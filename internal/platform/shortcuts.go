@@ -17,10 +17,13 @@ import (
 	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/messages"
 )
 
+// The installation identity remains compatible with the pre-rename records.
 const shortcutApplication = "github.com/kodai-utsunomiya-mdl/local-tex-editor"
-const shortcutExecutableName = "local-tex-editor.exe"
+const shortcutExecutableName = branding.ExecutableName + ".exe"
+const legacyShortcutExecutableName = "local-tex-editor.exe"
 const shortcutManifestName = "installation.json"
-const shortcutName = "Local TeX Editor.lnk"
+const shortcutName = branding.Name + ".lnk"
+const legacyShortcutName = "Local TeX Editor.lnk"
 const shortcutExecutableLimit int64 = 512 << 20
 
 var ErrShortcutsUnsupported = messages.Errorf("起動用のショートカット作成は Windows で利用できます．")
@@ -59,7 +62,7 @@ func shortcutInstallDirectory(localAppData string) (string, error) {
 		return "", messages.Errorf("アプリの保存先を取得できません．")
 	}
 	directory := localAppData
-	for _, component := range []string{"Programs", "LocalTeXEditor"} {
+	for _, component := range []string{"Programs", branding.DataDirectoryName} {
 		directory = filepath.Join(directory, component)
 		if err := os.Mkdir(directory, 0700); err != nil && !errors.Is(err, os.ErrExist) {
 			return "", messages.Errorf("アプリの保存先を作成できません (%s): %w", directory, err)
@@ -174,6 +177,10 @@ func installShortcutExecutable(source, directory string) (string, error) {
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return "", err
 	}
+	legacy, err := registeredLegacyShortcut(directory, manifest, exists)
+	if err != nil {
+		return "", err
+	}
 	copyNeeded := !exists
 	if exists {
 		targetHash, err := shortcutFileHash(target)
@@ -201,7 +208,12 @@ func installShortcutExecutable(source, directory string) (string, error) {
 			}
 		}
 		if err := commitShortcutFile(staged, target, exists); err != nil {
-			return "", messages.Errorf("配置先のアプリを更新できません (%s)．起動中の Local TeX Editor を終了し，新しい実行ファイルを開いてから再度操作してください．%w (%w)", target, ErrShortcutConflict, err)
+			return "", messages.Errorf("配置先のアプリを更新できません (%s)．起動中の Local TeX Web Editor を終了し，新しい実行ファイルを開いてから再度操作してください．%w (%w)", target, ErrShortcutConflict, err)
+		}
+	}
+	if legacy != nil && manifest.SHA256 != sourceHash {
+		if err := updateLegacyShortcutExecutable(target, directory, sourceHash, legacy); err != nil {
+			return "", err
 		}
 	}
 	if manifest == nil || manifest.SHA256 != sourceHash {
@@ -214,6 +226,66 @@ func installShortcutExecutable(source, directory string) (string, error) {
 		}
 	}
 	return target, nil
+}
+
+// Existing pins and user-created links can still target the old filename.
+// Update that file only when its hash agrees with this application's record.
+func registeredLegacyShortcut(directory string, manifest *shortcutInstallation, currentExists bool) (os.FileInfo, error) {
+	if manifest == nil {
+		return nil, nil
+	}
+	path := filepath.Join(directory, legacyShortcutExecutableName)
+	info, err := shortcutRegularFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	hash, err := shortcutFileHash(path)
+	if err != nil {
+		return nil, err
+	}
+	if hash != manifest.SHA256 {
+		if !currentExists {
+			return nil, messages.Errorf("配置先の実行ファイルが，このアプリの配置記録と一致しません (%s)．%w", path, ErrShortcutConflict)
+		}
+		return nil, nil
+	}
+	return info, nil
+}
+
+func updateLegacyShortcutExecutable(installed, directory, expectedHash string, previous os.FileInfo) error {
+	// A hard link gives the old launch path the same executable without a second
+	// copy. File systems without hard links can use the regular staged copy.
+	file, err := os.CreateTemp(directory, "local-tex-web-editor-legacy-*.tmp")
+	if err != nil {
+		return err
+	}
+	staged := file.Name()
+	if err := file.Close(); err != nil {
+		_ = os.Remove(staged)
+		return err
+	}
+	if err := os.Remove(staged); err != nil {
+		return err
+	}
+	if err := os.Link(installed, staged); err != nil {
+		staged, err = stageShortcutExecutable(installed, directory, expectedHash)
+		if err != nil {
+			return err
+		}
+	}
+	defer os.Remove(staged)
+	legacy := filepath.Join(directory, legacyShortcutExecutableName)
+	current, err := shortcutRegularFile(legacy)
+	if err != nil || !os.SameFile(previous, current) || previous.Size() != current.Size() || !previous.ModTime().Equal(current.ModTime()) {
+		return messages.Errorf("配置先の実行ファイルが操作中に変更されました．%w", ErrShortcutConflict)
+	}
+	if err := commitShortcutFile(staged, legacy, true); err != nil {
+		return messages.Errorf("配置先のアプリを更新できません (%s)．起動中の Local TeX Web Editor を終了し，新しい実行ファイルを開いてから再度操作してください．%w (%w)", legacy, ErrShortcutConflict, err)
+	}
+	return nil
 }
 
 func stageShortcutExecutable(source, directory, expectedHash string) (string, error) {

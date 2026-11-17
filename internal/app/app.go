@@ -17,6 +17,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/branding"
 	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/messages"
 	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/platform"
 )
@@ -109,7 +110,7 @@ func New(options Options) (*App, error) {
 		if err != nil {
 			return nil, messages.Errorf("設定フォルダーを取得できません: %w", err)
 		}
-		options.ConfigDir = filepath.Join(base, "LocalTeXEditor")
+		options.ConfigDir = filepath.Join(base, branding.DataDirectoryName)
 	}
 	var err error
 	options.ConfigDir, err = filepath.Abs(options.ConfigDir)

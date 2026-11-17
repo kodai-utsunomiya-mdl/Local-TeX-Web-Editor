@@ -2,7 +2,9 @@ package platform
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -15,6 +17,94 @@ func writeShortcutTestFile(t *testing.T, path string, data []byte) {
 	}
 	if err := os.WriteFile(path, data, 0600); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func writeLegacyShortcutInstallation(t *testing.T, root string, contents []byte) string {
+	t.Helper()
+	directory, err := shortcutInstallDirectory(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	executable := filepath.Join(directory, "local-tex-editor.exe")
+	writeShortcutTestFile(t, executable, contents)
+	hash := sha256.Sum256(contents)
+	manifest := fmt.Sprintf(`{"application":"github.com/kodai-utsunomiya-mdl/local-tex-editor","format":1,"sha256":"%x"}`, hash)
+	writeShortcutTestFile(t, filepath.Join(directory, "installation.json"), []byte(manifest))
+	return executable
+}
+
+func TestRenamedShortcutInstallationUpdatesExistingLaunchPaths(t *testing.T) {
+	for _, interrupted := range []bool{false, true} {
+		t.Run(fmt.Sprintf("previous installation update interrupted=%v", interrupted), func(t *testing.T) {
+			root := t.TempDir()
+			legacy := writeLegacyShortcutInstallation(t, root, []byte("MZ version 0.1.3"))
+			directory := filepath.Dir(legacy)
+			source := filepath.Join(root, "Downloads", "local-tex-web-editor.exe")
+			newBytes := []byte("MZ Local TeX Web Editor version 0.1.4")
+			writeShortcutTestFile(t, source, newBytes)
+			if interrupted {
+				// The new executable may already have been placed when an update
+				// stops before refreshing the previous launch path and its record.
+				writeShortcutTestFile(t, filepath.Join(directory, "local-tex-web-editor.exe"), newBytes)
+			}
+			installed, err := installShortcutExecutable(source, directory)
+			if err != nil || installed != filepath.Join(root, "Programs", "LocalTeXEditor", "local-tex-web-editor.exe") {
+				t.Fatalf("renamed installation: %s (%v)", installed, err)
+			}
+			check := func(want []byte) {
+				t.Helper()
+				for _, path := range []string{installed, legacy} {
+					data, err := os.ReadFile(path)
+					if err != nil || !bytes.Equal(data, want) {
+						t.Fatalf("launch path %s did not receive the update: %q (%v)", path, data, err)
+					}
+				}
+				manifest, err := readShortcutInstallation(filepath.Join(directory, shortcutManifestName))
+				hash := sha256.Sum256(want)
+				if err != nil || manifest == nil || manifest.SHA256 != fmt.Sprintf("%x", hash) {
+					t.Fatalf("updated installation record: %#v (%v)", manifest, err)
+				}
+			}
+			check(newBytes)
+			if _, err := installShortcutExecutable(legacy, directory); err != nil {
+				t.Fatalf("starting from a previous shortcut: %v", err)
+			}
+			// A later version must refresh both names again, including when they
+			// refer to the same file through a hard link.
+			newBytes = []byte("MZ Local TeX Web Editor next version")
+			writeShortcutTestFile(t, source, newBytes)
+			if _, err := installShortcutExecutable(source, directory); err != nil {
+				t.Fatal(err)
+			}
+			check(newBytes)
+		})
+	}
+}
+
+func TestRenamedInstallationLeavesAnUnrecognizedLegacyExecutable(t *testing.T) {
+	for _, registered := range []bool{false, true} {
+		t.Run(fmt.Sprintf("registered=%v", registered), func(t *testing.T) {
+			root := t.TempDir()
+			legacy := writeLegacyShortcutInstallation(t, root, []byte("MZ previous version"))
+			directory := filepath.Dir(legacy)
+			if !registered {
+				if err := os.Remove(filepath.Join(directory, shortcutManifestName)); err != nil {
+					t.Fatal(err)
+				}
+			}
+			foreign := []byte("a different file now uses this filename")
+			writeShortcutTestFile(t, legacy, foreign)
+			source := filepath.Join(root, "download.exe")
+			writeShortcutTestFile(t, source, []byte("MZ new application"))
+			_, err := installShortcutExecutable(source, directory)
+			if registered && !errors.Is(err, ErrShortcutConflict) || !registered && err != nil {
+				t.Fatalf("unexpected installation result: %v", err)
+			}
+			if data, err := os.ReadFile(legacy); err != nil || !bytes.Equal(data, foreign) {
+				t.Fatalf("changed an unrecognized file: %q (%v)", data, err)
+			}
+		})
 	}
 }
 

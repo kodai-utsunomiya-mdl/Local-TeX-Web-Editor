@@ -59,7 +59,7 @@ macOS では `scripts/build-macos.mjs` が Apple Silicon と Intel の実行フ�
 
 `tex-packages.test.mjs` は，設定済みの TeX を使う追加コマンド，Windows / Mac の引用形式，不足ファイル名から作る検索用の正規表現を確認する．入力されたパッケージ名やファイル名にシェルのコマンドやオプションが含まれる場合も扱う．Go のテストでは，小さめの TeX Live，BasicTeX の symlink，旧年度，不明な年度を含め，表示するプログラムと取得先を確認する．
 
-フロントエンドをビルドした後，実行ファイルを `bin/local-tex-editor.exe` に作成する．`LOCAL_TEX_EDITOR_TEST_EXE` で別の場所も指定できる．TeX Live の実行ファイルがある場所は `LOCAL_TEX_EDITOR_TEST_TEX_BIN` で指定する．
+フロントエンドをビルドした後，実行ファイルを `bin/local-tex-web-editor.exe` に作成する．`LOCAL_TEX_EDITOR_TEST_EXE` で別の場所も指定できる．TeX Live の実行ファイルがある場所は `LOCAL_TEX_EDITOR_TEST_TEX_BIN` で指定する．
 
 ```powershell
 npm ci
@@ -67,12 +67,12 @@ npm run test:unit
 npm run build
 npm run build:windows-resources
 go test ./...
-go build -o bin/local-tex-editor.exe ./cmd/local-tex-editor
+go build -o bin/local-tex-web-editor.exe ./cmd/local-tex-editor
 $env:LOCAL_TEX_EDITOR_TEST_TEX_BIN = 'C:\texlive\2025\bin\windows'
 npx playwright install chromium
 npm test
 ```
 
-テストは一時フォルダーへ原稿のコピーを作り，終了時に削除する．失敗時は `test-results` にブラウザの画像と trace，アプリの出力を保存する．成功したブラウザの画面も同じ場所へ保存する．GitHub Actions の `local-tex-editor-windows-x64` と `local-tex-editor-macos-universal` に配布ファイルを保存する．Release への公開は Windows と両 Mac のテストが成功した後に進む．
+テストは一時フォルダーへ原稿のコピーを作り，終了時に削除する．失敗時は `test-results` にブラウザの画像と trace，アプリの出力を保存する．成功したブラウザの画面も同じ場所へ保存する．GitHub Actions の `local-tex-web-editor-windows-x64` と `local-tex-web-editor-macos-universal` に配布ファイルを保存する．Release への公開は Windows と両 Mac のテストが成功した後に進む．
 
 日本語のコメントの入力は Unicode 文字列を使って確認する．Windows の各 IME の候補選択や変換中のキー操作は，実際の執筆画面でも確認する．

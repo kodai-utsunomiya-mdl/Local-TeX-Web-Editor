@@ -9,7 +9,7 @@ final class EditorApplication: NSObject, NSApplicationDelegate {
 
     private func command() -> Process {
         let process = Process()
-        process.executableURL = Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/local-tex-editor")
+        process.executableURL = Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/local-tex-web-editor")
         process.arguments = arguments
         return process
     }
@@ -24,7 +24,7 @@ final class EditorApplication: NSObject, NSApplicationDelegate {
             backend = process
         } catch {
             let alert = NSAlert()
-            alert.messageText = Locale.preferredLanguages.first?.hasPrefix("ja") == true ? "Local TeX Editor を起動できません" : "Could not start Local TeX Editor"
+            alert.messageText = Locale.preferredLanguages.first?.hasPrefix("ja") == true ? "Local TeX Web Editor を起動できません" : "Could not start Local TeX Web Editor"
             alert.informativeText = error.localizedDescription
             alert.alertStyle = .critical
             alert.runModal()
@@ -40,7 +40,7 @@ final class EditorApplication: NSObject, NSApplicationDelegate {
             try process.run()
             opening = process
         } catch {
-            NSLog("Could not reopen Local TeX Editor: %@", error.localizedDescription)
+            NSLog("Could not reopen Local TeX Web Editor: %@", error.localizedDescription)
         }
         return false
     }

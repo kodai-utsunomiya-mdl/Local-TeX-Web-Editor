@@ -99,7 +99,7 @@ func createShortcutAt(source, localAppData, shortcutDirectory string) (ShortcutR
 	if err != nil {
 		return ShortcutResult{}, messages.Errorf("ショートカットのアイコンを保存できません: %w", err)
 	}
-	temporary, err := os.CreateTemp(shortcutDirectory, "Local TeX Editor-*.lnk")
+	temporary, err := os.CreateTemp(shortcutDirectory, "Local TeX Web Editor-*.lnk")
 	if err != nil {
 		return ShortcutResult{}, messages.Errorf("ショートカットを保存できません: %w", err)
 	}
@@ -122,13 +122,17 @@ func createShortcutAt(source, localAppData, shortcutDirectory string) (ShortcutR
 }
 
 func notifyShellFileChange(path string, created bool) {
-	wide, err := syscall.UTF16PtrFromString(path)
-	if err != nil {
-		return
-	}
 	event := uintptr(0x00002000) // SHCNE_UPDATEITEM
 	if created {
 		event = 0x00000002 // SHCNE_CREATE
+	}
+	notifyShellChange(path, event)
+}
+
+func notifyShellChange(path string, event uintptr) {
+	wide, err := syscall.UTF16PtrFromString(path)
+	if err != nil {
+		return
 	}
 	shell32.NewProc("SHChangeNotify").Call(event, 0x0005|0x2000,
 		uintptr(unsafe.Pointer(wide)), 0) // SHCNF_PATHW | SHCNF_FLUSHNOWAIT

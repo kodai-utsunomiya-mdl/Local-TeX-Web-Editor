@@ -34,6 +34,6 @@ func OpenBrowser(url string) error {
 
 func ShowError(message string) {
 	// Pass the message as data, so file names cannot become AppleScript code.
-	script := "on run argv\n display alert \"Local TeX Editor\" message (item 1 of argv) as critical buttons {\"OK\"} default button \"OK\"\nend run"
+	script := "on run argv\n display alert \"Local TeX Web Editor\" message (item 1 of argv) as critical buttons {\"OK\"} default button \"OK\"\nend run"
 	_ = exec.Command("/usr/bin/osascript", "-e", script, message).Run()
 }

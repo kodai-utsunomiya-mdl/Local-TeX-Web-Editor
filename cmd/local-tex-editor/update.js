@@ -2,7 +2,7 @@ const token = new URLSearchParams(location.hash.slice(1)).get('token') || '';
 const byID = id => document.getElementById(id);
 const translations = {
   en: {
-    title: 'Update Local TeX Editor', language: 'Language',
+    title: 'Update Local TeX Web Editor', language: 'Language',
     currentVersion: 'Running version', requestedVersion: 'Version being opened',
     checking: 'Checking…', checkingApp: 'Checking the running app.',
     instructions: 'Save your documents in the running editor, then use its Exit button in the upper right to open this version.',
@@ -21,7 +21,7 @@ const translations = {
     missingToken: 'Use the URL opened when the app started.',
   },
   ja: {
-    title: 'Local TeX Editor を更新', language: '表示言語',
+    title: 'Local TeX Web Editor を更新', language: '表示言語',
     currentVersion: '起動中のバージョン', requestedVersion: '開こうとしているバージョン',
     checking: '確認中…', checkingApp: '起動中のアプリを確認しています．',
     instructions: '起動中の編集画面で原稿を保存し，右上の「終了」を押すと，今回のバージョンが開きます．',

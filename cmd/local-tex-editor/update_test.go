@@ -51,7 +51,7 @@ func TestUpdatePageUsesSavedLanguageAndLocalizesRequests(t *testing.T) {
 		}
 	}
 	page.problem = messages.Errorf("旧版の終了を確認できません．起動中の編集画面から「終了」を押してください．")
-	page.state.Executable = `C:\日本語のフォルダー\local-tex-editor.exe`
+	page.state.Executable = `C:\日本語のフォルダー\local-tex-web-editor.exe`
 	for _, test := range []struct{ language, confirmation, problem string }{
 		{"en", "Confirm that you have saved all open documents.", "Could not confirm that the previous version has closed. Use Exit in the running editor."},
 		{"ja", "開いている原稿を保存したことを確認してください．", "旧版の終了を確認できません．起動中の編集画面から「終了」を押してください．"},

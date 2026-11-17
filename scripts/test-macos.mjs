@@ -9,10 +9,10 @@ import { chromium, expect } from '@playwright/test';
 
 if (process.platform !== 'darwin') throw new Error('Run the macOS checks on macOS.');
 const root = path.resolve(import.meta.dirname, '..');
-const application = path.resolve(process.env.LOCAL_TEX_EDITOR_TEST_MAC_APP || path.join(root, 'dist/macos/Local TeX Editor.app'));
+const application = path.resolve(process.env.LOCAL_TEX_EDITOR_TEST_MAC_APP || path.join(root, 'dist/macos/Local TeX Web Editor.app'));
 const version = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8')).version;
 const output = path.join(root, 'test-results/macos');
-const temporary = await mkdtemp(path.join(os.tmpdir(), 'local-tex-editor-mac-'));
+const temporary = await mkdtemp(path.join(os.tmpdir(), 'local-tex-web-editor-mac-'));
 const project = path.join(temporary, '日本語の原稿 with spaces');
 const readyPath = path.join(temporary, 'ready.json');
 const execute = promisify(execFile);
@@ -61,7 +61,7 @@ async function compile() {
 
 try {
   await execute('/usr/bin/codesign', ['--verify', '--deep', '--strict', application]);
-  for (const executable of ['LocalTeXEditor', 'local-tex-editor']) {
+  for (const executable of ['LocalTeXWebEditor', 'local-tex-web-editor']) {
     await execute('/usr/bin/lipo', [path.join(application, 'Contents/MacOS', executable), '-verify_arch', 'arm64', 'x86_64']);
   }
   const icon = await readFile(path.join(application, 'Contents/Resources/app-icon.icns'));

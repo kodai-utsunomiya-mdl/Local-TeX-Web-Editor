@@ -1,4 +1,4 @@
-# Local TeX Editor の実装
+# Local TeX Web Editor の実装
 
 Windows と macOS のブラウザでローカルの TeX / Markdown プロジェクトを編集する．Go の HTTP サーバーが UI，API，PDF を同じ loopback のポートから配信する．原稿は選択したフォルダーに保存し，既存の latexmkrc を用いる．UI は CodeMirror 6 と PDF.js を使用し，ビルド時に Go の実行ファイルへ組み込む．Python，Node.js，Go は利用する PC に導入しない．
 
@@ -17,7 +17,7 @@ Windows と macOS のブラウザでローカルの TeX / Markdown プロジェ�
 ### GET /api/state
 
 ```json
-{"version":"0.1.4","executablePath":"C:\\Users\\user\\AppData\\Local\\Programs\\LocalTeXEditor\\local-tex-editor.exe","platform":"windows","shortcutsSupported":true,"texBin":"C:\\texlive\\2025\\bin\\windows","latexmk":"...","synctex":"...","synctexInstallCommands":[],"project":null,"recentProjects":[],"build":null}
+{"version":"0.1.4","executablePath":"C:\\Users\\user\\AppData\\Local\\Programs\\LocalTeXEditor\\local-tex-web-editor.exe","platform":"windows","shortcutsSupported":true,"texBin":"C:\\texlive\\2025\\bin\\windows","latexmk":"...","synctex":"...","synctexInstallCommands":[],"project":null,"recentProjects":[],"build":null}
 ```
 
 `executablePath` は動いている実行ファイルの絶対パス．配置済みのアプリやショートカットの更新が失敗した場合は，`installationError` も返す．画面にはアプリのバージョンとパス，更新に失敗した際の案内を表示する．
@@ -148,7 +148,7 @@ CLI の形式と座標は TeX Live の [synctex_main.c](https://github.com/TeX-L
 
 ### POST /api/shortcuts
 
-Windows で起動用のショートカットを作成する．入力は `{ "destination":"start-menu" }` または `{ "destination":"desktop" }`．実行ファイルをユーザーの LocalAppData の `Programs\LocalTeXEditor\local-tex-editor.exe` に配置し，選んだ Known Folder へ `Local TeX Editor.lnk` を作る．成功時は `{ "executable":"...", "shortcut":"...", "message":"..." }` を返す．UI は設定画面のボタン操作から呼ぶ．
+Windows で起動用のショートカットを作成する．入力は `{ "destination":"start-menu" }` または `{ "destination":"desktop" }`．実行ファイルをユーザーの LocalAppData の `Programs\LocalTeXEditor\local-tex-web-editor.exe` に配置し，選んだ Known Folder へ `Local TeX Web Editor.lnk` を作る．成功時は `{ "executable":"...", "shortcut":"...", "message":"..." }` を返す．UI は設定画面のボタン操作から呼ぶ．
 
 配置先とショートカット名はアプリで固定する．アプリ自身が配置した旧バージョンは更新できる．起動している旧バージョンのファイルを置き換えられない場合は，終了してから再度実行する案内を返す．
 

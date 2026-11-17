@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { chmod, cp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { appendFile, chmod, cp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { chromium } from '@playwright/test';
 
@@ -11,7 +11,7 @@ const version = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8
 if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error('The macOS bundle version must have three numeric components.');
 const build = path.join(root, 'bin/macos');
 const distribution = path.join(root, 'dist/macos');
-const application = path.join(distribution, 'Local TeX Editor.app');
+const application = path.join(distribution, 'Local TeX Web Editor.app');
 const contents = path.join(application, 'Contents');
 const macos = path.join(contents, 'MacOS');
 const resources = path.join(contents, 'Resources');
@@ -34,9 +34,9 @@ for (const [goArchitecture, swiftArchitecture] of [['arm64', 'arm64'], ['amd64',
   });
   await run('/usr/bin/xcrun', ['swiftc', '-O', '-target', `${swiftArchitecture}-apple-macos12.0`, path.join(root, 'scripts/macos-launcher.swift'), '-o', path.join(build, `launcher-${goArchitecture}`)]);
 }
-await run('/usr/bin/lipo', ['-create', path.join(build, 'server-arm64'), path.join(build, 'server-amd64'), '-output', path.join(macos, 'local-tex-editor')]);
-await run('/usr/bin/lipo', ['-create', path.join(build, 'launcher-arm64'), path.join(build, 'launcher-amd64'), '-output', path.join(macos, 'LocalTeXEditor')]);
-for (const file of ['local-tex-editor', 'LocalTeXEditor']) await chmod(path.join(macos, file), 0o755);
+await run('/usr/bin/lipo', ['-create', path.join(build, 'server-arm64'), path.join(build, 'server-amd64'), '-output', path.join(macos, 'local-tex-web-editor')]);
+await run('/usr/bin/lipo', ['-create', path.join(build, 'launcher-arm64'), path.join(build, 'launcher-amd64'), '-output', path.join(macos, 'LocalTeXWebEditor')]);
+for (const file of ['local-tex-web-editor', 'LocalTeXWebEditor']) await chmod(path.join(macos, file), 0o755);
 
 const iconset = path.join(build, 'app-icon.iconset');
 await mkdir(iconset, { recursive: true });
@@ -58,13 +58,13 @@ const icon = await readFile(path.join(resources, 'app-icon.icns'));
 if (icon.toString('ascii', 0, 4) !== 'icns' || icon.readUInt32BE(4) !== icon.length) throw new Error('The application icon has an invalid ICNS header.');
 
 const info = {
-  CFBundleName: 'Local TeX Editor', CFBundleDisplayName: 'Local TeX Editor',
+  CFBundleName: 'Local TeX Web Editor', CFBundleDisplayName: 'Local TeX Web Editor',
   CFBundleIdentifier: 'io.github.kodai-utsunomiya-mdl.local-tex-editor',
-  CFBundleExecutable: 'LocalTeXEditor', CFBundlePackageType: 'APPL',
+  CFBundleExecutable: 'LocalTeXWebEditor', CFBundlePackageType: 'APPL',
   CFBundleShortVersionString: version, CFBundleVersion: version,
   CFBundleIconFile: 'app-icon.icns', LSMinimumSystemVersion: '12.0',
   LSUIElement: true, NSHighResolutionCapable: true,
-  NSHumanReadableCopyright: 'Local TeX Editor contributors. MIT License.',
+  NSHumanReadableCopyright: 'Local TeX Web Editor contributors. MIT License.',
 };
 await writeFile(path.join(contents, 'Info.plist'), JSON.stringify(info));
 await run('/usr/bin/plutil', ['-convert', 'xml1', path.join(contents, 'Info.plist')]);
@@ -73,19 +73,41 @@ await cp(path.join(root, 'LICENSE'), path.join(resources, 'LICENSE'));
 await cp(path.join(root, 'web/dist/THIRD_PARTY_LICENSES.txt'), path.join(resources, 'THIRD_PARTY_LICENSES.txt'));
 // Ad-hoc signing makes both Mach-O slices and the bundle verifiable. A Developer
 // ID signature and notarization require the maintainer's Apple credentials.
-await run('/usr/bin/codesign', ['--force', '--sign', '-', '--timestamp=none', path.join(macos, 'local-tex-editor')]);
+await run('/usr/bin/codesign', ['--force', '--sign', '-', '--timestamp=none', path.join(macos, 'local-tex-web-editor')]);
 await run('/usr/bin/codesign', ['--force', '--sign', '-', '--timestamp=none', application]);
 await run('/usr/bin/codesign', ['--verify', '--deep', '--strict', application]);
-for (const file of ['LocalTeXEditor', 'local-tex-editor']) await run('/usr/bin/lipo', [path.join(macos, file), '-verify_arch', 'arm64', 'x86_64']);
-const actual = await run(path.join(macos, 'local-tex-editor'), ['--version']);
+for (const file of ['LocalTeXWebEditor', 'local-tex-web-editor']) await run('/usr/bin/lipo', [path.join(macos, file), '-verify_arch', 'arm64', 'x86_64']);
+const actual = await run(path.join(macos, 'local-tex-web-editor'), ['--version']);
 if (actual.stdout.trim() !== version) throw new Error('The packaged server reports another version.');
 
 for (const file of ['README.md', 'README.ja.md', 'LICENSE']) await cp(path.join(root, file), path.join(distribution, file));
 await cp(path.join(root, 'docs'), path.join(distribution, 'docs'), { recursive: true });
-const archive = path.join(root, 'dist', `local-tex-editor-${version}-macos-universal.zip`);
+const archive = path.join(root, 'dist', `local-tex-web-editor-${version}-macos-universal.zip`);
 await rm(archive, { force: true });
 await run('/usr/bin/ditto', ['-c', '-k', '--sequesterRsrc', distribution, archive]);
 const unpacked = path.join(build, 'unpacked');
 await run('/usr/bin/ditto', ['-x', '-k', archive, unpacked]);
-await run('/usr/bin/codesign', ['--verify', '--deep', '--strict', path.join(unpacked, 'Local TeX Editor.app')]);
-console.log(`Created ${path.basename(archive)} (${(await stat(archive)).size} bytes).`);
+await run('/usr/bin/codesign', ['--verify', '--deep', '--strict', path.join(unpacked, 'Local TeX Web Editor.app')]);
+
+async function directoryBytes(directory) {
+  let total = 0;
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const filename = path.join(directory, entry.name);
+    if (entry.isDirectory()) total += await directoryBytes(filename);
+    else if (entry.isFile()) total += (await stat(filename)).size;
+  }
+  return total;
+}
+const sizes = {
+  version, platform: 'macos', architectures: ['arm64', 'x86_64'],
+  application: path.basename(application), archive: path.basename(archive),
+  appBytes: await directoryBytes(path.join(unpacked, 'Local TeX Web Editor.app')),
+  zipBytes: (await stat(archive)).size,
+};
+const megabytes = bytes => (bytes / 1_000_000).toFixed(2);
+await writeFile(path.join(root, 'dist', `local-tex-web-editor-${version}-macos-size.json`), `${JSON.stringify(sizes, null, 2)}\n`);
+console.log(`Created ${sizes.archive} (${sizes.zipBytes} bytes; ${megabytes(sizes.zipBytes)} MB).`);
+console.log(`Extracted application: ${sizes.appBytes} bytes; ${megabytes(sizes.appBytes)} MB.`);
+if (process.env.GITHUB_STEP_SUMMARY) {
+  await appendFile(process.env.GITHUB_STEP_SUMMARY, `## macOS application size\n\nVersion ${version}. MB uses 1,000,000 bytes.\n\n| File | Bytes | MB |\n| --- | ---: | ---: |\n| ZIP download | ${sizes.zipBytes} | ${megabytes(sizes.zipBytes)} |\n| Extracted .app | ${sizes.appBytes} | ${megabytes(sizes.appBytes)} |\n`);
+}

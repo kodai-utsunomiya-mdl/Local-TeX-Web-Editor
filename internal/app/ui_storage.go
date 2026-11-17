@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"unicode/utf8"
 
+	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/branding"
 	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/messages"
 )
 
@@ -53,7 +54,7 @@ func SavedInterfaceLanguage(configDir string) string {
 		if err != nil {
 			return "en"
 		}
-		configDir = filepath.Join(base, "LocalTeXEditor")
+		configDir = filepath.Join(base, branding.DataDirectoryName)
 	}
 	hash := sha256.Sum256([]byte("preferences"))
 	path := filepath.Join(configDir, "ui-state", hex.EncodeToString(hash[:])+".json")

@@ -1,28 +1,28 @@
-# Local TeX Editor
+# Local TeX Web Editor
 
 [English](README.md) | 日本語
 
-[![Windows 版をダウンロード](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/local-tex-editor/releases/download/v0.1.4/local-tex-editor-0.1.4-windows-x64.zip)
+[![Windows 版をダウンロード](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/local-tex-editor/releases/download/v0.1.4/local-tex-web-editor-0.1.4-windows-x64.zip)
 &nbsp;&nbsp;
-[![macOS 版をダウンロード](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/local-tex-editor/releases/download/v0.1.4/local-tex-editor-0.1.4-macos-universal.zip)
+[![macOS 版をダウンロード](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/local-tex-editor/releases/download/v0.1.4/local-tex-web-editor-0.1.4-macos-universal.zip)
 
-**v0.1.4** · [配布ファイルと更新内容](https://github.com/kodai-utsunomiya-mdl/local-tex-editor/releases/latest) · [利用前の準備](#利用前の準備) · [起動する](#ダウンロードして起動する)
+**v0.1.4** · [配布ファイルと更新内容](https://github.com/kodai-utsunomiya-mdl/local-tex-editor/releases/latest) · [利用前の準備](#利用前の準備) · [アプリの容量](#アプリとデータの保存先) · [起動する](#ダウンロードして起動する)
 
 Windows と macOS のブラウザで TeX の原稿を編集し，PC にある TeX Live でコンパイルするアプリ．編集画面と PDF を同じウィンドウで確認できる．アプリを起動すると，既定のブラウザで `localhost` の画面が開く．Markdown の編集とプレビューにも対応する．
 
-![ダークモードで TeX の原稿と PDF を並べて表示した Local TeX Editor](docs/screenshots/editor-dark.png)
+![ダークモードで TeX の原稿と PDF を並べて表示した Local TeX Web Editor](docs/screenshots/editor-dark.png)
 
 原稿は PC 上のフォルダーに保存する．TeX Live と原稿の `latexmkrc` を使い，コンパイル中のログと生成した PDF を画面へ表示する．利用する PC に追加の Python，Node.js，Go，VS Code を導入する必要はない．
 
 ## 作成した経緯
 
-このアプリは，作者が TeX の原稿を書くために複数のエディタを使ってきた経験から作り始めた．
+ブラウザで原稿を編集する操作感を，PC にある TeX Live と組み合わせて使えるようにするために作成した．
 
-- **Overleaf:** 長い原稿がコンパイル時間の上限に達し，複数行の文章をひとまとまりで貼り付けて検索する操作にも不便を感じていた．ブラウザで編集する使い方には利点を感じていた．
-- **VS Code:** 既存の TeX Live でコンパイルできる環境は整っていた．TeX の執筆だけに使うには開発向けの機能が多く，メモリに余裕が少ない PC では，デスクトップ版の起動も重く感じていた．
-- **Prism:** ブラウザで執筆する場所として使っていた．OpenAI による [2027 年 1 月 1 日にサービスを終了するという告知](https://openai.com/index/introducing-prism/) を受け，作業を続けるための環境を探すことになった．
+Overleaf では，長い原稿がコンパイル時間の上限に達する場合がある．コンパイルを PC 上で実行すれば，手元の計算資源を使って作業を続けられる．また，複数行の文章や TeX コードをそのまま貼り付けて検索できるようにした．
 
-PC にはすでに TeX Live があった．その環境をブラウザのエディタから使い，PDF の連続スクロール，原稿と PDF の相互移動，複数行の検索，Markdown のプレビューを同じ画面で使えるようにしたのが Local TeX Editor である．普段の執筆を快適に進められることと，手元のツールや原稿をそのまま使えることを目指している．
+VS Code は幅広い開発用途に対応している．TeX の原稿を編集する目的では，機能の多さやデスクトップアプリのメモリ使用量が負担になる場合がある．このエディタでは，原稿の編集，コンパイル，プレビューをブラウザの同じ画面にまとめている．
+
+PDF の連続スクロール，SyncTeX による原稿と PDF の相互移動，Markdown のプレビューを備え，手元の原稿や TeX の環境を使って執筆と確認を進められる．
 
 ## 利用前の準備
 
@@ -107,8 +107,8 @@ Mac のターミナルでは次を実行する．
 ### Windows
 
 1. [Releases](https://github.com/kodai-utsunomiya-mdl/local-tex-editor/releases) を開き，最新のバージョンを選ぶ．
-2. **Assets** の `local-tex-editor-0.1.4-windows-x64.zip` をダウンロードする．`Source code` は開発用のソースである．
-3. ZIP を展開し，`local-tex-editor.exe` をダブルクリックする．
+2. **Assets** の `local-tex-web-editor-0.1.4-windows-x64.zip` をダウンロードする．`Source code` は開発用のソースである．
+3. ZIP を展開し，`local-tex-web-editor.exe` をダブルクリックする．
 4. 開いたブラウザで原稿のフォルダーを選ぶ．フォルダーのパスを入力して開くこともできる．
 5. TeX Live の場所が自動で見つからない場合は，設定に `C:\texlive\2025\bin\windows` など，`latexmk.exe` があるフォルダーを指定する．
 6. コンパイルしたい `.tex` をエディタで開き，「コンパイル」を押す．
@@ -117,9 +117,9 @@ Windows の配布ファイルにはコード署名が付いていない．GitHub
 
 ### macOS
 
-1. [Releases](https://github.com/kodai-utsunomiya-mdl/local-tex-editor/releases) の **Assets** から `local-tex-editor-0.1.4-macos-universal.zip` をダウンロードする．Apple Silicon と Intel で共通の ZIP を使う．
-2. ZIP を展開し，`Local TeX Editor.app` を「アプリケーション」フォルダーへ移す．
-3. Finder や Spotlight から `Local TeX Editor` を開く．ブラウザに編集画面が開く．
+1. [Releases](https://github.com/kodai-utsunomiya-mdl/local-tex-editor/releases) の **Assets** から `local-tex-web-editor-0.1.4-macos-universal.zip` をダウンロードする．Apple Silicon と Intel で共通の ZIP を使う．
+2. ZIP を展開し，`Local TeX Web Editor.app` を「アプリケーション」フォルダーへ移す．
+3. Finder や Spotlight から `Local TeX Web Editor` を開く．ブラウザに編集画面が開く．
 4. 原稿のフォルダーを開く．TeX の場所が自動で見つからない場合は，設定に `/Library/TeX/texbin` を指定する．
 5. コンパイルしたい `.tex` をエディタで開き，「コンパイル」を押す．
 
@@ -137,7 +137,7 @@ macOS 版には Apple Developer ID による署名と notarization が付いて�
 
 Windows では，新しい ZIP を展開して `.exe` を起動する．異なるバージョンが動いている場合は，起動中のバージョンと今回開いたバージョンが表示される．原稿を保存して旧版を終了すると，新版の画面が開く．設定画面の「アプリのバージョン」と「起動中の実行ファイル」で，動いているアプリを確認できる．
 
-Mac では，原稿を保存してアプリを終了し，展開した新しい `Local TeX Editor.app` を「アプリケーション」にある旧版と置き換えてから開く．設定と草稿はユーザーの設定フォルダーから読み込む．
+Mac では，原稿を保存してアプリを終了し，展開した新しい `Local TeX Web Editor.app` を「アプリケーション」にある旧版と置き換えてから開く．設定と草稿はユーザーの設定フォルダーから読み込む．
 
 同じバージョンのアプリをもう一度開くと，既存の編集画面へ接続する．同じ原稿を複数のプロセスが同時にコンパイルすることを防ぐ仕組みも入れている．
 
@@ -145,9 +145,9 @@ Mac では，原稿を保存してアプリを終了し，展開した新しい 
 
 1. アプリの「設定」を開く．
 2. 「起動用のショートカット」で「スタートメニューに追加」または「デスクトップに作成」を押す．
-3. 次回から，スタートメニューで `Local TeX Editor` を探すか，デスクトップのショートカットを開く．ブラウザに編集画面が開く．
+3. 次回から，スタートメニューで `Local TeX Web Editor` を探すか，デスクトップのショートカットを開く．ブラウザに編集画面が開く．
 
-この操作で，アプリを `%LOCALAPPDATA%\Programs\LocalTeXEditor\local-tex-editor.exe` に配置する．ダウンロード時のフォルダーを移動しても，ショートカットから起動できる．設定と草稿は共通の場所から読み込む．
+この操作で，アプリを `%LOCALAPPDATA%\Programs\LocalTeXEditor\local-tex-web-editor.exe` に配置する．ダウンロード時のフォルダーを移動しても，ショートカットから起動できる．設定と草稿は共通の場所から読み込む．
 
 実行ファイル，ショートカット，ブラウザのタブには，緑の背景に白い TeX の専用アイコンを使う．
 
@@ -257,7 +257,9 @@ PDF はページをまたいで連続してスクロールできる．表示中�
 
 ## アプリとデータの保存先
 
-編集画面に必要な JavaScript，PDF.js の worker，フォントなどは実行ファイルに含む．起動のたびに CDN から取得する処理はない．
+編集画面に必要な JavaScript，PDF.js の worker，フォントなどはアプリに含む．ブラウザと TeX Live は PC にあるものを使う．配布ファイルには TeX Live，ブラウザのエンジン，Python，Node.js は含まない．
+
+利用中は，原稿，追加した TeX パッケージ，草稿，生成した PDF などの容量も必要になる．コンパイル時のファイルは各プロジェクトの `.local-tex-editor/build` 以下に作られ，容量は原稿や図によって変わる．ダウンロードした ZIP は展開後に削除できる．Windows のスタートメニューやデスクトップにショートカットを作成すると，上で説明したアプリ用フォルダーに実行ファイルをコピーする．一度アプリを終了し，ショートカットから起動できることを確認した後は，ダウンロードを展開したフォルダーも削除できる．
 
 設定，草稿，前回の表示位置，表示用の PDF と SyncTeX のコピーは，Windows では `%APPDATA%\LocalTeXEditor`，Mac では `~/Library/Application Support/LocalTeXEditor` に保存する．原稿そのものは，選択したプロジェクトのフォルダーへ保存する．PDF のコピーを使うことで，TeX が書き込み中の PDF と表示中の PDF が競合する状況を防ぐ．
 
@@ -277,13 +279,13 @@ npm run test:unit
 npm run build
 npm run build:windows-resources
 go test ./...
-go build -o bin/local-tex-editor.exe ./cmd/local-tex-editor
+go build -o bin/local-tex-web-editor.exe ./cmd/local-tex-editor
 ```
 
 Windows 用の配布ファイルは次のコマンドで作成する．
 
 ```sh
-go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.4" -o dist/local-tex-editor.exe ./cmd/local-tex-editor
+go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.4" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
 ```
 
 `build:windows-resources` は同梱の ICO から Windows x64 用の resource を生成する．実行ファイルのビルド時に，16〜256 px の 9 サイズのアイコンが組み込まれる．
@@ -299,7 +301,7 @@ npx playwright install chromium
 node scripts/build-macos.mjs
 ```
 
-`dist/local-tex-editor-0.1.4-macos-universal.zip` に，Apple Silicon と Intel で動く `.app`，日英の README，ライセンスを収録する．
+`dist/local-tex-web-editor-0.1.4-macos-universal.zip` に，Apple Silicon と Intel で動く `.app`，日英の README，ライセンスを収録する．
 
 起動時のオプション:
 
@@ -317,7 +319,7 @@ node scripts/build-macos.mjs
 
 GitHub Actions はアプリをビルドし，Windows と macOS の Apple Silicon / Intel で動作を確認する．Windows では，日本語と空白を含むフォルダーでの TeX の実行，参考文献，PDF のスクロール・拡大縮小・検索，SyncTeX の往復，自動保存，草稿の復元，エラー箇所への移動を確認する．macOS では，同じ配布 ZIP を両 CPU の環境で展開し，`.app` の起動，日本語の TeX，SyncTeX，文書の切り替え，Markdown，終了を確認する．日々の原稿のコンパイルは PC の TeX Live が担当する．
 
-`main` の Windows と両 macOS のテストが成功し，`package.json` のバージョンに対応する Release がまだ存在しない場合は，その実行で確認したアプリを Releases に公開する．新しいバージョンを作る際は，`package.json` を更新し，`release-notes/v<バージョン>.md` を追加する．Actions の **Artifacts** にある `local-tex-editor-windows-x64` と `local-tex-editor-macos-universal` からも取得できる．Release の `SHA256SUMS.txt` に，両 ZIP の SHA-256 を記録する．
+`main` の Windows と両 macOS のテストが成功し，`package.json` のバージョンに対応する Release がまだ存在しない場合は，その実行で確認したアプリを Releases に公開する．新しいバージョンを作る際は，`package.json` を更新し，`release-notes/v<バージョン>.md` を追加する．Actions の **Artifacts** にある `local-tex-web-editor-windows-x64` と `local-tex-web-editor-macos-universal` からも取得できる．Release の `SHA256SUMS.txt` に，両 ZIP の SHA-256 を記録する．
 
 ## 利用するライブラリ
 

@@ -160,7 +160,7 @@ var english = map[string]string{
 	"選択したフォルダーのパスを取得できません．":                                                     "Could not get the selected folder path.",
 	"選択したフォルダーを取得できません: %w":                                                     "Could not get the selected folder: %w",
 	"選択したメインの文書を開けません．":                                                         "Could not open the selected main document.",
-	"配置先のアプリを更新できません (%s)．起動中の Local TeX Editor を終了し，新しい実行ファイルを開いてから再度操作してください．%w (%w)": "Could not update the installed app (%s). Close the running Local TeX Editor, open the new executable, and try again. %w (%w)",
+	"配置先のアプリを更新できません (%s)．起動中の Local TeX Web Editor を終了し，新しい実行ファイルを開いてから再度操作してください．%w (%w)": "Could not update the installed app (%s). Close the running Local TeX Web Editor, open the new executable, and try again. %w (%w)",
 	"配置先の実行ファイルが操作中に変更されました．%w":              "The installed executable changed during this operation. %w",
 	"配置先の実行ファイルが，このアプリの配置記録と一致しません (%s)．%w":  "The installed executable does not match this app's installation record (%s). %w",
 	"開いているプロジェクトが変わりました．現在の原稿で操作してください．":     "The open project has changed. Use the current source document.",

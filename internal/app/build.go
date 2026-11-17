@@ -297,7 +297,7 @@ func (a *App) finishBuild(run *buildRun, code *int, err error, pdf, pdfID string
 		}
 	}
 	if run.result.Error != "" {
-		a.appendMessageLocked(run, "\n[Local TeX Editor] %v\n", run.err)
+		a.appendMessageLocked(run, "\n[Local TeX Web Editor] %v\n", run.err)
 	}
 	if pdf != "" {
 		a.trimPDFCacheLocked(filepath.Dir(pdf))

@@ -1,28 +1,28 @@
-# Local TeX Editor
+# Local TeX Web Editor
 
 English | [日本語](README.ja.md)
 
-[![Download for Windows](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/local-tex-editor/releases/download/v0.1.4/local-tex-editor-0.1.4-windows-x64.zip)
+[![Download for Windows](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/local-tex-editor/releases/download/v0.1.4/local-tex-web-editor-0.1.4-windows-x64.zip)
 &nbsp;&nbsp;
-[![Download for macOS](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/local-tex-editor/releases/download/v0.1.4/local-tex-editor-0.1.4-macos-universal.zip)
+[![Download for macOS](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/local-tex-editor/releases/download/v0.1.4/local-tex-web-editor-0.1.4-macos-universal.zip)
 
-**v0.1.4** · [All downloads and release notes](https://github.com/kodai-utsunomiya-mdl/local-tex-editor/releases/latest) · [Requirements](#requirements) · [Get started](#download-and-launch)
+**v0.1.4** · [All downloads and release notes](https://github.com/kodai-utsunomiya-mdl/local-tex-editor/releases/latest) · [Requirements](#requirements) · [App size](#app-files-and-storage) · [Get started](#download-and-launch)
 
 Edit TeX documents in your browser on Windows or macOS, and compile them with TeX Live on your computer. The editor and PDF preview appear in the same window. Launching the app opens a `localhost` page in your default browser. Markdown editing and preview are also supported.
 
-![Local TeX Editor showing a TeX document and its PDF in dark mode](docs/screenshots/editor-dark.png)
+![Local TeX Web Editor showing a TeX document and its PDF in dark mode](docs/screenshots/editor-dark.png)
 
 Documents stay in the project folder on your computer. The app uses your TeX Live installation and the project's `latexmkrc`, and displays compilation logs and the resulting PDF. The distributed app runs without installing Python, Node.js, Go, or VS Code.
 
 ## Why this editor exists
 
-This project grew out of the author's experience using several editors for TeX documents.
+Local TeX Web Editor brings a browser editing workflow to the TeX Live installation on your computer.
 
-- **Overleaf:** Longer documents reached the compilation time limit, and searching for a pasted block of text spanning several lines was cumbersome. The browser editing workflow was still useful.
-- **VS Code:** The existing setup could already compile with TeX Live. For writing TeX alone, its broader development features felt unnecessary, and starting the desktop editor felt heavy on a computer where memory was limited.
-- **Prism:** It provided a browser workspace for writing. OpenAI's [announcement that the service will end on January 1, 2027](https://openai.com/index/introducing-prism/) prompted the search for another place to continue that work.
+Long documents can reach Overleaf's compilation time limit. Compiling on the computer allows work to continue with the available local resources. Multiline search also makes it possible to paste a block of prose or TeX code directly into the search field.
 
-TeX Live was already installed on the computer. Local TeX Editor connects that installation to a browser editor, with continuous PDF scrolling, source–PDF navigation, multiline search, and Markdown preview in the same workspace. The aim is to make everyday writing comfortable while using the tools and files already on the computer.
+VS Code provides a broad set of development features. For editing TeX documents, starting a full desktop development environment can add more features and memory use than the task needs. This editor brings document editing, compilation, and preview together in a browser window.
+
+Continuous PDF scrolling, SyncTeX, and Markdown preview support writing and reviewing documents while using the project files and TeX installation already on the computer.
 
 ## Requirements
 
@@ -107,8 +107,8 @@ When these commands display their version or usage information, select the same 
 ### Windows
 
 1. Open [Releases](https://github.com/kodai-utsunomiya-mdl/local-tex-editor/releases) and select the latest version.
-2. Under **Assets**, download `local-tex-editor-0.1.4-windows-x64.zip`. The **Source code** archives contain the files for development.
-3. Extract the ZIP and double-click `local-tex-editor.exe`.
+2. Under **Assets**, download `local-tex-web-editor-0.1.4-windows-x64.zip`. The **Source code** archives contain the files for development.
+3. Extract the ZIP and double-click `local-tex-web-editor.exe`.
 4. In the browser window, choose your project folder. You can also enter its path.
 5. If TeX Live is not found automatically, open Settings and select the folder containing `latexmk.exe`, for example `C:\texlive\2025\bin\windows`.
 6. Open the `.tex` document you want to compile and click **Compile**.
@@ -117,9 +117,9 @@ The Windows executable does not have a code signature. If SmartScreen displays *
 
 ### macOS
 
-1. Under **Assets** in [Releases](https://github.com/kodai-utsunomiya-mdl/local-tex-editor/releases), download `local-tex-editor-0.1.4-macos-universal.zip`. The same ZIP supports Apple Silicon and Intel.
-2. Extract the ZIP and move `Local TeX Editor.app` to **Applications**.
-3. Open **Local TeX Editor** from Finder or Spotlight. The editor opens in your browser.
+1. Under **Assets** in [Releases](https://github.com/kodai-utsunomiya-mdl/local-tex-editor/releases), download `local-tex-web-editor-0.1.4-macos-universal.zip`. The same ZIP supports Apple Silicon and Intel.
+2. Extract the ZIP and move `Local TeX Web Editor.app` to **Applications**.
+3. Open **Local TeX Web Editor** from Finder or Spotlight. The editor opens in your browser.
 4. Open your project folder. If TeX is not found automatically, select `/Library/TeX/texbin` in Settings.
 5. Open the `.tex` document you want to compile and click **Compile**.
 
@@ -137,7 +137,7 @@ You can also use the exit button at the top right. If there are unsaved edits, c
 
 On Windows, extract the new ZIP and launch its `.exe`. If another version is running, the app shows both the running version and the version you just launched. Save your documents and exit the old version to open the new one. Settings shows the app version and the path of the running executable.
 
-On Mac, save your documents and exit the app, replace the old copy in **Applications** with the new `Local TeX Editor.app`, then open it. Settings and drafts are loaded from your user configuration folder.
+On Mac, save your documents and exit the app, replace the old copy in **Applications** with the new `Local TeX Web Editor.app`, then open it. Settings and drafts are loaded from your user configuration folder.
 
 Launching the same version again connects to the existing editor. A project lock also prevents multiple app processes from compiling the same project at the same time.
 
@@ -145,9 +145,9 @@ Launching the same version again connects to the existing editor. A project lock
 
 1. Open **Settings**.
 2. Under **App shortcuts**, click **Add to Start menu** or **Create on desktop**.
-3. Next time, find **Local TeX Editor** in the Start menu or open the desktop shortcut. The app and browser will open.
+3. Next time, find **Local TeX Web Editor** in the Start menu or open the desktop shortcut. The app and browser will open.
 
-This places the app at `%LOCALAPPDATA%\Programs\LocalTeXEditor\local-tex-editor.exe`. The shortcut continues to work if you move the original download folder. All copies use the same settings and drafts.
+This places the app at `%LOCALAPPDATA%\Programs\LocalTeXEditor\local-tex-web-editor.exe`. The shortcut continues to work if you move the original download folder. All copies use the same settings and drafts.
 
 The executable, shortcuts, and browser tab use a white TeX icon on a green background.
 
@@ -257,7 +257,9 @@ The app does not impose a compilation time limit. Use the stop button to stop a 
 
 ## App files and storage
 
-The executable includes the JavaScript, PDF.js worker, fonts, and other files needed by the editor. These resources are available locally when the app starts.
+The app includes the JavaScript, PDF.js worker, fonts, and other files needed by the editor. It uses the browser and TeX Live installed on your computer. TeX Live, a browser engine, Python, and Node.js are not included in the download.
+
+Disk usage also grows with your project files, TeX packages, drafts, and generated PDFs. Compilation files are written under `.local-tex-editor/build` in each project; their size depends on the document and its figures. The ZIP can be deleted after extraction. Creating a Windows Start menu or desktop shortcut copies the executable to the application folder described above. After closing the app and checking that the shortcut opens it, the extracted download folder can be deleted as well.
 
 Settings, drafts, previous view positions, and copies of the PDF and SyncTeX data are stored in `%APPDATA%\LocalTeXEditor` on Windows or `~/Library/Application Support/LocalTeXEditor` on Mac. Source files are saved in the project folder you selected. Using a copy of the PDF lets you keep reading while TeX writes the next version.
 
@@ -277,13 +279,13 @@ npm run test:unit
 npm run build
 npm run build:windows-resources
 go test ./...
-go build -o bin/local-tex-editor.exe ./cmd/local-tex-editor
+go build -o bin/local-tex-web-editor.exe ./cmd/local-tex-editor
 ```
 
 Build a Windows distribution executable:
 
 ```sh
-go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.4" -o dist/local-tex-editor.exe ./cmd/local-tex-editor
+go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.4" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
 ```
 
 `build:windows-resources` generates Windows x64 resources from the bundled ICO. The executable embeds nine icon sizes from 16 to 256 px.
@@ -299,7 +301,7 @@ npx playwright install chromium
 node scripts/build-macos.mjs
 ```
 
-This creates `dist/local-tex-editor-0.1.4-macos-universal.zip` with an app supporting Apple Silicon and Intel, the English and Japanese READMEs, and license files.
+This creates `dist/local-tex-web-editor-0.1.4-macos-universal.zip` with an app supporting Apple Silicon and Intel, the English and Japanese READMEs, and license files.
 
 Command-line options:
 
@@ -317,7 +319,7 @@ Command-line options:
 
 GitHub Actions builds the app and checks it on Windows and on macOS with Apple Silicon and Intel. Windows tests cover TeX in folders containing Japanese characters and spaces, bibliographies, PDF scrolling, zoom and search, SyncTeX in both directions, autosave, draft recovery, and navigation to errors. The macOS jobs extract the same distribution ZIP on both CPU architectures and check app launch, Japanese TeX, SyncTeX, document switching, Markdown, and exit. Everyday document compilation uses TeX Live on your computer.
 
-When the Windows and both macOS test jobs on `main` succeed, and no release exists for the version in `package.json`, that run publishes the tested app archives to Releases. To release a new version, update `package.json` and add `release-notes/v<version>.md`. You can also download the archives from the Actions artifacts named `local-tex-editor-windows-x64` and `local-tex-editor-macos-universal`. The release's `SHA256SUMS.txt` lists the SHA-256 hash of each ZIP.
+When the Windows and both macOS test jobs on `main` succeed, and no release exists for the version in `package.json`, that run publishes the tested app archives to Releases. To release a new version, update `package.json` and add `release-notes/v<version>.md`. You can also download the archives from the Actions artifacts named `local-tex-web-editor-windows-x64` and `local-tex-web-editor-macos-universal`. The release's `SHA256SUMS.txt` lists the SHA-256 hash of each ZIP.
 
 ## Libraries
 
@@ -328,4 +330,4 @@ When the Windows and both macOS test jobs on `main` succeed, and no release exis
 - [DOMPurify](https://github.com/cure53/DOMPurify): preview HTML processing (Apache-2.0 or MPL-2.0)
 - [Go](https://go.dev/): HTTP server and TeX execution
 
-JavaScript dependency versions are recorded in `package-lock.json`. The bundled libraries' license texts are available at the app's `/THIRD_PARTY_LICENSES.txt`. Local TeX Editor itself is licensed under [MIT](LICENSE).
+JavaScript dependency versions are recorded in `package-lock.json`. The bundled libraries' license texts are available at the app's `/THIRD_PARTY_LICENSES.txt`. Local TeX Web Editor itself is licensed under [MIT](LICENSE).

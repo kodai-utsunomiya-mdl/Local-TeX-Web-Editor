@@ -26,6 +26,42 @@ func TestRefreshShortcutsDoesNotCreateAnInstallation(t *testing.T) {
 	}
 }
 
+func TestRefreshShortcutsRenamesThePreviousProductLinks(t *testing.T) {
+	root := t.TempDir()
+	legacy := writeLegacyShortcutInstallation(t, root, []byte("MZ version 0.1.3"))
+	source := filepath.Join(root, "Downloads", "local-tex-web-editor.exe")
+	newBytes := []byte("MZ Local TeX Web Editor version 0.1.4")
+	writeShortcutTestFile(t, source, newBytes)
+	desktop, programs := filepath.Join(root, "Desktop"), filepath.Join(root, "Start Menu")
+	for _, folder := range []string{desktop, programs} {
+		if err := os.MkdirAll(folder, 0700); err != nil {
+			t.Fatal(err)
+		}
+		if err := writeShellShortcut(filepath.Join(folder, "Local TeX Editor.lnk"), legacy, legacy); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := refreshInstalledShortcutsAt(source, root, []string{desktop, programs}); err != nil {
+		t.Fatal(err)
+	}
+	installed := filepath.Join(filepath.Dir(legacy), "local-tex-web-editor.exe")
+	for _, folder := range []string{desktop, programs} {
+		link, err := readShellShortcut(filepath.Join(folder, "Local TeX Web Editor.lnk"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		requireSameShortcutFile(t, link.Target, installed)
+		if _, err := os.Lstat(filepath.Join(folder, "Local TeX Editor.lnk")); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("the previous link was not replaced by the new product name: %v", err)
+		}
+	}
+	// Existing taskbar pins and user-renamed shortcuts can still target this
+	// path, so it must launch the new application as well.
+	if data, err := os.ReadFile(legacy); err != nil || !bytes.Equal(data, newBytes) {
+		t.Fatalf("the previous executable name was not updated: %q (%v)", data, err)
+	}
+}
+
 func TestRefreshShortcutsUpdatesTheInstalledApplicationAndExistingLinks(t *testing.T) {
 	root := t.TempDir()
 	old := filepath.Join(root, "old", "editor.exe")
@@ -114,14 +150,33 @@ func TestRefreshShortcutsLeavesUnrelatedLinksAndChangedExecutables(t *testing.T)
 }
 
 func TestRefreshShortcutsLeavesUserArgumentsAndWorkingDirectory(t *testing.T) {
-	for _, property := range []string{"arguments", "working directory"} {
-		t.Run(property, func(t *testing.T) {
+	for _, scenario := range []struct {
+		property string
+		legacy   bool
+	}{
+		{property: "arguments"}, {property: "working directory"},
+		{property: "arguments", legacy: true}, {property: "working directory", legacy: true},
+	} {
+		name := scenario.property
+		if scenario.legacy {
+			name += " in previous product shortcut"
+		}
+		t.Run(name, func(t *testing.T) {
+			property := scenario.property
 			root := t.TempDir()
 			old, newer := filepath.Join(root, "old.exe"), filepath.Join(root, "new.exe")
 			writeShortcutTestFile(t, old, []byte("MZ old application"))
 			newBytes := []byte("MZ new application")
 			writeShortcutTestFile(t, newer, newBytes)
-			result, err := createShortcutAt(old, root, root)
+			var result ShortcutResult
+			var err error
+			if scenario.legacy {
+				result.Executable = writeLegacyShortcutInstallation(t, root, []byte("MZ old application"))
+				result.Shortcut = filepath.Join(root, legacyShortcutName)
+				err = writeShellShortcut(result.Shortcut, result.Executable, result.Executable)
+			} else {
+				result, err = createShortcutAt(old, root, root)
+			}
 			if err != nil {
 				t.Fatal(err)
 			}

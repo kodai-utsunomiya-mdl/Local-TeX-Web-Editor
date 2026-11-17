@@ -142,7 +142,7 @@ func acquireStartupInstance(ctx context.Context, configDir, readyFile string, no
 			}
 		}
 		if time.Now().After(deadline) {
-			return nil, nil, fmt.Errorf("Local TeX Editor は既に起動していますが，接続を確認できません．開いている編集画面から終了して，再度起動してください．%w", readErr)
+			return nil, nil, fmt.Errorf("Local TeX Web Editor は既に起動していますが，接続を確認できません．開いている編集画面から終了して，再度起動してください．%w", readErr)
 		}
 		select {
 		case <-ctx.Done():

@@ -14,7 +14,7 @@ func TestShortcutAPIValidatesTheDestinationAndAuthentication(t *testing.T) {
 	called := []string{}
 	a.shortcutCreator = func(destination string) (platform.ShortcutResult, error) {
 		called = append(called, destination)
-		return platform.ShortcutResult{Executable: "installed executable", Shortcut: destination + "/Local TeX Editor.lnk", Message: "ready"}, nil
+		return platform.ShortcutResult{Executable: "installed executable", Shortcut: destination + "/Local TeX Web Editor.lnk", Message: "ready"}, nil
 	}
 	for _, test := range []struct {
 		name    string
@@ -42,7 +42,7 @@ func TestShortcutAPIValidatesTheDestinationAndAuthentication(t *testing.T) {
 	for _, destination := range []string{"start-menu", "desktop"} {
 		response := apiRequest(a, http.MethodPost, "/api/shortcuts", map[string]string{"destination": destination}, map[string]string{"X-Project-Root": "an-old-project"})
 		var result platform.ShortcutResult
-		if response.Code != http.StatusOK || json.Unmarshal(response.Body.Bytes(), &result) != nil || result.Executable != "installed executable" || result.Shortcut != destination+"/Local TeX Editor.lnk" {
+		if response.Code != http.StatusOK || json.Unmarshal(response.Body.Bytes(), &result) != nil || result.Executable != "installed executable" || result.Shortcut != destination+"/Local TeX Web Editor.lnk" {
 			t.Fatalf("shortcut response: %d %s", response.Code, response.Body.String())
 		}
 	}

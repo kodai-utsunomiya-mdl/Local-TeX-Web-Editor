@@ -52,6 +52,7 @@ const state = {
   pollTimer: null,
   polling: false,
   heartbeat: null,
+  heartbeatPending: false,
   closed: false,
   connected: false,
   externalProjectChanged: false,
@@ -246,7 +247,10 @@ function setOperation(operation) {
   state.operation = operation;
   if (state.editor) state.editor.dispatch({ effects: readOnly.reconfigure([EditorState.readOnly.of(!!operation), EditorView.editable.of(!operation)]) });
   renderControls();
-  if (!operation) scheduleAutoSave();
+  if (!operation) {
+    scheduleAutoSave();
+    if (state.heartbeatPending) runTask(heartbeat);
+  }
 }
 
 function updateCursor() {
@@ -335,7 +339,7 @@ function makeDocument(file) {
 function selectDocument(doc) {
   rememberEditorPosition(); assetPreview.hide(); rememberTab(doc.path);
   doc.state = doc.state.update({ effects: readOnly.reconfigure([EditorState.readOnly.of(!!state.operation), EditorView.editable.of(!state.operation)]) }).state;
-  const position = !doc.visited ? state.session?.positions?.[doc.path] : { scrollTop: doc.scrollTop || 0 };
+  const position = (!doc.visited ? state.session?.positions?.[doc.path] : { scrollTop: doc.scrollTop || 0 }) || { scrollTop: 0 };
   if (position && !doc.visited) doc.state = doc.state.update({ selection: { anchor: Math.min(doc.state.doc.length, Math.max(0, Number(position.anchor) || 0)), head: Math.min(doc.state.doc.length, Math.max(0, Number(position.head) || 0)) } }).state;
   doc.visited = true;
   state.activePath = doc.path;
@@ -363,7 +367,7 @@ function selectDocument(doc) {
   if (/\.(tex|bib)$/i.test(doc.path) && doc.indexedDoc !== doc.state.doc) updateIndex(doc.path, doc.state.doc.toString());
   renderRecovery(); scheduleSession();
   updateDocumentPreview({ immediate: true });
-  document.title = `${isDirty(doc) ? '● ' : ''}${basename(doc.path)} — Local TeX Editor`;
+  document.title = `${isDirty(doc) ? '● ' : ''}${basename(doc.path)} — Local TeX Web Editor`;
 }
 
 async function openFile(path) {
@@ -399,7 +403,7 @@ function selectAsset(file) {
   $('active-filename').textContent = file.path; $('active-filename').title = file.path;
   $('save-status').textContent = ''; $('save-status').classList.remove('dirty', 'error');
   renderTabs(); updateTreeSelection(); renderControls(); updateCursor(); scheduleSession();
-  document.title = `${basename(file.path)} — Local TeX Editor`;
+  document.title = `${basename(file.path)} — Local TeX Web Editor`;
   assetPreview.show(asset, state.meta.project.root);
   updateDocumentPreview();
 }
@@ -503,7 +507,7 @@ function updateDocumentIndicators(doc) {
     $('save-status').classList.toggle('dirty', dirty && !doc.conflict);
     $('save-status').classList.toggle('error', !!doc.conflict);
     $('conflict-banner').hidden = !doc.conflict;
-    document.title = `${dirty ? '● ' : ''}${basename(doc.path)} — Local TeX Editor`;
+    document.title = `${dirty ? '● ' : ''}${basename(doc.path)} — Local TeX Web Editor`;
   }
   renderControls();
 }
@@ -627,7 +631,7 @@ function removeOpenFile(path) {
       assetPreview.hide();
       state.activePath = ''; state.editorZoomCleanup?.(); state.editorZoomCleanup = null; state.editor?.destroy(); state.editor = null; $('editor').replaceChildren();
       $('editor').hidden = true; $('editor-empty').hidden = false; $('active-filename').textContent = t("原稿");
-      $('save-status').textContent = ''; $('conflict-banner').hidden = true; updateCursor(); document.title = 'Local TeX Editor';
+      $('save-status').textContent = ''; $('conflict-banner').hidden = true; updateCursor(); document.title = 'Local TeX Web Editor';
     }
   }
   renderTabs(); renderTree(); renderControls(); updatePreviewNote(); updateDocumentPreview(); persistSession();
@@ -713,7 +717,7 @@ async function applyMeta(meta, resetProject = false) {
   if (project && resetProject) await loadProjectSession(project.root, generation);
   if (generation !== state.projectGeneration) return;
   $('welcome').hidden = !!project; $('workbench').hidden = !project;
-  $('project-name').textContent = project ? basename(project.root) : 'Local TeX Editor';
+  $('project-name').textContent = project ? basename(project.root) : 'Local TeX Web Editor';
   $('project-name').title = project?.root || '';
   $('project-root').textContent = project?.root || ''; $('project-root').title = project?.root || '';
   updateApplicationDetails(meta);
@@ -1082,7 +1086,10 @@ async function reconnect() {
 }
 
 async function heartbeat() {
-  if (state.closed || state.operation) return;
+  if (state.closed) return;
+  // Returning to the tab during a save still needs a refresh when that save ends.
+  if (state.operation) { state.heartbeatPending = true; return; }
+  state.heartbeatPending = false;
   const generation = state.projectGeneration;
   const toolsGeneration = state.toolsGeneration;
   try {
@@ -1118,7 +1125,7 @@ async function shutdown() {
     clearError();
     try { window.close(); } catch { /* Some browsers require the user to close an existing tab. */ }
     setTimeout(() => {
-      $('closed-message').textContent = t("このタブを閉じてください ({value0}+W)．次回は Local TeX Editor を開いてください．", { value0: shortcutModifier });
+      $('closed-message').textContent = t("このタブを閉じてください ({value0}+W)．次回は Local TeX Web Editor を開いてください．", { value0: shortcutModifier });
     }, 600);
   } finally { setOperation(state.closed ? 'closed' : ''); }
 }
