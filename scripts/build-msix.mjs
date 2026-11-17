@@ -91,6 +91,10 @@ for (const filename of ['microsoft-store-listing.md', 'privacy.md', 'privacy.ja.
   const source = path.join(root, 'docs', filename);
   if (await exists(source)) await copyFile(source, path.join(listing, filename));
 }
+await run('powershell.exe', ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', `
+$ErrorActionPreference = 'Stop'
+Compress-Archive -LiteralPath @('packaging/windows/review-sample/main.tex', 'packaging/windows/review-sample/notes.md') -DestinationPath 'dist/store-listing/store-review-sample.zip' -Force
+`]);
 
 const xml = value => String(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[character]);
 const manifest = `<?xml version="1.0" encoding="utf-8"?>

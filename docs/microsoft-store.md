@@ -22,12 +22,12 @@ The build also accepts `MSIX_IDENTITY_NAME`, `MSIX_PUBLISHER` and `MSIX_PUBLISHE
 
 The **Build Microsoft Store package** workflow builds the editor, creates a package with a test identity, installs a signed copy on a disposable Windows runner, and exercises the installed application. It checks the process's Windows package identity, project saving, TeX compilation, bibliography, SyncTeX, PDF and Markdown previews, the folder dialog and app exit. It also captures the Store screenshots from the installed app.
 
-The Windows App Certification Kit is run when it is installed on the runner. Read `certification.json` in the test artifact for its result. A `not-run` result means the kit still needs to be run on a Windows test machine before submission. The kit and Microsoft Store review provide additional checks beyond the app's workflow. [Windows App Certification Kit](https://learn.microsoft.com/en-us/windows/uwp/debug-test-perf/windows-app-certification-kit)
+The workflow runs the Windows App Certification Kit (WACK) when it is installed on the runner and writes its result to `certification.json`. WACK is deprecated and provides optional checks before submission; `not-run` means those checks were skipped. Microsoft performs the official certification automatically when the package is submitted to Partner Center. [Microsoft's package validation guide](https://learn.microsoft.com/en-us/windows/msix/package/packaging-uwp-apps#validate-your-app-package-locally)
 
 When all three Product identity values are configured and the installation tests pass, the workflow creates these artifacts:
 
 - `microsoft-store-submission`: the unsigned `.msix` for upload and its version, identity and SHA-256 record.
-- `microsoft-store-listing`: the app icon, two screenshots, English/Japanese listing text and privacy policy text.
+- `microsoft-store-listing`: the app icon, two screenshots, English/Japanese listing text, privacy policy text and `store-review-sample.zip` containing the reviewer's TeX and Markdown sample files.
 - `microsoft-store-test-results`: test output, screenshots and the certification-kit result.
 
 The package submitted to Store is unsigned. Microsoft signs it for Store distribution. The signing material used for the installation test exists only on the temporary runner. [Microsoft's MSIX preparation guide](https://learn.microsoft.com/en-us/windows/apps/publish/store-readiness-checklist)
@@ -68,6 +68,8 @@ TeX Live is installed separately. The package uses `runFullTrust` so the editor 
 ## Submit the app
 
 Use [the prepared listing and reviewer notes](microsoft-store-listing.md) for the English and Japanese pages. They include a simple TeX/Markdown sample, requirements, feature descriptions, support URLs and the reason for `runFullTrust`.
+
+Publish `store-review-sample.zip` from the listing artifact at [the sample download URL](https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/downloads/store-review-sample.zip) before submitting. The reviewer notes link to that ZIP.
 
 In Partner Center, set the price to Free, complete the product properties and age-rating questionnaire, upload the MSIX and listing images, and review the completed submission before sending it to Microsoft. The privacy-policy URLs are:
 

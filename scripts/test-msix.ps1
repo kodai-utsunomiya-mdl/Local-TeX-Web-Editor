@@ -1,3 +1,6 @@
+#requires -Version 5.1
+#requires -PSEdition Desktop
+
 [CmdletBinding()]
 param(
     [string]$PackagePath,

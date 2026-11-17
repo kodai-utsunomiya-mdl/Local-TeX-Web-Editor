@@ -182,29 +182,31 @@ Store への初回提出では空欄にする．以降は，前回の Store 版�
 
 ## Images and captions
 
-The existing screenshots are PNG files at **1440 × 900**, which meet the desktop minimum of 1366 × 768. Capture these same views from the final Store build so the displayed version matches the submitted package. The images can then be used for both language listings. Upload them separately for each listing language, with the corresponding captions below.
+Use the **1600 × 1000** PNG screenshots captured from the installed MSIX by `scripts/test-msix.mjs`. They are written to `test-results/msix/` and copied into the `microsoft-store-listing` artifact after the installation test succeeds. This size meets the desktop minimum of 1366 × 768. Upload the same images separately for each listing language, with the corresponding captions below.
 
 | Image | English caption | 日本語の説明 |
 | --- | --- | --- |
-| [TeX and PDF](screenshots/editor-tex-dark.png) | Edit TeX source and read the compiled PDF side by side in dark mode. | ダークモードで TeX の原稿とコンパイルした PDF を並べて表示． |
-| [Markdown](screenshots/editor-markdown-light.png) | Preview Markdown mathematics, a task list and a table while editing in light mode. | ライトモードで Markdown を編集し，数式，チェック項目，表をプレビュー． |
+| `editor-tex-dark.png` | Edit TeX source and read the compiled PDF side by side in dark mode. | ダークモードで TeX の原稿とコンパイルした PDF を並べて表示． |
+| `editor-markdown-light.png` | Preview Markdown mathematics, a task list and a table while editing in light mode. | ライトモードで Markdown を編集し，数式，チェック項目，表をプレビュー． |
 
 For the Store app icon, export a **300 × 300 PNG** from [the existing app icon](../internal/branding/app-icon.svg). The package's manifest icons are also required by the package format and are prepared with the MSIX. A separate Store icon gives the listing a consistent image.
 
 Desktop listings accept up to 10 screenshots, each as PNG up to 50 MB. At least one screenshot is required. Captions can contain up to 200 characters. Use images of the submitted app's interface. [Microsoft's image specifications](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/screenshots-and-images)
 
-Trailers, promotional artwork and extra screenshots can be added later. The two existing images explain the current TeX/PDF and Markdown workflows.
+Trailers, promotional artwork and extra screenshots can be added later. These two screenshots show the TeX/PDF and Markdown workflows.
 
 ## Reviewer notes
 
-Use these notes with the Store package after checking its launch, save and compile behavior on Windows. Supply the sample files shown below in a folder that the reviewer can download from the repository, or include the same text in the submission notes.
+Use these notes with the Store package after checking its launch, save and compile behavior on Windows. The build puts `main.tex` and `notes.md` from [the sample folder](../packaging/windows/review-sample/) at the root of `dist/store-listing/store-review-sample.zip`. Publish that ZIP at the sample URL below before submitting the app.
 
 ### English
 
 ```text
 Local TeX Web Editor is a Windows desktop application with a browser interface. Launching it from the Start menu starts a server on the local loopback address and opens the editor in the default browser. The page is served by the installed app on this computer. No app login or subscription is required.
 
-For review, use a current Microsoft Edge or Google Chrome. Create a writable project folder with the main.tex and notes.md samples provided with these notes.
+For review, use a current Microsoft Edge or Google Chrome. Download the sample ZIP below and extract it to a writable project folder. It contains main.tex and notes.md.
+
+Sample project: https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/downloads/store-review-sample.zip
 
 1. Launch Local TeX Web Editor and use Open to select that folder.
 2. Open notes.md. With the preview set to Auto, edit a sentence and confirm that the Markdown preview updates. Save with Ctrl+S.
@@ -229,7 +231,9 @@ Privacy: https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/privacy/
 ```text
 Local TeX Web Editor は，ブラウザを画面として使う Windows のデスクトップアプリです．スタートメニューから起動すると，PC の loopback アドレスでサーバーを起動し，既定のブラウザに編集画面を開きます．このページは，同じ PC にインストールされたアプリから読み込みます．アプリのログインやサブスクリプションは不要です．
 
-確認には現在の Microsoft Edge または Google Chrome を使います．書き込み可能なプロジェクトフォルダーを作り，下記の main.tex と notes.md を置きます．
+確認には現在の Microsoft Edge または Google Chrome を使います．下記のサンプル ZIP をダウンロードし，書き込み可能なプロジェクトフォルダーへ展開します．main.tex と notes.md が入っています．
+
+サンプルのプロジェクト: https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/downloads/store-review-sample.zip
 
 1. アプリを起動し，Open からそのフォルダーを選びます．
 2. notes.md を開きます．プレビューを Auto にして文章を編集し，表示が更新されることを確認します．Ctrl + S で保存できます．
