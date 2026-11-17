@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy policy — Local TeX Web Editor</title>
+  <meta name="description" content="How Local TeX Web Editor handles documents, drafts, settings, local communication and external links.">
+  <link rel="canonical" href="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/privacy/">
+  <link rel="alternate" hreflang="en" href="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/privacy/">
+  <link rel="alternate" hreflang="ja" href="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/ja/privacy/">
+  <link rel="icon" href="../assets/app-icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header"><div class="wrap header-inner">
+    <a class="brand" href="../"><img src="../assets/app-icon.svg" alt="" width="32" height="32"><span>Local TeX Web Editor</span></a>
+    <nav class="header-nav" aria-label="Main navigation">
+      <a href="../">Downloads and guide</a>
+      <div class="languages" aria-label="Language">
+        <a href="../privacy/" lang="en" aria-current="page">EN</a>
+        <a href="../ja/privacy/" lang="ja">日本語</a>
+      </div>
+    </nav>
+  </div></header>
+  <main id="main" class="wrap privacy-page"><h1>Privacy policy for Local TeX Web Editor</h1>
+<p>Last updated: 18 November 2026</p>
+<p>Local TeX Web Editor edits documents stored on your computer and uses your local TeX installation to compile them. The app has no document-upload service, advertising, usage analytics or automatic crash-report uploads. It does not require an app account.</p>
+<h2>Documents and local app data</h2>
+<p>The app reads and writes documents in the project folder you select. It also reads project files to show the file list, document outline, citation and reference suggestions, images and PDF previews. TeX compilation runs against files on your computer.</p>
+<p>To support saving and resuming work, the app stores the following on your computer:</p>
+<ul>
+<li>Project and TeX installation paths, recent projects and compilation settings.</li>
+<li>Interface language, theme, font size and autosave preferences.</li>
+<li>Local drafts, including text that has not yet been saved to a project file.</li>
+<li>Open documents, cursor positions and preview positions.</li>
+<li>Copies of compiled PDFs, SyncTeX data and information about the corresponding source files.</li>
+</ul>
+<p>These files are used to operate the editor and resume your previous session. The developer does not receive their contents through the app.</p>
+<p>Settings, drafts and preview copies are stored in the app's user-data folder. On Windows, the Microsoft Store edition uses its package's <code>LocalState</code> folder; the ZIP edition uses <code>%APPDATA%\LocalTeXEditor</code>. On Mac, the default location is <code>~/Library/Application Support/LocalTeXEditor</code>. Compilation files and logs are also written within the project's <code>.local-tex-editor/build</code> folder or the output location selected by the project's TeX configuration.</p>
+<p>On its first launch, the Store edition can copy settings, drafts and view preferences from an existing ZIP installation into its own user-data folder. The original files remain in the ZIP edition's folder. Project source files remain where you placed them.</p>
+<p>The browser stores the selected theme locally. While a draft is being written to the app's data folder, it may also store a temporary draft backup. That backup is removed after the app confirms the save. The local connection token is stored in the browser tab's session storage.</p>
+<h2>Local communication</h2>
+<p>Launching the app starts a server on a loopback address such as <code>127.0.0.1</code> and opens the browser on the same computer. Editing, saving, compiling and previewing use this local connection. Access to the file and compilation APIs requires a token generated when the app starts.</p>
+<p>The editor's scripts, fonts and PDF-viewing resources are included with the app. Editing and previewing do not require loading these resources from an external service.</p>
+<h2>External links and other software</h2>
+<p>When you choose an external link in a document or in the app's help, your browser opens the linked website. That website handles the resulting request under its own privacy policy. External images in Markdown are shown as links; the preview does not download them automatically. Images inside your project are read locally.</p>
+<p>TeX engines, bibliography programs and commands specified by your project run as separate programs. Their access to files and the network depends on their own configuration. The TeX package help prepares commands for you to run in a terminal. When you run an installation command, the package manager connects to its configured repository.</p>
+<p>If you place a project or app-data folder in a location managed by OneDrive, iCloud or another synchronization or backup service, that service can copy the files according to your settings.</p>
+<p>If you install the app through Microsoft Store, Microsoft handles Store installation and updates under the <a href="https://www.microsoft.com/en-us/privacy/privacystatement">Microsoft Privacy Statement</a>. Your browser and operating system also have their own privacy settings. The app does not ask for or receive your Microsoft account credentials.</p>
+<h2>Managing your data</h2>
+<p>You can edit, copy and delete project files using your normal file tools. The app's draft-recovery dialog offers an option to delete a saved draft. Settings lets you turn autosave on or off; local drafts are recorded independently of that setting.</p>
+<p>To remove the app's saved settings, drafts and preview copies, first save the documents you want to keep and close the app, then remove its user-data folder. Browser site-data controls can remove the saved theme and any remaining browser draft backups. Project files and files in a previous ZIP installation's data folder are managed separately.</p>
+<h2>Support and the project website</h2>
+<p>The project website, downloads and issue tracker are hosted on GitHub. If you open these pages, GitHub processes the visit under its <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">General Privacy Statement</a>.</p>
+<p>Issues, comments and attachments that you choose to post to the public repository are stored on GitHub and are visible to other people. You control which excerpts, screenshots and files you include in a report.</p>
+<p>For questions about the app's handling of data, use the project's <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/issues">issue tracker</a>. The app's <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor">source code</a> is available in the same repository.</p>
+</main>
+  <footer class="site-footer"><div class="wrap footer-inner"><p>Local TeX Web Editor</p><nav class="footer-links" aria-label="Project links"><a href="../">Downloads and guide</a><a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/issues">Support</a></nav></div></footer>
+</body>
+</html>

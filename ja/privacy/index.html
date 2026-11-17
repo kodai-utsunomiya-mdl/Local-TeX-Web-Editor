@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>プライバシーポリシー — Local TeX Web Editor</title>
+  <meta name="description" content="Local TeX Web Editor の文書，草稿，設定，PC 内の通信と外部リンクの扱い．">
+  <link rel="canonical" href="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/ja/privacy/">
+  <link rel="alternate" hreflang="en" href="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/privacy/">
+  <link rel="alternate" hreflang="ja" href="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/ja/privacy/">
+  <link rel="icon" href="../../assets/app-icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../../styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">本文へ移動</a>
+  <header class="site-header"><div class="wrap header-inner">
+    <a class="brand" href="../"><img src="../../assets/app-icon.svg" alt="" width="32" height="32"><span>Local TeX Web Editor</span></a>
+    <nav class="header-nav" aria-label="メニュー">
+      <a href="../">ダウンロードと使い方</a>
+      <div class="languages" aria-label="言語">
+        <a href="../../privacy/" lang="en">EN</a>
+        <a href="../../ja/privacy/" lang="ja" aria-current="page">日本語</a>
+      </div>
+    </nav>
+  </div></header>
+  <main id="main" class="wrap privacy-page"><h1>Local TeX Web Editor のプライバシーポリシー</h1>
+<p>更新日: 2026 年 11 月 18 日</p>
+<p>Local TeX Web Editor は，PC にある文書を編集し，PC の TeX でコンパイルするアプリです．原稿をアップロードするサービス，広告，利用状況の解析，自動で送信するクラッシュレポートはありません．アプリ用のアカウントも不要です．</p>
+<h2>原稿と PC に保存するデータ</h2>
+<p>アプリは，選んだプロジェクトフォルダーの文書を読み書きします．ファイル一覧，アウトライン，引用・相互参照の候補，画像と PDF のプレビューを表示するためにも，プロジェクト内のファイルを読み込みます．コンパイルには PC 上のファイルを使います．</p>
+<p>保存や作業の再開のため，次の情報を PC に記録します．</p>
+<ul>
+<li>プロジェクトと TeX の場所，最近開いたプロジェクト，コンパイルの設定．</li>
+<li>表示言語，テーマ，文字サイズ，自動保存の設定．</li>
+<li>原稿のファイルへまだ保存していない文章を含む草稿．</li>
+<li>開いている文書，カーソルの位置，プレビューの表示位置．</li>
+<li>コンパイルした PDF のコピー，SyncTeX のデータ，対応する原稿の情報．</li>
+</ul>
+<p>これらはエディタの動作と前回の作業の再開に使います．アプリを通じて開発者へ内容を送る処理はありません．</p>
+<p>設定，草稿，プレビューのコピーは，アプリのユーザーデータフォルダーに保存します．Windows の Microsoft Store 版では，そのパッケージの <code>LocalState</code> フォルダーを使います．ZIP 版の既定の場所は <code>%APPDATA%\LocalTeXEditor</code>，Mac では <code>~/Library/Application Support/LocalTeXEditor</code> です．コンパイル中のファイルとログは，プロジェクト内の <code>.local-tex-editor/build</code> または TeX の設定で指定した出力先にも書き込みます．</p>
+<p>Store 版の初回起動時には，既存の ZIP 版にある設定，草稿，表示位置などを Store 版のユーザーデータフォルダーへコピーできます．ZIP 版の元のデータはその場所に残ります．原稿のファイルも，ユーザーが置いた場所にあります．</p>
+<p>ブラウザにもテーマの設定を保存します．草稿をアプリのフォルダーへ書き込む間は，ブラウザに一時的な草稿のコピーを置く場合があります．アプリが保存の完了を返すと，そのコピーを削除します．PC 内の接続に使うトークンは，ブラウザタブのセッションストレージに置きます．</p>
+<h2>PC 内の通信</h2>
+<p>起動すると，<code>127.0.0.1</code> などの loopback アドレスでサーバーを動かし，同じ PC のブラウザで開きます．編集，保存，コンパイル，プレビューの操作には，この PC 内の接続を使います．ファイルとコンパイルの API へ接続する際には，起動時に生成したトークンが必要です．</p>
+<p>エディタのプログラム，フォント，PDF の表示に使うファイルはアプリに含まれています．編集やプレビューのために，これらを外部サービスから読み込む必要はありません．</p>
+<h2>外部リンクと他のソフトウェア</h2>
+<p>文書やヘルプにある外部リンクを選ぶと，ブラウザでリンク先のサイトを開きます．そのアクセスには，リンク先のプライバシーポリシーが適用されます．Markdown の外部画像はリンクとして表示し，プレビューから自動で取得しません．プロジェクト内の画像は PC から読み込みます．</p>
+<p>TeX のエンジン，文献処理のプログラム，プロジェクトで指定したコマンドは，別のプログラムとして動作します．ファイルやネットワークへのアクセスは，それらの設定によります．TeX パッケージの案内は，ユーザーがターミナルで実行するコマンドを用意します．追加コマンドを実行すると，パッケージ管理のプログラムが設定された配布元へ接続します．</p>
+<p>OneDrive，iCloud などの同期・バックアップ用のフォルダーへ原稿やアプリのデータを置いた場合は，そのサービスの設定に従ってファイルがコピーされることがあります．</p>
+<p>Microsoft Store から導入した場合は，Microsoft が Store のインストールと更新を管理し，<a href="https://www.microsoft.com/ja-jp/privacy/privacystatement">Microsoft のプライバシーステートメント</a> が適用されます．ブラウザと OS にもそれぞれのプライバシー設定があります．このアプリが Microsoft アカウントの認証情報を求めたり受け取ったりすることはありません．</p>
+<h2>データを管理する</h2>
+<p>原稿のファイルは，普段使うファイル操作で編集・コピー・削除できます．アプリの草稿を確認する画面からは，その草稿を削除できます．設定で自動保存をオン／オフにできますが，PC への草稿の記録は自動保存の設定とは別に行います．</p>
+<p>設定，草稿，プレビューのコピーを削除する場合は，必要な原稿を保存してアプリを終了し，アプリのユーザーデータフォルダーを削除します．ブラウザのサイトデータの設定からは，テーマや残っている草稿のコピーを削除できます．プロジェクトの原稿や，以前使っていた ZIP 版のデータフォルダーは，それぞれの場所で管理します．</p>
+<h2>問い合わせとプロジェクトのサイト</h2>
+<p>紹介ページ，ダウンロード，Issue は GitHub 上にあります．これらを開く際のアクセスは，<a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub のプライバシーステートメント</a> に従って扱われます．</p>
+<p>公開リポジトリの Issue，コメント，添付ファイルとして自分で送った内容は，GitHub に保存され，他の人にも表示されます．報告に含める文章，スクリーンショット，ファイルは，ユーザーが選びます．</p>
+<p>アプリのデータの扱いに関する質問は，プロジェクトの <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/issues">Issue</a> へ送れます．同じリポジトリで <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor">ソースコード</a> も公開しています．</p>
+</main>
+  <footer class="site-footer"><div class="wrap footer-inner"><p>Local TeX Web Editor</p><nav class="footer-links" aria-label="プロジェクト"><a href="../">ダウンロードと使い方</a><a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/issues">問い合わせ</a></nav></div></footer>
+</body>
+</html>

@@ -34,7 +34,13 @@ const baseURL = `http://127.0.0.1:${server.address().port}`;
 const browser = await chromium.launch();
 const results = [];
 try {
-  for (const language of ['en', 'ja']) {
+  for (const route of [
+    { language: 'en', path: '', name: 'en' },
+    { language: 'ja', path: 'ja/', name: 'ja' },
+    { language: 'en', path: 'privacy/', name: 'en-privacy' },
+    { language: 'ja', path: 'ja/privacy/', name: 'ja-privacy' },
+  ]) {
+    const { language } = route;
     for (const size of [{ name: 'desktop', width: 1440, height: 1000 }, { name: 'mobile', width: 390, height: 844 }]) {
       const context = await browser.newContext({ viewport: { width: size.width, height: size.height }, deviceScaleFactor: 1 });
       const page = await context.newPage();
@@ -43,7 +49,7 @@ try {
       page.on('response', response => {
         if (response.url().startsWith(baseURL) && response.status() >= 400) errors.push(`${response.status()} ${response.url()}`);
       });
-      await page.goto(`${baseURL}${sitePath}${language === 'ja' ? 'ja/' : ''}`, { waitUntil: 'networkidle' });
+      await page.goto(`${baseURL}${sitePath}${route.path}`, { waitUntil: 'networkidle' });
       await page.evaluate(() => document.fonts.ready);
       for (const picture of await page.locator('img').all()) {
         await picture.scrollIntoViewIfNeeded();
@@ -63,8 +69,8 @@ try {
       if (layout.unloadedImages.length) errors.push(`Images did not load: ${layout.unloadedImages.join(', ')}`);
       if (layout.missingAnchors.length) errors.push(`Missing sections: ${layout.missingAnchors.join(', ')}`);
       if (!layout.title.includes('Local TeX Web Editor')) errors.push('The page title does not identify the app.');
-      await page.screenshot({ path: path.join(output, `${language}-${size.name}.png`), fullPage: true });
-      results.push({ language, viewport: size.name, ...layout, errors });
+      await page.screenshot({ path: path.join(output, `${route.name}-${size.name}.png`), fullPage: true });
+      results.push({ page: route.name, language, viewport: size.name, ...layout, errors });
       await context.close();
     }
   }
