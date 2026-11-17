@@ -987,12 +987,17 @@ test('Markdown を編集し，表示するプレビューを選んで文書を�
   await expect(preview).toBeVisible();
   await expect(article).toContainText(finalNote.trim());
   await expect(page.locator('#pdf-preview')).not.toBeVisible();
-  await previewChoice.selectOption('pdf');
+  await page.setViewportSize({ width: 900, height: 1000 });
+  await page.getByTestId('editor').locator('.cm-line').filter({ hasText: 'ブラウザでページを移動し' }).click();
+  await page.locator('#synctex-forward').click();
+  await expect(previewChoice).toHaveValue('pdf');
+  await expect(page.locator('.synctex-highlight')).toBeVisible();
   await expect(page.getByTestId('pdf-canvas')).toHaveAttribute('data-build-id', backgroundPDF.finished.pdfBuildId);
   await expect(page.getByTestId('pdf-canvas')).toHaveAttribute('data-ready', 'true');
   await expect(page.getByTestId('pdf-page')).toHaveValue('2');
   await expect(page.getByTestId('pdf-zoom')).toHaveValue('1');
 
+  await page.setViewportSize({ width: 1600, height: 1000 });
   await previewChoice.selectOption('auto');
   await expect(page.locator('#pdf-preview')).toBeVisible();
   await page.locator('#editor-tabs [data-path="notes.md"]').click();

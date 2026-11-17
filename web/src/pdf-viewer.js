@@ -26,7 +26,7 @@ export class PDFViewer {
     this.zoomSetting = 'page-width';
     this.initialPosition = null;
     this.pendingPosition = null;
-    this.initialisingDocument = null;
+    this.pageInitialisation = null;
     this.lastLocation = null;
     this.currentCanvas = null;
     this.highlight = null;
@@ -210,37 +210,41 @@ export class PDFViewer {
   async initialisePages() {
     const document = this.document;
     const generation = this.generation;
-    if (!document || this.ready || this.initialisingDocument === document || this.pageViewer.pdfDocument !== document || !this.pageViewer.getPageView(0)) return;
+    if (!document || this.ready || this.pageViewer.pdfDocument !== document || !this.pageViewer.getPageView(0)) return;
+    const active = this.pageInitialisation;
+    if (active?.document === document && active.generation === generation) return active.promise;
     // A hidden preview has no scrollable layout. Apply the saved page, offset,
     // and zoom together after returning from Markdown or the mobile editor.
     if (this.elements.scroll.clientWidth < 50 || this.elements.scroll.clientHeight < 50) return;
-    this.initialisingDocument = document;
-    try {
-      const position = this.pendingPosition;
-      const number = clamp(Math.round(Number(position?.pageNumber) || 1), 1, document.numPages);
-      const page = await document.getPage(number);
-      if (generation !== this.generation || document !== this.document || this.pageViewer.pdfDocument !== document) return;
-      if (this.elements.scroll.clientWidth < 50 || this.elements.scroll.clientHeight < 50) return;
-      const view = this.pageViewer.getPageView(number - 1);
-      if (!view) return;
-      if (!view.pdfPage) view.setPdfPage(page);
-      this.pageViewer.currentPageNumber = number;
-      this.zoomSetting = position?.zoom || this.zoomSetting || 'page-width';
-      this.pageViewer.currentScaleValue = this.zoomSetting;
-      if (Number.isFinite(position?.left) && Number.isFinite(position?.top)) {
-        this.pageViewer.scrollPageIntoView({ pageNumber: number, destArray: [null, { name: 'XYZ' }, position.left, position.top, null], allowNegativeOffset: true, ignoreDestinationZoom: true });
+    const task = { document, generation, promise: null };
+    this.pageInitialisation = task;
+    task.promise = (async () => {
+      try {
+        const position = this.pendingPosition;
+        const number = clamp(Math.round(Number(position?.pageNumber) || 1), 1, document.numPages);
+        const page = await document.getPage(number);
+        if (generation !== this.generation || document !== this.document || this.pageViewer.pdfDocument !== document) return;
+        if (this.elements.scroll.clientWidth < 50 || this.elements.scroll.clientHeight < 50) return;
+        const view = this.pageViewer.getPageView(number - 1);
+        if (!view) return;
+        if (!view.pdfPage) view.setPdfPage(page);
+        this.pageViewer.currentPageNumber = number;
+        this.zoomSetting = position?.zoom || this.zoomSetting || 'page-width';
+        this.pageViewer.currentScaleValue = this.zoomSetting;
+        if (Number.isFinite(position?.left) && Number.isFinite(position?.top)) {
+          this.pageViewer.scrollPageIntoView({ pageNumber: number, destArray: [null, { name: 'XYZ' }, position.left, position.top, null], allowNegativeOffset: true, ignoreDestinationZoom: true });
+        }
+        this.ready = true;
+        this.pendingPosition = null;
+        this.pageViewer.update();
+        this.updateControls();
+        this.markCurrentCanvas();
+        if (view.renderingState === RenderingStates.FINISHED && view.canvas) this.notifyReady();
+      } catch (error) {
+        if (generation === this.generation && document === this.document) throw error;
       }
-      this.ready = true;
-      this.pendingPosition = null;
-      this.pageViewer.update();
-      this.updateControls();
-      this.markCurrentCanvas();
-      if (view.renderingState === RenderingStates.FINISHED && view.canvas) this.notifyReady();
-    } catch (error) {
-      if (generation === this.generation && document === this.document) throw error;
-    } finally {
-      if (this.initialisingDocument === document) this.initialisingDocument = null;
-    }
+    })().finally(() => { if (this.pageInitialisation === task) this.pageInitialisation = null; });
+    return task.promise;
   }
 
   pageRendered(event) {
@@ -377,7 +381,7 @@ export class PDFViewer {
     this.loadingTask = null; this.document = null;
     this.buildId = ''; this.requestedBuildId = ''; this.lastRequest = null;
     this.documentMain = ''; this.positions.clear();
-    this.ready = false; this.hasRendered = false; this.initialPosition = null; this.pendingPosition = null; this.initialisingDocument = null; this.lastLocation = null; this.currentCanvas = null;
+    this.ready = false; this.hasRendered = false; this.initialPosition = null; this.pendingPosition = null; this.pageInitialisation = null; this.lastLocation = null; this.currentCanvas = null;
     delete this.elements.stage.dataset.buildId;
     this.clearHighlight();
     this.search.reset();

@@ -188,6 +188,7 @@ function updateDocumentPreview({ immediate = false } = {}) {
   const editingMarkdown = !!doc && isMarkdown(doc.path);
   if (editingMarkdown) state.lastMarkdownPath = doc.path;
   const markdownDocument = (editingMarkdown ? doc : state.documents.get(state.lastMarkdownPath)) || [...state.documents.values()].find(item => isMarkdown(item.path));
+  state.lastMarkdownPath = markdownDocument?.path || '';
   const useMarkdown = state.previewChoice === 'markdown' || (state.previewChoice === 'auto' && editingMarkdown);
   const changed = state.previewMode !== (useMarkdown ? 'markdown' : 'pdf');
   state.previewMode = useMarkdown ? 'markdown' : 'pdf';
@@ -1432,11 +1433,6 @@ async function syncForward(position = null) {
   if (isMarkdown(state.activePath)) return;
   if (state.syncing || state.operation || !state.editor || !activeDocument() || !state.meta?.project) return;
   if (!viewer.document || !viewer.buildId) throw new Error('PDF をコンパイルしてから，原稿と PDF の位置を対応させてください．');
-  if (state.previewMode === 'markdown') {
-    setPreviewChoice('pdf');
-    await new Promise(resolve => requestAnimationFrame(resolve));
-    await viewer.initialisePages();
-  }
   const generation = state.projectGeneration;
   const path = state.activePath;
   const view = state.editor;
@@ -1445,6 +1441,11 @@ async function syncForward(position = null) {
   const buildId = viewer.buildId;
   state.syncing = true; renderControls();
   try {
+    if (state.previewMode === 'markdown') setPreviewChoice('pdf');
+    switchView(true);
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    await viewer.initialisePages();
+    if (generation !== state.projectGeneration || buildId !== viewer.buildId) return;
     const result = await api('/api/synctex/forward', { method: 'POST', body: { buildId, path, line: line.number, column: 0 } });
     if (generation !== state.projectGeneration || buildId !== viewer.buildId) return;
     if (!result.locations?.length) throw new Error(`${path} の ${line.number} 行に対応する PDF の位置が見つかりませんでした．文章や数式の行で試してください．`);
