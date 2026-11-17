@@ -1,6 +1,6 @@
 # Local TeX Web Editor
 
-English | [日本語](README.ja.md)
+English | [日本語](README.ja.md) · [Website and guide](https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/)
 
 [![Download for Windows](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.4/local-tex-web-editor-0.1.4-windows-x64.zip)
 &nbsp;&nbsp;
