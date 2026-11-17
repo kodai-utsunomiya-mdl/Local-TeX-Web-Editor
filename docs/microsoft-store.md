@@ -24,11 +24,15 @@ The **Build Microsoft Store package** workflow builds the editor, creates a pack
 
 The workflow runs the Windows App Certification Kit (WACK) when it is installed on the runner and writes its result to `certification.json`. WACK is deprecated and provides optional checks before submission; `not-run` means those checks were skipped. Microsoft performs the official certification automatically when the package is submitted to Partner Center. [Microsoft's package validation guide](https://learn.microsoft.com/en-us/windows/msix/package/packaging-uwp-apps#validate-your-app-package-locally)
 
+WACK's XML report and `certification.json` record the result returned by the kit. The DPI test can report `WARNING` with “Failed to process the binary”. The workflow records that warning and requires independent checks of the installed executable's manifest and SHA-256, together with the native folder dialog's DPI context. A failing check, an unknown result or an incomplete report stops the workflow.
+
 When all three Product identity values are configured and the installation tests pass, the workflow creates these artifacts:
 
 - `microsoft-store-submission`: the unsigned `.msix` for upload and its version, identity and SHA-256 record.
 - `microsoft-store-listing`: the app icon, two screenshots, English/Japanese listing text, privacy policy text and `store-review-sample.zip` containing the reviewer's TeX and Markdown sample files.
 - `microsoft-store-test-results`: test output, screenshots and the certification-kit result.
+
+Listing files and test results are also collected when a later check fails. The workflow copies the two installed-app screenshots after package creation, including when the final package uses the Product identity. If those captures are unavailable, the listing artifact contains the repository's screenshots; `screenshot-source.json` and the job summary identify their source. Use images from a successful installed-package run for submission.
 
 The package submitted to Store is unsigned. Microsoft signs it for Store distribution. The signing material used for the installation test exists only on the temporary runner. [Microsoft's MSIX preparation guide](https://learn.microsoft.com/en-us/windows/apps/publish/store-readiness-checklist)
 
@@ -69,7 +73,7 @@ TeX Live is installed separately. The package uses `runFullTrust` so the editor 
 
 Use [the prepared listing and reviewer notes](microsoft-store-listing.md) for the English and Japanese pages. They include a simple TeX/Markdown sample, requirements, feature descriptions, support URLs and the reason for `runFullTrust`.
 
-Publish `store-review-sample.zip` from the listing artifact at [the sample download URL](https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/downloads/store-review-sample.zip) before submitting. The reviewer notes link to that ZIP.
+The reviewer notes link to [the published sample ZIP](https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/downloads/store-review-sample.zip). Check that it downloads and contains the expected `main.tex` and `notes.md` before submitting. If the sample files have changed, update that download with `store-review-sample.zip` from the listing artifact.
 
 In Partner Center, set the price to Free, complete the product properties and age-rating questionnaire, upload the MSIX and listing images, and review the completed submission before sending it to Microsoft. The privacy-policy URLs are:
 
