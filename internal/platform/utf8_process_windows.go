@@ -49,8 +49,16 @@ func EnableUTF8CodePage(executable string) error {
 	result, _, enumErr := kernel32.NewProc("EnumResourceLanguagesW").Call(module, 24, 1, collectManifestLanguage, uintptr(unsafe.Pointer(&languages)))
 	runtime.KeepAlive(&languages)
 	kernel32.NewProc("FreeLibrary").Call(module)
-	if result == 0 && enumErr != syscall.Errno(1813) && enumErr != syscall.Errno(1814) && enumErr != syscall.Errno(1815) {
-		return fmt.Errorf("read interpreter manifest languages: %w", enumErr)
+	if result == 0 {
+		switch enumErr {
+		case syscall.Errno(1812), syscall.Errno(1813), syscall.Errno(1814), syscall.Errno(1815):
+			// ERROR_RESOURCE_{DATA,TYPE,NAME,LANG}_NOT_FOUND means there is
+			// no existing manifest to replace. BeginUpdateResource can add
+			// the first resource to a valid PE with no resource section.
+			// https://learn.microsoft.com/en-us/windows/win32/debug/system-error-codes--1700-3999-
+		default:
+			return fmt.Errorf("read interpreter manifest languages: %w", enumErr)
+		}
 	}
 	if len(languages) == 0 {
 		languages = []uint16{0}

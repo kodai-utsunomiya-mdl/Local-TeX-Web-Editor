@@ -5,6 +5,7 @@ package platform
 import (
 	"bytes"
 	"context"
+	"debug/pe"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -24,12 +25,27 @@ func TestUTF8InterpreterCopyAcceptsUnicodePathsThroughANSIAPIs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if resources := interpreterResources(t, data); resources.VirtualAddress != 0 || resources.Size != 0 {
+		t.Fatalf("this fixture must exercise a PE without resources: %#v", resources)
+	}
 	directory := t.TempDir()
 	executable := filepath.Join(directory, "interpreter.exe")
 	if err := os.WriteFile(executable, data, 0700); err != nil {
 		t.Fatal(err)
 	}
 	initialCodePage, _, _ := kernel32.NewProc("GetACP").Call()
+	if err := EnableUTF8CodePage(executable); err != nil {
+		t.Fatal(err)
+	}
+	updated, err := os.ReadFile(executable)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resources := interpreterResources(t, updated); resources.VirtualAddress == 0 || resources.Size == 0 {
+		t.Fatalf("the first resource was not added to the interpreter: %#v", resources)
+	}
+	// A second update exercises enumeration and replacement of the manifest
+	// now present in the copy, before checking the process's actual code page.
 	if err := EnableUTF8CodePage(executable); err != nil {
 		t.Fatal(err)
 	}
@@ -49,6 +65,24 @@ func TestUTF8InterpreterCopyAcceptsUnicodePathsThroughANSIAPIs(t *testing.T) {
 	currentCodePage, _, _ := kernel32.NewProc("GetACP").Call()
 	if currentCodePage != initialCodePage {
 		t.Fatalf("the application's code page changed from %d to %d", initialCodePage, currentCodePage)
+	}
+}
+
+func interpreterResources(t *testing.T, data []byte) pe.DataDirectory {
+	t.Helper()
+	image, err := pe.NewFile(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer image.Close()
+	switch header := image.OptionalHeader.(type) {
+	case *pe.OptionalHeader32:
+		return header.DataDirectory[pe.IMAGE_DIRECTORY_ENTRY_RESOURCE]
+	case *pe.OptionalHeader64:
+		return header.DataDirectory[pe.IMAGE_DIRECTORY_ENTRY_RESOURCE]
+	default:
+		t.Fatalf("unexpected interpreter PE header: %T", header)
+		return pe.DataDirectory{}
 	}
 }
 
