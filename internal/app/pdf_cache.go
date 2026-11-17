@@ -129,7 +129,10 @@ func (a *App) restoreCachedBuildLocked(project Project) {
 			continue
 		}
 		var value cachedBuild
-		if json.Unmarshal(data, &value) != nil || value.Format != 1 || value.ID == "" || name != "pdf-"+value.ID+".json" || value.Main != project.Main || value.Mode != project.Mode {
+		if json.Unmarshal(data, &value) != nil || value.Format != 1 || value.ID == "" || name != "pdf-"+value.ID+".json" || value.Mode != project.Mode {
+			continue
+		}
+		if main, err := cleanRelative(value.Main); err != nil || main != value.Main || !strings.EqualFold(filepath.Ext(main), ".tex") {
 			continue
 		}
 		pdf := strings.TrimSuffix(filepath.Join(directory, name), ".json") + ".pdf"
@@ -176,9 +179,12 @@ func (a *App) restoreCachedBuildLocked(project Project) {
 			finished = started
 		}
 		changed := value.Changed || cachedSourcesChanged(project.Root, value.Sources)
+		a.lastPDFMain, a.lastPDFChanged = value.Main, changed
+		compiledProject := project
+		compiledProject.Main, compiledProject.Mode = value.Main, value.Mode
 		code := 0
-		a.build = &buildRun{started: started, finished: finished, sources: value.Sources, synctex: a.synctexVersions[value.ID],
-			result: Build{ID: value.ID, Status: "success", ExitCode: &code, StartedAt: started.UTC().Format(time.RFC3339Nano),
+		a.build = &buildRun{started: started, finished: finished, project: compiledProject, sources: value.Sources, synctex: a.synctexVersions[value.ID],
+			result: Build{ID: value.ID, Main: value.Main, Status: "success", ExitCode: &code, StartedAt: started.UTC().Format(time.RFC3339Nano),
 				FinishedAt: finished.UTC().Format(time.RFC3339Nano), SourceChanged: changed, Restored: true},
 			log: []byte("[前回の PDF] このプロジェクトで最後に成功した PDF を読み込みました．\n")}
 	}

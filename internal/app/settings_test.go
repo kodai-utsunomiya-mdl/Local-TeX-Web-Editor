@@ -19,7 +19,7 @@ func TestSettingsOnlyInvalidatePDFWhenCompilationSettingsChange(t *testing.T) {
 		{name: "no compiler settings"},
 		{name: "same compiler settings", change: "same"},
 		{name: "equivalent compiler path", change: "equivalent"},
-		{name: "another main document", change: "main", wantChanged: true},
+		{name: "another fallback main document", change: "main"},
 		{name: "another compilation mode", change: "mode", wantChanged: true},
 		{name: "another TeX installation", change: "texBin", wantChanged: true},
 		{name: "existing source edits remain", change: "same", alreadyChanged: true, wantChanged: true},
@@ -31,6 +31,7 @@ func TestSettingsOnlyInvalidatePDFWhenCompilationSettingsChange(t *testing.T) {
 			pdfPath := filepath.Join(t.TempDir(), "compiled.pdf")
 			writeTestFile(t, pdfPath, []byte("%PDF-1.7\nprevious successful build\n"))
 			a.lastPDF, a.lastPDFID = pdfPath, "existing-build"
+			a.lastPDFMain, a.lastPDFChanged = "main.tex", test.alreadyChanged
 			a.build = &buildRun{result: Build{ID: "existing-build", Status: "success", SourceChanged: test.alreadyChanged}, started: time.Now(), finished: time.Now()}
 			body := map[string]string{}
 			if test.change != "" {
@@ -54,6 +55,9 @@ func TestSettingsOnlyInvalidatePDFWhenCompilationSettingsChange(t *testing.T) {
 			}
 			if state.Build.SourceChanged != test.wantChanged {
 				t.Fatalf("sourceChanged = %v, want %v", state.Build.SourceChanged, test.wantChanged)
+			}
+			if state.Build.PDFSourceChanged != test.wantChanged || state.Build.PDFMain != "main.tex" {
+				t.Fatalf("visible PDF metadata changed unexpectedly: %#v", state.Build)
 			}
 			if state.Build.PDFBuildID != "existing-build" || !state.Build.PDFReady || state.Build.Status != "success" {
 				t.Fatalf("settings replaced the previous result: %#v", state.Build)

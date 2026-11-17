@@ -16,7 +16,7 @@ Windows のブラウザでローカルの TeX プロジェクトを編集する�
 ### GET /api/state
 
 ```json
-{"version":"0.1.3","executablePath":"C:\\Users\\user\\AppData\\Local\\Programs\\LocalTeXEditor\\local-tex-editor.exe","platform":"windows","shortcutsSupported":true,"texBin":"C:\\texlive\\2025\\bin\\windows","latexmk":"...","synctex":"...","synctexInstallCommands":[],"project":null,"recentProjects":[],"build":null}
+{"version":"0.1.4","executablePath":"C:\\Users\\user\\AppData\\Local\\Programs\\LocalTeXEditor\\local-tex-editor.exe","platform":"windows","shortcutsSupported":true,"texBin":"C:\\texlive\\2025\\bin\\windows","latexmk":"...","synctex":"...","synctexInstallCommands":[],"project":null,"recentProjects":[],"build":null}
 ```
 
 `executablePath` は動いている実行ファイルの絶対パス．配置済みのアプリやショートカットの更新が失敗した場合は，`installationError` も返す．画面にはアプリのバージョンとパス，更新に失敗した際の案内を表示する．
@@ -47,7 +47,7 @@ Windows のフォルダー選択ダイアログを開く．成功時 `{ "path": 
 
 入力 `{ "texBin": "絶対パスまたは空", "main": "main.tex", "mode": "project" }`．state を返す．texBin は TeX の実行ファイルがあるフォルダー．main / mode は開いた project 用．未指定の値は変更しない．
 
-main / mode / texBin が変わった場合は，成功済みの PDF がある build の `sourceChanged` を true にする．同じ設定の再送と空の入力では，そのフラグを現在の値のままにする．文字サイズ等の UI 設定は `/api/storage` へ保存する．
+main は，コンパイルのリクエストに文書の指定がない場合に使う既定の文書．main の変更は，表示中の PDF とその更新状態を変更しない．mode / texBin が変わった場合は，build の `sourceChanged` と，成功済みの PDF がある場合の `pdfSourceChanged` を true にする．同じ設定の再送と空の入力では，これらのフラグを現在の値のままにする．文字サイズ等の UI 設定は `/api/storage` へ保存する．
 
 ### GET /api/file?path=相対パス
 
@@ -69,19 +69,23 @@ main / mode / texBin が変わった場合は，成功済みの PDF がある bu
 
 ### POST /api/build
 
-入力 `{}`．保存済みの main を latexmk でコンパイルし，即座に build を返す．同時実行は 409．ファイル変更はコンパイル前に UI から保存する．
+入力は `{ "main":"notes/paper.tex" }`．main は省略可能で，`{}` または body がない場合には，プロジェクトに設定された既定のメイン文書を使う．指定された文書は，プロジェクト内にある通常の `.tex` ファイルとして確認する．その指定は今回のコンパイルに使い，既定のメイン文書の設定は書き換えない．
+
+確認した文書とコンパイラーの設定をコンパイル開始時に記録し，latexmk の実行中はその記録を使う．即座に HTTP 202 と build を返し，同時実行は 409．ファイル変更はコンパイル前に UI から保存する．
+
+プロジェクト直下の `main.tex` は，従来の `.local-tex-editor/build` を出力先にする．ほかの文書は，相対パスの SHA-256 から作った `.local-tex-editor/build/doc-<hash>` を使う．同じ basename の文書や同じ job name の文書にも，各文書の中間ファイルと PDF が対応する．再コンパイルでは，同じ文書の中間ファイルを使う．
 
 ### GET /api/build
 
 ```json
-{"id":"...","status":"running","command":"...","log":"標準出力と標準エラー","exitCode":null,"error":"","startedAt":"ISO8601","finishedAt":"","pdfReady":false,"pdfBuildId":"","synctexReady":false,"elapsedMs":0,"sourceChanged":false,"restored":false}
+{"id":"...","main":"notes/paper.tex","status":"running","command":"...","log":"標準出力と標準エラー","exitCode":null,"error":"","startedAt":"ISO8601","finishedAt":"","pdfReady":false,"pdfBuildId":"","pdfMain":"","pdfSourceChanged":false,"synctexReady":false,"elapsedMs":0,"sourceChanged":false,"restored":false}
 ```
 
-build がまだない場合は `null`．status は `running`，`success`，`failed`，`cancelled`．ログは上限を設けるが，エラーの理由と終了コードは必ず返す．最後に成功した PDF がある場合は失敗後も pdfReady=true とし，UI に最新のコンパイルが失敗した旨を表示する．PDF の版は pdfBuildId で識別する．
+build がまだない場合は `null`．status は `running`，`success`，`failed`，`cancelled`．main は今回のコンパイルの対象．ログは上限を設けるが，エラーの理由と終了コードは必ず返す．最後に成功した PDF がある場合は失敗後も pdfReady=true とし，UI に最新のコンパイルが失敗した旨を表示する．PDF の版は pdfBuildId，その PDF を作った文書は pdfMain で識別する．別の文書のコンパイルが実行中，失敗，停止となった場合も，最後に成功した PDF と対応する文書を返す．
 
-コンパイル開始後にアプリから保存が行われた場合は，`sourceChanged: true` を返す．画面は原稿が更新された旨を示す．
+コンパイル開始後にアプリから保存が行われた場合は，`sourceChanged: true` を返す．表示中の PDF の作成後にアプリから保存が行われた場合は，`pdfSourceChanged: true` を返す．PDF の更新案内には `pdfSourceChanged` を使う．別の文書のコンパイルを開始しても，表示中の PDF の更新状態は変わらず，新しい PDF の作成に成功するとその PDF の状態になる．
 
-`synctexReady` は `pdfBuildId` の PDF に対応する SyncTeX データがある場合に true．プロジェクトを開いた際に前回の PDF を読み込んだ場合は `restored: true`．その時点の原稿と保存された SHA-256 を比べ，変更があれば `sourceChanged: true` とする．
+`synctexReady` は `pdfBuildId` の PDF に対応する SyncTeX データがある場合に true．プロジェクトを開いた際に前回の PDF を読み込んだ場合は `restored: true`．その時点の原稿と保存された SHA-256 を比べ，変更があれば `sourceChanged: true` と `pdfSourceChanged: true` にする．
 
 ### POST /api/build/stop
 
@@ -91,7 +95,7 @@ build がまだない場合は `null`．status は `running`，`success`，`fail
 
 最後に成功した PDF のコピーを配信する．認証が必要．HTTP Range をサポートする．`?build=pdfBuildId` を指定すると，その版の同じ PDF を配信する．削除済みの版は HTTP 410 を返す．ファイルをコンパイル中に読む競合を避けるため，成功した PDF をアプリのキャッシュへコピーする．キャッシュはプロジェクトごとに現行版と直前の版までとする．
 
-PDF，対応する SyncTeX データ，原稿のハッシュと版の情報を設定フォルダーへ保存する．次の起動でも，同じプロジェクトの main / mode に対応する前回の PDF を再コンパイルせずに表示できる．キャッシュの不備がある場合もプロジェクトを開ける．
+PDF，対応する SyncTeX データ，実際にコンパイルした文書，原稿のハッシュと版の情報を設定フォルダーへ保存する．次の起動でも，同じプロジェクトと mode に対応する，最後に成功した PDF を再コンパイルせずに表示できる．その文書が現在の既定のメイン文書と異なる場合も読み込む．キャッシュの不備がある場合もプロジェクトを開ける．
 
 ### POST /api/synctex/forward
 

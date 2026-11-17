@@ -151,6 +151,7 @@ func (a *App) openProjectLocked(rawPath string) error {
 	a.project = &Project{Root: root, Main: settings.Main, Mode: settings.Mode, Files: files, Directories: directories}
 	a.build = nil
 	a.lastPDF, a.lastPDFID = "", ""
+	a.lastPDFMain, a.lastPDFChanged = "", false
 	a.pdfVersions = make(map[string]string)
 	a.pdfOrder = nil
 	a.synctexVersions = make(map[string]*synctexVersion)
@@ -211,7 +212,7 @@ func (a *App) updateSettingsLocked(texBin, main, mode *string) error {
 	}
 	compilationChanged := !samePath(config.TexBin, a.config.TexBin)
 	if a.project != nil {
-		compilationChanged = compilationChanged || !samePath(project.Main, a.project.Main) || project.Mode != a.project.Mode
+		compilationChanged = compilationChanged || project.Mode != a.project.Mode
 	}
 	a.config = config
 	if a.project != nil {
@@ -219,6 +220,9 @@ func (a *App) updateSettingsLocked(texBin, main, mode *string) error {
 	}
 	if a.build != nil && compilationChanged {
 		a.build.result.SourceChanged = true
+	}
+	if a.lastPDFID != "" && compilationChanged {
+		a.lastPDFChanged = true
 	}
 	return nil
 }
@@ -281,7 +285,7 @@ func isTextFile(path string) bool {
 		return true
 	}
 	switch strings.ToLower(filepath.Ext(path)) {
-	case ".tex", ".bib", ".sty", ".cls", ".bst", ".clo", ".def", ".cfg", ".bbx", ".cbx", ".lbx", ".dtx", ".ins", ".ltx", ".tikz", ".pgf", ".txt", ".md", ".csv", ".tsv", ".json", ".yaml", ".yml", ".toml", ".lua", ".asy":
+	case ".tex", ".bib", ".sty", ".cls", ".bst", ".clo", ".def", ".cfg", ".bbx", ".cbx", ".lbx", ".dtx", ".ins", ".ltx", ".tikz", ".pgf", ".txt", ".md", ".markdown", ".csv", ".tsv", ".json", ".yaml", ".yml", ".toml", ".lua", ".asy":
 		return true
 	default:
 		return false

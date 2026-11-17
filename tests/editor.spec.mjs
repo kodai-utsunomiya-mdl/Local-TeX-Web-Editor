@@ -7,6 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { promisify } from 'node:util';
+import { checkEditorSelectionVisibility, checkPDFSelectionVisibility } from './selection-checks.mjs';
 
 const repository = path.resolve(import.meta.dirname, '..');
 const fixture = path.join(import.meta.dirname, 'fixtures', 'japanese');
@@ -436,7 +437,7 @@ test('タブを閉じる確認を取り消すと，接続したまま原稿を�
 test('配布済みの古い版から保存を確認して更新し，新しい版の編集画面を開く', async ({ page, context }, testInfo) => {
   const previousExecutable = process.env.LOCAL_TEX_EDITOR_TEST_PREVIOUS_EXE;
   test.skip(!previousExecutable, 'Set LOCAL_TEX_EDITOR_TEST_PREVIOUS_EXE to exercise the published application.');
-  const previousVersion = process.env.LOCAL_TEX_EDITOR_TEST_PREVIOUS_VERSION || '0.1.2';
+  const previousVersion = process.env.LOCAL_TEX_EDITOR_TEST_PREVIOUS_VERSION || '0.1.3';
   const temp = await mkdtemp(path.join(os.tmpdir(), 'ltex-update-'));
   const project = path.join(temp, '保存する日本語の原稿');
   await cp(fixture, project, { recursive: true });
@@ -790,6 +791,216 @@ test('フォルダーから画像と PDF を開き，編集中の原稿へ戻る
   expect(dimensions.editorTop).toBeLessThanOrEqual(100);
   expect(dimensions.pdfTop).toBeLessThanOrEqual(100);
   await page.screenshot({ path: testInfo.outputPath('compact-editor.png') });
+  expect(errors).toEqual([]);
+});
+
+test('エディタと PDF の選択範囲が両テーマで見える', async ({ page, session }, testInfo) => {
+  await openProject(session);
+  await openEditor(page, session);
+  await checkEditorSelectionVisibility(page, testInfo);
+  const { finished } = await compileFromUI(page, session);
+  expect(finished.status, finished.log + '\n' + finished.error).toBe('success');
+  await expect(page.getByTestId('pdf-canvas')).toHaveAttribute('data-ready', 'true');
+  await checkPDFSelectionVisibility(page, testInfo);
+});
+
+test('編集中の文書をコンパイルし，タブを選ぶだけでは表示中の PDF を変えない', async ({ page, session }, testInfo) => {
+  const other = '別の 原稿.tex';
+  const source = ['\\documentclass[uplatex,dvipdfmx]{jsarticle}', '\\begin{document}',
+    '別の文書の最初のページを表示する．', '\\newpage', '別の文書の二ページ目である．', '\\end{document}', ''].join('\n');
+  await writeFile(path.join(session.project, other), source);
+  await openProject(session);
+  await openEditor(page, session);
+  const first = await compileFromUI(page, session);
+  expect(first.finished.status, first.finished.log + '\n' + first.finished.error).toBe('success');
+  const canvas = page.getByTestId('pdf-canvas');
+  await expect(canvas).toHaveAttribute('data-ready', 'true');
+  await page.getByTestId('pdf-next').click();
+  await expect(page.getByTestId('pdf-page')).toHaveValue('2');
+
+  await page.getByTestId(`file-${other}`).click();
+  await expect(page.locator('#main-document-label')).toContainText(other);
+  await expect(page.getByTestId('pdf-document')).toHaveText('main.tex');
+  await expect(canvas).toHaveAttribute('data-build-id', first.finished.pdfBuildId);
+  await expect(page.getByTestId('pdf-page')).toHaveValue('2');
+  const second = await compileFromUI(page, session);
+  expect(second.started.main).toBe(other);
+  expect(second.finished.status, second.finished.log + '\n' + second.finished.error).toBe('success');
+  expect(second.finished.pdfMain).toBe(other);
+  expect((await json(session, '/api/state')).project.main).toBe('main.tex');
+  await expect(canvas).toHaveAttribute('data-build-id', second.finished.pdfBuildId);
+  await expect(canvas).toHaveAttribute('data-ready', 'true');
+  await expect(page.getByTestId('pdf-document')).toHaveText(other);
+  await expect(page.getByTestId('pdf-page')).toHaveValue('1');
+  const forward = await json(session, '/api/synctex/forward', { method: 'POST', data: { buildId: second.finished.pdfBuildId, path: other, line: 3, column: 0 } });
+  expect(forward.locations.length).toBeGreaterThan(0);
+  const download = page.waitForEvent('download');
+  await page.locator('#download-pdf').click();
+  expect((await download).suggestedFilename()).toBe('別の 原稿.pdf');
+
+  await page.locator('#editor-tabs [data-path="main.tex"]').click();
+  await expect(canvas).toHaveAttribute('data-build-id', second.finished.pdfBuildId);
+  await expect(page.getByTestId('pdf-document')).toHaveText(other);
+  const back = await compileFromUI(page, session);
+  expect(back.finished.status, back.finished.log + '\n' + back.finished.error).toBe('success');
+  await expect(canvas).toHaveAttribute('data-build-id', back.finished.pdfBuildId);
+  await expect(page.getByTestId('pdf-page')).toHaveValue('2');
+
+  await page.locator(`#editor-tabs [data-path="${other}"]`).click();
+  await replaceEditor(page, source.replace('\\end{document}', '\\ThisCommandMustFail\n\\end{document}'));
+  const failed = await compileFromUI(page, session);
+  expect(failed.finished.status).toBe('failed');
+  expect(failed.finished.main).toBe(other);
+  expect(failed.finished.pdfMain).toBe('main.tex');
+  expect(failed.finished.pdfBuildId).toBe(back.finished.pdfBuildId);
+  await expect(canvas).toHaveAttribute('data-build-id', back.finished.pdfBuildId);
+  await expect(page.getByTestId('pdf-document')).toHaveText('main.tex');
+  await page.screenshot({ path: testInfo.outputPath('compile-another-document.png') });
+});
+
+test('Markdown を編集し，表示するプレビューを選んで文書を切り替えられる', async ({ page, session }, testInfo) => {
+  const notes = ['# 研究ノート', '', '本文の **強調** と数式 $`x^2`$ を表示する．', '',
+    '| 文書 | 状態 |', '| --- | --- |', '| 原稿 | 編集中 |', '',
+    '```tex', '\\section{実験}', '```', '', '![図](figures/図.png)', '', '[続き](detail.markdown#続き)', '',
+    ...Array.from({ length: 35 }, (_, index) => `段落 ${index + 1} の内容をここに書く．\n`)].join('\n');
+  await mkdir(path.join(session.project, 'figures'), { recursive: true });
+  await writeFile(path.join(session.project, 'notes.md'), notes);
+  await writeFile(path.join(session.project, 'detail.markdown'), '# 続き\n\n別の Markdown 文書を開く．\n');
+  await writeFile(path.join(session.project, 'figures', '図.png'), Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNQaXjwHwAE1AKEf31AsgAAAABJRU5ErkJggg==', 'base64'));
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await openProject(session);
+  await openEditor(page, session);
+  const first = await compileFromUI(page, session);
+  expect(first.finished.status, first.finished.log + '\n' + first.finished.error).toBe('success');
+  await expect(page.getByTestId('pdf-canvas')).toHaveAttribute('data-ready', 'true');
+  await page.getByTestId('pdf-zoom').selectOption('1');
+  await page.getByTestId('pdf-next').click();
+  await expect(page.getByTestId('pdf-page')).toHaveValue('2');
+
+  // Hold the next PDF response until the Markdown preview is on screen.
+  let releasePDF;
+  const heldPDF = new Promise(resolve => { releasePDF = resolve; });
+  let waiting = false;
+  await page.route('**/api/pdf?build=*', async route => {
+    waiting = true;
+    await heldPDF;
+    await route.continue().catch(() => {});
+  });
+  const updated = await compileFromUI(page, session);
+  expect(updated.finished.status, updated.finished.log + '\n' + updated.finished.error).toBe('success');
+  await expect.poll(() => waiting).toBe(true);
+  await page.getByTestId('file-notes.md').click();
+  const preview = page.getByTestId('markdown-preview');
+  const article = page.getByTestId('markdown-document');
+  await expect(preview).toBeVisible();
+  releasePDF();
+  await expect(page.locator('#pdf-stage')).toHaveAttribute('data-build-id', updated.finished.pdfBuildId);
+  await page.unroute('**/api/pdf?build=*');
+  await expect(article.getByRole('heading', { name: '研究ノート' })).toBeVisible();
+  await expect(article.locator('table')).toContainText('編集中');
+  await expect(article.locator('pre code')).toHaveText('\\section{実験}\n');
+  await expect(article.locator('.katex')).toHaveCount(1);
+  await expect.poll(() => article.locator('img').evaluate(image => image.complete && image.naturalWidth)).toBe(1);
+  await expect(page.locator('#pdf-preview')).not.toBeVisible();
+  await expect(page.locator('#compile-label')).toHaveText('プレビュー');
+  await setAutoSave(page, false);
+  const editor = page.getByTestId('editor').locator('.cm-content');
+  await editor.click(); await page.keyboard.press('Control+Home'); await page.keyboard.press('End');
+  await page.keyboard.insertText('を更新');
+  await expect(article.getByRole('heading', { name: '研究ノートを更新', exact: true })).toBeVisible();
+  await expect(editor).toBeFocused();
+  await page.getByTestId('compile-button').click();
+  await expect.poll(() => readFile(path.join(session.project, 'notes.md'), 'utf8')).toContain('# 研究ノートを更新');
+  expect((await json(session, '/api/build')).id).toBe(updated.finished.id);
+  await page.screenshot({ path: testInfo.outputPath('markdown-preview.png') });
+
+  await article.getByRole('link', { name: '続き', exact: true }).click();
+  await expect(page.getByTestId('editor')).toHaveAttribute('data-path', 'detail.markdown');
+  await expect(article).toContainText('別の Markdown 文書を開く');
+  await page.locator('#editor-tabs [data-path="notes.md"]').click();
+  await expect(article.getByRole('heading', { name: '研究ノートを更新' })).toBeVisible();
+  await preview.evaluate(element => { element.scrollTop = 600; });
+  const markdownTop = await preview.evaluate(element => element.scrollTop);
+  expect(markdownTop).toBeGreaterThan(300);
+
+  await page.locator('#editor-tabs [data-path="main.tex"]').click();
+  await expect(preview).not.toBeVisible();
+  await expect(page.getByTestId('pdf-canvas')).toHaveAttribute('data-build-id', updated.finished.pdfBuildId);
+  await expect(page.getByTestId('pdf-canvas')).toHaveAttribute('data-ready', 'true');
+  await expect(page.getByTestId('pdf-page')).toHaveValue('2');
+  await expect(page.getByTestId('pdf-zoom')).toHaveValue('1');
+  await page.locator('#editor-tabs [data-path="notes.md"]').click();
+  await expect.poll(() => preview.evaluate(element => element.scrollTop)).toBeCloseTo(markdownTop, 0);
+  await expect(page.getByTestId('editor').locator('.cm-content')).toContainText('研究ノートを更新');
+
+  const previewChoice = page.locator('[data-preview-choice]:visible');
+  await expect(previewChoice).toHaveCount(1);
+  await expect(previewChoice).toHaveValue('auto');
+  await previewChoice.selectOption('pdf');
+  await expect(page.locator('#pdf-preview')).toBeVisible();
+  await expect(preview).not.toBeVisible();
+  await expect(page.getByTestId('editor')).toHaveAttribute('data-path', 'notes.md');
+  await expect(page.getByTestId('pdf-page')).toHaveValue('2');
+  await expect(page.getByTestId('pdf-zoom')).toHaveValue('1');
+
+  // Markdown saves must leave the chosen PDF visible, including its location.
+  const readingNote = '\n\nPDF を読みながら追記した本文．';
+  await editor.click(); await page.keyboard.press('Control+End');
+  await page.keyboard.insertText(readingNote);
+  await page.keyboard.press('Control+S');
+  await expect.poll(() => readFile(path.join(session.project, 'notes.md'), 'utf8')).toContain(readingNote);
+  await expect(previewChoice).toHaveValue('pdf');
+  await expect(page.locator('#pdf-preview')).toBeVisible();
+  await expect(preview).not.toBeVisible();
+  const finalNote = '\nCtrl+Enter でも PDF を見ながら保存する．';
+  await expect(editor).toHaveAttribute('contenteditable', 'true');
+  await editor.click(); await page.keyboard.press('Control+End');
+  await page.keyboard.insertText(finalNote);
+  await page.keyboard.press('Control+Enter');
+  await expect.poll(() => readFile(path.join(session.project, 'notes.md'), 'utf8')).toContain(finalNote);
+  await expect(previewChoice).toHaveValue('pdf');
+  await expect(page.locator('#pdf-preview')).toBeVisible();
+  await expect(preview).not.toBeVisible();
+  await expect(page.getByTestId('pdf-page')).toHaveValue('2');
+  await expect(page.getByTestId('pdf-zoom')).toHaveValue('1');
+  expect((await json(session, '/api/build')).id).toBe(updated.finished.id);
+  await page.screenshot({ path: testInfo.outputPath('markdown-with-pdf.png') });
+
+  await previewChoice.selectOption('markdown');
+  await expect(preview).toBeVisible();
+  await expect(article).toContainText(readingNote.trim());
+  await expect(article).toContainText(finalNote.trim());
+  await expect(preview).toHaveAttribute('data-path', 'notes.md');
+  await page.locator('#editor-tabs [data-path="main.tex"]').click();
+  await expect(page.getByTestId('editor')).toHaveAttribute('data-path', 'main.tex');
+  await expect(previewChoice).toHaveValue('markdown');
+  await expect(preview).toBeVisible();
+  await expect(preview).toHaveAttribute('data-path', 'notes.md');
+  await expect(page.locator('#pdf-preview')).not.toBeVisible();
+
+  // Compiling TeX updates the hidden PDF without changing the selected view.
+  const backgroundPDF = await compileFromUI(page, session);
+  expect(backgroundPDF.finished.status, backgroundPDF.finished.log + '\n' + backgroundPDF.finished.error).toBe('success');
+  await expect(page.locator('#pdf-stage')).toHaveAttribute('data-build-id', backgroundPDF.finished.pdfBuildId);
+  await expect(previewChoice).toHaveValue('markdown');
+  await expect(preview).toBeVisible();
+  await expect(article).toContainText(finalNote.trim());
+  await expect(page.locator('#pdf-preview')).not.toBeVisible();
+  await previewChoice.selectOption('pdf');
+  await expect(page.getByTestId('pdf-canvas')).toHaveAttribute('data-build-id', backgroundPDF.finished.pdfBuildId);
+  await expect(page.getByTestId('pdf-canvas')).toHaveAttribute('data-ready', 'true');
+  await expect(page.getByTestId('pdf-page')).toHaveValue('2');
+  await expect(page.getByTestId('pdf-zoom')).toHaveValue('1');
+
+  await previewChoice.selectOption('auto');
+  await expect(page.locator('#pdf-preview')).toBeVisible();
+  await page.locator('#editor-tabs [data-path="notes.md"]').click();
+  await expect(preview).toBeVisible();
+  await expect(previewChoice).toHaveValue('auto');
+  await page.locator('#editor-tabs [data-path="main.tex"]').click();
+  await expect(page.locator('#pdf-preview')).toBeVisible();
+  await expect(preview).not.toBeVisible();
   expect(errors).toEqual([]);
 });
 

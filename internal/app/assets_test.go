@@ -36,6 +36,7 @@ func TestProjectListsAssetsAndEmptyDirectories(t *testing.T) {
 		"figures/chart.pdf":  {"pdf", "%PDF-1.7\n"},
 		"figures/vector.svg": {"image", `<svg xmlns="http://www.w3.org/2000/svg"/>`},
 		"data/table.csv":     {"text", "x,y\n1,2\n"},
+		"notes.markdown":     {"text", "# Notes\n"},
 		"data/source.zip":    {"binary", "archive bytes"},
 		"figures/chart.eps":  {"binary", "%!PS-Adobe-3.0 EPSF-3.0\n"},
 		"page.html":          {"binary", "<html>project contents</html>"},
@@ -76,7 +77,7 @@ func TestProjectListsAssetsAndEmptyDirectories(t *testing.T) {
 		}
 	}
 	revisions := snapshotSourceRevisions(root)
-	if len(revisions) != 2 || revisions["main.tex"] == "" || revisions["data/table.csv"] == "" {
+	if len(revisions) != 3 || revisions["main.tex"] == "" || revisions["data/table.csv"] == "" || revisions["notes.markdown"] == "" {
 		t.Fatalf("source revisions include assets: %#v", revisions)
 	}
 }

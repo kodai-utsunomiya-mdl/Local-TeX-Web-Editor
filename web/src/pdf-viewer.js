@@ -16,6 +16,8 @@ export class PDFViewer {
     this.document = null;
     this.loadingTask = null;
     this.buildId = '';
+    this.documentMain = '';
+    this.positions = new Map();
     this.requestedBuildId = '';
     this.lastRequest = null;
     this.generation = 0;
@@ -24,6 +26,7 @@ export class PDFViewer {
     this.zoomSetting = 'page-width';
     this.initialPosition = null;
     this.pendingPosition = null;
+    this.initialisingDocument = null;
     this.lastLocation = null;
     this.currentCanvas = null;
     this.highlight = null;
@@ -31,7 +34,7 @@ export class PDFViewer {
     this.elements = Object.fromEntries(['scroll', 'stage', 'empty', 'loading', 'prev', 'next', 'page', 'pages', 'zoom', 'zoom-in', 'zoom-out'].map(name => [name, document.getElementById(`pdf-${name}`)]));
     this.eventBus = new EventBus();
     this.linkService = new PDFLinkService({ eventBus: this.eventBus, externalLinkTarget: LinkTarget.BLANK, externalLinkRel: 'noopener noreferrer', ignoreDestinationZoom: true });
-    this.search = new PDFSearch({ eventBus: this.eventBus, linkService: this.linkService, pane: document.getElementById('pdf-pane'), toolbar: document.querySelector('.pdf-toolbar'), scroll: this.elements.scroll });
+    this.search = new PDFSearch({ eventBus: this.eventBus, linkService: this.linkService, pane: document.getElementById('pdf-preview') || document.getElementById('pdf-pane'), toolbar: document.querySelector('.pdf-toolbar'), scroll: this.elements.scroll });
     this.pageViewer = new DocumentViewer({
       container: this.elements.scroll,
       viewer: this.elements.stage,
@@ -127,21 +130,29 @@ export class PDFViewer {
     else { custom.hidden = false; custom.value = String(scale); custom.textContent = `${Math.round(scale * 100)}%`; select.value = custom.value; }
   }
 
-  restorePosition(position) {
+  restorePosition(position, positions) {
     this.initialPosition = position && typeof position === 'object' ? position : null;
+    this.positions = new Map(Object.entries(positions || {}).filter(([, value]) => value && typeof value === 'object').slice(-128));
   }
 
   getViewState() {
-    if (!this.document || !this.ready) return this.initialPosition;
+    if (!this.document) return this.initialPosition;
+    if (!this.ready) return this.pendingPosition ? { ...this.pendingPosition, main: this.documentMain } : this.initialPosition;
     const location = this.lastLocation;
-    return { pageNumber: location?.pageNumber || this.pageNumber, left: location?.left ?? 0, top: location?.top ?? null, zoom: this.zoomSetting };
+    return { main: this.documentMain, pageNumber: location?.pageNumber || this.pageNumber, left: location?.left ?? 0, top: location?.top ?? null, zoom: this.zoomSetting };
   }
 
-  async load(buildId, projectRoot) {
+  getPositions() {
+    const current = this.getViewState();
+    if (this.documentMain && current) this.positions.set(this.documentMain, current);
+    return Object.fromEntries([...this.positions].slice(-128));
+  }
+
+  async load(buildId, projectRoot, main = '') {
     if (!buildId || buildId === this.requestedBuildId) return;
     const generation = ++this.generation;
     this.requestedBuildId = buildId;
-    this.lastRequest = { buildId, projectRoot };
+    this.lastRequest = { buildId, projectRoot, main };
     this.elements.loading.hidden = false;
     const oldPending = this.loadingTask;
     this.loadingTask = null;
@@ -162,9 +173,15 @@ export class PDFViewer {
       await nextDocument.getPage(1);
       if (generation !== this.generation) { await task.destroy(); return; }
       const previous = this.document;
-      this.pendingPosition = this.getViewState() || this.initialPosition;
+      const current = this.getViewState();
+      if (this.documentMain && current) this.positions.set(this.documentMain, current);
+      const initial = !this.initialPosition?.main || this.initialPosition.main === main ? this.initialPosition : null;
+      this.pendingPosition = (previous && this.documentMain === main ? current : this.positions.get(main) || initial) || { pageNumber: 1, left: 0, top: null, zoom: this.zoomSetting };
+      this.initialPosition = null;
       this.document = nextDocument;
+      this.documentMain = main;
       this.buildId = buildId;
+      this.elements.stage.dataset.buildId = buildId;
       this.ready = false;
       this.hasRendered = false;
       this.lastLocation = null;
@@ -193,25 +210,37 @@ export class PDFViewer {
   async initialisePages() {
     const document = this.document;
     const generation = this.generation;
-    if (!document || this.pageViewer.pdfDocument !== document) return;
-    const position = this.pendingPosition;
-    const number = clamp(Math.round(Number(position?.pageNumber) || 1), 1, document.numPages);
-    const page = await document.getPage(number);
-    if (generation !== this.generation || document !== this.document) return;
-    const view = this.pageViewer.getPageView(number - 1);
-    if (!view.pdfPage) view.setPdfPage(page);
-    this.pageViewer.currentPageNumber = number;
-    this.zoomSetting = position?.zoom || this.zoomSetting || 'page-width';
-    if (this.elements.scroll.clientWidth >= 50 || !['page-width', 'page-fit'].includes(this.zoomSetting)) this.pageViewer.currentScaleValue = this.zoomSetting;
-    if (Number.isFinite(position?.left) && Number.isFinite(position?.top)) {
-      this.pageViewer.scrollPageIntoView({ pageNumber: number, destArray: [null, { name: 'XYZ' }, position.left, position.top, null], allowNegativeOffset: true, ignoreDestinationZoom: true });
+    if (!document || this.ready || this.initialisingDocument === document || this.pageViewer.pdfDocument !== document || !this.pageViewer.getPageView(0)) return;
+    // A hidden preview has no scrollable layout. Apply the saved page, offset,
+    // and zoom together after returning from Markdown or the mobile editor.
+    if (this.elements.scroll.clientWidth < 50 || this.elements.scroll.clientHeight < 50) return;
+    this.initialisingDocument = document;
+    try {
+      const position = this.pendingPosition;
+      const number = clamp(Math.round(Number(position?.pageNumber) || 1), 1, document.numPages);
+      const page = await document.getPage(number);
+      if (generation !== this.generation || document !== this.document || this.pageViewer.pdfDocument !== document) return;
+      if (this.elements.scroll.clientWidth < 50 || this.elements.scroll.clientHeight < 50) return;
+      const view = this.pageViewer.getPageView(number - 1);
+      if (!view) return;
+      if (!view.pdfPage) view.setPdfPage(page);
+      this.pageViewer.currentPageNumber = number;
+      this.zoomSetting = position?.zoom || this.zoomSetting || 'page-width';
+      this.pageViewer.currentScaleValue = this.zoomSetting;
+      if (Number.isFinite(position?.left) && Number.isFinite(position?.top)) {
+        this.pageViewer.scrollPageIntoView({ pageNumber: number, destArray: [null, { name: 'XYZ' }, position.left, position.top, null], allowNegativeOffset: true, ignoreDestinationZoom: true });
+      }
+      this.ready = true;
+      this.pendingPosition = null;
+      this.pageViewer.update();
+      this.updateControls();
+      this.markCurrentCanvas();
+      if (view.renderingState === RenderingStates.FINISHED && view.canvas) this.notifyReady();
+    } catch (error) {
+      if (generation === this.generation && document === this.document) throw error;
+    } finally {
+      if (this.initialisingDocument === document) this.initialisingDocument = null;
     }
-    this.ready = true;
-    this.pendingPosition = null;
-    this.pageViewer.update();
-    this.updateControls();
-    this.markCurrentCanvas();
-    if (view.renderingState === RenderingStates.FINISHED && view.canvas) this.notifyReady();
   }
 
   pageRendered(event) {
@@ -249,7 +278,11 @@ export class PDFViewer {
   }
 
   refreshLayout() {
-    if (!this.ready || this.elements.scroll.clientWidth < 50) return;
+    if (this.elements.scroll.clientWidth < 50 || this.elements.scroll.clientHeight < 50) return;
+    if (!this.ready) {
+      this.initialisePages().catch(error => this.report(error));
+      return;
+    }
     if (this.zoomSetting === 'page-width' || this.zoomSetting === 'page-fit') this.pageViewer.currentScaleValue = this.zoomSetting;
     this.pageViewer.update();
   }
@@ -334,7 +367,7 @@ export class PDFViewer {
     const request = this.lastRequest;
     if (!request) return;
     this.requestedBuildId = '';
-    await this.load(request.buildId, request.projectRoot);
+    await this.load(request.buildId, request.projectRoot, request.main);
   }
 
   async reset() {
@@ -343,7 +376,9 @@ export class PDFViewer {
     const document = this.document;
     this.loadingTask = null; this.document = null;
     this.buildId = ''; this.requestedBuildId = ''; this.lastRequest = null;
-    this.ready = false; this.hasRendered = false; this.initialPosition = null; this.pendingPosition = null; this.lastLocation = null; this.currentCanvas = null;
+    this.documentMain = ''; this.positions.clear();
+    this.ready = false; this.hasRendered = false; this.initialPosition = null; this.pendingPosition = null; this.initialisingDocument = null; this.lastLocation = null; this.currentCanvas = null;
+    delete this.elements.stage.dataset.buildId;
     this.clearHighlight();
     this.search.reset();
     this.pageViewer.setDocument(null); this.linkService.setDocument(null);

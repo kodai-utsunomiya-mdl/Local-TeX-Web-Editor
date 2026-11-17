@@ -49,6 +49,8 @@ type App struct {
 	workers         sync.WaitGroup
 	lastPDF         string
 	lastPDFID       string
+	lastPDFMain     string
+	lastPDFChanged  bool
 	pdfVersions     map[string]string
 	pdfOrder        []string
 	synctexVersions map[string]*synctexVersion
@@ -392,6 +394,9 @@ func (a *App) fileHandler(w http.ResponseWriter, r *http.Request) {
 			if a.build != nil && document.Revision != input.Revision {
 				a.build.result.SourceChanged = true
 			}
+			if a.lastPDFID != "" && document.Revision != input.Revision {
+				a.lastPDFChanged = true
+			}
 			if files, directories, listErr := listProjectEntries(a.project.Root); listErr == nil {
 				a.project.Files = files
 				a.project.Directories = directories
@@ -411,7 +416,16 @@ func (a *App) buildHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method == http.MethodPost {
-		build, err := a.startBuild(r.Header.Get("X-Project-Root"))
+		var input struct {
+			Main string `json:"main"`
+		}
+		if r.ContentLength != 0 {
+			if err := readJSON(w, r, &input); err != nil {
+				writeError(w, err)
+				return
+			}
+		}
+		build, err := a.startBuild(r.Header.Get("X-Project-Root"), input.Main)
 		if err != nil {
 			writeError(w, err)
 			return

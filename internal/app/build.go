@@ -3,6 +3,7 @@ package app
 import (
 	"bytes"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -26,24 +27,28 @@ const maxLogBytes = 2 << 20
 const buildRelative = ".local-tex-editor/build"
 
 type Build struct {
-	ID            string `json:"id"`
-	Status        string `json:"status"`
-	Command       string `json:"command"`
-	Log           string `json:"log"`
-	ExitCode      *int   `json:"exitCode"`
-	Error         string `json:"error"`
-	StartedAt     string `json:"startedAt"`
-	FinishedAt    string `json:"finishedAt"`
-	PDFReady      bool   `json:"pdfReady"`
-	PDFBuildID    string `json:"pdfBuildId"`
-	SyncTeXReady  bool   `json:"synctexReady"`
-	ElapsedMS     int64  `json:"elapsedMs"`
-	SourceChanged bool   `json:"sourceChanged"`
-	Restored      bool   `json:"restored"`
+	ID               string `json:"id"`
+	Main             string `json:"main"`
+	Status           string `json:"status"`
+	Command          string `json:"command"`
+	Log              string `json:"log"`
+	ExitCode         *int   `json:"exitCode"`
+	Error            string `json:"error"`
+	StartedAt        string `json:"startedAt"`
+	FinishedAt       string `json:"finishedAt"`
+	PDFReady         bool   `json:"pdfReady"`
+	PDFBuildID       string `json:"pdfBuildId"`
+	PDFMain          string `json:"pdfMain"`
+	PDFSourceChanged bool   `json:"pdfSourceChanged"`
+	SyncTeXReady     bool   `json:"synctexReady"`
+	ElapsedMS        int64  `json:"elapsedMs"`
+	SourceChanged    bool   `json:"sourceChanged"`
+	Restored         bool   `json:"restored"`
 }
 
 type buildRun struct {
 	result          Build
+	project         Project
 	started         time.Time
 	finished        time.Time
 	process         *os.Process
@@ -119,6 +124,8 @@ func (a *App) buildSnapshotLocked() *Build {
 	}
 	result.PDFReady = a.lastPDF != ""
 	result.PDFBuildID = a.lastPDFID
+	result.PDFMain = a.lastPDFMain
+	result.PDFSourceChanged = a.lastPDFChanged
 	result.SyncTeXReady = a.synctexVersions[a.lastPDFID] != nil
 	end := run.finished
 	if end.IsZero() {
@@ -138,7 +145,7 @@ func randomID() (string, error) {
 	return time.Now().UTC().Format("20060102T150405.000000000") + "-" + hex.EncodeToString(data[:]), nil
 }
 
-func (a *App) startBuild(expectedProject string) (*Build, error) {
+func (a *App) startBuild(expectedProject string, requestedMain ...string) (*Build, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	if err := a.checkProjectLocked(expectedProject); err != nil {
@@ -153,20 +160,28 @@ func (a *App) startBuild(expectedProject string) (*Build, error) {
 	if a.project == nil {
 		return nil, fail(http.StatusBadRequest, "原稿フォルダーを開いてください．")
 	}
-	if a.project.Main == "" {
+	project, texBin := *a.project, a.config.TexBin
+	if len(requestedMain) > 0 && requestedMain[0] != "" {
+		project.Main = requestedMain[0]
+	}
+	if project.Main == "" {
 		return nil, fail(http.StatusBadRequest, "メインの .tex ファイルを選んでください．")
 	}
-	if _, _, err := projectFilePath(a.project.Root, a.project.Main, false); err != nil {
+	main, _, err := projectFilePath(project.Root, project.Main, false)
+	if err != nil {
 		return nil, err
 	}
+	if !strings.EqualFold(filepath.Ext(main), ".tex") {
+		return nil, fail(http.StatusBadRequest, "コンパイルする文書には .tex ファイルを選んでください．")
+	}
+	project.Main = main
 	id, err := randomID()
 	if err != nil {
 		return nil, err
 	}
 	now := time.Now()
-	run := &buildRun{started: now, result: Build{ID: id, Status: "running", StartedAt: now.UTC().Format(time.RFC3339Nano)}}
+	run := &buildRun{started: now, project: project, result: Build{ID: id, Main: main, Status: "running", StartedAt: now.UTC().Format(time.RFC3339Nano)}}
 	a.build = run
-	project, texBin := *a.project, a.config.TexBin
 	a.workers.Add(1)
 	go a.compile(run, project, texBin)
 	return a.buildSnapshotLocked(), nil
@@ -188,7 +203,13 @@ func (a *App) finishBuild(run *buildRun, code *int, err error, pdf, pdfID string
 	} else {
 		run.result.Status = "success"
 		run.result.Error = ""
+		project := run.project
+		if project.Root == "" && a.project != nil {
+			project = *a.project
+		}
+		run.result.Main = project.Main
 		a.lastPDF, a.lastPDFID = pdf, pdfID
+		a.lastPDFMain, a.lastPDFChanged = project.Main, run.result.SourceChanged
 		a.pdfVersions[pdfID] = pdf
 		if run.synctex != nil {
 			run.synctex.ChangedDuringBuild = run.result.SourceChanged
@@ -200,8 +221,8 @@ func (a *App) finishBuild(run *buildRun, code *int, err error, pdf, pdfID string
 			delete(a.synctexVersions, a.pdfOrder[0])
 			a.pdfOrder = a.pdfOrder[1:]
 		}
-		if a.project != nil {
-			if err := a.saveCachedBuild(*a.project, run, pdf); err != nil {
+		if project.Root != "" {
+			if err := a.saveCachedBuild(project, run, pdf); err != nil {
 				a.appendLogLocked(run, []byte("\n[前回の PDF] 次の起動時に読み込む情報を保存できません: "+err.Error()+"\n"))
 			}
 		}
@@ -224,7 +245,7 @@ func (a *App) compile(run *buildRun, project Project, texBin string) {
 		a.finishBuild(run, nil, err, "", "")
 		return
 	}
-	outputDirectory, err := ensureBuildDirectory(project.Root)
+	outputDirectory, err := ensureBuildDirectory(project.Root, project.Main)
 	if err != nil {
 		a.finishBuild(run, nil, err, "", "")
 		return
@@ -324,8 +345,9 @@ func (a *App) stopBuild(expectedProject ...string) error {
 }
 
 func latexmkArguments(project Project) []string {
+	directory := buildDirectoryRelative(project.Main)
 	args := []string{"-interaction=nonstopmode", "-file-line-error", "-halt-on-error", "-synctex=1", "-recorder",
-		"-outdir=" + buildRelative, "-auxdir=" + buildRelative}
+		"-outdir=" + directory, "-auxdir=" + directory}
 	if runtime.GOOS == "windows" {
 		// Keep BibTeX in the source directory. upBibTeX resolves absolute
 		// BIBINPUTS paths through Windows' legacy code page, which can lose
@@ -408,9 +430,25 @@ func findLatexmk(texBin string) (string, string, error) {
 	return "", "", errors.New("latexmk が見つかりません．設定で TeX Live の bin フォルダーを指定してください．")
 }
 
-func ensureBuildDirectory(root string) (string, error) {
+func buildDirectoryRelative(main string) string {
+	if main == "" || samePath(main, "main.tex") {
+		return buildRelative
+	}
+	name := filepath.ToSlash(main)
+	if runtime.GOOS == "windows" {
+		name = strings.ToLower(name)
+	}
+	key := sha256.Sum256([]byte(name))
+	return buildRelative + "/doc-" + hex.EncodeToString(key[:16])
+}
+
+func ensureBuildDirectory(root string, main ...string) (string, error) {
+	relative := buildRelative
+	if len(main) > 0 {
+		relative = buildDirectoryRelative(main[0])
+	}
 	path := root
-	for _, part := range strings.Split(buildRelative, "/") {
+	for _, part := range strings.Split(relative, "/") {
 		path = filepath.Join(path, part)
 		if err := os.Mkdir(path, 0700); err != nil && !errors.Is(err, os.ErrExist) {
 			return "", fmt.Errorf("コンパイル用のフォルダーを作れません: %w", err)
@@ -470,7 +508,11 @@ func findOutputPDF(root, main, directory string) (string, error) {
 		if !strings.HasSuffix(entry.Name(), ".fdb_latexmk") {
 			continue
 		}
-		path, err := safePath(root, buildRelative+"/"+entry.Name(), false)
+		relative, err := filepath.Rel(root, filepath.Join(directory, entry.Name()))
+		if err != nil {
+			continue
+		}
+		path, err := safePath(root, filepath.ToSlash(relative), false)
 		if err != nil {
 			continue
 		}

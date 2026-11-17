@@ -39,6 +39,29 @@ function escaped(text, offset) {
   return count % 2 === 1;
 }
 
+// Use a complete document from the active tab. Included chapters and files
+// such as a bibliography still compile through the project's default document.
+export function compileTarget(path, content, fallback = '') {
+  if (!/\.tex$/i.test(path || '')) return fallback;
+  const directive = /^[\t ]*%[\t ]*![\t ]*tex[\t ]+root[\t ]*=[\t ]*(.+?)[\t ]*$/im.exec(content || '');
+  if (directive) {
+    let root = directive[1].trim().replace(/^(?:"([^"]+)"|'([^']+)')$/, (_, double, single) => double || single).replaceAll('\\', '/');
+    if (/^(?:\/|[A-Za-z]:)/.test(root)) return root;
+    const parts = path.replaceAll('\\', '/').split('/').slice(0, -1);
+    for (const part of root.split('/')) {
+      if (!part || part === '.') continue;
+      if (part === '..' && parts.length && parts.at(-1) !== '..') parts.pop();
+      else parts.push(part);
+    }
+    return parts.join('/');
+  }
+  const code = maskNonCode(content || '');
+  for (const match of code.matchAll(/\\(?:documentclass(?![A-Za-z@])|begin\s*\{\s*document\s*\})/g)) {
+    if (!escaped(code, match.index)) return path;
+  }
+  return fallback;
+}
+
 function group(text, start, open = '{', close = '}') {
   if (text[start] !== open) return null;
   let depth = 1;

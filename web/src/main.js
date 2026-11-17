@@ -5,14 +5,16 @@ import { indentWithTab } from '@codemirror/commands';
 import { StreamLanguage, HighlightStyle, syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language';
 import { autocompletion } from '@codemirror/autocomplete';
 import { stex } from '@codemirror/legacy-modes/mode/stex';
+import { markdown } from '@codemirror/lang-markdown';
 import { PDFViewer } from './pdf-viewer.js';
+import { MarkdownPreview } from './markdown-preview.js';
 import { AssetPreview } from './asset-preview.js';
 import { sourceSearch, openSourceSearchPanel } from './source-search.js';
 import { attachEditorZoom, prepareEditorResize } from './editor-zoom.js';
 import { tags } from '@lezer/highlight';
 import { SessionStore } from './session-store.js';
 import { BrowserSession } from './browser-session.js';
-import { extractTexMetadata, extractCitations, texCompletionSource, extractLogLocations } from './tex-tools.js';
+import { extractTexMetadata, extractCitations, texCompletionSource, extractLogLocations, compileTarget } from './tex-tools.js';
 
 const $ = id => document.getElementById(id);
 const TOKEN_KEY = 'local-tex-editor-token';
@@ -67,6 +69,9 @@ const state = {
   completionItems: { citations: [], labels: [] },
   indexing: false,
   syncing: false,
+  previewMode: 'pdf',
+  previewChoice: 'auto',
+  lastMarkdownPath: '',
 };
 const readOnly = new Compartment();
 const editorTheme = new Compartment();
@@ -167,6 +172,48 @@ function basename(path) { return path.replace(/[\\/]+$/, '').split(/[\\/]/).pop(
 function isDirty(doc) { return !!doc && !doc.state.doc.eq(doc.savedDoc); }
 function dirtyDocuments() { return [...state.documents.values()].filter(isDirty); }
 function activeDocument() { return state.documents.get(state.activePath); }
+function isMarkdown(path) { return /\.(md|markdown)$/i.test(path || ''); }
+function currentCompileTarget() {
+  const doc = activeDocument();
+  const fallback = state.meta?.project?.main || '';
+  if (!doc) return fallback;
+  if (doc.compileDoc !== doc.state.doc || doc.compileFallback !== fallback) {
+    doc.compileDoc = doc.state.doc; doc.compileFallback = fallback;
+    doc.compileMain = compileTarget(doc.path, doc.state.doc.toString(), fallback);
+  }
+  return doc.compileMain;
+}
+function updateDocumentPreview({ immediate = false } = {}) {
+  const doc = activeDocument();
+  const editingMarkdown = !!doc && isMarkdown(doc.path);
+  if (editingMarkdown) state.lastMarkdownPath = doc.path;
+  const markdownDocument = (editingMarkdown ? doc : state.documents.get(state.lastMarkdownPath)) || [...state.documents.values()].find(item => isMarkdown(item.path));
+  const useMarkdown = state.previewChoice === 'markdown' || (state.previewChoice === 'auto' && editingMarkdown);
+  const changed = state.previewMode !== (useMarkdown ? 'markdown' : 'pdf');
+  state.previewMode = useMarkdown ? 'markdown' : 'pdf';
+  $('pdf-preview').hidden = useMarkdown;
+  for (const select of document.querySelectorAll('[data-preview-choice]')) select.value = state.previewChoice;
+  $('pdf-pane').setAttribute('aria-label', useMarkdown ? 'Markdown のプレビュー' : 'PDF のプレビュー');
+  $('show-preview').textContent = useMarkdown ? 'プレビュー' : 'PDF';
+  $('splitter').setAttribute('aria-label', '編集画面とプレビューの幅を変更');
+  if (useMarkdown) {
+    $('markdown-preview-panel').hidden = false;
+    if (changed) viewer.search.close(false);
+    const path = markdownDocument?.path || '';
+    $('markdown-document-name').textContent = path || 'Markdown ファイルを開いてください';
+    $('markdown-document-name').title = path;
+    markdownPreview.update(markdownDocument?.state.doc.toString() || '', { path, projectRoot: state.meta?.project?.root, immediate });
+    if (changed) markdownPreview.show();
+  } else {
+    if (changed) { markdownPreview.hide(); requestAnimationFrame(() => viewer.refreshLayout()); }
+    $('markdown-preview-panel').hidden = true;
+  }
+}
+function setPreviewChoice(value) {
+  state.previewChoice = ['auto', 'pdf', 'markdown'].includes(value) ? value : 'auto';
+  updateDocumentPreview({ immediate: true });
+  renderControls(); scheduleSession();
+}
 function fileKind(file) { return file?.kind || 'text'; }
 function rememberTab(path) { if (!state.tabOrder.includes(path)) state.tabOrder.push(path); }
 function rememberEditorPosition() {
@@ -234,7 +281,7 @@ const bibLanguage = StreamLanguage.define({
 
 function makeEditorState(path, content) {
   const extension = path.split('.').pop().toLowerCase();
-  const language = extension === 'bib' ? bibLanguage : /^(tex|sty|cls|ltx|def|bst)$/.test(extension) ? StreamLanguage.define(stex) : [];
+  const language = isMarkdown(path) ? markdown() : extension === 'bib' ? bibLanguage : /^(tex|sty|cls|ltx|def|bst)$/.test(extension) ? StreamLanguage.define(stex) : [];
   return EditorState.create({ doc: normalise(content), extensions: [
     basicSetup,
     sourceSearch(),
@@ -247,6 +294,7 @@ function makeEditorState(path, content) {
     EditorState.phrases.of({ 'Find': '検索', 'Replace': '置換', 'next': '次', 'previous': '前', 'all': 'すべて', 'match case': '大文字と小文字を区別', 'by word': '単語単位', 'regexp': '正規表現', 'replace': '置換', 'replace all': 'すべて置換', 'close': '閉じる', 'Go to line': '行へ移動', 'go': '移動', 'Fold line': '折りたたむ', 'Unfold line': '展開' }),
     autocompletion({ override: /^(tex|sty|cls|ltx)$/.test(extension) ? [texCompletionSource(() => state.completionItems), latexCompletion] : [] }),
     EditorView.domEventHandlers({ mousedown(event, view) {
+      if (isMarkdown(state.activePath)) return false;
       if (!(event.ctrlKey || event.metaKey) || event.button !== 0 || view.composing) return false;
       const position = view.posAtCoords({ x: event.clientX, y: event.clientY });
       if (position == null) return false;
@@ -261,7 +309,7 @@ function makeEditorState(path, content) {
     EditorView.updateListener.of(update => {
       const doc = activeDocument();
       if (doc) doc.state = update.state;
-      if (update.docChanged && doc) { updateDocumentIndicators(doc); updatePreviewNote(); queueDrafts(); scheduleAutoSave(); scheduleIndex(doc); }
+      if (update.docChanged && doc) { updateDocumentIndicators(doc); updatePreviewNote(); updateDocumentPreview(); queueDrafts(); scheduleAutoSave(); scheduleIndex(doc); }
       if (update.selectionSet || update.docChanged) updateCursor();
     }),
   ] });
@@ -302,6 +350,7 @@ function selectDocument(doc) {
   if (position) { const view = state.editor; requestAnimationFrame(() => { if (state.editor === view && state.activePath === doc.path) { view.scrollDOM.scrollTop = Math.max(0, Number(position.scrollTop) || 0); view.dispatch({ effects: EditorView.scrollIntoView(view.state.selection.main.head, { y: 'nearest' }) }); } }); }
   if (/\.(tex|bib)$/i.test(doc.path) && doc.indexedDoc !== doc.state.doc) updateIndex(doc.path, doc.state.doc.toString());
   renderRecovery(); scheduleSession();
+  updateDocumentPreview({ immediate: true });
   document.title = `${isDirty(doc) ? '● ' : ''}${basename(doc.path)} — Local TeX Editor`;
 }
 
@@ -340,6 +389,7 @@ function selectAsset(file) {
   renderTabs(); updateTreeSelection(); renderControls(); updateCursor(); scheduleSession();
   document.title = `${basename(file.path)} — Local TeX Editor`;
   assetPreview.show(asset, state.meta.project.root);
+  updateDocumentPreview();
 }
 
 function renderTabs() {
@@ -565,7 +615,7 @@ function removeOpenFile(path) {
       $('save-status').textContent = ''; $('conflict-banner').hidden = true; updateCursor(); document.title = 'Local TeX Editor';
     }
   }
-  renderTabs(); renderTree(); renderControls(); updatePreviewNote(); persistSession();
+  renderTabs(); renderTree(); renderControls(); updatePreviewNote(); updateDocumentPreview(); persistSession();
 }
 
 async function resolveConflict(doc) {
@@ -635,7 +685,9 @@ async function applyMeta(meta, resetProject = false) {
     state.texIndex.clear(); state.completionItems = { citations: [], labels: [] }; state.indexError = ''; state.indexing = false;
     clearTimeout(state.pollTimer); state.pollTimer = null;
     state.documents.clear(); state.assets.clear(); state.tabOrder = []; state.directoryState.clear(); state.pendingFiles.clear(); state.activePath = ''; ++state.openSequence;
-    assetPreview.hide();
+    assetPreview.hide(); markdownPreview.reset();
+    state.previewMode = 'pdf'; state.previewChoice = 'auto'; state.lastMarkdownPath = '';
+    $('pdf-preview').hidden = false; $('markdown-preview-panel').hidden = true;
     state.editorZoomCleanup?.(); state.editorZoomCleanup = null; state.editor?.destroy(); state.editor = null; $('editor').replaceChildren(); $('editor').hidden = true; $('editor-empty').hidden = false;
     $('conflict-banner').hidden = true; $('file-filter').value = ''; $('save-status').textContent = ''; $('active-filename').textContent = '原稿';
     state.build = null; state.reportedBuild = ''; await viewer.reset();
@@ -649,7 +701,6 @@ async function applyMeta(meta, resetProject = false) {
   $('project-name').title = project?.root || '';
   $('project-root').textContent = project?.root || ''; $('project-root').title = project?.root || '';
   updateApplicationDetails(meta);
-  $('main-document-label').textContent = project ? `${project.main || 'メイン文書を選択'} · ${modeLabels[project.mode] || project.mode}` : 'メイン文書を選択';
   renderRecent(); renderTree(); renderTabs(); renderControls(); updateCursor(); renderOutline(); renderRecovery();
   applyBuild(meta.build);
   if (project && resetProject) runTask(() => indexProject());
@@ -844,7 +895,7 @@ function updatePreviewNote() {
   if (build.status === 'failed') { note.textContent = '最新のコンパイルに失敗しました．前回成功した PDF を表示しています．'; note.classList.add('error'); label.textContent = '前回の PDF'; }
   else if (build.status === 'cancelled') { note.textContent = 'コンパイルを停止しました．前回成功した PDF を表示しています．'; label.textContent = '前回の PDF'; }
   else if (build.status === 'running') { note.textContent = 'コンパイル中です．完了すると PDF が更新されます．'; label.textContent = '更新待ち'; }
-  else if (build.sourceChanged || dirtyDocuments().length) { note.textContent = '原稿に変更があります．最新の内容を確認するにはコンパイルしてください．'; label.textContent = '原稿に変更あり'; }
+  else if ((build.pdfSourceChanged ?? build.sourceChanged) || dirtyDocuments().some(doc => !isMarkdown(doc.path))) { note.textContent = '原稿に変更があります．最新の内容を確認するにはコンパイルしてください．'; label.textContent = '原稿に変更あり'; }
   else { label.textContent = viewer.hasRendered && viewer.buildId === build.pdfBuildId ? '更新済み' : '読み込み中'; return; }
   note.hidden = false; label.classList.add('stale');
 }
@@ -857,6 +908,9 @@ function applyBuild(build) {
   }
   const previouslyRunning = isRunning();
   state.build = build || null;
+  const pdfMain = build?.pdfMain || (build?.pdfReady ? state.meta?.project?.main : '') || '';
+  $('pdf-document').textContent = basename(pdfMain);
+  $('pdf-document').title = pdfMain ? `表示中の PDF: ${pdfMain}` : '';
   const labels = { running: 'コンパイル中', success: 'コンパイル完了', failed: 'コンパイル失敗', cancelled: '停止しました' };
   $('build-status').textContent = labels[build?.status] || 'コンパイル前';
   $('build-status').dataset.status = build?.status || 'idle';
@@ -874,7 +928,7 @@ function applyBuild(build) {
       state.reportedBuild = `${build.id}:failed`; setLogVisible(true);
       showError(new Error(build.error || `コンパイルに失敗しました (終了コード ${build.exitCode ?? '不明'})．ログを確認してください．`));
     }
-    if (build.pdfReady && build.pdfBuildId && state.meta?.project) viewer.load(build.pdfBuildId, state.meta.project.root).catch(error => showError(error));
+    if (build.pdfReady && build.pdfBuildId && state.meta?.project) viewer.load(build.pdfBuildId, state.meta.project.root, pdfMain).catch(error => showError(error));
     if (build.status === 'running') schedulePoll(650);
     else { clearTimeout(state.pollTimer); state.pollTimer = null; }
   } else {
@@ -910,11 +964,15 @@ async function pollBuild() {
 async function startBuild() {
   if (state.operation || isRunning() || !state.meta?.project || state.closed) return;
   if (state.editor?.composing) return;
-  if (!state.meta.project.main) { await showSettings(); return; }
-  setOperation('compiling'); $('build-status').textContent = 'ファイルを保存しています…'; clearError();
+  const doc = activeDocument();
+  const useMarkdown = !!doc && isMarkdown(doc.path);
+  const main = currentCompileTarget();
+  if (!useMarkdown && !main) { await showSettings(); return; }
+  setOperation(useMarkdown ? 'previewing' : 'compiling'); $('build-status').textContent = 'ファイルを保存しています…'; clearError();
   try {
     await saveAll();
-    const build = await api('/api/build', { method: 'POST', body: {} });
+    if (useMarkdown) { updateDocumentPreview({ immediate: true }); markdownPreview.refresh(); return; }
+    const build = await api('/api/build', { method: 'POST', body: { main } });
     applyBuild(build);
   } catch (error) { if (!error?.shown) showError(error); }
   finally { setOperation(''); if (!isRunning()) { const current = state.build; $('build-status').textContent = current ? ({ success: 'コンパイル完了', failed: 'コンパイル失敗', cancelled: '停止しました' }[current.status] || 'コンパイル前') : 'コンパイル前'; } }
@@ -932,15 +990,20 @@ function renderControls() {
   const busy = !!state.operation || state.closed;
   const doc = activeDocument();
   const running = isRunning();
-  $('compile-button').disabled = busy || running || !project || !project.main || state.externalProjectChanged;
-  $('compile-label').textContent = state.operation === 'compiling' ? '保存しています…' : running ? 'コンパイル中' : 'コンパイル';
+  const useMarkdown = !!doc && isMarkdown(doc.path);
+  const main = currentCompileTarget();
+  $('compile-button').disabled = busy || running || !project || (!useMarkdown && !main) || state.externalProjectChanged;
+  $('compile-label').textContent = ['compiling', 'previewing'].includes(state.operation) ? '保存しています…' : running ? 'コンパイル中' : useMarkdown ? 'プレビュー' : 'コンパイル';
+  $('compile-button').title = useMarkdown ? '保存して Markdown のプレビューを更新 (Ctrl+Enter)' : `保存して ${main || '原稿'} をコンパイル (Ctrl+Enter)`;
+  $('main-document-label').textContent = useMarkdown ? `${doc.path} · Markdown` : project ? `${main || '原稿を選択'} · ${modeLabels[project.mode] || project.mode}` : '原稿を選択';
+  $('main-document').title = useMarkdown ? '編集とコンパイルの設定を開く' : `コンパイル対象: ${main || '未選択'}\n既定のメイン文書とコンパイラーの設定を開く`;
   $('compile-icon').classList.toggle('spinning', running || state.operation === 'compiling');
   $('compile-icon').textContent = running || state.operation === 'compiling' ? '' : '▶';
   $('stop-button').hidden = !running; $('stop-button').disabled = busy || !running;
   $('save-button').disabled = busy || !doc || !!doc.saving || !isDirty(doc) || state.externalProjectChanged;
   $('find-button').disabled = !doc || state.closed;
   const missingSynctex = state.meta && typeof state.meta.synctex === 'string' && !state.meta.synctex;
-  $('synctex-forward').disabled = busy || state.syncing || !doc || !viewer.ready || !state.build?.synctexReady || missingSynctex || state.externalProjectChanged;
+  $('synctex-forward').disabled = busy || state.syncing || !doc || useMarkdown || !(viewer.ready || (state.previewMode === 'markdown' && viewer.document)) || !state.build?.synctexReady || missingSynctex || state.externalProjectChanged;
   $('synctex-forward').title = missingSynctex ? 'SyncTeX が見つかりません．設定に導入の手順があります．' : state.build?.synctexReady ? 'カーソル位置を PDF で表示 (Ctrl+クリックでも移動)' : 'SyncTeX を使うには，このアプリで PDF をコンパイルしてください．';
   $('main-document').disabled = busy || !project || running;
   $('settings-button').disabled = busy || running;
@@ -962,7 +1025,7 @@ async function downloadPDF() {
   const response = await fetch(`/api/pdf?build=${encodeURIComponent(build.pdfBuildId)}`, { headers: { 'X-Local-Token': token, 'X-Project-Root': encodeURIComponent(project.root) }, cache: 'no-store' });
   if (!response.ok) { const text = await response.text(); let message = text; try { message = JSON.parse(text).error || text; } catch { /* A non-JSON error is still displayed. */ } throw new APIError(`PDF を取得できませんでした．${message}`, response.status); }
   const blob = await response.blob(); const url = URL.createObjectURL(blob);
-  const link = document.createElement('a'); link.href = url; link.download = basename(project.main).replace(/\.tex$/i, '') + '.pdf'; link.click();
+  const link = document.createElement('a'); link.href = url; link.download = basename(build.pdfMain || project.main).replace(/\.tex$/i, '') + '.pdf'; link.click();
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
@@ -1016,7 +1079,7 @@ async function shutdown() {
     clearInterval(state.heartbeat); state.build = null; setConnected(false);
     try { sessionStorage.removeItem(TOKEN_KEY); } catch { /* No persistent storage is required. */ }
     state.editorZoomCleanup?.(); state.editorZoomCleanup = null; state.editor?.destroy(); state.editor = null;
-    state.documents.clear(); state.assets.clear(); assetPreview.hide(); viewer.reset().catch(() => {});
+    state.documents.clear(); state.assets.clear(); assetPreview.hide(); markdownPreview.reset(); viewer.reset().catch(() => {});
     $('app-shell').classList.add('app-closed');
     $('workbench').hidden = true; $('welcome').hidden = true; $('recovery-banner').hidden = true; $('toast').hidden = true;
     $('closed-screen').hidden = false;
@@ -1209,17 +1272,28 @@ function persistSession() {
     const selection = doc.state.selection.main;
     positions[doc.path] = { anchor: selection.anchor, head: selection.head, scrollTop: doc.path === state.activePath && state.editor ? state.editor.scrollDOM.scrollTop : doc.scrollTop ?? positions[doc.path]?.scrollTop ?? 0 };
   }
-  state.session = { version: 1, updatedAt: Date.now(), activePath: state.activePath, positions, pdf: viewer.getViewState(), sidebar: state.sidebar, directories: Object.fromEntries(state.directoryState) };
+  state.session = { version: 1, updatedAt: Date.now(), activePath: state.activePath, positions, pdf: viewer.getViewState(), pdfPositions: viewer.getPositions(), previewChoice: state.previewChoice, lastMarkdownPath: state.lastMarkdownPath, sidebar: state.sidebar, directories: Object.fromEntries(state.directoryState) };
   sessionStore.write(`session:${state.meta.project.root}`, state.session, 0);
 }
 async function loadProjectSession(root, generation) {
   const [session, drafts] = await Promise.all([sessionStore.read(`session:${root}`), sessionStore.read(`drafts:${root}`)]);
   if (generation !== state.projectGeneration) return;
   state.session = session && typeof session === 'object' ? session : null;
+  state.previewChoice = ['auto', 'pdf', 'markdown'].includes(state.session?.previewChoice) ? state.session.previewChoice : 'auto';
+  state.lastMarkdownPath = isMarkdown(state.session?.lastMarkdownPath) ? state.session.lastMarkdownPath : '';
+  const markdownFile = state.previewChoice === 'markdown' && state.meta.project.files?.find(file => file.path === state.lastMarkdownPath);
+  if (markdownFile && markdownFile.path !== state.session?.activePath) {
+    try {
+      const file = await api(`/api/file?path=${encodeURIComponent(markdownFile.path)}`);
+      if (generation !== state.projectGeneration) return;
+      state.documents.set(file.path, makeDocument(file)); rememberTab(file.path);
+    } catch (error) { if (generation === state.projectGeneration) showError(error); }
+  }
+  if (generation !== state.projectGeneration) return;
   state.directoryState = new Map(Object.entries(state.session?.directories || {}).filter(([, value]) => typeof value === 'boolean'));
   state.drafts = { version: 1, entries: Array.isArray(drafts?.entries) ? drafts.entries.filter(entry => typeof entry?.id === 'string' && typeof entry.path === 'string' && typeof entry.content === 'string' && typeof entry.baseRevision === 'string') : [] };
   state.persistenceReady = true;
-  viewer.restorePosition(state.session?.pdf);
+  viewer.restorePosition(state.session?.pdf, state.session?.pdfPositions);
   setSidebar(state.session?.sidebar === 'outline' ? 'outline' : 'files');
   renderRecovery();
   $('draft-status').textContent = availableDrafts().length ? '前回の草稿があります' : '';
@@ -1355,8 +1429,14 @@ function noteSourceChanged(result) {
   if (result.sourceChanged || dirtyDocuments().length) toast('この PDF を作成した後に原稿が変更されています．行の位置がずれる場合があります．');
 }
 async function syncForward(position = null) {
+  if (isMarkdown(state.activePath)) return;
   if (state.syncing || state.operation || !state.editor || !activeDocument() || !state.meta?.project) return;
-  if (!viewer.ready || !viewer.buildId) throw new Error('PDF をコンパイルしてから，原稿と PDF の位置を対応させてください．');
+  if (!viewer.document || !viewer.buildId) throw new Error('PDF をコンパイルしてから，原稿と PDF の位置を対応させてください．');
+  if (state.previewMode === 'markdown') {
+    setPreviewChoice('pdf');
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    await viewer.initialisePages();
+  }
   const generation = state.projectGeneration;
   const path = state.activePath;
   const view = state.editor;
@@ -1402,6 +1482,16 @@ const viewer = new PDFViewer({
   onInverse: position => runTask(() => syncInverse(position)),
 });
 const assetPreview = new AssetPreview({ token });
+const markdownPreview = new MarkdownPreview({
+  container: $('markdown-preview-container'), token,
+  onError: error => showError(error),
+  onOpenFile: (path, { fragment } = {}) => runTask(async () => {
+    await openFile(path);
+    const doc = activeDocument();
+    if (doc?.path === path && isMarkdown(path) && fragment) markdownPreview.update(doc.state.doc.toString(), { path, projectRoot: state.meta.project.root, immediate: true, fragment });
+  }),
+  onSourceLine: (line, path) => runTask(() => goToSource(path, line)),
+});
 
 let cachedTheme = null;
 try { cachedTheme = localStorage.getItem('local-tex-editor-theme'); } catch { /* Use the system preference on the first visit. */ }
@@ -1415,6 +1505,7 @@ onClick('shortcut-start-menu', () => createShortcut('start-menu')); onClick('sho
 onClick('copy-synctex-setup', async () => { await navigator.clipboard.writeText($('synctex-install-commands').textContent); toast('コマンドをコピーしました．'); });
 onClick('pick-project', pickProject); onClick('cancel-picker', cancelPicker); onClick('shutdown-button', shutdown);
 onClick('save-button', saveCurrent); onClick('compile-button', startBuild); onClick('stop-button', stopBuild);
+for (const select of document.querySelectorAll('[data-preview-choice]')) select.addEventListener('change', () => setPreviewChoice(select.value));
 onClick('refresh-files', refreshFiles); onClick('download-pdf', downloadPDF); onClick('copy-log', copyLog);
 onClick('synctex-forward', () => syncForward());
 onClick('files-tab', () => { $('file-filter').value = ''; setSidebar('files'); });

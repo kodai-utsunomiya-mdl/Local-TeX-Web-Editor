@@ -9,11 +9,11 @@ Windows のブラウザで TeX の原稿を編集し，PC にある TeX Live で
 ## ダウンロードして起動する
 
 1. [Releases](https://github.com/kodai-utsunomiya-mdl/local-tex-editor/releases) を開き，最新のバージョンを選ぶ．
-2. **Assets** の `local-tex-editor-0.1.3-windows-x64.zip` をダウンロードする．`Source code` は開発用のソースである．
+2. **Assets** の `local-tex-editor-0.1.4-windows-x64.zip` をダウンロードする．`Source code` は開発用のソースである．
 3. ZIP を展開し，`local-tex-editor.exe` をダブルクリックする．
 4. 開いたブラウザで原稿のフォルダーを選ぶ．フォルダーのパスを入力して開くこともできる．
 5. TeX Live の場所が自動で見つからない場合は，設定に `C:\texlive\2025\bin\windows` など，`latexmk.exe` があるフォルダーを指定する．
-6. メイン文書を `main.tex` にして，コンパイルする．
+6. コンパイルしたい `.tex` をエディタで開き，「コンパイル」を押す．
 
 例えば，Overleaf にあるような原稿は，プロジェクトのソースを ZIP としてダウンロードして展開し，そのフォルダーを開く．GitHub などから取得した原稿を開く場合も，`.tex`，`.bib`，画像，`latexmkrc` などを含むプロジェクトのフォルダーを指定する．
 
@@ -45,6 +45,8 @@ Windows のブラウザで TeX の原稿を編集し，PC にある TeX Live で
 
 フォルダーは左側の一覧で展開できる．画像や PDF を選ぶと，原稿と同じタブ欄でプレビューを開く．原稿のタブへ戻ると，編集中の内容とカーソルの位置から作業を続けられる．
 
+文字を選択すると，選択範囲に背景色が付く．ライト／ダークの両方で，現在の行やエディタからフォーカスを移した後の範囲も確認できる．
+
 | 操作 | 使い方 |
 | --- | --- |
 | ファイルや見出しを探す | 左側の検索欄を使う．「アウトライン」タブでは，原稿の節・小節をクリックしてその行へ移動できる |
@@ -54,7 +56,7 @@ Windows のブラウザで TeX の原稿を編集し，PC にある TeX Live で
 | 原稿を検索・置換する | エディタで `Ctrl + F` を押す，または「検索」を押す．複数行をそのまま貼り付けられる |
 | 原稿の文字を拡大・縮小する | エディタ上で `Ctrl + ホイール`，タッチパッドのピンチ，またはタッチ画面の 2 本指で操作する．設定の文字サイズにも反映される |
 | ファイルを保存する | `Ctrl + S` を押す．開いているファイルをすべて保存する操作は `Ctrl + Shift + S` |
-| コンパイルする | `Ctrl + Enter`，または「コンパイル」を押す．編集中のファイルを保存してから TeX を実行する |
+| コンパイルする | `Ctrl + Enter`，または「コンパイル」を押す．ファイルを保存してから，編集対象の TeX 文書をコンパイルする |
 | エラーの行へ移動する | ログの上に表示されるファイル名と行番号をクリックする |
 
 検索欄と置換欄では，改行と TeX の `\` を入力どおりに扱う．`Enter` で次の一致箇所へ，`Shift + Enter` で前へ移動する．欄の中で改行を入力するには `Ctrl + Enter` を使う．正規表現は検索欄のチェックボックスから有効にできる．
@@ -68,6 +70,16 @@ Windows のブラウザで TeX の原稿を編集し，PC にある TeX Live で
 編集中の草稿は，原稿のファイルへの保存とは別に PC へ記録する．アプリを開き直した際に前回の草稿があれば，「草稿を確認」が表示される．ファイルと草稿の内容を見比べてから「草稿をエディタで開く」を選ぶ．別のアプリが原稿を書き換えた場合には，ディスクと編集中の内容を確認する画面から，保存する内容を選べる．
 
 次回の起動では，前回のプロジェクト，開いていた原稿のカーソル位置，PDF のページと倍率を読み戻す．前回成功した PDF も表示できるので，読み返すためにコンパイルを待つ必要はない．
+
+### Markdown を編集する
+
+プレビューの種類が「自動」のとき，`.md` または `.markdown` を開くと，右側に Markdown のプレビューを表示する．入力に合わせて本文を更新し，見出し，箇条書き，表，コードブロック，チェック項目，リンク，画像，数式を表示する．「プレビュー」または `Ctrl + Enter` を押すと，原稿を保存して表示を更新する．
+
+プレビュー上部で「自動・PDF・Markdown」を選べる．「PDF」を選ぶと，PDF を読みながら Markdown を編集できる．「Markdown」を選ぶと，TeX のタブへ移っても最後に編集した Markdown を表示する．選んだ表示は，原稿の保存やコンパイルの後も続く．「自動」に戻すと，編集中のファイルに合わせて表示を切り替える．この選択は，次回そのプロジェクトを開いたときにも読み込む．
+
+数式には `$...$`，GitHub のドル記号とバッククォートで囲む形式，`$$...$$`，`math` のコードブロック，`\(...\)` を使える．プロジェクト内の画像は，Markdown のファイルからの相対パスで指定する．外部の画像は，その URL をブラウザで開くリンクとして表示する．
+
+プレビュー内の相対リンクから別の文書を開ける．本文の段落や見出しをダブルクリックすると，エディタの対応する行へ移動する．Markdown の各文書でスクロール位置を記録する．PDF の表示へ戻ると，最後にコンパイルした PDF を表示する．
 
 ## PDF を読み，原稿と行き来する
 
@@ -107,11 +119,17 @@ PDF はページをまたいで連続してスクロールできる．表示中�
 
 ## コンパイルの設定
 
+コンパイルする文書は，その時点でエディタに表示している `.tex` から選ぶ．`\documentclass` または `\begin{document}` があるファイルを開いて「コンパイル」を押すと，その文書の PDF を表示する．TeX のタブを切り替えただけでは，表示中の PDF は変わらない．画面上部に次のコンパイル対象，PDF の操作欄に表示中の文書名を示す．
+
+`\input` で読む章や共通設定のファイルを編集している場合は，設定画面の「既定のメイン文書」をコンパイルする．文書ごとの親ファイルを指定するには，編集するファイルに `% !TeX root = ../main.tex` のようなコメントを書く．パスはそのファイルのフォルダーから指定する．
+
+文書ごとに PDF のページ位置と倍率を記録する．別の文書のコンパイルに失敗した場合も，直前に成功した PDF と SyncTeX を使って作業を続けられる．
+
 既存の `latexmkrc` がある原稿では，設定画面のコンパイラーを「latexmkrc の設定を使う」にする．`latexmkrc` / `.latexmkrc` に書かれた `uplatex`，`upbibtex`，`dvipdfmx` などの指定を使う．
 
 `latexmkrc` を置かないプロジェクトでは，pdfLaTeX，upLaTeX，XeLaTeX，LuaLaTeX を選択できる．アプリは `latexmk` を実行し，参考文献や相互参照に必要な再実行も `latexmk` が担当する．
 
-コンパイルの中間ファイルは，プロジェクト内の `.local-tex-editor/build` に保存する．次回のコンパイルでは，同じ中間ファイルを使う．プロジェクトを Git で管理する場合は，そのプロジェクトの `.gitignore` に次を追加できる．
+コンパイルの中間ファイルは，プロジェクト内の `.local-tex-editor/build` 以下に文書ごとに保存する．次回のコンパイルでは，同じ文書の中間ファイルを使う．プロジェクトを Git で管理する場合は，そのプロジェクトの `.gitignore` に次を追加できる．
 
 ```gitignore
 .local-tex-editor/
@@ -145,7 +163,7 @@ go build -o bin/local-tex-editor.exe ./cmd/local-tex-editor
 Windows 用の配布ファイルは次のコマンドで作成する．
 
 ```sh
-go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.3" -o dist/local-tex-editor.exe ./cmd/local-tex-editor
+go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.4" -o dist/local-tex-editor.exe ./cmd/local-tex-editor
 ```
 
 `build:windows-resources` は同梱の ICO から Windows x64 用の resource を生成する．実行ファイルのビルド時に，16〜256 px の 9 サイズのアイコンが組み込まれる．
@@ -172,6 +190,9 @@ GitHub Actions はアプリをビルドし，Windows で Go のテストとブ�
 
 - [CodeMirror](https://codemirror.net/): 編集画面 (MIT)
 - [PDF.js](https://mozilla.github.io/pdf.js/): PDF の表示 (Apache-2.0)
+- [markdown-it](https://github.com/markdown-it/markdown-it): Markdown の表示 (MIT)
+- [KaTeX](https://katex.org/): Markdown 内の数式 (MIT)
+- [DOMPurify](https://github.com/cure53/DOMPurify): プレビューの HTML の処理 (Apache-2.0 または MPL-2.0)
 - [Go](https://go.dev/): HTTP サーバーと TeX の実行
 
 依存する JavaScript のバージョンは `package-lock.json` に記録する．同梱するライブラリのライセンス本文は，アプリの `/THIRD_PARTY_LICENSES.txt` に含む．アプリ自体のライセンスは [MIT](LICENSE) である．
