@@ -4,12 +4,13 @@ package platform
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
 	"syscall"
 	"unsafe"
+
+	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/messages"
 )
 
 var (
@@ -29,7 +30,7 @@ func knownShortcutFolder(id *nativeGUID) (string, error) {
 		defer ole32.NewProc("CoTaskMemFree").Call(uintptr(unsafe.Pointer(path)))
 	}
 	if int32(result) < 0 || path == nil {
-		return "", fmt.Errorf("Windows の保存先を取得できません (HRESULT 0x%08X)．", uint32(result))
+		return "", messages.Errorf("Windows の保存先を取得できません (HRESULT 0x%08X)．", uint32(result))
 	}
 	return filepath.EvalSymlinks(nativeWideString(path))
 }
@@ -42,11 +43,11 @@ func CreateShortcut(destination string) (ShortcutResult, error) {
 	case "desktop":
 		folder = &folderDesktop
 	default:
-		return ShortcutResult{}, errors.New("ショートカットの作成先を選んでください．")
+		return ShortcutResult{}, messages.Errorf("ショートカットの作成先を選んでください．")
 	}
 	source, err := os.Executable()
 	if err != nil {
-		return ShortcutResult{}, fmt.Errorf("起動中の実行ファイルを取得できません: %w", err)
+		return ShortcutResult{}, messages.Errorf("起動中の実行ファイルを取得できません: %w", err)
 	}
 	localAppData, err := knownShortcutFolder(&folderLocalAppData)
 	if err != nil {
@@ -68,7 +69,7 @@ func createShortcutAt(source, localAppData, shortcutDirectory string) (ShortcutR
 	}
 	release, err := acquireNamedLock(directory, `Local\LocalTeXEditorInstall-`)
 	if err != nil {
-		return ShortcutResult{}, fmt.Errorf("別のウィンドウがショートカットを作成しています: %w", err)
+		return ShortcutResult{}, messages.Errorf("別のウィンドウがショートカットを作成しています: %w", err)
 	}
 	defer release()
 	source, err = filepath.EvalSymlinks(source)
@@ -80,11 +81,11 @@ func createShortcutAt(source, localAppData, shortcutDirectory string) (ShortcutR
 	existed := false
 	if info, err := shortcutRegularFile(shortcut); err == nil {
 		if info.Size() > 1<<20 {
-			return ShortcutResult{}, fmt.Errorf("同名の別ファイルがあります (%s)．%w", shortcut, ErrShortcutConflict)
+			return ShortcutResult{}, messages.Errorf("同名の別ファイルがあります (%s)．%w", shortcut, ErrShortcutConflict)
 		}
 		link, err := readShellShortcut(shortcut)
 		if err != nil || (!shortcutSameFile(link.Target, target) && !shortcutSameFile(link.Target, source)) {
-			return ShortcutResult{}, fmt.Errorf("同名の別のショートカットがあります (%s)．%w", shortcut, ErrShortcutConflict)
+			return ShortcutResult{}, messages.Errorf("同名の別のショートカットがあります (%s)．%w", shortcut, ErrShortcutConflict)
 		}
 		existed = true
 	} else if !errors.Is(err, os.ErrNotExist) {
@@ -96,11 +97,11 @@ func createShortcutAt(source, localAppData, shortcutDirectory string) (ShortcutR
 	}
 	icon, iconCreated, err := installShortcutIcon(directory)
 	if err != nil {
-		return ShortcutResult{}, fmt.Errorf("ショートカットのアイコンを保存できません: %w", err)
+		return ShortcutResult{}, messages.Errorf("ショートカットのアイコンを保存できません: %w", err)
 	}
 	temporary, err := os.CreateTemp(shortcutDirectory, "Local TeX Editor-*.lnk")
 	if err != nil {
-		return ShortcutResult{}, fmt.Errorf("ショートカットを保存できません: %w", err)
+		return ShortcutResult{}, messages.Errorf("ショートカットを保存できません: %w", err)
 	}
 	staged := temporary.Name()
 	_ = temporary.Close()
@@ -109,7 +110,7 @@ func createShortcutAt(source, localAppData, shortcutDirectory string) (ShortcutR
 		return ShortcutResult{}, err
 	}
 	if err := commitShortcutFile(staged, shortcut, existed); err != nil {
-		return ShortcutResult{}, fmt.Errorf("ショートカットを保存できません (%s): %w", shortcut, err)
+		return ShortcutResult{}, messages.Errorf("ショートカットを保存できません (%s): %w", shortcut, err)
 	}
 	// Refresh this application's entries without restarting Explorer or touching
 	// the user's icon-cache database. The content-hashed ICO path changes with
@@ -158,7 +159,7 @@ func withShellShortcut(use func(link, persistent *nativeCOMObject) error) error 
 }
 
 func shortcutCOMError(action string, result uintptr) error {
-	return fmt.Errorf("ショートカットを%sできません (HRESULT 0x%08X)．", action, uint32(result))
+	return messages.Errorf("ショートカットを%sできません (HRESULT 0x%08X)．", messages.Label(action), uint32(result))
 }
 
 func writeShellShortcut(path, target, iconPath string) error {
@@ -260,7 +261,7 @@ func commitShortcutFile(source, target string, replace bool) error {
 	}
 	result, _, callErr := kernel32.NewProc("MoveFileExW").Call(uintptr(unsafe.Pointer(from)), uintptr(unsafe.Pointer(to)), flags)
 	if result == 0 {
-		return fmt.Errorf("ファイルを配置できません: %w", callErr)
+		return messages.Errorf("ファイルを配置できません: %w", callErr)
 	}
 	return nil
 }

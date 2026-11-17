@@ -3,10 +3,8 @@
 package platform
 
 import (
-	"errors"
 	"os"
 	"os/exec"
-	"runtime"
 	"strings"
 	"syscall"
 )
@@ -39,25 +37,6 @@ func IsRegularFile(_ string, info os.FileInfo) (bool, error) {
 }
 
 func ReplaceFile(src, dst string) error { return os.Rename(src, dst) }
-
-func OpenBrowser(url string) error {
-	command := "xdg-open"
-	if runtime.GOOS == "darwin" {
-		command = "open"
-	}
-	cmd := exec.Command(command, url)
-	if err := cmd.Start(); err != nil {
-		return err
-	}
-	go cmd.Wait()
-	return nil
-}
-
-func showNativeFolderDialog(_ *folderPickRequest) (string, error) {
-	return "", errors.New("この OS ではフォルダーのパスを入力してください．")
-}
-
-func ShowError(message string) {}
 
 func DecodeOutput(data []byte) string { return strings.ToValidUTF8(string(data), "\uFFFD") }
 

@@ -1,4 +1,6 @@
+import { t, onLanguageChange, translateElements } from './i18n.js';
 import { PDFFindController, FindState } from 'pdfjs-dist/web/pdf_viewer.mjs';
+import { shortcutModifier } from './platform-keys.js';
 
 // Use PDF.js's text extraction and text-layer highlights, including pages that
 // have not yet been drawn. Searching does not allocate canvases for every page.
@@ -14,9 +16,9 @@ export class PDFSearch {
     this.toggle.type = 'button';
     this.toggle.className = 'icon-button pdf-search-toggle';
     this.toggle.innerHTML = '<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg>';
-    this.toggle.setAttribute('aria-label', 'PDF 内を検索');
+    this.toggle.setAttribute('aria-label', t("PDF 内を検索"));
     this.toggle.dataset.testid = 'pdf-search-toggle';
-    this.toggle.title = 'PDF 内を検索 (PDF にフォーカスして Ctrl+F)';
+    this.toggle.title = t("PDF 内を検索 (PDF にフォーカスして {value0}+F)", { value0: shortcutModifier });
     this.toggle.setAttribute('aria-expanded', 'false');
     this.toggle.setAttribute('aria-controls', 'pdf-search-bar');
     toolbar.insertBefore(this.toggle, toolbar.querySelector('#download-pdf'));
@@ -26,13 +28,13 @@ export class PDFSearch {
     this.bar.className = 'pdf-search-bar';
     this.bar.hidden = true;
     this.bar.setAttribute('role', 'search');
-    this.bar.setAttribute('aria-label', 'PDF 内を検索');
+    this.bar.setAttribute('aria-label', t("PDF 内を検索"));
     this.bar.innerHTML = `<div class="pdf-search-row">
-      <input type="search" data-testid="pdf-search-input" aria-label="PDF 内で探す文字列" placeholder="PDF 内で検索" autocomplete="off" spellcheck="false">
-      <button type="button" data-testid="pdf-search-prev" class="icon-button" aria-label="前の検索結果" title="前の結果 (Shift+Enter)">↑</button>
-      <button type="button" data-testid="pdf-search-next" class="icon-button" aria-label="次の検索結果" title="次の結果 (Enter)">↓</button>
-      <button type="button" class="icon-button" data-search-close aria-label="PDF の検索を閉じる" title="閉じる (Esc)">×</button>
-    </div><div class="pdf-search-options"><label><input type="checkbox" data-search-case> 大文字と小文字を区別</label><span data-testid="pdf-search-count" class="pdf-search-count" role="status" aria-live="polite"></span></div>`;
+      <input type="search" data-testid="pdf-search-input" aria-label="PDF 内で探す文字列" placeholder="PDF 内で検索" autocomplete="off" spellcheck="false" data-i18n-aria-label="PDF 内で探す文字列" data-i18n-placeholder="PDF 内で検索">
+      <button type="button" data-testid="pdf-search-prev" class="icon-button" aria-label="前の検索結果" title="前の結果 (Shift+Enter)" data-i18n-aria-label="前の検索結果" data-i18n-title="前の結果 (Shift+Enter)">↑</button>
+      <button type="button" data-testid="pdf-search-next" class="icon-button" aria-label="次の検索結果" title="次の結果 (Enter)" data-i18n-aria-label="次の検索結果" data-i18n-title="次の結果 (Enter)">↓</button>
+      <button type="button" class="icon-button" data-search-close aria-label="PDF の検索を閉じる" title="閉じる (Esc)" data-i18n-aria-label="PDF の検索を閉じる" data-i18n-title="閉じる (Esc)">×</button>
+    </div><div class="pdf-search-options"><label><input type="checkbox" data-search-case> <span data-i18n="大文字と小文字を区別">大文字と小文字を区別</span></label><span data-testid="pdf-search-count" class="pdf-search-count" role="status" aria-live="polite"></span></div>`;
     toolbar.after(this.bar);
     this.input = this.bar.querySelector('input[type="search"]');
     this.caseSensitive = this.bar.querySelector('[data-search-case]');
@@ -65,15 +67,29 @@ export class PDFSearch {
     });
     eventBus.on('updatefindcontrolstate', event => {
       if (event.source !== this.controller) return;
+      this.findState = event.state;
       this.input.classList.toggle('search-not-found', event.state === FindState.NOT_FOUND);
       if (!this.input.value) this.count.textContent = '';
-      else if (event.state === FindState.PENDING) this.count.textContent = '検索しています…';
-      else if (event.state === FindState.NOT_FOUND) this.count.textContent = '見つかりません';
+      else if (event.state === FindState.PENDING) this.count.textContent = t("検索しています…");
+      else if (event.state === FindState.NOT_FOUND) this.count.textContent = t("見つかりません");
       else this.showCount(event.matchesCount);
     });
     eventBus.on('updatefindmatchescount', event => { if (event.source === this.controller) this.showCount(event.matchesCount); });
     eventBus.on('pagesinit', () => this.reset());
     this.setEnabled(false);
+    this.refreshLanguage();
+    this.unsubscribeLanguage = onLanguageChange(() => this.refreshLanguage());
+  }
+
+  refreshLanguage() {
+    translateElements(this.bar);
+    this.toggle.setAttribute('aria-label', t('PDF 内を検索'));
+    this.toggle.title = t('PDF 内を検索 (PDF にフォーカスして {value0}+F)', { value0: shortcutModifier });
+    this.bar.setAttribute('aria-label', t('PDF 内を検索'));
+    if (!this.input.value) this.count.textContent = '';
+    else if (this.findState === FindState.PENDING) this.count.textContent = t('検索しています…');
+    else if (this.findState === FindState.NOT_FOUND) this.count.textContent = t('見つかりません');
+    else this.showCount(this.matches);
   }
 
   setEnabled(enabled) {
@@ -105,6 +121,7 @@ export class PDFSearch {
     this.input.value = '';
     this.input.classList.remove('search-not-found');
     this.count.textContent = '';
+    this.findState = null; this.matches = null;
     this.setEnabled(this.enabled);
   }
 
@@ -119,6 +136,7 @@ export class PDFSearch {
   }
 
   showCount(matches) {
-    this.count.textContent = !this.input.value ? '' : matches?.total > 0 ? `${matches.current} / ${matches.total} 件` : '0 件';
+    this.matches = matches;
+    this.count.textContent = !this.input.value ? '' : matches?.total > 0 ? t("{value0} / {value1} 件", { value0: matches.current, value1: matches.total }) : t("0 件");
   }
 }

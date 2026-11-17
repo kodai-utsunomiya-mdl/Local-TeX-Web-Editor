@@ -1,3 +1,4 @@
+import { t, getLanguage, onLanguageChange } from './i18n.js';
 import * as pdfjs from 'pdfjs-dist/build/pdf.mjs';
 import { EventBus, PDFViewer, PDFLinkService, LinkTarget } from 'pdfjs-dist/web/pdf_viewer.mjs';
 
@@ -34,6 +35,7 @@ export class AssetPreview {
     });
     this.resizeObserver.observe(this.elements.scroll);
     this.updateControls();
+    this.unsubscribeLanguage = onLanguageChange(() => this.refreshLanguage());
   }
 
   savePosition() {
@@ -71,22 +73,22 @@ export class AssetPreview {
     this.elements['image-stage'].hidden = true; this.elements['pdf-stage'].hidden = true;
     this.elements['pdf-stage'].dataset.path = file.path;
     this.elements.info.textContent = bytes(file.size || 0); this.elements.info.title = file.path;
-    this.message('読み込んでいます…'); this.updateControls();
+    this.message(t("読み込んでいます…")); this.updateControls();
     if (!['image', 'pdf'].includes(file.kind)) {
       this.root.dataset.state = 'unsupported';
-      this.message(`${file.path}\n${bytes(file.size || 0)}\n\nこの種類のファイルはプレビューに対応していません．`);
+      this.message(t("{value0}\n{value1}\n\nこの種類のファイルはプレビューに対応していません．", { value0: file.path, value1: bytes(file.size || 0) }));
       return;
     }
     try {
       const url = `/api/asset?path=${encodeURIComponent(file.path)}`;
-      const headers = { 'X-Local-Token': this.token, 'X-Project-Root': encodeURIComponent(projectRoot) };
+      const headers = { 'X-Local-Token': this.token, 'X-Project-Root': encodeURIComponent(projectRoot), 'Accept-Language': getLanguage() };
       if (file.kind === 'image') {
         const controller = new AbortController(); this.controller = controller;
         const response = await fetch(url, { headers, signal: controller.signal, cache: 'no-store' });
         if (!response.ok) {
           const text = await response.text(); let message = text;
           try { message = JSON.parse(text).error || text; } catch { /* Show the HTTP response when it is not JSON. */ }
-          throw new Error(message || `画像を取得できませんでした (HTTP ${response.status})．`);
+          throw new Error(message || t("画像を取得できませんでした (HTTP {value0})．", { value0: response.status }));
         }
         const blob = await response.blob();
         if (generation !== this.generation) return;
@@ -162,10 +164,18 @@ export class AssetPreview {
     this.elements.message.setAttribute('role', error ? 'alert' : 'status');
   }
 
+  refreshLanguage() {
+    if (!this.file || this.root.hidden) return;
+    if (this.root.dataset.state === 'loading') this.message(t('読み込んでいます…'));
+    else if (this.root.dataset.state === 'unsupported') this.message(t('{value0}\n{value1}\n\nこの種類のファイルはプレビューに対応していません．', { value0: this.file.path, value1: bytes(this.file.size || 0) }));
+    else if (this.root.dataset.state === 'error') this.message(t('{value0} を表示できませんでした．\n{value1}', { value0: this.file.path, value1: this.lastError?.message || this.lastError }), true);
+  }
+
   fail(error) {
     if (this.root.hidden || !this.file) return;
     this.ready = false; this.root.dataset.state = 'error';
-    this.message(`${this.file.path} を表示できませんでした．\n${error?.message || error}`, true);
+    this.lastError = error;
+    this.message(t("{value0} を表示できませんでした．\n{value1}", { value0: this.file.path, value1: error?.message || error }), true);
     this.updateControls();
   }
 

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/xml"
-	"fmt"
 	"io"
 	"mime"
 	"net/http"
@@ -13,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/messages"
 	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/platform"
 )
 
@@ -93,7 +93,7 @@ func (a *App) assetHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	file, err := os.Open(path)
 	if err != nil {
-		writeError(w, fmt.Errorf("プレビューするファイルを開けません: %w", err))
+		writeError(w, messages.Errorf("プレビューするファイルを開けません: %w", err))
 		return
 	}
 	defer file.Close()

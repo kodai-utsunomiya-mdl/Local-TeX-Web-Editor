@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: windows-${{ github.ref }}
+  group: build-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -151,9 +151,8 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force dist/windows | Out-Null
-          Copy-Item bin/local-tex-editor.exe, README.md, LICENSE -Destination dist/windows
-          New-Item -ItemType Directory -Force dist/windows/docs/screenshots | Out-Null
-          Copy-Item docs/screenshots/editor-dark.png -Destination dist/windows/docs/screenshots
+          Copy-Item bin/local-tex-editor.exe, README.md, README.ja.md, LICENSE -Destination dist/windows
+          Copy-Item docs -Destination dist/windows -Recurse -Force
           Get-FileHash dist/windows/local-tex-editor.exe -Algorithm SHA256 | Format-List
           $size = (Get-Item dist/windows/local-tex-editor.exe).Length
           "Windows application: $size bytes" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
@@ -166,9 +165,147 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+  macos-build:
+    name: Build the universal macOS application
+    runs-on: macos-15
+    timeout-minutes: 20
+    env:
+      CGO_ENABLED: '0'
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: '1.25.x'
+          cache: true
+          cache-dependency-path: go.mod
+
+      - name: Set up Node.js for the build
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install frontend dependencies and Chromium
+        run: |
+          npm ci
+          npx playwright install chromium
+
+      - name: Build the frontend
+        run: npm run build
+
+      - name: Build and verify the application bundle and icon
+        run: node scripts/build-macos.mjs
+
+      - name: Upload the universal macOS archive for tests
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: local-tex-editor-macos-universal
+          path: dist/local-tex-editor-*-macos-universal.zip
+          if-no-files-found: error
+          retention-days: 30
+
+  macos:
+    name: macOS ${{ matrix.architecture }} with TeX Live and Chromium
+    needs: macos-build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            architecture: arm64
+          - runner: macos-15-intel
+            architecture: x64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+    env:
+      CGO_ENABLED: '0'
+      CTAN_REPO: https://mirror.ctan.org/systems/texlive/tlnet
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: '1.25.x'
+          cache: true
+          cache-dependency-path: go.mod
+
+      - name: Set up Node.js for the tests
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Run editor unit tests and build test assets
+        run: |
+          npm run test:unit
+          npm run build
+
+      - name: Download the universal archive built by this workflow
+        run: |
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name local-tex-editor-macos-universal --dir macos-download
+          version=$(node -p "require('./package.json').version")
+          ditto -x -k "macos-download/local-tex-editor-$version-macos-universal.zip" macos-package
+          echo "LOCAL_TEX_EDITOR_TEST_MAC_APP=$PWD/macos-package/Local TeX Editor.app" >> "$GITHUB_ENV"
+
+      - name: Set up TeX Live for tests
+        uses: r-lib/actions/setup-tinytex@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+
+      - name: Install Japanese TeX packages
+        run: |
+          tlmgr update --self
+          tlmgr install latexmk uptex uptex-base uplatex platex jsclasses dvipdfmx synctex natbib ptex-fonts ptex-fontmaps haranoaji adobemapping
+          fmtutil-sys --byfmt uplatex
+          updmap-sys --setoption kanjiEmbed haranoaji
+          kpsewhich --format=cmap UniJIS2004-UTF16-H
+          kpsewhich HaranoAjiMincho-Regular.otf
+          tex_bin="$(dirname "$(command -v uplatex)")"
+          echo "LOCAL_TEX_EDITOR_TEST_TEX_BIN=$tex_bin" >> "$GITHUB_ENV"
+          "$tex_bin/latexmk" -v
+          "$tex_bin/upbibtex" --version
+          "$tex_bin/synctex" help
+
+      - name: Run Go tests on macOS
+        run: go test ./...
+
+      - name: Install Chromium for browser tests
+        run: npx playwright install chromium
+
+      - name: Test the packaged app, editing, compilation, and shutdown
+        run: node scripts/test-macos.mjs
+
+      - name: Test the native macOS folder selection dialog
+        if: ${{ !cancelled() }}
+        shell: bash
+        env:
+          LOCAL_TEX_EDITOR_TEST_NATIVE_PICKER: '1'
+        run: |
+          mkdir -p test-results/macos
+          go test -count=1 -timeout 45s -v -run NativeFolderPickerMac ./internal/platform 2>&1 | tee test-results/macos/native-folder-picker.log
+
+      - name: Upload macOS test results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: macos-${{ matrix.architecture }}-test-results
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
   release:
     name: Publish the tested application
-    needs: windows
+    needs: [windows, macos]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
@@ -192,7 +329,10 @@ jobs:
           gh run download "$GITHUB_RUN_ID" --name local-tex-editor-windows-x64 --dir release-package
           archive="local-tex-editor-$version-windows-x64.zip"
           (cd release-package && zip -r "../$archive" .)
-          sha256sum "$archive" > SHA256SUMS.txt
-          gh release create "$tag" "$archive" SHA256SUMS.txt \
+          gh run download "$GITHUB_RUN_ID" --name local-tex-editor-macos-universal --dir macos-release
+          mac_archive="local-tex-editor-$version-macos-universal.zip"
+          cp "macos-release/$mac_archive" "$mac_archive"
+          sha256sum "$archive" "$mac_archive" > SHA256SUMS.txt
+          gh release create "$tag" "$archive" "$mac_archive" SHA256SUMS.txt \
             --target "$GITHUB_SHA" --title "Local TeX Editor $version" \
             --notes-file "release-notes/$tag.md"

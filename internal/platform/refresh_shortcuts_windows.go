@@ -4,12 +4,13 @@ package platform
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"syscall"
 	"time"
 	"unsafe"
+
+	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/messages"
 )
 
 // RefreshInstalledShortcuts updates a previous installation when the user opens
@@ -31,7 +32,7 @@ func RefreshInstalledShortcuts() error {
 		}
 	}
 	if err := refreshInstalledShortcutsAt(source, localAppData, directories); err != nil {
-		return fmt.Errorf("ショートカットから起動するアプリを更新できませんでした．設定でショートカットをもう一度作成してください．%w", err)
+		return messages.Errorf("ショートカットから起動するアプリを更新できませんでした．設定でショートカットをもう一度作成してください．%w", err)
 	}
 	return nil
 }
@@ -44,7 +45,7 @@ func existingShortcutFolder(id *nativeGUID) (string, error) {
 		defer ole32.NewProc("CoTaskMemFree").Call(uintptr(unsafe.Pointer(path)))
 	}
 	if int32(result) < 0 || path == nil {
-		return "", fmt.Errorf("Windows の保存先を取得できません (HRESULT 0x%08X)．", uint32(result))
+		return "", messages.Errorf("Windows の保存先を取得できません (HRESULT 0x%08X)．", uint32(result))
 	}
 	return filepath.EvalSymlinks(nativeWideString(path))
 }

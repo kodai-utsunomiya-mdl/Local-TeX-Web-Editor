@@ -1,3 +1,4 @@
+import { t, getLanguage, setLanguage } from './i18n.js';
 import { EditorState, Compartment, Prec, StateEffect, StateField } from '@codemirror/state';
 import { EditorView, keymap, Decoration } from '@codemirror/view';
 import { basicSetup } from 'codemirror';
@@ -14,6 +15,8 @@ import { attachEditorZoom, prepareEditorResize } from './editor-zoom.js';
 import { tags } from '@lezer/highlight';
 import { SessionStore } from './session-store.js';
 import { BrowserSession } from './browser-session.js';
+import { isMac, shortcutModifier } from './platform-keys.js';
+import { renderTeXPackagesHelp } from './tex-packages.js';
 import { extractTexMetadata, extractCitations, texCompletionSource, extractLogLocations, compileTarget } from './tex-tools.js';
 
 const $ = id => document.getElementById(id);
@@ -41,6 +44,7 @@ const state = {
   activePath: '',
   projectGeneration: 0,
   toolsGeneration: 0,
+  texPackages: null,
   openSequence: 0,
   operation: '',
   build: null,
@@ -52,7 +56,7 @@ const state = {
   connected: false,
   externalProjectChanged: false,
   reportedBuild: '',
-  preferences: { autoSave: true, theme: null, editorFontSize: 14 },
+  preferences: { autoSave: true, theme: null, editorFontSize: 14, language: getLanguage() },
   theme: 'light',
   saveQueue: Promise.resolve(),
   autoSaveTimer: null,
@@ -75,6 +79,7 @@ const state = {
 };
 const readOnly = new Compartment();
 const editorTheme = new Compartment();
+const editorLanguage = new Compartment();
 const modeLabels = { project: 'latexmkrc', pdflatex: 'pdfLaTeX', uplatex: 'upLaTeX', xelatex: 'XeLaTeX', lualatex: 'LuaLaTeX' };
 let toastTimer = null;
 let lineFlashTimer = null;
@@ -111,13 +116,13 @@ function setConnected(connected) {
   const label = $('connection-status');
   label.classList.toggle('connected', connected);
   label.classList.toggle('disconnected', !connected);
-  label.textContent = state.closed ? 'アプリを終了しました' : connected ? 'この PC に接続済み' : '接続を確認してください';
+  label.textContent = state.closed ? t("アプリを終了しました") : connected ? t("この PC に接続済み") : t("接続を確認してください");
 }
 
 async function api(path, { method = 'GET', body, timeout = 15000, projectRoot = state.meta?.project?.root, signal, keepalive = false } = {}) {
-  if (state.closed) throw new Error('アプリは終了しています．実行ファイルから開き直してください．');
-  if (!token) throw new APIError('接続に必要な情報が見つかりません．アプリの実行ファイルを起動して開いたページを使用してください．', 401);
-  const headers = { 'X-Local-Token': token, Accept: 'application/json' };
+  if (state.closed) throw new Error(t("アプリは終了しています．実行ファイルから開き直してください．"));
+  if (!token) throw new APIError(t("接続に必要な情報が見つかりません．アプリの実行ファイルを起動して開いたページを使用してください．"), 401);
+  const headers = { 'X-Local-Token': token, Accept: 'application/json', 'Accept-Language': getLanguage() };
   if (projectRoot && !/^\/api\/(state|project\/|shutdown)/.test(path)) headers['X-Project-Root'] = encodeURIComponent(projectRoot);
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   const controller = new AbortController();
@@ -129,19 +134,19 @@ async function api(path, { method = 'GET', body, timeout = 15000, projectRoot = 
     const text = await response.text();
     let data;
     try { data = text ? JSON.parse(text) : null; }
-    catch { throw new APIError(`応答を読み取れませんでした (HTTP ${response.status})．${text.slice(0, 500)}`, response.status); }
-    if (!response.ok) throw new APIError(data?.error || `処理に失敗しました (HTTP ${response.status})．`, response.status, data);
+    catch { throw new APIError(t("応答を読み取れませんでした (HTTP {value0})．{value1}", { value0: response.status, value1: text.slice(0, 500) }), response.status); }
+    if (!response.ok) throw new APIError(data?.error || t("処理に失敗しました (HTTP {value0})．", { value0: response.status }), response.status, data);
     setConnected(true);
     return data;
   } catch (error) {
-    if (signal?.aborted) throw new DOMException('操作を取り消しました．', 'AbortError');
+    if (signal?.aborted) throw new DOMException(t("操作を取り消しました．"), 'AbortError');
     if (error instanceof APIError) {
       if (error.status === 401 || error.status === 403) setConnected(false);
       throw error;
     }
     setConnected(false);
-    if (error.name === 'AbortError') throw new APIError('PC 上のアプリから応答がありません．処理が続いている場合は，少し待ってから再接続してください．');
-    throw new APIError(`PC 上のアプリに接続できません．${error.message || error}`);
+    if (error.name === 'AbortError') throw new APIError(t("PC 上のアプリから応答がありません．処理が続いている場合は，少し待ってから再接続してください．"));
+    throw new APIError(t("PC 上のアプリに接続できません．{value0}", { value0: error.message || error }));
   } finally { if (timer) clearTimeout(timer); signal?.removeEventListener('abort', cancel); }
 }
 
@@ -150,10 +155,10 @@ function showError(error, action = null) {
   const message = error?.message || String(error);
   $('error-text').textContent = message;
   $('app-error').hidden = false;
-  const fallback = !state.connected && token && !state.closed ? { label: '再接続', run: reconnect } : null;
+  const fallback = !state.connected && token && !state.closed ? { label: t("再接続"), run: reconnect } : null;
   const buttonAction = action || fallback;
   $('error-action').hidden = !buttonAction;
-  $('error-action').textContent = buttonAction?.label || '再接続';
+  $('error-action').textContent = buttonAction?.label || t("再接続");
   $('error-action').onclick = buttonAction ? () => runTask(buttonAction.run) : null;
   if (error && typeof error === 'object') error.shown = true;
 }
@@ -173,6 +178,13 @@ function isDirty(doc) { return !!doc && !doc.state.doc.eq(doc.savedDoc); }
 function dirtyDocuments() { return [...state.documents.values()].filter(isDirty); }
 function activeDocument() { return state.documents.get(state.activePath); }
 function isMarkdown(path) { return /\.(md|markdown)$/i.test(path || ''); }
+function sourceAffectsPDF(path) {
+  if (!isMarkdown(path)) return true;
+  const inputs = state.build?.pdfMarkdownInputs;
+  if (!Array.isArray(inputs)) return true;
+  const normalisePath = value => state.meta?.platform === 'windows' ? value.toLowerCase() : value;
+  return inputs.some(input => normalisePath(input) === normalisePath(path));
+}
 function currentCompileTarget() {
   const doc = activeDocument();
   const fallback = state.meta?.project?.main || '';
@@ -194,14 +206,14 @@ function updateDocumentPreview({ immediate = false } = {}) {
   state.previewMode = useMarkdown ? 'markdown' : 'pdf';
   $('pdf-preview').hidden = useMarkdown;
   for (const select of document.querySelectorAll('[data-preview-choice]')) select.value = state.previewChoice;
-  $('pdf-pane').setAttribute('aria-label', useMarkdown ? 'Markdown のプレビュー' : 'PDF のプレビュー');
-  $('show-preview').textContent = useMarkdown ? 'プレビュー' : 'PDF';
-  $('splitter').setAttribute('aria-label', '編集画面とプレビューの幅を変更');
+  $('pdf-pane').setAttribute('aria-label', useMarkdown ? t("Markdown のプレビュー") : t("PDF のプレビュー"));
+  $('show-preview').textContent = useMarkdown ? t("プレビュー") : 'PDF';
+  $('splitter').setAttribute('aria-label', t("編集画面とプレビューの幅を変更"));
   if (useMarkdown) {
     $('markdown-preview-panel').hidden = false;
     if (changed) viewer.search.close(false);
     const path = markdownDocument?.path || '';
-    $('markdown-document-name').textContent = path || 'Markdown ファイルを開いてください';
+    $('markdown-document-name').textContent = path || t("Markdown ファイルを開いてください");
     $('markdown-document-name').title = path;
     markdownPreview.update(markdownDocument?.state.doc.toString() || '', { path, projectRoot: state.meta?.project?.root, immediate });
     if (changed) markdownPreview.show();
@@ -242,7 +254,7 @@ function updateCursor() {
   if (!view || !activeDocument()) { $('cursor-status').textContent = ''; $('document-encoding').textContent = ''; delete $('editor').dataset.path; delete $('editor').dataset.line; delete $('editor').dataset.column; return; }
   const head = view.state.selection.main.head;
   const line = view.state.doc.lineAt(head);
-  $('cursor-status').textContent = `${line.number} 行，${head - line.from + 1} 列`;
+  $('cursor-status').textContent = t("{value0} 行，{value1} 列", { value0: line.number, value1: head - line.from + 1 });
   $('editor').dataset.path = state.activePath; $('editor').dataset.line = String(line.number); $('editor').dataset.column = String(head - line.from + 1);
   const doc = activeDocument();
   $('document-encoding').textContent = `UTF-8 · ${doc?.lineEnding === 'crlf' ? 'CRLF' : 'LF'}`;
@@ -291,8 +303,7 @@ function makeEditorState(path, content) {
     lineFlashField,
     EditorView.lineWrapping,
     readOnly.of([EditorState.readOnly.of(false), EditorView.editable.of(true)]),
-    EditorView.contentAttributes.of({ 'aria-label': '原稿エディタ', spellcheck: 'false', autocapitalize: 'off', autocorrect: 'off' }),
-    EditorState.phrases.of({ 'Find': '検索', 'Replace': '置換', 'next': '次', 'previous': '前', 'all': 'すべて', 'match case': '大文字と小文字を区別', 'by word': '単語単位', 'regexp': '正規表現', 'replace': '置換', 'replace all': 'すべて置換', 'close': '閉じる', 'Go to line': '行へ移動', 'go': '移動', 'Fold line': '折りたたむ', 'Unfold line': '展開' }),
+    editorLanguage.of(editorLanguageExtension()),
     autocompletion({ override: /^(tex|sty|cls|ltx)$/.test(extension) ? [texCompletionSource(() => state.completionItems), latexCompletion] : [] }),
     EditorView.domEventHandlers({ mousedown(event, view) {
       if (isMarkdown(state.activePath)) return false;
@@ -409,12 +420,12 @@ function renderTabs() {
     button.setAttribute('aria-selected', String(state.activePath === path));
     button.dataset.path = path; button.title = path; button.disabled = !!state.operation;
     const name = document.createElement('span'); name.textContent = basename(path);
-    const dirty = document.createElement('span'); dirty.className = 'tab-dirty'; dirty.hidden = !isDirty(doc); dirty.setAttribute('aria-label', '未保存');
+    const dirty = document.createElement('span'); dirty.className = 'tab-dirty'; dirty.hidden = !isDirty(doc); dirty.setAttribute('aria-label', t("未保存"));
     button.append(name, dirty);
     button.addEventListener('click', () => runTask(() => openFile(path)));
     const close = document.createElement('button');
     close.type = 'button'; close.className = 'icon-button tab-close'; close.textContent = '×';
-    close.setAttribute('aria-label', `${path} を閉じる`); close.disabled = !!state.operation;
+    close.setAttribute('aria-label', t("{value0} を閉じる", { value0: path })); close.disabled = !!state.operation;
     close.addEventListener('click', () => runTask(() => doc ? closeDocument(doc) : removeOpenFile(path)));
     tab.append(button, close); container.append(tab);
     state.tabElements.set(path, { tab, button, dirty, close });
@@ -432,7 +443,7 @@ function renderTree() {
   treeElement.replaceChildren(); state.treeButtons.clear();
   if (!files.length && !directories.length) {
     const empty = document.createElement('p'); empty.className = 'tree-empty';
-    empty.textContent = filter ? '一致するファイルやフォルダーがありません．' : 'ファイルがありません．＋ からテキストファイルを作成できます．';
+    empty.textContent = filter ? t("一致するファイルやフォルダーがありません．") : t("ファイルがありません．＋ からテキストファイルを作成できます．");
     treeElement.append(empty); return;
   }
   const tree = { directories: new Map(), files: [] };
@@ -454,14 +465,14 @@ function renderTree() {
       const path = prefix + name;
       details.dataset.testid = 'tree-folder'; details.dataset.path = path;
       details.open = !!filter || (state.directoryState.has(path) ? state.directoryState.get(path) : state.activePath.startsWith(path + '/'));
-      const summary = document.createElement('summary'); summary.setAttribute('aria-label', `${path} フォルダー`);
+      const summary = document.createElement('summary'); summary.setAttribute('aria-label', t("{value0} フォルダー", { value0: path }));
       const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       icon.classList.add('button-icon', 'folder-icon'); icon.setAttribute('viewBox', '0 0 24 24'); icon.setAttribute('aria-hidden', 'true');
       const outline = document.createElementNS('http://www.w3.org/2000/svg', 'path'); outline.setAttribute('d', 'M2 6h7l2 2h11v12H2ZM2 6V4h7l2 2h9v2'); icon.append(outline);
       const label = document.createElement('span'); label.className = 'folder-name'; label.textContent = name;
       summary.append(icon, label); details.append(summary);
       appendNode(child, details, path + '/');
-      if (!child.files.length && !child.directories.size) { const empty = document.createElement('p'); empty.className = 'folder-empty'; empty.textContent = '空のフォルダー'; details.append(empty); }
+      if (!child.files.length && !child.directories.size) { const empty = document.createElement('p'); empty.className = 'folder-empty'; empty.textContent = t("空のフォルダー"); details.append(empty); }
       details.addEventListener('toggle', () => { if (!filter && details.isConnected) { state.directoryState.set(path, details.open); scheduleSession(); } });
       item.append(details); list.append(item);
     }
@@ -484,11 +495,11 @@ function renderTree() {
 function updateDocumentIndicators(doc) {
   const dirty = isDirty(doc);
   const tab = state.tabElements.get(doc.path);
-  if (tab) { tab.dirty.hidden = !dirty; tab.button.setAttribute('aria-label', `${doc.path}${dirty ? '，未保存' : ''}`); }
+  if (tab) { tab.dirty.hidden = !dirty; tab.button.setAttribute('aria-label', `${doc.path}${dirty ? t("，未保存") : ''}`); }
   const treeButton = state.treeButtons.get(doc.path);
   if (treeButton) treeButton.querySelector('.file-unsaved').hidden = !dirty;
   if (state.activePath === doc.path) {
-    $('save-status').textContent = doc.saving ? '保存しています…' : doc.conflict ? '保存の確認が必要' : dirty ? '未保存' : '保存済み';
+    $('save-status').textContent = doc.saving ? t("保存しています…") : doc.conflict ? t("保存の確認が必要") : dirty ? t("未保存") : t("保存済み");
     $('save-status').classList.toggle('dirty', dirty && !doc.conflict);
     $('save-status').classList.toggle('error', !!doc.conflict);
     $('conflict-banner').hidden = !doc.conflict;
@@ -513,14 +524,17 @@ async function saveDocument(doc) {
       doc.lineEnding = result.lineEnding || doc.lineEnding;
       doc.savedDoc = snapshot;
       doc.conflict = null;
-      if (state.build) state.build.sourceChanged = true;
+      if (state.build) {
+        if (!isMarkdown(doc.path)) state.build.sourceChanged = true;
+        if (state.build.pdfReady && sourceAffectsPDF(doc.path)) state.build.pdfSourceChanged = true;
+      }
       updatePreviewNote();
       syncDrafts();
       return true;
     } catch (error) {
       if (error.status === 409) doc.conflict = error;
-      const wrapped = new APIError(`${doc.path} を保存できませんでした．${error.message || error}`, error.status);
-      showError(wrapped, error.status === 409 ? { label: '内容を確認', run: () => resolveConflict(doc) } : null);
+      const wrapped = new APIError(t("{value0} を保存できませんでした．{value1}", { value0: doc.path, value1: error.message || error }), error.status);
+      showError(wrapped, error.status === 409 ? { label: t("内容を確認"), run: () => resolveConflict(doc) } : null);
       throw wrapped;
     } finally {
       doc.saving = null;
@@ -545,20 +559,20 @@ async function saveCurrent() {
   const doc = activeDocument();
   if (doc.conflict) { await resolveConflict(doc); return; }
   if (doc.saving) await doc.saving;
-  if (!isDirty(doc)) { toast('保存済みです．'); return; }
+  if (!isDirty(doc)) { toast(t("保存済みです．")); return; }
   await saveDocument(doc);
   clearError();
-  toast(isDirty(doc) ? '保存しました．その後の編集は未保存です．' : '保存しました．');
+  toast(isDirty(doc) ? t("保存しました．その後の編集は未保存です．") : t("保存しました．"));
 }
 
 async function saveEveryDocument() {
   if (state.operation || !state.meta?.project) return;
   setOperation('saving');
-  try { await saveAll(); clearError(); toast('開いているファイルを保存しました．'); }
+  try { await saveAll(); clearError(); toast(t("開いているファイルを保存しました．")); }
   finally { setOperation(''); }
 }
 
-function choose({ title, description, primary = '保存して続ける', secondary = '保存せずに続ける', cancel = 'キャンセル' }) {
+function choose({ title, description, primary = t('保存して続ける'), secondary = t('保存せずに続ける'), cancel = t('キャンセル') }) {
   const dialog = $('decision-dialog');
   $('decision-title').textContent = title; $('decision-description').textContent = description;
   $('decision-primary').textContent = primary; $('decision-secondary').textContent = secondary; $('decision-secondary').hidden = !secondary;
@@ -582,7 +596,7 @@ async function confirmUnsaved(description) {
   syncDrafts(); persistSession(); await sessionStore.flush();
   const dirty = dirtyDocuments();
   if (!dirty.length) return true;
-  const answer = await choose({ title: '未保存の変更があります', description: `${dirty.map(doc => doc.path).join('\n')}\n\n${description}`, secondary: '草稿に残して続ける' });
+  const answer = await choose({ title: t("未保存の変更があります"), description: `${dirty.map(doc => doc.path).join('\n')}\n\n${description}`, secondary: t("草稿に残して続ける") });
   if (answer === 'cancel') return false;
   if (answer === 'primary') await saveAll();
   return true;
@@ -592,7 +606,7 @@ async function closeDocument(doc) {
   if (state.operation) return;
   if (doc.saving) await doc.saving;
   if (isDirty(doc)) {
-    const answer = await choose({ title: '未保存のファイルを閉じますか？', description: doc.path, primary: '保存して閉じる', secondary: '保存せずに閉じる' });
+    const answer = await choose({ title: t("未保存のファイルを閉じますか？"), description: doc.path, primary: t("保存して閉じる"), secondary: t("保存せずに閉じる") });
     if (answer === 'cancel') return;
     if (answer === 'primary') { await saveDocument(doc); if (isDirty(doc)) return; }
     else removeDraft(doc.draftId);
@@ -612,7 +626,7 @@ function removeOpenFile(path) {
     else {
       assetPreview.hide();
       state.activePath = ''; state.editorZoomCleanup?.(); state.editorZoomCleanup = null; state.editor?.destroy(); state.editor = null; $('editor').replaceChildren();
-      $('editor').hidden = true; $('editor-empty').hidden = false; $('active-filename').textContent = '原稿';
+      $('editor').hidden = true; $('editor-empty').hidden = false; $('active-filename').textContent = t("原稿");
       $('save-status').textContent = ''; $('conflict-banner').hidden = true; updateCursor(); document.title = 'Local TeX Editor';
     }
   }
@@ -622,7 +636,7 @@ function removeOpenFile(path) {
 async function resolveConflict(doc) {
   if (!doc || state.operation) return;
   const remote = await api(`/api/file?path=${encodeURIComponent(doc.path)}`);
-  $('conflict-description').textContent = `${doc.path} は，読み込んだ後にディスクの内容が変更されました．保存する内容を選んでください．`;
+  $('conflict-description').textContent = t("{value0} は，読み込んだ後にディスクの内容が変更されました．保存する内容を選んでください．", { value0: doc.path });
   $('disk-content').value = remote.content;
   $('editing-content').value = doc.state.doc.toString();
   const dialog = $('conflict-dialog');
@@ -642,13 +656,13 @@ async function resolveConflict(doc) {
     const transaction = doc.state.update({ changes: { from: 0, to: doc.state.doc.length, insert: content } });
     doc.savedDoc = transaction.state.doc;
     if (state.activePath === doc.path) state.editor.update([transaction]); else doc.state = transaction.state;
-    clearError(); updateDocumentIndicators(doc); updatePreviewNote(); syncDrafts(); toast('ディスクの内容を読み込みました．');
+    clearError(); updateDocumentIndicators(doc); updatePreviewNote(); syncDrafts(); toast(t("ディスクの内容を読み込みました．"));
   } else {
     doc.revision = remote.revision;
     doc.savedDoc = EditorState.create({ doc: normalise(remote.content) }).doc;
     await saveDocument(doc);
     doc.conflict = null;
-    clearError(); updateDocumentIndicators(doc); toast('編集中の内容を保存しました．');
+    clearError(); updateDocumentIndicators(doc); toast(t("編集中の内容を保存しました．"));
   }
 }
 
@@ -679,6 +693,7 @@ async function applyMeta(meta, resetProject = false) {
   if (resetProject && state.persistenceReady) { syncDrafts(); persistSession(); }
   const generation = resetProject ? ++state.projectGeneration : state.projectGeneration;
   state.meta = meta;
+  state.texPackages = meta.texPackages || null;
   state.externalProjectChanged = false;
   if (resetProject) {
     clearTimeout(state.autoSaveTimer); clearTimeout(state.draftTimer); clearTimeout(state.sessionTimer); clearTimeout(state.outlineTimer);
@@ -690,7 +705,7 @@ async function applyMeta(meta, resetProject = false) {
     state.previewMode = 'pdf'; state.previewChoice = 'auto'; state.lastMarkdownPath = '';
     $('pdf-preview').hidden = false; $('markdown-preview-panel').hidden = true;
     state.editorZoomCleanup?.(); state.editorZoomCleanup = null; state.editor?.destroy(); state.editor = null; $('editor').replaceChildren(); $('editor').hidden = true; $('editor-empty').hidden = false;
-    $('conflict-banner').hidden = true; $('file-filter').value = ''; $('save-status').textContent = ''; $('active-filename').textContent = '原稿';
+    $('conflict-banner').hidden = true; $('file-filter').value = ''; $('save-status').textContent = ''; $('active-filename').textContent = t("原稿");
     state.build = null; state.reportedBuild = ''; await viewer.reset();
   }
   if (generation !== state.projectGeneration) return;
@@ -710,10 +725,10 @@ async function applyMeta(meta, resetProject = false) {
 
 function showProjectDialog() {
   if (state.operation || state.closed) return;
-  if (isRunning()) { showError(new Error('コンパイルが終了してからプロジェクトを切り替えてください．')); return; }
+  if (isRunning()) { showError(new Error(t("コンパイルが終了してからプロジェクトを切り替えてください．"))); return; }
   $('project-path').value = state.meta?.project?.root || '';
   $('project-tex-bin').value = state.meta?.texBin || '';
-  $('project-tex-help').textContent = state.meta?.latexmk ? `latexmk: ${state.meta.latexmk}` : '例: C:\\texlive\\2025\\bin\\windows';
+  $('project-tex-help').textContent = state.meta?.latexmk ? `latexmk: ${state.meta.latexmk}` : isMac ? t("例: /Library/TeX/texbin") : t("例: C:\\texlive\\2025\\bin\\windows");
   $('project-error').hidden = true; renderRecent();
   if (!$('project-dialog').open) $('project-dialog').showModal();
   $('project-path').focus();
@@ -732,7 +747,7 @@ async function openProject(event) {
   const dialog = $('project-dialog'); $('project-error').hidden = true;
   setOperation('opening'); setDialogBusy(dialog, true);
   try {
-    if (!await confirmUnsaved('プロジェクトを切り替える前に，変更を保存しますか？')) return;
+    if (!await confirmUnsaved(t("プロジェクトを切り替える前に，変更を保存しますか？"))) return;
     if (texBin !== (state.meta?.texBin || '')) await api('/api/settings', { method: 'PUT', body: { texBin } });
     const meta = await api('/api/project/open', { method: 'POST', body: { path } });
     await applyMeta(meta, true);
@@ -758,7 +773,7 @@ async function pickProject() {
 function renderPickerState() {
   const pending = !!state.folderPicker;
   $('project-picker-status').hidden = !pending;
-  $('pick-project').textContent = pending ? '選択画面を表示' : '参照…';
+  $('pick-project').textContent = pending ? t("選択画面を表示") : t("参照…");
   for (const id of ['project-path', 'project-tex-bin', 'open-project']) $(id).disabled = pending;
   $('pick-project').disabled = false;
   for (const button of $('project-recent-list').querySelectorAll('button')) button.disabled = pending;
@@ -769,11 +784,13 @@ function cancelPicker() {
 }
 
 function renderToolStatus() {
-  $('tex-tool-status').textContent = state.meta?.latexmk ? `latexmk: ${state.meta.latexmk}` : state.meta?.toolError || '例: C:\\texlive\\2025\\bin\\windows．空欄の場合は自動で検索します．';
-  $('synctex-tool-status').textContent = state.meta?.synctex ? `synctex: ${state.meta.synctex}` : state.meta?.synctexError || 'SyncTeX で，原稿と PDF の対応する位置へ移動できます．';
+  $('tex-tool-status').textContent = state.meta?.latexmk ? `latexmk: ${state.meta.latexmk}` : state.meta?.toolError || t("例: C:\\texlive\\2025\\bin\\windows．空欄の場合は自動で検索します．");
+  $('synctex-tool-status').textContent = state.meta?.synctex ? `synctex: ${state.meta.synctex}` : state.meta?.synctexError || t("SyncTeX で，原稿と PDF の対応する位置へ移動できます．");
   const synctexCommands = state.meta?.synctexInstallCommands || [];
   $('synctex-setup').hidden = !synctexCommands.length;
+  $('synctex-setup-help').textContent = t('次のコマンドを {value0} で実行し，設定を開き直して SyncTeX のパスを確認してください．', { value0: isMac ? t('ターミナル') : 'PowerShell' });
   $('synctex-install-commands').textContent = synctexCommands.join('\n');
+  renderTeXPackagesHelp($('tex-packages-help'), state.texPackages);
 }
 function updateApplicationDetails(meta) {
   $('app-version').textContent = meta.version ? `v${meta.version}` : '';
@@ -784,6 +801,8 @@ function updateTools(meta) {
   if (!state.meta) return;
   for (const key of ['texBin', 'latexmk', 'toolError', 'synctex', 'synctexError']) state.meta[key] = meta[key] || '';
   state.meta.synctexInstallCommands = meta.synctexInstallCommands || [];
+  state.meta.texPackages = meta.texPackages || null;
+  state.texPackages = state.meta.texPackages;
   updateApplicationDetails(meta);
   if ($('settings-dialog').open) renderToolStatus();
   renderControls();
@@ -791,7 +810,7 @@ function updateTools(meta) {
 
 async function showSettings() {
   if (state.operation || state.closed) return;
-  if (isRunning()) { showError(new Error('コンパイルが終了してから設定を変更してください．')); return; }
+  if (isRunning()) { showError(new Error(t("コンパイルが終了してから設定を変更してください．"))); return; }
   const project = state.meta?.project;
   const generation = state.projectGeneration;
   const toolsGeneration = state.toolsGeneration;
@@ -804,6 +823,7 @@ async function showSettings() {
   $('main-file').value = project?.main || '';
   $('compile-mode').value = project?.mode || 'pdflatex';
   $('autosave-setting').checked = state.preferences.autoSave;
+  $('language-setting').value = state.preferences.language;
   $('editor-font-size').value = String(state.preferences.editorFontSize);
   $('main-field').hidden = !project; $('mode-field').hidden = !project;
   $('shortcut-settings').hidden = state.meta?.platform !== 'windows' || state.meta?.shortcutsSupported === false;
@@ -822,6 +842,8 @@ async function showSettings() {
 async function saveSettings(event) {
   event.preventDefault(); if (state.operation) return;
   const body = {};
+  const language = $('language-setting').value;
+  const languageChanged = language !== state.preferences.language;
   const texBin = $('tex-bin').value.trim();
   if (texBin !== (state.meta?.texBin || '')) body.texBin = texBin;
   const project = state.meta?.project;
@@ -831,9 +853,15 @@ async function saveSettings(event) {
   try {
     if (Object.keys(body).length) { ++state.toolsGeneration; const meta = await api('/api/settings', { method: 'PUT', body }); await applyMeta(meta); }
     state.preferences.autoSave = $('autosave-setting').checked;
+    state.preferences.language = language;
     applyEditorFontSize($('editor-font-size').valueAsNumber);
     savePreferences(); await sessionStore.flush();
-    $('settings-dialog').close(); clearError(); updateAutoSaveStatus(); toast('設定を保存しました．');
+    applyLanguage(language);
+    if (languageChanged) {
+      const meta = await api('/api/state');
+      if (meta.project?.root === state.meta?.project?.root) await applyMeta(meta);
+    }
+    $('settings-dialog').close(); clearError(); updateAutoSaveStatus(); toast(t("設定を保存しました．"));
   }
   catch (error) { $('settings-error').textContent = error.message || String(error); $('settings-error').hidden = false; }
   finally { setDialogBusy($('settings-dialog'), false); setOperation(''); }
@@ -841,19 +869,19 @@ async function saveSettings(event) {
 
 async function createShortcut(destination) {
   if (state.operation || state.closed || state.meta?.platform !== 'windows') return;
-  const label = destination === 'desktop' ? 'デスクトップのショートカット' : 'スタートメニューのショートカット';
+  const label = destination === 'desktop' ? t("デスクトップのショートカット") : t("スタートメニューのショートカット");
   const resultElement = $('shortcut-result');
   resultElement.hidden = false; resultElement.classList.remove('error'); resultElement.setAttribute('role', 'status');
-  resultElement.textContent = `${label}を作成しています…`; $('shortcut-paths').hidden = true;
+  resultElement.textContent = t("{value0}を作成しています…", { value0: label }); $('shortcut-paths').hidden = true;
   setOperation('shortcut'); setDialogBusy($('settings-dialog'), true);
   try {
     const result = await api('/api/shortcuts', { method: 'POST', body: { destination }, timeout: 60000, projectRoot: null });
-    resultElement.textContent = result.message || `${label}を作成しました．`;
+    resultElement.textContent = result.message || t("{value0}を作成しました．", { value0: label });
     $('shortcut-executable').textContent = result.executable || '';
     $('shortcut-path').textContent = result.shortcut || '';
     $('shortcut-paths').hidden = false;
   } catch (error) {
-    resultElement.textContent = `${label}を作成できませんでした．${error.message || error}`;
+    resultElement.textContent = t("{value0}を作成できませんでした．{value1}", { value0: label, value1: error.message || error });
     resultElement.classList.add('error'); resultElement.setAttribute('role', 'alert');
   } finally { setDialogBusy($('settings-dialog'), false); setOperation(''); }
 }
@@ -862,7 +890,7 @@ async function refreshFiles() {
   if (state.operation || !state.meta?.project) return;
   const meta = await api('/api/state');
   if (meta.project?.root !== state.meta.project.root) { handleExternalProjectChange(); return; }
-  await applyMeta(meta); await indexProject(true); toast('ファイル一覧を更新しました．');
+  await applyMeta(meta); await indexProject(true); toast(t("ファイル一覧を更新しました．"));
 }
 
 async function createFile(event) {
@@ -881,7 +909,7 @@ async function createFile(event) {
 }
 
 function setLogVisible(visible) { $('log-panel').hidden = !visible; $('log-toggle').setAttribute('aria-expanded', String(visible)); }
-function formatElapsed(ms) { const seconds = Math.max(0, Math.round(ms / 1000)); return seconds < 60 ? `${seconds} 秒` : `${Math.floor(seconds / 60)} 分 ${seconds % 60} 秒`; }
+function formatElapsed(ms) { const seconds = Math.max(0, Math.round(ms / 1000)); return seconds < 60 ? t("{value0} 秒", { value0: seconds }) : t("{value0} 分 {value1} 秒", { value0: Math.floor(seconds / 60), value1: seconds % 60 }); }
 function updateElapsed() {
   const build = state.build;
   const ms = build?.status === 'running' && build.startedAt ? Date.now() - new Date(build.startedAt).getTime() : build?.elapsedMs;
@@ -893,11 +921,11 @@ function updatePreviewNote() {
   const note = $('pdf-note'); const label = $('pdf-state');
   note.hidden = true; note.classList.remove('error'); label.classList.remove('stale');
   if (!build?.pdfReady) { label.textContent = ''; return; }
-  if (build.status === 'failed') { note.textContent = '最新のコンパイルに失敗しました．前回成功した PDF を表示しています．'; note.classList.add('error'); label.textContent = '前回の PDF'; }
-  else if (build.status === 'cancelled') { note.textContent = 'コンパイルを停止しました．前回成功した PDF を表示しています．'; label.textContent = '前回の PDF'; }
-  else if (build.status === 'running') { note.textContent = 'コンパイル中です．完了すると PDF が更新されます．'; label.textContent = '更新待ち'; }
-  else if ((build.pdfSourceChanged ?? build.sourceChanged) || dirtyDocuments().some(doc => !isMarkdown(doc.path))) { note.textContent = '原稿に変更があります．最新の内容を確認するにはコンパイルしてください．'; label.textContent = '原稿に変更あり'; }
-  else { label.textContent = viewer.hasRendered && viewer.buildId === build.pdfBuildId ? '更新済み' : '読み込み中'; return; }
+  if (build.status === 'failed') { note.textContent = t("最新のコンパイルに失敗しました．前回成功した PDF を表示しています．"); note.classList.add('error'); label.textContent = t("前回の PDF"); }
+  else if (build.status === 'cancelled') { note.textContent = t("コンパイルを停止しました．前回成功した PDF を表示しています．"); label.textContent = t("前回の PDF"); }
+  else if (build.status === 'running') { note.textContent = t("コンパイル中です．完了すると PDF が更新されます．"); label.textContent = t("更新待ち"); }
+  else if ((build.pdfSourceChanged ?? build.sourceChanged) || dirtyDocuments().some(doc => sourceAffectsPDF(doc.path))) { note.textContent = t("原稿に変更があります．最新の内容を確認するにはコンパイルしてください．"); label.textContent = t("原稿に変更あり"); }
+  else { label.textContent = viewer.hasRendered && viewer.buildId === build.pdfBuildId ? t("更新済み") : t("読み込み中"); return; }
   note.hidden = false; label.classList.add('stale');
 }
 
@@ -906,34 +934,37 @@ function applyBuild(build) {
   if (build && state.build) {
     if (build.id === state.build.id && state.build.status !== 'running' && build.status === 'running') return;
     if (build.id !== state.build.id && Date.parse(build.startedAt) < Date.parse(state.build.startedAt)) return;
+    // A response that began before a save must not clear that save's notice.
+    if (build.id === state.build.id && state.build.sourceChanged) build = { ...build, sourceChanged: true };
+    if (build.pdfBuildId && build.pdfBuildId === state.build.pdfBuildId && state.build.pdfSourceChanged) build = { ...build, pdfSourceChanged: true };
   }
   const previouslyRunning = isRunning();
   state.build = build || null;
   const pdfMain = build?.pdfMain || (build?.pdfReady ? state.meta?.project?.main : '') || '';
   $('pdf-document').textContent = basename(pdfMain);
-  $('pdf-document').title = pdfMain ? `表示中の PDF: ${pdfMain}` : '';
-  const labels = { running: 'コンパイル中', success: 'コンパイル完了', failed: 'コンパイル失敗', cancelled: '停止しました' };
-  $('build-status').textContent = labels[build?.status] || 'コンパイル前';
+  $('pdf-document').title = pdfMain ? t("表示中の PDF: {value0}", { value0: pdfMain }) : '';
+  const labels = { running: t("コンパイル中"), success: t("コンパイル完了"), failed: t("コンパイル失敗"), cancelled: t("停止しました") };
+  $('build-status').textContent = labels[build?.status] || t("コンパイル前");
   $('build-status').dataset.status = build?.status || 'idle';
   $('log-indicator').hidden = build?.status !== 'failed';
   updateElapsed();
   if (build) {
     const text = [build.command ? `$ ${build.command}` : '', build.log || '', build.error ? `\n${build.error}` : ''].filter(Boolean).join('\n').replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, '');
-    state.fullLog = text || 'プロセスからの出力を待っています…';
+    state.fullLog = text || t("プロセスからの出力を待っています…");
     const output = $('build-log'); const follow = output.scrollHeight - output.scrollTop - output.clientHeight < 55;
-    const displayed = state.fullLog.length > 300000 ? `ログの末尾 300,000 文字を表示しています．「コピー」で受け取ったログ全体を取得できます．\n\n${state.fullLog.slice(-300000)}` : state.fullLog;
+    const displayed = state.fullLog.length > 300000 ? t("ログの末尾 300,000 文字を表示しています．「コピー」で受け取ったログ全体を取得できます．\n\n{value0}", { value0: state.fullLog.slice(-300000) }) : state.fullLog;
     if (output.textContent !== displayed) { output.textContent = displayed; if (follow) output.scrollTop = output.scrollHeight; renderLogLocations(); }
-    const exit = Number.isInteger(build.exitCode) ? `終了コード ${build.exitCode}` : '実行中';
+    const exit = Number.isInteger(build.exitCode) ? t("終了コード {value0}", { value0: build.exitCode }) : t("実行中");
     $('log-meta').textContent = `${exit}${build.finishedAt ? ` · ${formatElapsed(build.elapsedMs || 0)}` : ''}`;
     if (build.status === 'failed' && state.reportedBuild !== `${build.id}:failed`) {
       state.reportedBuild = `${build.id}:failed`; setLogVisible(true);
-      showError(new Error(build.error || `コンパイルに失敗しました (終了コード ${build.exitCode ?? '不明'})．ログを確認してください．`));
+      showError(new Error(build.error || t("コンパイルに失敗しました (終了コード {value0})．ログを確認してください．", { value0: build.exitCode ?? t("不明") })));
     }
     if (build.pdfReady && build.pdfBuildId && state.meta?.project) viewer.load(build.pdfBuildId, state.meta.project.root, pdfMain).catch(error => showError(error));
     if (build.status === 'running') schedulePoll(650);
     else { clearTimeout(state.pollTimer); state.pollTimer = null; }
   } else {
-    state.fullLog = ''; $('build-log').textContent = 'コンパイルすると，ここにコマンドとログが表示されます．'; $('log-meta').textContent = '';
+    state.fullLog = ''; $('build-log').textContent = t("コンパイルすると，ここにコマンドとログが表示されます．"); $('log-meta').textContent = '';
     renderLogLocations();
     if (viewer.document || viewer.loadingTask) viewer.reset().catch(error => showError(error));
   }
@@ -969,14 +1000,14 @@ async function startBuild() {
   const useMarkdown = !!doc && isMarkdown(doc.path);
   const main = currentCompileTarget();
   if (!useMarkdown && !main) { await showSettings(); return; }
-  setOperation(useMarkdown ? 'previewing' : 'compiling'); $('build-status').textContent = 'ファイルを保存しています…'; clearError();
+  setOperation(useMarkdown ? 'previewing' : 'compiling'); $('build-status').textContent = t("ファイルを保存しています…"); clearError();
   try {
     await saveAll();
     if (useMarkdown) { updateDocumentPreview({ immediate: true }); markdownPreview.refresh(); return; }
     const build = await api('/api/build', { method: 'POST', body: { main } });
     applyBuild(build);
   } catch (error) { if (!error?.shown) showError(error); }
-  finally { setOperation(''); if (!isRunning()) { const current = state.build; $('build-status').textContent = current ? ({ success: 'コンパイル完了', failed: 'コンパイル失敗', cancelled: '停止しました' }[current.status] || 'コンパイル前') : 'コンパイル前'; } }
+  finally { setOperation(''); if (!isRunning()) { const current = state.build; $('build-status').textContent = current ? ({ success: t("コンパイル完了"), failed: t("コンパイル失敗"), cancelled: t("停止しました") }[current.status] || t("コンパイル前")) : t("コンパイル前"); } }
 }
 
 async function stopBuild() {
@@ -994,10 +1025,10 @@ function renderControls() {
   const useMarkdown = !!doc && isMarkdown(doc.path);
   const main = currentCompileTarget();
   $('compile-button').disabled = busy || running || !project || (!useMarkdown && !main) || state.externalProjectChanged;
-  $('compile-label').textContent = ['compiling', 'previewing'].includes(state.operation) ? '保存しています…' : running ? 'コンパイル中' : useMarkdown ? 'プレビュー' : 'コンパイル';
-  $('compile-button').title = useMarkdown ? '保存して Markdown のプレビューを更新 (Ctrl+Enter)' : `保存して ${main || '原稿'} をコンパイル (Ctrl+Enter)`;
-  $('main-document-label').textContent = useMarkdown ? `${doc.path} · Markdown` : project ? `${main || '原稿を選択'} · ${modeLabels[project.mode] || project.mode}` : '原稿を選択';
-  $('main-document').title = useMarkdown ? '編集とコンパイルの設定を開く' : `コンパイル対象: ${main || '未選択'}\n既定のメイン文書とコンパイラーの設定を開く`;
+  $('compile-label').textContent = ['compiling', 'previewing'].includes(state.operation) ? t("保存しています…") : running ? t("コンパイル中") : useMarkdown ? t("プレビュー") : t("コンパイル");
+  $('compile-button').title = useMarkdown ? t("保存して Markdown のプレビューを更新 ({value0}+Enter)", { value0: shortcutModifier }) : t("保存して {value0} をコンパイル ({value1}+Enter)", { value0: main || t("原稿"), value1: shortcutModifier });
+  $('main-document-label').textContent = useMarkdown ? `${doc.path} · Markdown` : project ? `${main || t("原稿を選択")} · ${modeLabels[project.mode] || project.mode}` : t("原稿を選択");
+  $('main-document').title = useMarkdown ? t("編集とコンパイルの設定を開く") : t("コンパイル対象: {value0}\n既定のメイン文書とコンパイラーの設定を開く", { value0: main || t("未選択") });
   $('compile-icon').classList.toggle('spinning', running || state.operation === 'compiling');
   $('compile-icon').textContent = running || state.operation === 'compiling' ? '' : '▶';
   $('stop-button').hidden = !running; $('stop-button').disabled = busy || !running;
@@ -1005,7 +1036,7 @@ function renderControls() {
   $('find-button').disabled = !doc || state.closed;
   const missingSynctex = state.meta && typeof state.meta.synctex === 'string' && !state.meta.synctex;
   $('synctex-forward').disabled = busy || state.syncing || !doc || useMarkdown || !(viewer.ready || (state.previewMode === 'markdown' && viewer.document)) || !state.build?.synctexReady || missingSynctex || state.externalProjectChanged;
-  $('synctex-forward').title = missingSynctex ? 'SyncTeX が見つかりません．設定に導入の手順があります．' : state.build?.synctexReady ? 'カーソル位置を PDF で表示 (Ctrl+クリックでも移動)' : 'SyncTeX を使うには，このアプリで PDF をコンパイルしてください．';
+  $('synctex-forward').title = missingSynctex ? t("SyncTeX が見つかりません．設定に導入の手順があります．") : state.build?.synctexReady ? t("カーソル位置を PDF で表示 ({value0}+クリックでも移動)", { value0: shortcutModifier }) : t("SyncTeX を使うには，このアプリで PDF をコンパイルしてください．");
   $('main-document').disabled = busy || !project || running;
   $('settings-button').disabled = busy || running;
   $('show-project').disabled = busy || running;
@@ -1023,8 +1054,8 @@ function renderControls() {
 async function downloadPDF() {
   const build = state.build; if (!build?.pdfReady) return;
   const project = state.meta.project;
-  const response = await fetch(`/api/pdf?build=${encodeURIComponent(build.pdfBuildId)}`, { headers: { 'X-Local-Token': token, 'X-Project-Root': encodeURIComponent(project.root) }, cache: 'no-store' });
-  if (!response.ok) { const text = await response.text(); let message = text; try { message = JSON.parse(text).error || text; } catch { /* A non-JSON error is still displayed. */ } throw new APIError(`PDF を取得できませんでした．${message}`, response.status); }
+  const response = await fetch(`/api/pdf?build=${encodeURIComponent(build.pdfBuildId)}`, { headers: { 'X-Local-Token': token, 'X-Project-Root': encodeURIComponent(project.root), 'Accept-Language': getLanguage() }, cache: 'no-store' });
+  if (!response.ok) { const text = await response.text(); let message = text; try { message = JSON.parse(text).error || text; } catch { /* A non-JSON error is still displayed. */ } throw new APIError(t("PDF を取得できませんでした．{value0}", { value0: message }), response.status); }
   const blob = await response.blob(); const url = URL.createObjectURL(blob);
   const link = document.createElement('a'); link.href = url; link.download = basename(build.pdfMain || project.main).replace(/\.tex$/i, '') + '.pdf'; link.click();
   setTimeout(() => URL.revokeObjectURL(url), 60000);
@@ -1033,13 +1064,13 @@ async function downloadPDF() {
 async function copyLog() {
   if (!state.fullLog) return;
   await navigator.clipboard.writeText(state.fullLog);
-  toast('ログをコピーしました．');
+  toast(t("ログをコピーしました．"));
 }
 
 function handleExternalProjectChange() {
   state.externalProjectChanged = true; renderControls();
-  showError(new Error('別のタブでプロジェクトが切り替わりました．この画面の編集内容は残っています．作業中のフォルダーを開き直してください．'), {
-    label: '元のフォルダーへ戻る',
+  showError(new Error(t("別のタブでプロジェクトが切り替わりました．この画面の編集内容は残っています．作業中のフォルダーを開き直してください．")), {
+    label: t("元のフォルダーへ戻る"),
     run: async () => { const meta = await api('/api/project/open', { method: 'POST', body: { path: state.meta.project.root } }); await applyMeta(meta); clearError(); },
   });
 }
@@ -1059,7 +1090,7 @@ async function heartbeat() {
     if (state.closed || generation !== state.projectGeneration) return;
     if (state.meta?.project && meta.project?.root !== state.meta.project.root) { if (!state.externalProjectChanged) handleExternalProjectChange(); return; }
     if (toolsGeneration === state.toolsGeneration) updateTools(meta);
-    if (!isRunning() && meta.build && meta.build.id !== state.build?.id) applyBuild(meta.build);
+    if (!isRunning() && meta.build) applyBuild(meta.build);
   } catch (error) { if ($('app-error').hidden) showError(error); }
 }
 
@@ -1067,9 +1098,9 @@ async function shutdown() {
   if (state.operation || state.closed) return;
   setOperation('shutdown');
   try {
-    if (!await confirmUnsaved('アプリを終了する前に，変更を保存しますか？')) return;
+    if (!await confirmUnsaved(t("アプリを終了する前に，変更を保存しますか？"))) return;
     if (isRunning()) {
-      const answer = await choose({ title: 'コンパイルを停止して終了しますか？', description: '実行中の TeX とローカルのアプリを終了します．', primary: '停止して終了', secondary: '' });
+      const answer = await choose({ title: t("コンパイルを停止して終了しますか？"), description: t("実行中の TeX とローカルのアプリを終了します．"), primary: t("停止して終了"), secondary: '' });
       if (answer !== 'primary') return;
     }
     syncDrafts(); persistSession(); await sessionStore.flush();
@@ -1087,7 +1118,7 @@ async function shutdown() {
     clearError();
     try { window.close(); } catch { /* Some browsers require the user to close an existing tab. */ }
     setTimeout(() => {
-      $('closed-message').textContent = 'このタブを閉じてください (Ctrl+W)．次回は Local TeX Editor のショートカットまたは実行ファイルを開いてください．';
+      $('closed-message').textContent = t("このタブを閉じてください ({value0}+W)．次回は Local TeX Editor を開いてください．", { value0: shortcutModifier });
     }, 600);
   } finally { setOperation(state.closed ? 'closed' : ''); }
 }
@@ -1095,14 +1126,42 @@ async function shutdown() {
 const sessionStore = new SessionStore(api, (status, key, error) => {
   if (key.startsWith('drafts:') && key === `drafts:${state.meta?.project?.root}`) {
     $('draft-status').dataset.status = status;
-    $('draft-status').textContent = status === 'saving' ? '草稿を保存中…' : status === 'saved' ? '草稿を PC に記録済み' : '草稿の記録を確認';
+    $('draft-status').textContent = status === 'saving' ? t("草稿を保存中…") : status === 'saved' ? t("草稿を PC に記録済み") : t("草稿の記録を確認");
   }
   if (error) {
-    const item = key.startsWith('drafts:') ? '草稿' : key.startsWith('session:') ? '編集位置' : '設定';
-    showError(new Error(`${item}を記録できませんでした．${error.message || error}`), { label: '再保存', run: () => sessionStore.flush({ retryConflicts: true }) });
+    const item = key.startsWith('drafts:') ? t("草稿") : key.startsWith('session:') ? t("編集位置") : t("設定");
+    showError(new Error(t("{value0}を記録できませんでした．{value1}", { value0: item, value1: error.message || error })), { label: t("再保存"), run: () => sessionStore.flush({ retryConflicts: true }) });
   }
 });
 const browserSession = new BrowserSession({ token, onConnectionChange: connected => { if (!state.closed) setConnected(connected); } });
+
+function editorLanguageExtension() {
+  return [
+    EditorView.contentAttributes.of({ 'aria-label': t('原稿エディタ'), spellcheck: 'false', autocapitalize: 'off', autocorrect: 'off' }),
+    EditorState.phrases.of({ 'Find': t('検索'), 'Replace': t('置換'), 'next': t('次'), 'previous': t('前'), 'all': t('すべて'), 'match case': t('大文字と小文字を区別'), 'by word': t('単語単位'), 'regexp': t('正規表現'), 'replace': t('置換'), 'replace all': t('すべて置換'), 'close': t('閉じる'), 'Go to line': t('行へ移動'), 'go': t('移動'), 'Fold line': t('折りたたむ'), 'Unfold line': t('展開') }),
+  ];
+}
+function applyLanguage(language) {
+  state.preferences.language = setLanguage(language);
+  $('language-setting').value = state.preferences.language;
+  for (const doc of state.documents.values()) {
+    const transaction = doc.state.update({ effects: editorLanguage.reconfigure(editorLanguageExtension()) });
+    if (doc.path === state.activePath && state.editor) state.editor.update([transaction]); else doc.state = transaction.state;
+  }
+  $('find-button').title = t('検索・置換 ({value0}+F)', { value0: shortcutModifier });
+  $('save-button').title = t('現在のファイルを保存 ({value0}+S)', { value0: shortcutModifier });
+  $('theme-toggle').setAttribute('aria-label', t(state.theme === 'dark' ? 'ライトテーマに切り替える' : 'ダークテーマに切り替える'));
+  $('theme-label').textContent = t(state.theme === 'dark' ? 'ダーク' : 'ライト');
+  $('project-tex-help').textContent = state.meta?.latexmk ? `latexmk: ${state.meta.latexmk}` : t(isMac ? '例: /Library/TeX/texbin' : '例: C:\\texlive\\2025\\bin\\windows');
+  setConnected(state.connected);
+  setSidebar(state.sidebar); renderTabs(); renderRecovery(); renderPickerState(); renderToolStatus();
+  for (const doc of state.documents.values()) updateDocumentIndicators(doc);
+  updateCursor(); updateAutoSaveStatus(); updateDocumentPreview();
+  if (state.meta) applyBuild(state.build);
+  else renderControls();
+  const draftStatus = $('draft-status').dataset.status;
+  $('draft-status').textContent = draftStatus === 'saving' ? t('草稿を保存中…') : draftStatus === 'saved' ? t('草稿を PC に記録済み') : draftStatus ? t('草稿の記録を確認') : availableDrafts().length ? t('前回の草稿があります') : '';
+}
 
 function themeExtension() {
   const dark = state.theme === 'dark';
@@ -1112,8 +1171,8 @@ function applyTheme(theme, persist = false) {
   state.theme = theme === 'dark' ? 'dark' : 'light';
   document.documentElement.dataset.theme = state.theme;
   $('theme-toggle').setAttribute('aria-pressed', String(state.theme === 'dark'));
-  $('theme-toggle').setAttribute('aria-label', state.theme === 'dark' ? 'ライトテーマに切り替える' : 'ダークテーマに切り替える');
-  $('theme-label').textContent = state.theme === 'dark' ? 'ダーク' : 'ライト';
+  $('theme-toggle').setAttribute('aria-label', state.theme === 'dark' ? t("ライトテーマに切り替える") : t("ダークテーマに切り替える"));
+  $('theme-label').textContent = state.theme === 'dark' ? t("ダーク") : t("ライト");
   try { localStorage.setItem('local-tex-editor-theme', state.theme); } catch { /* The PC copy is written through the storage API. */ }
   for (const doc of state.documents.values()) {
     const transaction = doc.state.update({ effects: editorTheme.reconfigure(themeExtension()) });
@@ -1139,12 +1198,14 @@ async function loadPreferences() {
     state.preferences.autoSave = preferences.autoSave !== false;
     state.preferences.theme = ['light', 'dark'].includes(preferences.theme) ? preferences.theme : null;
     state.preferences.editorFontSize = preferences.editorFontSize;
+    if (['ja', 'en'].includes(preferences.language)) state.preferences.language = preferences.language;
   }
+  applyLanguage(state.preferences.language);
   if (state.preferences.theme) applyTheme(state.preferences.theme);
   applyEditorFontSize(state.preferences.editorFontSize);
   updateAutoSaveStatus();
 }
-function updateAutoSaveStatus() { $('autosave-status').textContent = state.preferences.autoSave ? (isRunning() ? '自動保存はコンパイル後' : '自動保存オン') : '手動で保存'; }
+function updateAutoSaveStatus() { $('autosave-status').textContent = state.preferences.autoSave ? (isRunning() ? t("自動保存はコンパイル後") : t("自動保存オン")) : t("手動で保存"); }
 function scheduleAutoSave() {
   clearTimeout(state.autoSaveTimer);
   updateAutoSaveStatus();
@@ -1161,7 +1222,7 @@ function scheduleAutoSave() {
 function queueDrafts() {
   if (!state.persistenceReady || !state.meta?.project || state.closed) return;
   clearTimeout(state.draftTimer);
-  $('draft-status').dataset.status = 'saving'; $('draft-status').textContent = '草稿を保存中…';
+  $('draft-status').dataset.status = 'saving'; $('draft-status').textContent = t("草稿を保存中…");
   state.draftTimer = setTimeout(syncDrafts, 450);
 }
 function syncDrafts() {
@@ -1179,7 +1240,7 @@ function syncDrafts() {
     } else if (entries.delete(doc.draftId)) changed = true;
   }
   if (!changed) {
-    if (!sessionStore.pending) { $('draft-status').dataset.status = 'saved'; $('draft-status').textContent = '草稿を PC に記録済み'; }
+    if (!sessionStore.pending) { $('draft-status').dataset.status = 'saved'; $('draft-status').textContent = t("草稿を PC に記録済み"); }
     return;
   }
   state.drafts = { version: 1, updatedAt: Date.now(), entries: [...entries.values()] };
@@ -1199,7 +1260,7 @@ function availableDrafts() {
 function renderRecovery() {
   const count = availableDrafts().length;
   $('recovery-banner').hidden = !count;
-  $('recovery-summary').textContent = `前回保存しなかった草稿が ${count} 件あります．`;
+  $('recovery-summary').textContent = t("前回保存しなかった草稿が {value0} 件あります．", { value0: count });
 }
 async function showRecovery() {
   const entries = availableDrafts();
@@ -1207,7 +1268,7 @@ async function showRecovery() {
   $('recovery-file').replaceChildren();
   for (const entry of entries) {
     const option = document.createElement('option'); option.value = entry.id;
-    option.textContent = `${entry.path} · ${new Date(entry.updatedAt).toLocaleString('ja-JP')}`;
+    option.textContent = `${entry.path} · ${new Date(entry.updatedAt).toLocaleString(getLanguage() === 'ja' ? 'ja-JP' : 'en-US')}`;
     $('recovery-file').append(option);
   }
   $('recovery-error').hidden = true; $('recovery-dialog').showModal();
@@ -1226,7 +1287,7 @@ async function inspectDraft() {
     const disk = await diskForDraft(entry);
     state.recoverySelection = entry;
     $('recovery-disk').value = disk.content; $('recovery-draft').value = entry.content;
-    $('recovery-description').textContent = disk.missing ? 'ディスク上のファイルがありません．草稿を開き，保存するとファイルを作成できます．' : disk.revision === entry.baseRevision ? '草稿を記録したときから，ディスクの内容は変わっていません．草稿をエディタで開いて作業を再開できます．' : '草稿を記録した後に，ディスクの内容が変更されています．草稿を開いた後，保存する内容を確認してください．';
+    $('recovery-description').textContent = disk.missing ? t("ディスク上のファイルがありません．草稿を開き，保存するとファイルを作成できます．") : disk.revision === entry.baseRevision ? t("草稿を記録したときから，ディスクの内容は変わっていません．草稿をエディタで開いて作業を再開できます．") : t("草稿を記録した後に，ディスクの内容が変更されています．草稿を開いた後，保存する内容を確認してください．");
   } catch (error) { $('recovery-error').textContent = error.message || String(error); $('recovery-error').hidden = false; }
   finally { setDialogBusy(dialog, false); }
 }
@@ -1236,7 +1297,7 @@ async function restoreDraft() {
   const previous = state.documents.get(entry.path);
   if (previous && isDirty(previous) && previous.state.doc.toString() !== entry.content) {
     syncDrafts(); await sessionStore.flush();
-    const answer = await choose({ title: '編集中の内容を草稿に記録しました', description: `${entry.path} の編集内容を残して，選んだ草稿を開きますか？`, primary: '選んだ草稿を開く', secondary: '' });
+    const answer = await choose({ title: t("編集中の内容を草稿に記録しました"), description: t("{value0} の編集内容を残して，選んだ草稿を開きますか？", { value0: entry.path }), primary: t("選んだ草稿を開く"), secondary: '' });
     if (answer !== 'primary') return;
   }
   const remote = await diskForDraft(entry);
@@ -1245,13 +1306,13 @@ async function restoreDraft() {
   const content = normalise(entry.content);
   doc.state = doc.state.update({ changes: { from: 0, to: doc.state.doc.length, insert: content }, selection: { anchor: Math.min(content.length, Math.max(0, entry.selection?.anchor || 0)), head: Math.min(content.length, Math.max(0, entry.selection?.head || 0)) } }).state;
   doc.visited = true;
-  if (remote.revision !== doc.revision) doc.conflict = new APIError('草稿を記録した後にディスクの内容が変更されています．保存する内容を確認してください．', 409);
+  if (remote.revision !== doc.revision) doc.conflict = new APIError(t("草稿を記録した後にディスクの内容が変更されています．保存する内容を確認してください．"), 409);
   state.documents.set(doc.path, doc);
   $('recovery-dialog').close(); switchView(false); selectDocument(doc);
   state.editor.dispatch({ effects: EditorView.scrollIntoView(state.editor.state.selection.main.head, { y: 'center' }) });
   updateIndex(doc.path, doc.state.doc.toString());
   syncDrafts(); renderRecovery(); scheduleAutoSave();
-  toast(doc.conflict ? '草稿を開きました．保存の前に，ディスクの内容との比較を確認してください．' : '草稿を開きました．');
+  toast(doc.conflict ? t("草稿を開きました．保存の前に，ディスクの内容との比較を確認してください．") : t("草稿を開きました．"));
 }
 async function deleteSelectedDraft() {
   const id = $('recovery-file').value;
@@ -1297,7 +1358,7 @@ async function loadProjectSession(root, generation) {
   viewer.restorePosition(state.session?.pdf, state.session?.pdfPositions);
   setSidebar(state.session?.sidebar === 'outline' ? 'outline' : 'files');
   renderRecovery();
-  $('draft-status').textContent = availableDrafts().length ? '前回の草稿があります' : '';
+  $('draft-status').textContent = availableDrafts().length ? t("前回の草稿があります") : '';
 }
 async function openInitialFile() {
   const project = state.meta?.project;
@@ -1357,8 +1418,8 @@ function setSidebar(mode) {
   $('file-tree').hidden = outline; $('outline-tree').hidden = !outline;
   $('files-tab').classList.toggle('selected', !outline); $('outline-tab').classList.toggle('selected', outline);
   $('files-tab').setAttribute('aria-selected', String(!outline)); $('outline-tab').setAttribute('aria-selected', String(outline));
-  $('file-filter').placeholder = outline ? '見出しを検索' : 'ファイルを検索';
-  $('file-filter').setAttribute('aria-label', outline ? '見出しを検索' : 'ファイルを検索');
+  $('file-filter').placeholder = outline ? t("見出しを検索") : t("ファイルを検索");
+  $('file-filter').setAttribute('aria-label', outline ? t("見出しを検索") : t("ファイルを検索"));
   renderTree(); renderOutline(); scheduleSession();
 }
 function renderOutline() {
@@ -1374,13 +1435,13 @@ function renderOutline() {
     for (const item of items) {
       const button = document.createElement('button'); button.type = 'button'; button.className = 'outline-link';
       button.dataset.path = file.path; button.dataset.line = String(item.line); button.style.setProperty('--outline-depth', String(Math.max(0, Math.min(4, item.level - baseLevel))));
-      const title = document.createElement('span'); title.textContent = item.title || '(無題の見出し)';
+      const title = document.createElement('span'); title.textContent = item.title || t("(無題の見出し)");
       const line = document.createElement('span'); line.className = 'outline-line'; line.textContent = String(item.line);
       button.append(title, line); button.addEventListener('click', () => runTask(() => goToSource(file.path, item.line)));
       container.append(button); count++;
     }
   }
-  if (!count) { const text = document.createElement('p'); text.className = 'tree-empty'; text.textContent = state.indexing ? '見出しを読み込んでいます…' : state.indexError ? `原稿を読み込めませんでした．${state.indexError}` : query ? '一致する見出しがありません．' : 'section や chapter の見出しがここに表示されます．'; container.append(text); }
+  if (!count) { const text = document.createElement('p'); text.className = 'tree-empty'; text.textContent = state.indexing ? t("見出しを読み込んでいます…") : state.indexError ? t("原稿を読み込めませんでした．{value0}", { value0: state.indexError }) : query ? t("一致する見出しがありません．") : t("section や chapter の見出しがここに表示されます．"); container.append(text); }
   updateOutlinePosition();
 }
 function updateOutlinePosition() {
@@ -1427,12 +1488,12 @@ async function goToSource(path, lineNumber, column = 1) {
   return true;
 }
 function noteSourceChanged(result) {
-  if (result.sourceChanged || dirtyDocuments().length) toast('この PDF を作成した後に原稿が変更されています．行の位置がずれる場合があります．');
+  if (result.sourceChanged || dirtyDocuments().some(doc => sourceAffectsPDF(doc.path))) toast(t("この PDF を作成した後に原稿が変更されています．行の位置がずれる場合があります．"));
 }
 async function syncForward(position = null) {
   if (isMarkdown(state.activePath)) return;
   if (state.syncing || state.operation || !state.editor || !activeDocument() || !state.meta?.project) return;
-  if (!viewer.document || !viewer.buildId) throw new Error('PDF をコンパイルしてから，原稿と PDF の位置を対応させてください．');
+  if (!viewer.document || !viewer.buildId) throw new Error(t("PDF をコンパイルしてから，原稿と PDF の位置を対応させてください．"));
   const generation = state.projectGeneration;
   const path = state.activePath;
   const view = state.editor;
@@ -1448,7 +1509,7 @@ async function syncForward(position = null) {
     if (generation !== state.projectGeneration || buildId !== viewer.buildId) return;
     const result = await api('/api/synctex/forward', { method: 'POST', body: { buildId, path, line: line.number, column: 0 } });
     if (generation !== state.projectGeneration || buildId !== viewer.buildId) return;
-    if (!result.locations?.length) throw new Error(`${path} の ${line.number} 行に対応する PDF の位置が見つかりませんでした．文章や数式の行で試してください．`);
+    if (!result.locations?.length) throw new Error(t("{value0} の {value1} 行に対応する PDF の位置が見つかりませんでした．文章や数式の行で試してください．", { value0: path, value1: line.number }));
     const target = result.locations.find(location => location.page === viewer.pageNumber) || result.locations[0];
     switchView(true);
     await new Promise(resolve => requestAnimationFrame(resolve));
@@ -1456,7 +1517,7 @@ async function syncForward(position = null) {
     await viewer.showLocation(target, buildId);
     clearError(); noteSourceChanged(result);
   } catch (error) {
-    if (error.status === 503) showError(error, { label: '設定を開く', run: showSettings });
+    if (error.status === 503) showError(error, { label: t("設定を開く"), run: showSettings });
     throw error;
   } finally { state.syncing = false; renderControls(); }
 }
@@ -1470,14 +1531,14 @@ async function syncInverse(position) {
     await goToSource(result.path, result.line, result.column);
     clearError(); noteSourceChanged(result);
   } catch (error) {
-    if (error.status === 503) showError(error, { label: '設定を開く', run: showSettings });
+    if (error.status === 503) showError(error, { label: t("設定を開く"), run: showSettings });
     throw error;
   } finally { state.syncing = false; renderControls(); }
 }
 
 const viewer = new PDFViewer({
   token,
-  onError: error => showError(error, { label: 'PDF を再表示', run: async () => { clearError(); await viewer.retry(); } }),
+  onError: error => showError(error, { label: t("PDF を再表示"), run: async () => { clearError(); await viewer.retry(); } }),
   onReady: () => { updatePreviewNote(); renderControls(); },
   onPositionChange: () => scheduleSession(),
   onInverse: position => runTask(() => syncInverse(position)),
@@ -1495,6 +1556,13 @@ const markdownPreview = new MarkdownPreview({
 });
 
 let cachedTheme = null;
+applyLanguage(state.preferences.language);
+$('find-button').title = t("検索・置換 ({value0}+F)", { value0: shortcutModifier });
+$('save-button').title = t("現在のファイルを保存 ({value0}+S)", { value0: shortcutModifier });
+if (isMac) {
+  $('project-path').placeholder = '/Users/…/Documents/paper';
+  $('project-tex-help').textContent = t("例: /Library/TeX/texbin");
+}
 try { cachedTheme = localStorage.getItem('local-tex-editor-theme'); } catch { /* Use the system preference on the first visit. */ }
 applyTheme(['light', 'dark'].includes(cachedTheme) ? cachedTheme : matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 onClick('theme-toggle', () => applyTheme(state.theme === 'dark' ? 'light' : 'dark', true));
@@ -1503,7 +1571,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
 onClick('show-project', showProjectDialog); onClick('welcome-open', showProjectDialog);
 onClick('settings-button', showSettings); onClick('main-document', showSettings);
 onClick('shortcut-start-menu', () => createShortcut('start-menu')); onClick('shortcut-desktop', () => createShortcut('desktop'));
-onClick('copy-synctex-setup', async () => { await navigator.clipboard.writeText($('synctex-install-commands').textContent); toast('コマンドをコピーしました．'); });
+onClick('copy-synctex-setup', async () => { await navigator.clipboard.writeText($('synctex-install-commands').textContent); toast(t("コマンドをコピーしました．")); });
 onClick('pick-project', pickProject); onClick('cancel-picker', cancelPicker); onClick('shutdown-button', shutdown);
 onClick('save-button', saveCurrent); onClick('compile-button', startBuild); onClick('stop-button', stopBuild);
 for (const select of document.querySelectorAll('[data-preview-choice]')) select.addEventListener('change', () => setPreviewChoice(select.value));
@@ -1596,8 +1664,8 @@ setInterval(() => { if (isRunning()) updateElapsed(); }, 1000);
 async function initialise() {
   setOperation('initialising');
   try {
-    const meta = await api('/api/state');
     await loadPreferences();
+    const meta = await api('/api/state');
     await applyMeta(meta, true);
     if (meta.installationError) showError(new Error(meta.installationError));
     state.heartbeat = setInterval(() => runTask(heartbeat), 30000);

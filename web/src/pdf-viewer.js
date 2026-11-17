@@ -1,3 +1,4 @@
+import { t, getLanguage, onLanguageChange } from './i18n.js';
 import * as pdfjs from 'pdfjs-dist/build/pdf.mjs';
 import { EventBus, PDFViewer as DocumentViewer, PDFLinkService, LinkTarget, RenderingStates } from 'pdfjs-dist/web/pdf_viewer.mjs';
 import { PDFSearch } from './pdf-search.js';
@@ -32,6 +33,10 @@ export class PDFViewer {
     this.highlight = null;
     this.highlightTimer = null;
     this.elements = Object.fromEntries(['scroll', 'stage', 'empty', 'loading', 'prev', 'next', 'page', 'pages', 'zoom', 'zoom-in', 'zoom-out'].map(name => [name, document.getElementById(`pdf-${name}`)]));
+    this.unsubscribeLanguage = onLanguageChange(() => {
+      this.elements.empty.querySelector('h3').textContent = t(this.emptyError ? 'PDF を表示できませんでした' : 'PDF をここに表示します');
+      this.elements.empty.querySelector('p').textContent = this.emptyError?.message || (this.emptyError ? String(this.emptyError) : t('原稿を保存し，コンパイルしてください．'));
+    });
     this.eventBus = new EventBus();
     this.linkService = new PDFLinkService({ eventBus: this.eventBus, externalLinkTarget: LinkTarget.BLANK, externalLinkRel: 'noopener noreferrer', ignoreDestinationZoom: true });
     this.search = new PDFSearch({ eventBus: this.eventBus, linkService: this.linkService, pane: document.getElementById('pdf-preview') || document.getElementById('pdf-pane'), toolbar: document.querySelector('.pdf-toolbar'), scroll: this.elements.scroll });
@@ -162,7 +167,7 @@ export class PDFViewer {
     try {
       task = pdfjs.getDocument({
         url: `/api/pdf?build=${encodeURIComponent(buildId)}`,
-        httpHeaders: { 'X-Local-Token': this.token, 'X-Project-Root': encodeURIComponent(projectRoot) },
+        httpHeaders: { 'X-Local-Token': this.token, 'X-Project-Root': encodeURIComponent(projectRoot), 'Accept-Language': getLanguage() },
         cMapUrl: '/cmaps/', cMapPacked: true,
         standardFontDataUrl: '/standard_fonts/', wasmUrl: '/wasm/',
         isEvalSupported: false, enableXfa: false,
@@ -199,8 +204,9 @@ export class PDFViewer {
       if (task && task !== this.document?.loadingTask) await task.destroy().catch(() => {});
       this.elements.loading.hidden = true;
       if (!this.document) {
+        this.emptyError = error;
         this.elements.stage.hidden = true; this.elements.empty.hidden = false;
-        this.elements.empty.querySelector('h3').textContent = 'PDF を表示できませんでした';
+        this.elements.empty.querySelector('h3').textContent = t("PDF を表示できませんでした");
         this.elements.empty.querySelector('p').textContent = error?.message || String(error);
       }
       this.report(error);
@@ -363,7 +369,7 @@ export class PDFViewer {
   report(error) {
     if (!cancelled(error)) {
       this.elements.loading.hidden = true;
-      this.onError?.(new Error(`PDF の表示に失敗しました．${error?.message || error}`));
+      this.onError?.(new Error(t("PDF の表示に失敗しました．{value0}", { value0: error?.message || error })));
     }
   }
 
@@ -375,6 +381,7 @@ export class PDFViewer {
   }
 
   async reset() {
+    this.emptyError = null;
     ++this.generation;
     const loadingTask = this.loadingTask;
     const document = this.document;
@@ -387,8 +394,8 @@ export class PDFViewer {
     this.search.reset();
     this.pageViewer.setDocument(null); this.linkService.setDocument(null);
     this.elements.stage.hidden = true; this.elements.empty.hidden = false;
-    this.elements.empty.querySelector('h3').textContent = 'PDF をここに表示します';
-    this.elements.empty.querySelector('p').textContent = '原稿を保存し，コンパイルしてください．';
+    this.elements.empty.querySelector('h3').textContent = t("PDF をここに表示します");
+    this.elements.empty.querySelector('p').textContent = t("原稿を保存し，コンパイルしてください．");
     this.elements.loading.hidden = true;
     this.updateControls();
     await document?.loadingTask.destroy().catch(() => {});

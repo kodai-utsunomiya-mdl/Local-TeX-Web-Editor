@@ -1,3 +1,4 @@
+import { t, getLanguage, onLanguageChange } from './i18n.js';
 import MarkdownIt from 'markdown-it';
 import createDOMPurify from 'dompurify';
 import katex from 'katex';
@@ -88,7 +89,7 @@ function makeParser() {
       if (!match) continue;
       first.content = first.content.slice(match[0].length);
       const checkbox = new state.Token('html_inline', '', 0);
-      checkbox.content = `<input type="checkbox" disabled${match[1] === ' ' ? '' : ' checked'} aria-label="${match[1] === ' ' ? '未完了' : '完了'}">`;
+      checkbox.content = `<input type="checkbox" disabled${match[1] === ' ' ? '' : ' checked'} aria-label="${match[1] === ' ' ? t("未完了") : t("完了")}">`;
       inline.children.unshift(checkbox);
       state.tokens[index - 2].attrJoin('class', 'markdown-task');
     }
@@ -115,7 +116,7 @@ export function renderMarkdownHTML(content) {
 
 export class MarkdownPreview {
   constructor({ container, token, onOpenFile, onSourceLine, onError }) {
-    if (!container) throw new Error('Markdown の表示先がありません．');
+    if (!container) throw new Error(t("Markdown の表示先がありません．"));
     this.container = container;
     this.token = token;
     this.onOpenFile = onOpenFile;
@@ -129,7 +130,7 @@ export class MarkdownPreview {
     this.article.dataset.testid = 'markdown-document';
     this.container.classList.add('markdown-preview');
     this.container.dataset.testid = 'markdown-preview';
-    this.container.setAttribute('aria-label', 'Markdown プレビュー');
+    this.container.setAttribute('aria-label', t("Markdown プレビュー"));
     this.container.setAttribute('tabindex', '0');
     this.container.append(this.article);
     this.current = null;
@@ -149,6 +150,15 @@ export class MarkdownPreview {
     };
     this.container.addEventListener('click', this.linkClick);
     this.container.addEventListener('dblclick', this.doubleClick);
+    this.unsubscribeLanguage = onLanguageChange(() => this.refreshLanguage());
+  }
+
+  refreshLanguage() {
+    this.container.setAttribute('aria-label', t('Markdown プレビュー'));
+    if (this.article.classList.contains('is-empty')) this.article.textContent = t('Markdown を入力すると，ここに表示されます．');
+    for (const input of this.article.querySelectorAll('.markdown-task > input')) input.setAttribute('aria-label', t(input.checked ? '完了' : '未完了'));
+    for (const link of this.article.querySelectorAll('a.markdown-image-link')) link.title = t('画像をブラウザで開く');
+    for (const label of this.article.querySelectorAll('span.markdown-image-link')) label.title = t('画像のパスを確認してください．');
   }
 
   key(value = this.current) { return value ? `${value.projectRoot}\n${value.path}` : ''; }
@@ -248,7 +258,7 @@ export class MarkdownPreview {
       }
       this.article.replaceChildren(fragment);
       this.article.classList.toggle('is-empty', !current.content.trim());
-      if (!current.content.trim()) this.article.textContent = 'Markdown を入力すると，ここに表示されます．';
+      if (!current.content.trim()) this.article.textContent = t("Markdown を入力すると，ここに表示されます．");
       this.rendered = current;
       this.container.scrollTop = position?.top || 0;
       this.container.scrollLeft = position?.left || 0;
@@ -258,7 +268,7 @@ export class MarkdownPreview {
     } catch (error) {
       this.releaseImages();
       this.container.dataset.state = 'error';
-      this.article.textContent = `Markdown を表示できませんでした．${error.message || error}`;
+      this.article.textContent = t("Markdown を表示できませんでした．{value0}", { value0: error.message || error });
       this.onError?.(error);
     }
   }
@@ -292,25 +302,41 @@ export class MarkdownPreview {
         image.dataset.markdownLocalImage = resolved.path;
         const cached = this.images.get(resolved.path);
         const size = this.imageSizes.get(`${current.projectRoot}\n${resolved.path}`);
-        if (size) { image.width = size.width; image.height = size.height; }
+        if (size) this.setImageSize(image, size);
         if (cached?.url) {
           image.src = cached.url;
-          if (cached.width && cached.height) { image.width = cached.width; image.height = cached.height; }
+          if (cached.width && cached.height) this.setImageSize(image, cached);
           image.dataset.state = 'ready';
         } else image.dataset.state = 'loading';
         continue;
       }
       const replacement = this.document.createElement(resolved?.kind === 'external' ? 'a' : 'span');
       replacement.className = 'markdown-image-link';
-      replacement.textContent = image.alt || reference || '画像';
+      replacement.textContent = image.alt || reference || t("画像");
       if (resolved?.kind === 'external') {
         replacement.href = resolved.href;
         replacement.target = '_blank';
         replacement.rel = 'noopener noreferrer';
-        replacement.title = '画像をブラウザで開く';
-      } else replacement.title = '画像のパスを確認してください．';
+        replacement.title = t("画像をブラウザで開く");
+      } else replacement.title = t("画像のパスを確認してください．");
       image.replaceWith(replacement);
     }
+  }
+
+  setImageSize(image, { width, height }) {
+    image.width = width;
+    image.height = height;
+    let frame = image.parentElement;
+    if (!frame?.classList.contains('markdown-image-frame')) {
+      frame = this.document.createElement('span');
+      frame.className = 'markdown-image-frame';
+      image.replaceWith(frame);
+      frame.append(image);
+    }
+    // An img without a src may lay out its alt text even when width/height are set.
+    // Give the surrounding box the known dimensions before the next asset arrives.
+    frame.style.width = `${width}px`;
+    frame.style.aspectRatio = `${width} / ${height}`;
   }
 
   observeImages(current) {
@@ -336,17 +362,17 @@ export class MarkdownPreview {
       this.images.set(path, asset);
       asset.promise = (async () => {
         const response = await this.window.fetch(`/api/asset?path=${encodeURIComponent(path)}`, {
-          headers: { 'X-Local-Token': this.token, 'X-Project-Root': encodeURIComponent(current.projectRoot) },
+          headers: { 'X-Local-Token': this.token, 'X-Project-Root': encodeURIComponent(current.projectRoot), 'Accept-Language': getLanguage() },
           signal: controller.signal, cache: 'no-store',
         });
         if (!response.ok) {
           let error;
           try { error = (await response.json()).error; } catch { /* The status below describes non-JSON responses. */ }
-          throw new Error(error || `画像を取得できませんでした (HTTP ${response.status})．`);
+          throw new Error(error || t("画像を取得できませんでした (HTTP {value0})．", { value0: response.status }));
         }
         const blob = await response.blob();
         if (generation !== this.generation) return null;
-        if (!blob.type.startsWith('image/')) throw new Error('このファイルは画像として表示できません．');
+        if (!blob.type.startsWith('image/')) throw new Error(t("このファイルは画像として表示できません．"));
         asset.url = this.window.URL.createObjectURL(blob);
         return asset.url;
       })().finally(() => this.controllers.delete(controller));
@@ -359,8 +385,7 @@ export class MarkdownPreview {
       if (generation !== this.generation || !image.isConnected) return;
       asset.width = image.naturalWidth;
       asset.height = image.naturalHeight;
-      image.width = asset.width;
-      image.height = asset.height;
+      this.setImageSize(image, asset);
       this.imageSizes.set(`${current.projectRoot}\n${path}`, { width: asset.width, height: asset.height });
       while (this.imageSizes.size > 200) this.imageSizes.delete(this.imageSizes.keys().next().value);
       image.dataset.state = 'ready';
@@ -391,6 +416,7 @@ export class MarkdownPreview {
   }
 
   destroy() {
+    this.unsubscribeLanguage?.();
     this.reset();
     this.container.removeEventListener('click', this.linkClick);
     this.container.removeEventListener('dblclick', this.doubleClick);

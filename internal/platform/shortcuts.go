@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -14,6 +13,8 @@ import (
 	"strings"
 
 	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/branding"
+
+	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/messages"
 )
 
 const shortcutApplication = "github.com/kodai-utsunomiya-mdl/local-tex-editor"
@@ -22,8 +23,8 @@ const shortcutManifestName = "installation.json"
 const shortcutName = "Local TeX Editor.lnk"
 const shortcutExecutableLimit int64 = 512 << 20
 
-var ErrShortcutsUnsupported = errors.New("起動用のショートカット作成は Windows で利用できます．")
-var ErrShortcutConflict = errors.New("作成先のファイルを確認してください．")
+var ErrShortcutsUnsupported = messages.Errorf("起動用のショートカット作成は Windows で利用できます．")
+var ErrShortcutConflict = messages.Errorf("作成先のファイルを確認してください．")
 
 type ShortcutResult struct {
 	Executable string `json:"executable"`
@@ -55,13 +56,13 @@ func shortcutSameFile(first, second string) bool {
 
 func shortcutInstallDirectory(localAppData string) (string, error) {
 	if !filepath.IsAbs(localAppData) {
-		return "", errors.New("アプリの保存先を取得できません．")
+		return "", messages.Errorf("アプリの保存先を取得できません．")
 	}
 	directory := localAppData
 	for _, component := range []string{"Programs", "LocalTeXEditor"} {
 		directory = filepath.Join(directory, component)
 		if err := os.Mkdir(directory, 0700); err != nil && !errors.Is(err, os.ErrExist) {
-			return "", fmt.Errorf("アプリの保存先を作成できません (%s): %w", directory, err)
+			return "", messages.Errorf("アプリの保存先を作成できません (%s): %w", directory, err)
 		}
 		info, err := os.Lstat(directory)
 		if err != nil {
@@ -72,7 +73,7 @@ func shortcutInstallDirectory(localAppData string) (string, error) {
 			return "", err
 		}
 		if linked || !info.IsDir() {
-			return "", fmt.Errorf("アプリの保存先が通常のフォルダーではありません (%s)．%w", directory, ErrShortcutConflict)
+			return "", messages.Errorf("アプリの保存先が通常のフォルダーではありません (%s)．%w", directory, ErrShortcutConflict)
 		}
 	}
 	return directory, nil
@@ -92,7 +93,7 @@ func shortcutRegularFile(path string) (os.FileInfo, error) {
 		return nil, err
 	}
 	if linked || !regular {
-		return nil, fmt.Errorf("通常のファイルとして扱えません (%s)．%w", path, ErrShortcutConflict)
+		return nil, messages.Errorf("通常のファイルとして扱えません (%s)．%w", path, ErrShortcutConflict)
 	}
 	return info, nil
 }
@@ -103,7 +104,7 @@ func shortcutFileHash(path string) (string, error) {
 		return "", err
 	}
 	if info.Size() <= 0 || info.Size() > shortcutExecutableLimit {
-		return "", fmt.Errorf("アプリの実行ファイルのサイズを確認してください (%s)．%w", path, ErrShortcutConflict)
+		return "", messages.Errorf("アプリの実行ファイルのサイズを確認してください (%s)．%w", path, ErrShortcutConflict)
 	}
 	file, err := os.Open(path)
 	if err != nil {
@@ -116,7 +117,7 @@ func shortcutFileHash(path string) (string, error) {
 		return "", err
 	}
 	if written != info.Size() {
-		return "", errors.New("実行ファイルが読み込み中に変更されました．もう一度操作してください．")
+		return "", messages.Errorf("実行ファイルが読み込み中に変更されました．もう一度操作してください．")
 	}
 	return hex.EncodeToString(hash.Sum(nil)), nil
 }
@@ -130,7 +131,7 @@ func readShortcutInstallation(path string) (*shortcutInstallation, error) {
 		return nil, err
 	}
 	if info.Size() > 4096 {
-		return nil, fmt.Errorf("この保存先に別の installation.json があります (%s)．%w", path, ErrShortcutConflict)
+		return nil, messages.Errorf("この保存先に別の installation.json があります (%s)．%w", path, ErrShortcutConflict)
 	}
 	file, err := os.Open(path)
 	if err != nil {
@@ -143,10 +144,10 @@ func readShortcutInstallation(path string) (*shortcutInstallation, error) {
 	}
 	var value shortcutInstallation
 	if len(data) > 4096 || json.Unmarshal(data, &value) != nil || value.Application != shortcutApplication || value.Format != 1 {
-		return nil, fmt.Errorf("この保存先に別の installation.json があります (%s)．%w", path, ErrShortcutConflict)
+		return nil, messages.Errorf("この保存先に別の installation.json があります (%s)．%w", path, ErrShortcutConflict)
 	}
 	if hash, err := hex.DecodeString(value.SHA256); err != nil || len(hash) != sha256.Size {
-		return nil, fmt.Errorf("アプリの配置情報を読めません (%s)．%w", path, ErrShortcutConflict)
+		return nil, messages.Errorf("アプリの配置情報を読めません (%s)．%w", path, ErrShortcutConflict)
 	}
 	return &value, nil
 }
@@ -156,7 +157,7 @@ func readShortcutInstallation(path string) (*shortcutInstallation, error) {
 func installShortcutExecutable(source, directory string) (string, error) {
 	source, err := filepath.EvalSymlinks(source)
 	if err != nil {
-		return "", fmt.Errorf("起動中の実行ファイルを開けません: %w", err)
+		return "", messages.Errorf("起動中の実行ファイルを開けません: %w", err)
 	}
 	sourceHash, err := shortcutFileHash(source)
 	if err != nil {
@@ -181,7 +182,7 @@ func installShortcutExecutable(source, directory string) (string, error) {
 		}
 		copyNeeded = targetHash != sourceHash
 		if copyNeeded && (manifest == nil || manifest.SHA256 != targetHash) {
-			return "", fmt.Errorf("配置先の実行ファイルが，このアプリの配置記録と一致しません (%s)．%w", target, ErrShortcutConflict)
+			return "", messages.Errorf("配置先の実行ファイルが，このアプリの配置記録と一致しません (%s)．%w", target, ErrShortcutConflict)
 		}
 		if shortcutPathsEqual(source, target) {
 			copyNeeded = false
@@ -196,11 +197,11 @@ func installShortcutExecutable(source, directory string) (string, error) {
 		if exists {
 			current, err := shortcutRegularFile(target)
 			if err != nil || !os.SameFile(existing, current) || existing.Size() != current.Size() || !existing.ModTime().Equal(current.ModTime()) {
-				return "", fmt.Errorf("配置先の実行ファイルが操作中に変更されました．%w", ErrShortcutConflict)
+				return "", messages.Errorf("配置先の実行ファイルが操作中に変更されました．%w", ErrShortcutConflict)
 			}
 		}
 		if err := commitShortcutFile(staged, target, exists); err != nil {
-			return "", fmt.Errorf("配置先のアプリを更新できません (%s)．起動中の Local TeX Editor を終了し，新しい実行ファイルを開いてから再度操作してください．%w (%w)", target, ErrShortcutConflict, err)
+			return "", messages.Errorf("配置先のアプリを更新できません (%s)．起動中の Local TeX Editor を終了し，新しい実行ファイルを開いてから再度操作してください．%w (%w)", target, ErrShortcutConflict, err)
 		}
 	}
 	if manifest == nil || manifest.SHA256 != sourceHash {
@@ -209,7 +210,7 @@ func installShortcutExecutable(source, directory string) (string, error) {
 			return "", err
 		}
 		if err := writeShortcutInstallation(manifestPath, append(data, '\n'), manifest != nil); err != nil {
-			return "", fmt.Errorf("アプリの配置情報を保存できません: %w", err)
+			return "", messages.Errorf("アプリの配置情報を保存できません: %w", err)
 		}
 	}
 	return target, nil
@@ -238,7 +239,7 @@ func stageShortcutExecutable(source, directory, expectedHash string) (string, er
 		return "", err
 	}
 	if hex.EncodeToString(hash.Sum(nil)) != expectedHash {
-		return "", errors.New("実行ファイルがコピー中に変更されました．もう一度操作してください．")
+		return "", messages.Errorf("実行ファイルがコピー中に変更されました．もう一度操作してください．")
 	}
 	if err := output.Sync(); err != nil {
 		return "", err
@@ -278,14 +279,14 @@ func installShortcutIcon(directory string) (string, bool, error) {
 	path := filepath.Join(directory, name)
 	if info, err := shortcutRegularFile(path); err == nil {
 		if info.Size() != int64(len(branding.Icon)) {
-			return "", false, fmt.Errorf("アプリのアイコンと同名の別ファイルがあります (%s)．%w", path, ErrShortcutConflict)
+			return "", false, messages.Errorf("アプリのアイコンと同名の別ファイルがあります (%s)．%w", path, ErrShortcutConflict)
 		}
 		data, err := os.ReadFile(path)
 		if err != nil {
 			return "", false, err
 		}
 		if !bytes.Equal(data, branding.Icon) {
-			return "", false, fmt.Errorf("アプリのアイコンと同名の別ファイルがあります (%s)．%w", path, ErrShortcutConflict)
+			return "", false, messages.Errorf("アプリのアイコンと同名の別ファイルがあります (%s)．%w", path, ErrShortcutConflict)
 		}
 		return path, false, nil
 	} else if !errors.Is(err, os.ErrNotExist) {

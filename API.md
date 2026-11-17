@@ -1,10 +1,11 @@
 # Local TeX Editor の実装
 
-Windows のブラウザでローカルの TeX プロジェクトを編集する．Go の HTTP サーバーが UI，API，PDF を同じ loopback のポートから配信する．原稿は選択したフォルダーに保存し，既存の latexmkrc を用いる．UI は CodeMirror 6 と PDF.js を使用し，ビルド時に Go の実行ファイルへ組み込む．Python，Node.js，Go は利用する PC に導入しない．
+Windows と macOS のブラウザでローカルの TeX / Markdown プロジェクトを編集する．Go の HTTP サーバーが UI，API，PDF を同じ loopback のポートから配信する．原稿は選択したフォルダーに保存し，既存の latexmkrc を用いる．UI は CodeMirror 6 と PDF.js を使用し，ビルド時に Go の実行ファイルへ組み込む．Python，Node.js，Go は利用する PC に導入しない．
 
 ## 共通の約束
 
 - API は JSON．PDF と画像のプレビューは各形式の bytes を返し，`/api/session` は接続を続けるための stream を返す．失敗は適切な HTTP status と `{ "error": "説明" }`．画面は HTTP の失敗とプロセスの失敗を表示する．
+- UI は選択した言語を `Accept-Language: en` または `Accept-Language: ja` で送る．応答は `Content-Language` と `Vary: Accept-Language` を付け，エラー，ツールの案内，コンパイル結果，ショートカットの説明をその言語で返す．ヘッダーがない既存 API クライアントには日本語を返す．原稿，パス，外部ツールの出力は送られた文字列のまま扱い，アプリ自身がコンパイルログに追加する説明はテンプレートから翻訳する．
 - API と PDF は `X-Local-Token` ヘッダーで起動時のランダムな token を受け取る．UI は起動 URL の `#token=...` を読み，sessionStorage に置き，URL の fragment を取り除く．Host と Origin も検査する．サーバーは loopback だけに bind する．
 - プロジェクトの操作には `X-Project-Root: encodeURIComponent(root)` を付ける．別のタブでプロジェクトが変わった場合は HTTP 409 を返す．
 - パスはプロジェクトからの相対パス．絶対パス，親への移動，symlink / reparse point によるプロジェクト外へのアクセスを拒否する．プロジェクトを開く操作ではユーザーが選んだ絶対パスを受け付ける．
@@ -22,6 +23,10 @@ Windows のブラウザでローカルの TeX プロジェクトを編集する�
 `executablePath` は動いている実行ファイルの絶対パス．配置済みのアプリやショートカットの更新が失敗した場合は，`installationError` も返す．画面にはアプリのバージョンとパス，更新に失敗した際の案内を表示する．
 
 synctex は利用できる実行ファイルのパス．見つからない場合は空文字列と synctexError の説明を返す．Windows で TeX Live の管理ツールと年版が確認できた場合は，設定画面に表示する PowerShell のコマンドを synctexInstallCommands へ入れる．
+
+`texPackages` は `bin`，`manager`，`year`，`repository`，`shell`，`commandPrefix` と `programs` を返す．`programs` の各要素は `name`，`path`，`available`，`packages` を持つ．設定済みの TeX Live に `latexmk`，`synctex`，各エンジン，文献処理用のプログラムがあるかをファイルから確認する．`shell` は Windows で `powershell`，macOS で `posix` となる．
+
+`commandPrefix` はその TeX Live の `tlmgr` をシェルに合わせて引用した文字列で，管理ツールが見つかった場合に返す．旧年度は該当する `tlnet-final` の取得先を付け，年度が不明の場合は既存の取得先の設定を使う．UI は入力されたパッケージ名や不足ファイル名を確認し，`install` / `search` のコマンドを表示する．利用者が端末へコピーして実行する．
 
 project は開いている場合に次の形式で返す．
 
@@ -41,7 +46,7 @@ directories はルートからの相対パスの配列で，空のフォルダ�
 
 ### POST /api/project/pick
 
-Windows のフォルダー選択ダイアログを開く．成功時 `{ "path": "絶対パス" }`，取消時 `{ "path": "" }`．その他の OS では説明を返す．UI はパスの入力でも開ける．
+Windows または macOS のフォルダー選択ダイアログを開く．成功時 `{ "path": "絶対パス" }`，取消時 `{ "path": "" }`．UI はパスの入力でも開ける．
 
 ### PUT /api/settings
 
@@ -78,12 +83,14 @@ main は，コンパイルのリクエストに文書の指定がない場合に
 ### GET /api/build
 
 ```json
-{"id":"...","main":"notes/paper.tex","status":"running","command":"...","log":"標準出力と標準エラー","exitCode":null,"error":"","startedAt":"ISO8601","finishedAt":"","pdfReady":false,"pdfBuildId":"","pdfMain":"","pdfSourceChanged":false,"synctexReady":false,"elapsedMs":0,"sourceChanged":false,"restored":false}
+{"id":"...","main":"notes/paper.tex","status":"running","command":"...","log":"標準出力と標準エラー","exitCode":null,"error":"","startedAt":"ISO8601","finishedAt":"","pdfReady":false,"pdfBuildId":"","pdfMain":"","pdfSourceChanged":false,"pdfMarkdownInputs":null,"synctexReady":false,"elapsedMs":0,"sourceChanged":false,"restored":false}
 ```
 
 build がまだない場合は `null`．status は `running`，`success`，`failed`，`cancelled`．main は今回のコンパイルの対象．ログは上限を設けるが，エラーの理由と終了コードは必ず返す．最後に成功した PDF がある場合は失敗後も pdfReady=true とし，UI に最新のコンパイルが失敗した旨を表示する．PDF の版は pdfBuildId，その PDF を作った文書は pdfMain で識別する．別の文書のコンパイルが実行中，失敗，停止となった場合も，最後に成功した PDF と対応する文書を返す．
 
 コンパイル開始後にアプリから保存が行われた場合は，`sourceChanged: true` を返す．表示中の PDF の作成後にアプリから保存が行われた場合は，`pdfSourceChanged: true` を返す．PDF の更新案内には `pdfSourceChanged` を使う．別の文書のコンパイルを開始しても，表示中の PDF の更新状態は変わらず，新しい PDF の作成に成功するとその PDF の状態になる．
+
+`pdfMarkdownInputs` は表示中の PDF が参照した `.md` / `.markdown` の相対パスを配列で返す．例えば `["notes/methods.md"]` は，その Markdown の編集と保存が PDF の変更通知の対象になることを表す．`[]` は Markdown の入力がない場合，`null` は入力の記録を取得できなかった場合で，後者では従来通り Markdown の保存も変更として扱う．成功したコンパイルの `.fls` と `.fdb_latexmk` から入力を調べ，配列に含まれない Markdown の編集と保存では PDF を変更扱いにしない．この情報も PDF のキャッシュへ保存する．
 
 `synctexReady` は `pdfBuildId` の PDF に対応する SyncTeX データがある場合に true．プロジェクトを開いた際に前回の PDF を読み込んだ場合は `restored: true`．その時点の原稿と保存された SHA-256 を比べ，変更があれば `sourceChanged: true` と `pdfSourceChanged: true` にする．
 
@@ -187,9 +194,12 @@ UI は草稿の書込みにこの照合を使う．別のタブの草稿と競�
 - 根拠のない No PDF を避けるため，実行の失敗，終了コード，PDF 探索結果を必ず build.error か build.log へ記す．
 - 手書きの HTTP パーサーは使わず，Go 標準ライブラリを使う．
 
-## 分担
+## ファイル構成
 
-- backend: internal/app 以下．アプリ状態，ファイル，設定，コンパイル，API．
-- frontend: web/src 以下．CodeMirror，PDF.js，日本語の UI．
-- tests: .github/workflows と tests 以下．Windows での TeX，ブラウザ，配布物の確認．
-- root: cmd，internal/platform，web/embed.go，package.json，scripts，README，GitHub への反映．
+- `internal/app`: アプリの状態，ファイル，設定，コンパイル，API．
+- `internal/messages`: API と OS の操作から返す説明の言語対応．
+- `internal/platform`: OS ごとのフォルダー選択，ファイルの操作，プロセスの実行．
+- `web/src`: CodeMirror，PDF.js，Markdown のプレビュー，日英の UI．
+- `tests` と `.github/workflows`: Windows / macOS での TeX，ブラウザ，配布物の確認．
+- `cmd/local-tex-editor`: 起動，更新，UI の配信．
+- `scripts`: UI のビルドと OS ごとの配布ファイルの作成．

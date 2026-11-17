@@ -5,8 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -14,19 +12,21 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/messages"
 	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/platform"
 )
 
 type cachedBuild struct {
-	Format     int               `json:"format"`
-	ID         string            `json:"id"`
-	Main       string            `json:"main"`
-	Mode       string            `json:"mode"`
-	StartedAt  string            `json:"startedAt"`
-	FinishedAt string            `json:"finishedAt"`
-	Changed    bool              `json:"sourceChanged"`
-	Sources    map[string]string `json:"sources"`
-	SyncTeX    *synctexVersion   `json:"synctex,omitempty"`
+	Format         int               `json:"format"`
+	ID             string            `json:"id"`
+	Main           string            `json:"main"`
+	Mode           string            `json:"mode"`
+	StartedAt      string            `json:"startedAt"`
+	FinishedAt     string            `json:"finishedAt"`
+	Changed        bool              `json:"sourceChanged"`
+	Sources        map[string]string `json:"sources"`
+	MarkdownInputs []string          `json:"markdownInputs"`
+	SyncTeX        *synctexVersion   `json:"synctex,omitempty"`
 }
 
 func (a *App) projectCacheDirectory(root string) string {
@@ -40,13 +40,13 @@ func (a *App) saveCachedBuild(project Project, run *buildRun, pdf string) error 
 	defer a.cacheMu.Unlock()
 	value := cachedBuild{Format: 1, ID: run.result.ID, Main: project.Main, Mode: project.Mode,
 		StartedAt: run.result.StartedAt, FinishedAt: run.result.FinishedAt,
-		Changed: run.result.SourceChanged, Sources: run.sources, SyncTeX: run.synctex}
+		Changed: run.result.SourceChanged, Sources: run.sources, MarkdownInputs: markdownInputList(run.markdownInputs), SyncTeX: run.synctex}
 	data, err := json.Marshal(value)
 	if err != nil {
 		return err
 	}
 	if len(data) > maxTextSize {
-		return errors.New("PDF に対応する原稿の一覧が 8 MiB を超えています．")
+		return messages.Errorf("PDF に対応する原稿の一覧が 8 MiB を超えています．")
 	}
 	file, err := os.CreateTemp(filepath.Dir(pdf), ".pdf-state-*")
 	if err != nil {
@@ -180,13 +180,14 @@ func (a *App) restoreCachedBuildLocked(project Project) {
 		}
 		changed := value.Changed || cachedSourcesChanged(project.Root, value.Sources)
 		a.lastPDFMain, a.lastPDFChanged = value.Main, changed
+		a.lastPDFMarkdownInputs = markdownInputSet(value.MarkdownInputs)
 		compiledProject := project
 		compiledProject.Main, compiledProject.Mode = value.Main, value.Mode
 		code := 0
-		a.build = &buildRun{started: started, finished: finished, project: compiledProject, sources: value.Sources, synctex: a.synctexVersions[value.ID],
+		a.build = &buildRun{started: started, finished: finished, project: compiledProject, sources: value.Sources, markdownInputs: a.lastPDFMarkdownInputs, synctex: a.synctexVersions[value.ID],
 			result: Build{ID: value.ID, Main: value.Main, Status: "success", ExitCode: &code, StartedAt: started.UTC().Format(time.RFC3339Nano),
-				FinishedAt: finished.UTC().Format(time.RFC3339Nano), SourceChanged: changed, Restored: true},
-			log: []byte("[前回の PDF] このプロジェクトで最後に成功した PDF を読み込みました．\n")}
+				FinishedAt: finished.UTC().Format(time.RFC3339Nano), SourceChanged: changed, Restored: true}}
+		a.appendMessageLocked(a.build, "[前回の PDF] このプロジェクトで最後に成功した PDF を読み込みました．\n")
 	}
 }
 
@@ -212,7 +213,7 @@ func cachedSourcesChanged(root string, sources map[string]string) bool {
 func readCacheFile(path string, limit int64) ([]byte, error) {
 	linked, err := platform.IsReparsePoint(path)
 	if err != nil || linked {
-		return nil, errors.New("キャッシュのファイルを開けません．")
+		return nil, messages.Errorf("キャッシュのファイルを開けません．")
 	}
 	file, err := os.Open(path)
 	if err != nil {
@@ -221,15 +222,15 @@ func readCacheFile(path string, limit int64) ([]byte, error) {
 	defer file.Close()
 	info, err := file.Stat()
 	if err != nil || info.Size() > limit {
-		return nil, errors.New("キャッシュのファイルを読めません．")
+		return nil, messages.Errorf("キャッシュのファイルを読めません．")
 	}
 	regular, err := platform.IsRegularFile(path, info)
 	if err != nil || !regular {
-		return nil, errors.New("キャッシュのファイルを読めません．")
+		return nil, messages.Errorf("キャッシュのファイルを読めません．")
 	}
 	data, err := io.ReadAll(io.LimitReader(file, limit+1))
 	if int64(len(data)) > limit {
-		return nil, fmt.Errorf("キャッシュのファイルが %d byte を超えています．", limit)
+		return nil, messages.Errorf("キャッシュのファイルが %d byte を超えています．", limit)
 	}
 	return data, err
 }

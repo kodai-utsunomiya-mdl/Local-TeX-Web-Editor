@@ -2,7 +2,6 @@ package app
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -11,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/messages"
 )
 
 func findSynctex(bin string) (string, error) {
@@ -29,7 +30,7 @@ func findSynctex(bin string) (string, error) {
 	return "", fail(http.StatusServiceUnavailable, "%s が見つかりません．設定画面の SyncTeX の案内を確認してください．", path)
 }
 
-func synctexStatus(bin string) (string, string, []string) {
+func synctexStatus(bin string, language ...string) (string, string, []string) {
 	tool, err := findSynctex(bin)
 	if err == nil {
 		return tool, "", []string{}
@@ -41,10 +42,20 @@ func synctexStatus(bin string) (string, string, []string) {
 			commands = synctexRepairCommands(bin, texLiveYear(bin), time.Now().Year())
 		}
 	}
-	return "", err.Error(), commands
+	selected := "ja"
+	if len(language) > 0 {
+		selected = language[0]
+	}
+	return "", messages.ErrorText(selected, err), commands
 }
 
 func texLiveYear(bin string) int {
+	if bin == "" {
+		return 0
+	}
+	if resolved, err := filepath.EvalSymlinks(bin); err == nil {
+		bin = resolved
+	}
 	root := filepath.Dir(filepath.Dir(bin))
 	if file, err := os.Open(filepath.Join(root, "release-texlive.txt")); err == nil {
 		text, _ := io.ReadAll(io.LimitReader(file, 4096))
@@ -105,10 +116,7 @@ func synctexRepairCommands(bin string, year, currentYear int) []string {
 	if year == 0 || year > currentYear {
 		return []string{}
 	}
-	repository := "https://mirror.ctan.org/systems/texlive/tlnet"
-	if year < currentYear {
-		repository = fmt.Sprintf("https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/%d/tlnet-final", year)
-	}
+	repository := texLiveRepository(year, currentYear)
 	return []string{
 		"& " + powershellLiteral(filepath.Join(bin, "tlmgr.bat")) + " --repository " + powershellLiteral(repository) + " install --reinstall synctex synctex.windows",
 		"& " + powershellLiteral(filepath.Join(bin, "synctex.exe")) + " help",

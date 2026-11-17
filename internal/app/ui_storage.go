@@ -13,6 +13,8 @@ import (
 	"sort"
 	"strconv"
 	"unicode/utf8"
+
+	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/messages"
 )
 
 // Browser origins change when the local server chooses a new port. Keep drafts
@@ -41,6 +43,28 @@ type uiStorageEdit struct {
 	PrefixBytes int    `json:"prefixBytes"`
 	SuffixBytes int    `json:"suffixBytes"`
 	Insert      string `json:"insert"`
+}
+
+// SavedInterfaceLanguage is shared with the update page, which runs before
+// the editor server starts. It reads the same preference record as the UI.
+func SavedInterfaceLanguage(configDir string) string {
+	if configDir == "" {
+		base, err := os.UserConfigDir()
+		if err != nil {
+			return "en"
+		}
+		configDir = filepath.Join(base, "LocalTeXEditor")
+	}
+	hash := sha256.Sum256([]byte("preferences"))
+	path := filepath.Join(configDir, "ui-state", hex.EncodeToString(hash[:])+".json")
+	value, err := readStoredUIValue(path, "preferences")
+	var preferences struct {
+		Language string `json:"language"`
+	}
+	if err == nil && json.Unmarshal(value, &preferences) == nil && preferences.Language == "ja" {
+		return "ja"
+	}
+	return "en"
 }
 
 func uiStorageResult(value json.RawMessage) uiStorageResponse {
@@ -227,7 +251,7 @@ func (a *App) storageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	result := uiStorageResult(current)
 	conflict := func() {
-		result.Error = "保存済みの内容が変わりました．最新の草稿を確認してから再度保存してください．"
+		result.Error = messages.Text(messages.LanguageFromContext(r.Context()), "保存済みの内容が変わりました．最新の草稿を確認してから再度保存してください．")
 		writeJSON(w, http.StatusConflict, result)
 	}
 	switch r.Method {

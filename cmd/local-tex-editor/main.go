@@ -81,10 +81,10 @@ func run() error {
 	if update != nil {
 		defer update.Close()
 	}
-	installationError := ""
+	var installationError error
 	if !noBrowser {
 		if err := platform.RefreshInstalledShortcuts(); err != nil {
-			installationError = err.Error()
+			installationError = err
 		}
 	}
 	listener, err := net.ListenTCP("tcp", address)

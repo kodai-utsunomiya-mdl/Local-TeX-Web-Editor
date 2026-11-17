@@ -12,6 +12,8 @@ test.beforeAll(async () => {
   const bundled = await build({
     stdin: {
       contents: `import { MarkdownPreview } from './markdown-preview.js';
+        import { setLanguage } from './i18n.js';
+        setLanguage('ja');
         window.openedMarkdownFiles = [];
         window.markdownErrors = [];
         window.preview = new MarkdownPreview({
@@ -26,7 +28,7 @@ test.beforeAll(async () => {
   javascript = bundled.outputFiles[0].text;
 });
 
-async function openPreview(page) {
+async function openPreview(page, { asset = pixelPNG } = {}) {
   const requests = [];
   const contentTypes = { '.css': 'text/css', '.woff2': 'font/woff2', '.woff': 'font/woff', '.ttf': 'font/ttf' };
   await page.route(`${origin}/**`, async route => {
@@ -38,7 +40,7 @@ async function openPreview(page) {
       expect(request.headers()['x-local-token']).toBe('test-markdown-token');
       expect(request.headers()['x-project-root']).toBe(encodeURIComponent('C:\\原稿\\Markdown'));
       expect(url.searchParams.get('path')).toBe('figures/図 1.png');
-      return route.fulfill({ contentType: 'image/png', body: pixelPNG });
+      return route.fulfill({ contentType: 'image/png', body: asset });
     }
     if (url.pathname === '/style.css' || url.pathname === '/markdown-preview.css') {
       return route.fulfill({ contentType: 'text/css', body: await readFile(path.join(repository, 'web/src', url.pathname.slice(1))) });
@@ -136,4 +138,44 @@ test('Markdown の再描画では画像と位置を使い続け，HTML やプロ
   await expect(body.getByRole('heading', { name: '別の Markdown' })).toBeVisible();
   await expect(body.locator('img')).toHaveCount(0);
   expect(await page.evaluate(() => window.markdownErrors)).toEqual([]);
+});
+
+test('Markdown に戻った時に，画像の取得で本文とスクロール位置が動かない', async ({ page }, testInfo) => {
+  const onePixelPNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNQaXjwHwAE1AKEf31AsgAAAABJRU5ErkJggg==', 'base64');
+  await openPreview(page, { asset: onePixelPNG });
+  await render(page, ['# 原稿', '', '![図](../figures/図%201.png)', '',
+    ...Array.from({ length: 50 }, (_, index) => `段落 ${index} の本文．\n`)].join('\n'));
+  const container = page.getByTestId('markdown-preview');
+  const image = page.getByRole('img', { name: '図', exact: true });
+  await expect(image).toHaveAttribute('data-state', 'ready');
+  await container.evaluate(element => { element.scrollTop = 600; });
+
+  const measure = () => container.evaluate(element => {
+    const image = element.querySelector('img'), paragraph = image.closest('p');
+    const rect = image.getBoundingClientRect(), line = paragraph.getBoundingClientRect();
+    return { scrollTop: element.scrollTop, width: rect.width, height: rect.height,
+      paragraphHeight: line.height, paragraphTop: line.top };
+  });
+  const initial = await measure();
+  let releaseAsset;
+  const pendingAsset = new Promise(resolve => { releaseAsset = resolve; });
+  let requested = false;
+  await page.route(`${origin}/api/asset?*`, async route => {
+    requested = true;
+    await pendingAsset;
+    await route.fulfill({ contentType: 'image/png', body: onePixelPNG });
+  });
+  try {
+    await page.evaluate(() => { window.preview.hide(); window.preview.show(); });
+    await expect.poll(() => requested).toBe(true);
+    const loading = await measure();
+    releaseAsset();
+    await expect(image).toHaveAttribute('data-state', 'ready');
+    await container.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const loaded = await measure();
+    await testInfo.attach('markdown-image-layout.json', { body: JSON.stringify({ initial, loading, loaded }, null, 2), contentType: 'application/json' });
+    expect(initial.scrollTop).toBe(600);
+    expect(loading).toEqual(initial);
+    expect(loaded).toEqual(initial);
+  } finally { releaseAsset(); }
 });

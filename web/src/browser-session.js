@@ -1,3 +1,5 @@
+import { getLanguage } from './i18n.js';
+
 // Keep one connection open for each editor tab. The local application waits
 // briefly after the final connection closes, so a reload can reconnect.
 export class BrowserSession {
@@ -34,7 +36,7 @@ export class BrowserSession {
     let reader;
     try {
       const response = await this.request('/api/session', {
-        headers: { 'X-Local-Token': this.token, Accept: 'text/event-stream' },
+        headers: { 'X-Local-Token': this.token, Accept: 'text/event-stream', 'Accept-Language': getLanguage() },
         cache: 'no-store', signal: controller.signal,
       });
       if (!response.ok || !response.body) throw new Error('The browser session could not connect.');
