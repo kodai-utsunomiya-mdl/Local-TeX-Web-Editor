@@ -17,7 +17,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/branding"
 	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/messages"
 	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/platform"
 )
@@ -41,6 +40,7 @@ type App struct {
 	shortcutMu            sync.Mutex
 	shortcutCreator       func(string) (platform.ShortcutResult, error)
 	options               Options
+	packageIdentity       *platform.PackageIdentity
 	config                configuration
 	project               *Project
 	build                 *buildRun
@@ -67,21 +67,22 @@ type App struct {
 }
 
 type State struct {
-	Version                string           `json:"version"`
-	ExecutablePath         string           `json:"executablePath"`
-	InstallationError      string           `json:"installationError,omitempty"`
-	Platform               string           `json:"platform"`
-	TexBin                 string           `json:"texBin"`
-	TexPackages            TeXPackageStatus `json:"texPackages"`
-	Latexmk                string           `json:"latexmk"`
-	ToolError              string           `json:"toolError,omitempty"`
-	Synctex                string           `json:"synctex"`
-	SynctexError           string           `json:"synctexError,omitempty"`
-	SynctexInstallCommands []string         `json:"synctexInstallCommands"`
-	ShortcutsSupported     bool             `json:"shortcutsSupported"`
-	Project                *Project         `json:"project"`
-	RecentProjects         []string         `json:"recentProjects"`
-	Build                  *Build           `json:"build"`
+	Version                string                    `json:"version"`
+	ExecutablePath         string                    `json:"executablePath"`
+	InstallationError      string                    `json:"installationError,omitempty"`
+	Platform               string                    `json:"platform"`
+	PackageIdentity        *platform.PackageIdentity `json:"packageIdentity,omitempty"`
+	TexBin                 string                    `json:"texBin"`
+	TexPackages            TeXPackageStatus          `json:"texPackages"`
+	Latexmk                string                    `json:"latexmk"`
+	ToolError              string                    `json:"toolError,omitempty"`
+	Synctex                string                    `json:"synctex"`
+	SynctexError           string                    `json:"synctexError,omitempty"`
+	SynctexInstallCommands []string                  `json:"synctexInstallCommands"`
+	ShortcutsSupported     bool                      `json:"shortcutsSupported"`
+	Project                *Project                  `json:"project"`
+	RecentProjects         []string                  `json:"recentProjects"`
+	Build                  *Build                    `json:"build"`
 }
 
 type apiError struct {
@@ -106,13 +107,16 @@ func New(options Options) (*App, error) {
 		return nil, errors.New("the local API token must contain at least 16 characters")
 	}
 	if options.ConfigDir == "" {
-		base, err := os.UserConfigDir()
+		directories, err := platform.DefaultConfigDirectories()
 		if err != nil {
 			return nil, messages.Errorf("設定フォルダーを取得できません: %w", err)
 		}
-		options.ConfigDir = filepath.Join(base, branding.DataDirectoryName)
+		options.ConfigDir = directories.Directory
 	}
-	var err error
+	identity, err := platform.CurrentPackageIdentity()
+	if err != nil {
+		return nil, err
+	}
 	options.ConfigDir, err = filepath.Abs(options.ConfigDir)
 	if err != nil {
 		return nil, err
@@ -121,7 +125,7 @@ func New(options Options) (*App, error) {
 		return nil, messages.Errorf("設定フォルダーを作成できません: %w", err)
 	}
 	a := &App{
-		options: options, pdfVersions: make(map[string]string),
+		options: options, packageIdentity: identity, pdfVersions: make(map[string]string),
 		synctexVersions: make(map[string]*synctexVersion), synctexSlots: make(chan struct{}, 2),
 		browserEnd: make(chan struct{}), browserCloseDelay: 5 * time.Second,
 	}
@@ -290,8 +294,9 @@ func (a *App) stateLocked(refresh bool, language ...string) State {
 	}
 	result := State{
 		Version: a.options.Version, Platform: runtime.GOOS,
-		ExecutablePath: executable, InstallationError: messages.ErrorText(selected, a.options.InstallationError),
-		ShortcutsSupported: runtime.GOOS == "windows",
+		PackageIdentity: a.packageIdentity,
+		ExecutablePath:  executable, InstallationError: messages.ErrorText(selected, a.options.InstallationError),
+		ShortcutsSupported: runtime.GOOS == "windows" && a.packageIdentity == nil,
 		TexBin:             a.config.TexBin, RecentProjects: append([]string{}, a.config.RecentProjects...),
 		Build: a.buildSnapshotLocked(selected),
 	}

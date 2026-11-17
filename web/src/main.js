@@ -831,6 +831,7 @@ async function showSettings() {
   $('editor-font-size').value = String(state.preferences.editorFontSize);
   $('main-field').hidden = !project; $('mode-field').hidden = !project;
   $('shortcut-settings').hidden = state.meta?.platform !== 'windows' || state.meta?.shortcutsSupported === false;
+  $('store-installation-note').hidden = !state.meta?.packageIdentity;
   $('settings-error').hidden = true; $('settings-dialog').showModal();
   try {
     const meta = await api('/api/state');

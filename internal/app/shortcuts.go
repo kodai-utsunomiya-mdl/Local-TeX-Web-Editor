@@ -22,6 +22,10 @@ func (a *App) shortcutsHandler(w http.ResponseWriter, r *http.Request) {
 		writeError(w, fail(http.StatusBadRequest, "作成先に start-menu または desktop を指定してください．"))
 		return
 	}
+	if a.packageIdentity != nil {
+		writeError(w, fail(http.StatusNotImplemented, "%v", platform.ErrShortcutsManagedByWindows))
+		return
+	}
 	if !a.shortcutMu.TryLock() {
 		writeError(w, fail(http.StatusConflict, "ショートカットを作成しています．処理が終わるまでお待ちください．"))
 		return
@@ -43,7 +47,7 @@ func (a *App) shortcutsHandler(w http.ResponseWriter, r *http.Request) {
 	result, err := create(destination)
 	if err != nil {
 		switch {
-		case errors.Is(err, platform.ErrShortcutsUnsupported):
+		case errors.Is(err, platform.ErrShortcutsUnsupported), errors.Is(err, platform.ErrShortcutsManagedByWindows):
 			err = fail(http.StatusNotImplemented, "%v", err)
 		case errors.Is(err, platform.ErrShortcutConflict), errors.Is(err, platform.ErrLocked):
 			err = fail(http.StatusConflict, "%v", err)

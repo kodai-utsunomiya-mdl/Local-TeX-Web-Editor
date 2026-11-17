@@ -14,8 +14,8 @@ import (
 	"strconv"
 	"unicode/utf8"
 
-	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/branding"
 	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/messages"
+	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/platform"
 )
 
 // Browser origins change when the local server chooses a new port. Keep drafts
@@ -50,11 +50,11 @@ type uiStorageEdit struct {
 // the editor server starts. It reads the same preference record as the UI.
 func SavedInterfaceLanguage(configDir string) string {
 	if configDir == "" {
-		base, err := os.UserConfigDir()
+		directories, err := platform.DefaultConfigDirectories()
 		if err != nil {
 			return "en"
 		}
-		configDir = filepath.Join(base, branding.DataDirectoryName)
+		configDir = directories.Directory
 	}
 	hash := sha256.Sum256([]byte("preferences"))
 	path := filepath.Join(configDir, "ui-state", hex.EncodeToString(hash[:])+".json")

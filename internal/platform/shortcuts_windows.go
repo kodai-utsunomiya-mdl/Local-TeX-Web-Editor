@@ -36,6 +36,13 @@ func knownShortcutFolder(id *nativeGUID) (string, error) {
 }
 
 func CreateShortcut(destination string) (ShortcutResult, error) {
+	identity, err := CurrentPackageIdentity()
+	if err != nil {
+		return ShortcutResult{}, err
+	}
+	if identity != nil {
+		return ShortcutResult{}, ErrShortcutsManagedByWindows
+	}
 	var folder *nativeGUID
 	switch destination {
 	case "start-menu":
