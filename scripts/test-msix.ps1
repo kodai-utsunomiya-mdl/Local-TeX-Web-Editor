@@ -395,7 +395,14 @@ function Test-AppCertification([string]$PackageFullName) {
             if ($isProcessingWarning) {
                 $executable = Get-Content -LiteralPath (Join-Path $output 'installed-executable.json') -Raw -Encoding UTF8 | ConvertFrom-Json
                 $picker = Get-Content -LiteralPath (Join-Path $output 'native-picker.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-                $dpiProcessingWarning = $executable.hashesMatch -eq $true -and
+                $expectedMessages = @(
+                    "Failed to process the binary $($executable.installedPath).",
+                    "The app $($executable.packageFullName) is not DPI Aware."
+                )
+                $messagesMatch = $messages.Count -eq 2 -and
+                    @($messages | Where-Object { $_ -notin $expectedMessages }).Count -eq 0 -and
+                    @($expectedMessages | Where-Object { $_ -notin $messages }).Count -eq 0
+                $dpiProcessingWarning = $messagesMatch -and $executable.hashesMatch -eq $true -and
                     $executable.dpiAwareness -eq 'PerMonitorV2, PerMonitor' -and
                     $executable.dpiAware -eq 'true/pm' -and
                     $picker.status -eq 'passed' -and @($picker.dpi).Count -eq 2 -and
