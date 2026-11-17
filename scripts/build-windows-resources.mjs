@@ -1,12 +1,13 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
-// Go links this COFF resource object into the Windows executable. The ICO is
-// checked in, so the build needs only Node and Go, already used by the project.
+// Go links this COFF resource object into the Windows executable. The icon and
+// manifest are checked in, so the build needs only Node and Go.
 // Format: https://learn.microsoft.com/windows/win32/debug/pe-format
 const iconPath = new URL('../internal/branding/app-icon.ico', import.meta.url);
+const manifestPath = new URL('../internal/branding/windows.manifest', import.meta.url);
 const outputPath = new URL('../cmd/local-tex-editor/icon_windows_amd64.syso', import.meta.url);
-const ico = await readFile(iconPath);
+const [ico, manifest] = await Promise.all([readFile(iconPath), readFile(manifestPath)]);
 const count = ico.length >= 6 ? ico.readUInt16LE(4) : 0;
 if (ico.length < 6 || ico.readUInt16LE(0) !== 0 || ico.readUInt16LE(2) !== 1
   || count < 1 || count > 256 || ico.length < 6 + 16 * count) {
@@ -35,6 +36,7 @@ for (const [index, icon] of icons.entries()) {
 const types = [
   { id: 3, resources: icons }, // RT_ICON
   { id: 14, resources: [{ id: 1, data: group }] }, // RT_GROUP_ICON
+  { id: 24, resources: [{ id: 1, data: manifest }] }, // RT_MANIFEST, CREATEPROCESS_MANIFEST_RESOURCE_ID
 ];
 let cursor = 16 + types.length * 8;
 for (const type of types) {
@@ -70,7 +72,7 @@ directory(0, types.map(type => ({ id: type.id, offset: type.offset, directory: t
 for (const type of types) {
   directory(type.offset, type.resources.map(resource => ({ id: resource.id, offset: resource.languageOffset, directory: true })));
   for (const resource of type.resources) {
-    directory(resource.languageOffset, [{ id: 0, offset: resource.entryOffset }]); // Language-neutral artwork.
+    directory(resource.languageOffset, [{ id: 0, offset: resource.entryOffset }]); // Language-neutral resources.
     section.writeUInt32LE(resource.dataOffset, resource.entryOffset);
     section.writeUInt32LE(resource.data.length, resource.entryOffset + 4);
     resource.data.copy(section, resource.dataOffset);
@@ -102,4 +104,4 @@ object.writeUInt16LE(1, symbolOffset + 12); // Section 1.
 object.writeUInt8(3, symbolOffset + 16); // IMAGE_SYM_CLASS_STATIC.
 object.writeUInt32LE(4, symbolOffset + 18); // Empty COFF string table.
 await writeFile(outputPath, object);
-console.log(`Embedded ${count} icon sizes in ${fileURLToPath(outputPath)}`);
+console.log(`Embedded ${count} icon sizes and the application manifest in ${fileURLToPath(outputPath)}`);

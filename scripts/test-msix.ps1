@@ -207,15 +207,34 @@ function Test-AppCertification([string]$PackageFullName) {
     if ($LASTEXITCODE -ne 0) { throw "Windows App Certification Kit reset failed with exit code $LASTEXITCODE." }
     $report = Join-Path $output 'certification.xml'
     $arguments = [LocalTeXMSIXTest.Native]::Quote(@('test', '-packagefullname', $PackageFullName, '-reportoutputpath', $report))
-    $check = Start-Process -FilePath $tool -ArgumentList $arguments -PassThru -RedirectStandardOutput (Join-Path $output 'certification-stdout.txt') -RedirectStandardError (Join-Path $output 'certification-stderr.txt')
+    $check = [Diagnostics.Process]::new()
+    $check.StartInfo = [Diagnostics.ProcessStartInfo]::new()
+    $check.StartInfo.FileName = $tool
+    $check.StartInfo.Arguments = $arguments
+    $check.StartInfo.WorkingDirectory = Split-Path -Parent $tool
+    $check.StartInfo.UseShellExecute = $false
+    $check.StartInfo.RedirectStandardOutput = $true
+    $check.StartInfo.RedirectStandardError = $true
+    $standardOutput = $null
+    $standardError = $null
     try {
+        if (-not $check.Start()) { throw 'Windows App Certification Kit could not be started.' }
+        # Keep the process handle from creation through ExitCode. Windows
+        # PowerShell 5.1's Start-Process object can lose its exit-code state.
+        [void]$check.Handle
+        $standardOutput = $check.StandardOutput.ReadToEndAsync()
+        $standardError = $check.StandardError.ReadToEndAsync()
         if (-not $check.WaitForExit(600000)) {
-            Stop-Process -Id $check.Id -Force -ErrorAction SilentlyContinue
+            $check.Kill()
+            [void]$check.WaitForExit(5000)
             Write-JSONFile $resultFile @{ status = 'timed-out'; reason = 'Windows App Certification Kit did not finish within 10 minutes.' }
             throw 'Windows App Certification Kit did not finish within 10 minutes.'
         }
-        $check.Refresh()
         $code = $check.ExitCode
+        if ($code -isnot [int]) {
+            Write-JSONFile $resultFile @{ status = 'failed'; reason = 'Windows App Certification Kit did not provide a numeric process exit code.' }
+            throw 'Windows App Certification Kit did not provide a numeric process exit code.'
+        }
         if (-not (Test-Path -LiteralPath $report -PathType Leaf)) {
             Write-JSONFile $resultFile @{ status = 'failed'; exitCode = $code; reason = 'Windows App Certification Kit did not create a report.' }
             throw 'Windows App Certification Kit did not create a report.'
@@ -234,7 +253,23 @@ function Test-AppCertification([string]$PackageFullName) {
         if ($code -ne 0) { throw "Windows App Certification Kit failed with exit code $code. See certification.xml." }
         if ($overall -eq '') { throw 'Windows App Certification Kit did not provide OVERALL_RESULT in its XML report.' }
         if ($overall -ne 'PASS') { throw "Windows App Certification Kit reported OVERALL_RESULT=$overall. See certification.xml." }
-    } finally { $check.Dispose() }
+    } finally {
+        foreach ($stream in @(
+            @{ Task = $standardOutput; Name = 'certification-stdout.txt' },
+            @{ Task = $standardError; Name = 'certification-stderr.txt' }
+        )) {
+            if ($null -eq $stream.Task) { continue }
+            try {
+                if ($stream.Task.Wait(5000)) {
+                    $text = $stream.Task.GetAwaiter().GetResult()
+                } else {
+                    $text = 'The process output stream did not close within 5 seconds of the process ending.'
+                }
+            } catch { $text = 'Could not read the process output: ' + $_.Exception.Message }
+            [IO.File]::WriteAllText((Join-Path $output $stream.Name), $text, [Text.UTF8Encoding]::new($false))
+        }
+        $check.Dispose()
+    }
 }
 
 try {
