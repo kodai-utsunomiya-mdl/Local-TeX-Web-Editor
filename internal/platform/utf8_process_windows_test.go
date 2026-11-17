@@ -5,7 +5,7 @@ package platform
 import (
 	"bytes"
 	"context"
-	"debug/pe"
+	"encoding/binary"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -68,21 +68,47 @@ func TestUTF8InterpreterCopyAcceptsUnicodePathsThroughANSIAPIs(t *testing.T) {
 	}
 }
 
-func interpreterResources(t *testing.T, data []byte) pe.DataDirectory {
+type interpreterResourceDirectory struct {
+	VirtualAddress uint32
+	Size           uint32
+}
+
+func interpreterResources(t *testing.T, data []byte) interpreterResourceDirectory {
 	t.Helper()
-	image, err := pe.NewFile(bytes.NewReader(data))
-	if err != nil {
-		t.Fatal(err)
+	// Read only the image headers. UpdateResource can invalidate a Go test
+	// executable's COFF debug string table, which debug/pe.NewFile also reads.
+	// The child process below verifies that Windows still loads and runs the
+	// updated image with UTF-8 enabled.
+	if len(data) < 0x40 || string(data[:2]) != "MZ" {
+		t.Fatal("the interpreter is missing its DOS header")
 	}
-	defer image.Close()
-	switch header := image.OptionalHeader.(type) {
-	case *pe.OptionalHeader32:
-		return header.DataDirectory[pe.IMAGE_DIRECTORY_ENTRY_RESOURCE]
-	case *pe.OptionalHeader64:
-		return header.DataDirectory[pe.IMAGE_DIRECTORY_ENTRY_RESOURCE]
+	peOffset := uint64(binary.LittleEndian.Uint32(data[0x3c:0x40]))
+	if peOffset+24 > uint64(len(data)) || string(data[peOffset:peOffset+4]) != "PE\x00\x00" {
+		t.Fatal("the interpreter is missing its PE header")
+	}
+	optionalSize := uint64(binary.LittleEndian.Uint16(data[peOffset+20 : peOffset+22]))
+	optionalStart := peOffset + 24
+	if optionalSize < 2 || optionalStart+optionalSize > uint64(len(data)) {
+		t.Fatal("the interpreter has a truncated optional header")
+	}
+	header := data[optionalStart : optionalStart+optionalSize]
+	var directories int
+	switch magic := binary.LittleEndian.Uint16(header[:2]); magic {
+	case 0x10b: // PE32
+		directories = 96
+	case 0x20b: // PE32+
+		directories = 112
 	default:
-		t.Fatalf("unexpected interpreter PE header: %T", header)
-		return pe.DataDirectory{}
+		t.Fatalf("unexpected interpreter optional header magic: %#x", magic)
+	}
+	const resourceIndex = 2
+	if len(header) < directories+8*(resourceIndex+1) || binary.LittleEndian.Uint32(header[directories-4:directories]) <= resourceIndex {
+		t.Fatal("the interpreter has no resource directory entry")
+	}
+	resource := header[directories+8*resourceIndex:]
+	return interpreterResourceDirectory{
+		VirtualAddress: binary.LittleEndian.Uint32(resource[:4]),
+		Size:           binary.LittleEndian.Uint32(resource[4:8]),
 	}
 }
 

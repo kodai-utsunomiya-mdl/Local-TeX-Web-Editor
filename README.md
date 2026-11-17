@@ -3,6 +3,7 @@
 English | [日本語](README.ja.md)
 
 [![Download for Windows](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/local-tex-editor/releases/download/v0.1.4/local-tex-editor-0.1.4-windows-x64.zip)
+&nbsp;&nbsp;
 [![Download for macOS](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/local-tex-editor/releases/download/v0.1.4/local-tex-editor-0.1.4-macos-universal.zip)
 
 **v0.1.4** · [All downloads and release notes](https://github.com/kodai-utsunomiya-mdl/local-tex-editor/releases/latest) · [Requirements](#requirements) · [Get started](#download-and-launch)

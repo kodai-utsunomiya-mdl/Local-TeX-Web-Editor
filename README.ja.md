@@ -3,6 +3,7 @@
 [English](README.md) | 日本語
 
 [![Windows 版をダウンロード](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/local-tex-editor/releases/download/v0.1.4/local-tex-editor-0.1.4-windows-x64.zip)
+&nbsp;&nbsp;
 [![macOS 版をダウンロード](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/local-tex-editor/releases/download/v0.1.4/local-tex-editor-0.1.4-macos-universal.zip)
 
 **v0.1.4** · [配布ファイルと更新内容](https://github.com/kodai-utsunomiya-mdl/local-tex-editor/releases/latest) · [利用前の準備](#利用前の準備) · [起動する](#ダウンロードして起動する)

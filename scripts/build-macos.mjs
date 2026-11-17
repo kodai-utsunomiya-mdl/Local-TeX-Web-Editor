@@ -76,7 +76,7 @@ await cp(path.join(root, 'web/dist/THIRD_PARTY_LICENSES.txt'), path.join(resourc
 await run('/usr/bin/codesign', ['--force', '--sign', '-', '--timestamp=none', path.join(macos, 'local-tex-editor')]);
 await run('/usr/bin/codesign', ['--force', '--sign', '-', '--timestamp=none', application]);
 await run('/usr/bin/codesign', ['--verify', '--deep', '--strict', application]);
-for (const file of ['LocalTeXEditor', 'local-tex-editor']) await run('/usr/bin/lipo', ['-verify_arch', 'arm64', 'x86_64', path.join(macos, file)]);
+for (const file of ['LocalTeXEditor', 'local-tex-editor']) await run('/usr/bin/lipo', [path.join(macos, file), '-verify_arch', 'arm64', 'x86_64']);
 const actual = await run(path.join(macos, 'local-tex-editor'), ['--version']);
 if (actual.stdout.trim() !== version) throw new Error('The packaged server reports another version.');
 

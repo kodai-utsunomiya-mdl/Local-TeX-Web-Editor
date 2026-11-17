@@ -62,7 +62,7 @@ async function compile() {
 try {
   await execute('/usr/bin/codesign', ['--verify', '--deep', '--strict', application]);
   for (const executable of ['LocalTeXEditor', 'local-tex-editor']) {
-    await execute('/usr/bin/lipo', ['-verify_arch', 'arm64', 'x86_64', path.join(application, 'Contents/MacOS', executable)]);
+    await execute('/usr/bin/lipo', [path.join(application, 'Contents/MacOS', executable), '-verify_arch', 'arm64', 'x86_64']);
   }
   const icon = await readFile(path.join(application, 'Contents/Resources/app-icon.icns'));
   assert.equal(icon.toString('ascii', 0, 4), 'icns');
