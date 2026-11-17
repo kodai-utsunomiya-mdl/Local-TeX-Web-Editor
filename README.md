@@ -1,105 +1,225 @@
-# Local TeX Editor
+# Local TeX Web Editor
 
-Windows のブラウザで TeX の原稿を編集し，PC にある TeX Live でコンパイルするアプリ．編集画面と PDF を同じウィンドウで確認できる．アプリを起動すると，既定のブラウザで `localhost` の画面が開く．
+English | [日本語](README.ja.md)
 
-![ダークモードで TeX の原稿と PDF を並べて表示した Local TeX Editor](docs/screenshots/editor-dark.png)
+[![Download for Windows](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.4/local-tex-web-editor-0.1.4-windows-x64.zip)
+&nbsp;&nbsp;
+[![Download for macOS](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.4/local-tex-web-editor-0.1.4-macos-universal.zip)
 
-原稿は PC 上のフォルダーに保存する．TeX Live と原稿の `latexmkrc` を使い，コンパイル中のログと生成した PDF を画面へ表示する．利用する PC に追加の Python，Node.js，Go，VS Code を導入する必要はない．
+**v0.1.4** · [All downloads and release notes](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [Requirements](#requirements) · [App size](#app-files-and-storage) · [Get started](#download-and-launch)
 
-## ダウンロードして起動する
+Edit TeX documents in your browser on Windows or macOS, and compile them with TeX Live on your computer. The editor and PDF preview appear in the same window. Launching the app opens a `localhost` page in your default browser. Markdown editing and preview are also supported.
 
-1. [Releases](https://github.com/kodai-utsunomiya-mdl/local-tex-editor/releases) を開き，最新のバージョンを選ぶ．
-2. **Assets** の `local-tex-editor-0.1.4-windows-x64.zip` をダウンロードする．`Source code` は開発用のソースである．
-3. ZIP を展開し，`local-tex-editor.exe` をダブルクリックする．
-4. 開いたブラウザで原稿のフォルダーを選ぶ．フォルダーのパスを入力して開くこともできる．
-5. TeX Live の場所が自動で見つからない場合は，設定に `C:\texlive\2025\bin\windows` など，`latexmk.exe` があるフォルダーを指定する．
-6. コンパイルしたい `.tex` をエディタで開き，「コンパイル」を押す．
+![Local TeX Web Editor showing a TeX document and its PDF in dark mode](docs/screenshots/editor-tex-dark.png)
 
-例えば，Overleaf にあるような原稿は，プロジェクトのソースを ZIP としてダウンロードして展開し，そのフォルダーを開く．GitHub などから取得した原稿を開く場合も，`.tex`，`.bib`，画像，`latexmkrc` などを含むプロジェクトのフォルダーを指定する．
+Documents stay in the project folder on your computer. The app uses your TeX Live installation and the project's `latexmkrc`, and displays compilation logs and the resulting PDF. The distributed app runs without installing Python, Node.js, Go, or VS Code.
 
-最後の編集タブを閉じると，約 5 秒後にコンパイル中の処理とアプリが終了する．ページを再読み込みして接続が戻った場合や，別の編集タブが開いている場合は，そのまま動作を続ける．原稿に未保存の編集がある場合は，ブラウザの確認画面が出る．草稿は編集中にも PC に記録され，次回の起動で読み込まれる．
+## Why this editor exists
 
-右上の終了ボタンからもアプリを終了できる．未保存の編集がある場合は，保存するか草稿に残すかを選べる．ブラウザが自動で閉じる操作を認めない場合は，終了したことを画面に表示するので，`Ctrl + W` でタブを閉じる．
+Local TeX Web Editor brings a browser editing workflow to the TeX Live installation on your computer.
 
-配布する実行ファイルにはコード署名が付いていない．GitHub のリリースから取得したファイルを開く際に SmartScreen の「Windows によって PC が保護されました」が出た場合は，「詳細情報」でアプリ名を確認し，「実行」を選ぶ．[Microsoft の案内](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/publish-first-app) も参照できる．
+Long documents can reach Overleaf's compilation time limit. Compiling on the computer allows work to continue with the available local resources. Multiline search also makes it possible to paste a block of prose or TeX code directly into the search field.
 
-更新する際は，新しい ZIP を展開して `.exe` を起動する．異なるバージョンが動いている場合は，起動中のバージョンと今回開いたバージョンが表示される．原稿を保存して旧版を終了すると，新版の画面が開く．設定と草稿は Windows ユーザーの設定フォルダーにあるため，更新後も読み込まれる．設定画面の「アプリのバージョン」と「起動中の実行ファイル」で，動いているアプリを確認できる．
+VS Code provides a broad set of development features. For editing TeX documents, starting a full desktop development environment can add more features and memory use than the task needs. This editor brings document editing, compilation, and preview together in a browser window.
 
-同じバージョンの `.exe` をもう一度開くと，既存の編集画面へ接続する．同じ原稿を複数のプロセスが同時にコンパイルすることを防ぐ仕組みも入れている．
+Continuous PDF scrolling, SyncTeX, and Markdown preview support writing and reviewing documents while using the project files and TeX installation already on the computer.
 
-### スタートメニューやデスクトップから開く
+## Requirements
 
-1. アプリの「設定」を開く．
-2. 「起動用のショートカット」で「スタートメニューに追加」または「デスクトップに作成」を押す．
-3. 次回から，スタートメニューで `Local TeX Editor` を探すか，デスクトップのショートカットを開く．ブラウザに編集画面が開く．
+Compilation uses TeX Live installed on your computer. If you can already compile your project in another editor, select that same TeX Live installation in Settings.
 
-この操作で，アプリを `%LOCALAPPDATA%\Programs\LocalTeXEditor\local-tex-editor.exe` に配置する．ダウンロード時のフォルダーを移動しても，ショートカットから起動できる．設定と草稿は共通の場所から読み込む．
+| Requirement | Windows | macOS |
+| --- | --- | --- |
+| OS and CPU | Windows 10 / 11, 64-bit (x64) | macOS 12 Monterey or later, Apple Silicon or Intel |
+| Browser | Current Chrome or Edge | Current Chrome or Edge |
+| TeX distribution | [TeX Live](https://tug.org/texlive/windows.html) | [BasicTeX / MacTeX](https://tug.org/mactex/), or TeX Live with the packages your project needs |
+| Example TeX folder | `C:\texlive\2025\bin\windows` | `/Library/TeX/texbin` |
+| Documents | A project folder on your computer | A project folder on your computer |
 
-実行ファイル，ショートカット，ブラウザのタブには，緑の背景に白い TeX の専用アイコンを使う．
+The macOS requirement follows the [operating systems supported by Go 1.25](https://go.dev/doc/go1.25#darwin), which is used to build the app. MacTeX documents `/Library/TeX/texbin` as the TeX location for GUI applications in [What Is Installed](https://tug.org/mactex/What_Is_Installed.pdf).
 
-新しい ZIP の `.exe` を起動すると，配置済みのアプリと，スタートメニューやデスクトップに作成済みのショートカットが更新される．次回も同じショートカットから新版を起動できる．
+### TeX programs used by the app
 
-## 原稿を編集する
-
-左側のファイル一覧から `.tex`，`.bib` などを開く．複数のファイルはタブで切り替えられる．編集画面と PDF の間にある境界をドラッグすると，それぞれの幅を変更できる．右上のボタンでライト／ダークを切り替えられる．設定ではエディタの文字サイズを 8〜40 px に変更できる (既定は 14 px)．テーマと文字サイズの選択は，次回の起動でも同じになる．
-
-フォルダーは左側の一覧で展開できる．画像や PDF を選ぶと，原稿と同じタブ欄でプレビューを開く．原稿のタブへ戻ると，編集中の内容とカーソルの位置から作業を続けられる．
-
-文字を選択すると，選択範囲に背景色が付く．ライト／ダークの両方で，現在の行やエディタからフォーカスを移した後の範囲も確認できる．
-
-| 操作 | 使い方 |
+| Program | Purpose |
 | --- | --- |
-| ファイルや見出しを探す | 左側の検索欄を使う．「アウトライン」タブでは，原稿の節・小節をクリックしてその行へ移動できる |
-| 引用を入力する | `\citep{` や `\cite{` の中で，プロジェクト内の `.bib` にあるキーが候補になる．著者・年・題名も確認できる |
-| 相互参照を入力する | `\ref{`，`\eqref{`，`\cref{` などの中で，原稿の `\label` が候補になる |
-| 補完を呼び出す | `Ctrl + Space` を押す．TeX のコマンドも補完できる |
-| 原稿を検索・置換する | エディタで `Ctrl + F` を押す，または「検索」を押す．複数行をそのまま貼り付けられる |
-| 原稿の文字を拡大・縮小する | エディタ上で `Ctrl + ホイール`，タッチパッドのピンチ，またはタッチ画面の 2 本指で操作する．設定の文字サイズにも反映される |
-| ファイルを保存する | `Ctrl + S` を押す．開いているファイルをすべて保存する操作は `Ctrl + Shift + S` |
-| コンパイルする | `Ctrl + Enter`，または「コンパイル」を押す．ファイルを保存してから，編集対象の TeX 文書をコンパイルする |
-| エラーの行へ移動する | ログの上に表示されるファイル名と行番号をクリックする |
+| `latexmk` | Compiles the document and repeats the required steps for citations and cross-references |
+| `pdflatex`, `uplatex`, `xelatex`, `lualatex`, or another configured engine | Runs the TeX engine selected for the document |
+| `synctex` | Navigates between corresponding positions in the source and PDF |
+| `bibtex`, `upbibtex`, `biber`, or another bibliography processor | Processes references using the method selected by the project |
+| Packages and fonts used by the document | Provides document classes, `\usepackage` dependencies, Japanese fonts, and other resources |
 
-検索欄と置換欄では，改行と TeX の `\` を入力どおりに扱う．`Enter` で次の一致箇所へ，`Shift + Enter` で前へ移動する．欄の中で改行を入力するには `Ctrl + Enter` を使う．正規表現は検索欄のチェックボックスから有効にできる．
+An upLaTeX project usually needs `uplatex` and `dvipdfmx`, and may use `upbibtex` for references. Include the project's `latexmkrc` or `.latexmkrc` when you copy the project to your computer.
 
-文字サイズやテーマの変更は，原稿の内容とコンパイル済みの PDF に影響しない．PDF の更新案内は，原稿またはコンパイルの設定に変更がある場合に表示される．
+### Start with a smaller TeX installation
 
-### 自動保存と作業の再開
+The app can use a partial TeX Live installation. Start with a basic set of packages, then add what your documents need through TeX Live Manager (`tlmgr`).
 
-自動保存は初期状態でオンになっている．入力が落ち着いた時点で，原稿のファイルへ保存する．コンパイル中も編集を続けられ，自動保存はコンパイルの終了を待って実行する．設定から自動保存をオフにして，手動で保存することもできる．
+On **Windows**, open the [TeX Live network installer](https://tug.org/texlive/acquire-netinstall.html) and choose an installation `scheme` under **Advanced**. The `small` scheme includes basic LaTeX with some additional programs and languages; `medium` includes more packages. You can also select individual `collection` groups. The official [installation guide](https://tug.org/texlive/doc/texlive-en/texlive-en.html) explains the choices and their installation screens.
 
-編集中の草稿は，原稿のファイルへの保存とは別に PC へ記録する．アプリを開き直した際に前回の草稿があれば，「草稿を確認」が表示される．ファイルと草稿の内容を見比べてから「草稿をエディタで開く」を選ぶ．別のアプリが原稿を書き換えた場合には，ディスクと編集中の内容を確認する画面から，保存する内容を選べる．
+On **Mac**, [BasicTeX](https://tug.org/mactex/morepackages.html) provides an installation based on `scheme-small`. After installation, use `/Library/TeX/texbin/tlmgr` to add packages. See the official [BasicTeX guide](https://tug.org/mactex/BasicTeX.pdf) for details.
 
-次回の起動では，前回のプロジェクト，開いていた原稿のカーソル位置，PDF のページと倍率を読み戻す．前回成功した PDF も表示できるので，読み返すためにコンパイルを待つ必要はない．
+Add `latexmk` for compilation and `synctex` for navigation between source and PDF. For Japanese documents, add `collection-langjapanese`; it includes Japanese engines, document classes, fonts, and their dependencies. Add packages for mathematics, figures, and bibliography management as your documents require them.
 
-### Markdown を編集する
+To reduce disk usage, the TeX Live installer lets you omit package documentation and source files. In an existing installation, `tlmgr option docfiles 0` and `tlmgr option srcfiles 0` change these options for future package installations. Existing documentation and source files remain on disk. These options are described in the [install-tl manual](https://tug.org/texlive/doc/install-tl.html).
 
-プレビューの種類が「自動」のとき，`.md` または `.markdown` を開くと，右側に Markdown のプレビューを表示する．入力に合わせて本文を更新し，見出し，箇条書き，表，コードブロック，チェック項目，リンク，画像，数式を表示する．「プレビュー」または `Ctrl + Enter` を押すと，原稿を保存して表示を更新する．
+### Add packages later
 
-プレビュー上部で「自動・PDF・Markdown」を選べる．「PDF」を選ぶと，PDF を読みながら Markdown を編集できる．「Markdown」を選ぶと，TeX のタブへ移っても最後に編集した Markdown を表示する．選んだ表示は，原稿の保存やコンパイルの後も続く．「自動」に戻すと，編集中のファイルに合わせて表示を切り替える．この選択は，次回そのプロジェクトを開いたときにも読み込む．
+Open **Settings → Add TeX packages** to see the programs found in your TeX installation and prepare installation commands. You can choose `latexmk` and SyncTeX, choose Japanese typesetting, or enter package names. Copy the commands into PowerShell on Windows or Terminal on Mac. The app uses the configured TeX folder and the installation year it can identify. For older TeX Live releases, it selects that year's `tlnet-final` repository.
 
-数式には `$...$`，GitHub のドル記号とバッククォートで囲む形式，`$$...$$`，`math` のコードブロック，`\(...\)` を使える．プロジェクト内の画像は，Markdown のファイルからの相対パスで指定する．外部の画像は，その URL をブラウザで開くリンクとして表示する．
+For the current TeX Live release, the following commands are examples. Change the Windows path to match your installation.
 
-プレビュー内の相対リンクから別の文書を開ける．本文の段落や見出しをダブルクリックすると，エディタの対応する行へ移動する．Markdown の各文書でスクロール位置を記録する．PDF の表示へ戻ると，最後にコンパイルした PDF を表示する．
+```powershell
+& 'C:\texlive\2026\bin\windows\tlmgr.bat' update --self
+& 'C:\texlive\2026\bin\windows\tlmgr.bat' install latexmk synctex synctex.windows collection-langjapanese
+```
 
-## PDF を読み，原稿と行き来する
+```sh
+sudo /Library/TeX/texbin/tlmgr update --self
+sudo /Library/TeX/texbin/tlmgr install latexmk synctex collection-langjapanese
+```
 
-PDF はページをまたいで連続してスクロールできる．表示中のページとその周辺を優先して描画し，長い原稿の全ページを一度に画像へ変換することを防ぐ．PDF の文字は選択してコピーでき，PDF 内のリンクから参照先にも移動できる．
+The standard MacTeX / BasicTeX installation location requires `sudo` for changes. If TeX Live is installed in your own user folder, clear **Use sudo for installation** in the app. If Windows reports a permission error, check the installation location and the account that installed TeX Live; run the same commands in an administrator PowerShell when that installation requires it.
 
-| 操作 | 使い方 |
+For an error such as `File 'siunitx.sty' not found`, use `tlmgr search --global --file '/siunitx\.sty$'` to find the package that contains the file, then install the package shown in the result, for example `tlmgr install siunitx`. File names and package names can differ. The app's **Find a package from a missing file** section prepares this search command from a file name. The [tlmgr manual](https://tug.org/texlive/doc/tlmgr.html) documents both `search` and `install`.
+
+For custom `.sty` or `.cls` files supplied with a document, obtain them from the document's publisher or author and place them in the project. After adding packages, reopen Settings and compile again. If a package is registered as installed but its executable is missing, select the option to download its files again, or use `tlmgr install --reinstall`. See [Add SyncTeX](#add-synctex) for an example.
+
+### Check your TeX installation
+
+In Windows PowerShell, adjust the year and path to match your installation:
+
+```powershell
+& 'C:\texlive\2025\bin\windows\latexmk.exe' -v
+& 'C:\texlive\2025\bin\windows\synctex.exe' help
+```
+
+In Terminal on Mac:
+
+```sh
+/Library/TeX/texbin/latexmk -v
+/Library/TeX/texbin/synctex help
+```
+
+When these commands display their version or usage information, select the same TeX folder in the app's Settings. To add these two programs to MacTeX / BasicTeX, use `sudo /Library/TeX/texbin/tlmgr install latexmk synctex`. For older TeX Live releases, see [Add SyncTeX](#add-synctex) for the repository to use.
+
+## Download and launch
+
+### Windows
+
+1. Open [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) and select the latest version.
+2. Under **Assets**, download `local-tex-web-editor-0.1.4-windows-x64.zip`. The **Source code** archives contain the files for development.
+3. Extract the ZIP and double-click `local-tex-web-editor.exe`.
+4. In the browser window, choose your project folder. You can also enter its path.
+5. If TeX Live is not found automatically, open Settings and select the folder containing `latexmk.exe`, for example `C:\texlive\2025\bin\windows`.
+6. Open the `.tex` document you want to compile and click **Compile**.
+
+The Windows executable does not have a code signature. If SmartScreen displays **Windows protected your PC** when opening the file downloaded from this repository's release, select **More info**, check the app name, and choose **Run anyway**. See [Microsoft's guidance](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/publish-first-app).
+
+### macOS
+
+1. Under **Assets** in [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases), download `local-tex-web-editor-0.1.4-macos-universal.zip`. The same ZIP supports Apple Silicon and Intel.
+2. Extract the ZIP and move `Local TeX Web Editor.app` to **Applications**.
+3. Open **Local TeX Web Editor** from Finder or Spotlight. The editor opens in your browser.
+4. Open your project folder. If TeX is not found automatically, select `/Library/TeX/texbin` in Settings.
+5. Open the `.tex` document you want to compile and click **Compile**.
+
+The macOS app does not have an Apple Developer ID signature or notarization. If macOS blocks the first launch, confirm that you downloaded it from this repository's release, then use **System Settings → Privacy & Security → Open Anyway**. See [Apple's instructions](https://support.apple.com/en-us/102445).
+
+### Open a project and finish a session
+
+To use a project from Overleaf, download its source as a ZIP, extract it, and open that folder. For a project obtained from GitHub or another source, select the folder containing the `.tex` and `.bib` files, images, `latexmkrc`, and other project files.
+
+Closing the last browser tab connected to the editor stops the app and any running compilation after about five seconds. Reloading the page and reconnecting within that time, or keeping another editor browser tab open, lets the app continue running. The browser asks for confirmation when a document has unsaved edits. Drafts are also recorded on your computer while you edit, and are available when you next open the app.
+
+You can also use the exit button at the top right. If there are unsaved edits, choose whether to save them to the project files or leave them as drafts. If the browser does not allow the tab to close automatically, the page shows that the app has stopped. Close the tab with `Ctrl + W` on Windows or `Cmd + W` on Mac.
+
+### Update the app
+
+On Windows, extract the new ZIP and launch its `.exe`. If another version is running, the app shows both the running version and the version you just launched. Save your documents and exit the old version to open the new one. Settings shows the app version and the path of the running executable.
+
+On Mac, save your documents and exit the app, replace the old copy in **Applications** with the new `Local TeX Web Editor.app`, then open it. Settings and drafts are loaded from your user configuration folder.
+
+Launching the same version again connects to the existing editor. A project lock also prevents multiple app processes from compiling the same project at the same time.
+
+### Launch from the Start menu or desktop (Windows)
+
+1. Open **Settings**.
+2. Under **App shortcuts**, click **Add to Start menu** or **Create on desktop**.
+3. Next time, find **Local TeX Web Editor** in the Start menu or open the desktop shortcut. The app and browser will open.
+
+This places the app at `%LOCALAPPDATA%\Programs\LocalTeXEditor\local-tex-web-editor.exe`. The shortcut continues to work if you move the original download folder. All copies use the same settings and drafts.
+
+The executable, shortcuts, and browser tab use a white TeX icon on a green background.
+
+Launching the `.exe` from a new ZIP updates the installed copy and the Start menu or desktop shortcuts you have already created. The same shortcuts then launch the new version.
+
+## Edit documents
+
+The interface starts in **English**. Use **Settings → Language → 日本語** to switch to Japanese. Your language choice is saved for future sessions. This setting changes the app's controls and messages; documents, PDFs, and Markdown content are displayed as written.
+
+Open `.tex`, `.bib`, and other files from the file list on the left. Each file opens in a tab. Drag the divider between the editor and preview to adjust their widths. Use the theme button at the top right to switch between light and dark mode. Settings lets you choose an editor font size from 8 to 40 px; the default is 14 px. The theme and font size are saved for future sessions.
+
+Expand folders in the file list to browse their contents. Selecting an image or PDF opens it in the editor's tab area. Returning to a source tab restores the text and cursor position you were working with.
+
+Selected text has a visible background in both themes, including selections on the current line and selections left in the editor after you move focus elsewhere.
+
+| Action | How to use it |
 | --- | --- |
-| 拡大・縮小する | `＋` / `−`，倍率の選択，または `Ctrl + ホイール` を使う．タッチパッドのピンチ操作にも対応する |
-| 表示幅をそろえる | 倍率の選択から「幅に合わせる」または「ページに合わせる」を選ぶ |
-| ページへ移動する | ページ番号を入力する，または左右の矢印を押す |
-| PDF 内の文字を探す | 「PDF 内を検索」を押す．PDF にフォーカスした状態では `Ctrl + F` でも開く．`Enter` / `Shift + Enter` で次／前の結果へ移動する |
-| PDF から原稿へ移動する | PDF の文章などをダブルクリックする．該当する `.tex` が開き，移動先の行が一時的に強調される |
-| 原稿から PDF へ移動する | 原稿の行を `Ctrl + クリック` する，またはカーソルを置いて「PDF の位置へ」を押す．PDF の該当箇所が一時的に強調される |
-| PDF を取り出す | 「PDF を保存」を押す |
+| Find files or headings | Use the search field on the left. In the **Outline** tab, click a section or subsection to move to its source line |
+| Insert citations | Inside `\citep{` or `\cite{`, completion offers keys from the project's `.bib` files, with author, year, and title information |
+| Insert cross-references | Inside `\ref{`, `\eqref{`, `\cref{`, and similar commands, completion offers labels from the source |
+| Open completion | Press `Ctrl + Space`. TeX commands are also available |
+| Search and replace in source | Press `Ctrl + F` in the editor or click the **Find and replace** button. You can paste a selection containing multiple lines |
+| Change the editor font size | Use `Ctrl + wheel` over the editor, pinch on a touchpad, or use two fingers on a touchscreen. Settings reflects the new size |
+| Save | Press `Ctrl + S` for the current file or `Ctrl + Shift + S` for all open files |
+| Compile | Press `Ctrl + Enter` or click **Compile**. The app saves the files and compiles the TeX document selected by the active editor tab |
+| Go to an error | Click the file name and line number shown above the log |
 
-原稿と PDF の相互移動には，TeX Live の `synctex` を使う．コンパイル時に SyncTeX のデータを生成し，その PDF と一緒に保存する．TeX のマクロや数式の組み方によっては，クリックした文字の近くの行へ移動する．PDF を作成した後に原稿を編集した場合は，画面に更新の案内が出る．
+On Mac, use `Cmd` in place of `Ctrl` for saving, searching, compiling, and the SyncTeX click action. Zoom with `Ctrl + wheel` or a trackpad pinch.
 
-### SyncTeX を追加する
+The search and replacement fields accept newlines and TeX backslashes as entered. Press `Enter` for the next match, `Shift + Enter` for the previous match, and `Ctrl + Enter` to insert a newline in a field. A checkbox enables regular expressions.
 
-`synctex.exe` が見つからない場合は，TeX Live Manager で `synctex` と Windows 用の実行ファイルを追加する．TeX Live 2025 を `C:\texlive\2025` に入れている場合は，PowerShell で次を順に実行する．
+Changing the font size or theme leaves the document content and compiled PDF unchanged. The notice to recompile appears when source files or compilation settings have changed.
+
+### Autosave and returning to your work
+
+Autosave is enabled initially. The app saves the source file when typing pauses. You can continue editing while compilation runs; autosave waits until compilation finishes. Turn autosave off in Settings if you prefer to save manually.
+
+Drafts are recorded on your computer in addition to saving the project files. If a draft is available when you reopen the app, choose **Review drafts**, compare it with the file, and select **Open draft in the editor**. If another application changes a source file, the app lets you compare the disk version with your edits and choose what to save.
+
+The next session opens the previous project and restores source cursor positions, the PDF page, and the zoom level. The last successfully compiled PDF is available immediately for reading.
+
+### Edit Markdown
+
+With the preview type set to **Auto**, opening a `.md` or `.markdown` file displays its Markdown preview on the right. The preview updates as you type and supports headings, lists, tables, code blocks, task lists, links, images, and mathematics. Click **Preview** or press `Ctrl + Enter` to save and refresh it.
+
+![Local TeX Web Editor displaying Markdown source and its live preview in light mode](docs/screenshots/editor-markdown-light.png)
+
+The preview toolbar offers **Auto**, **PDF**, and **Markdown**. Choose **PDF** to read the PDF while editing Markdown. Choose **Markdown** to keep the last edited Markdown document visible when you switch to a TeX tab. The chosen preview remains visible after saving or compiling. Return to **Auto** to follow the file being edited. The project remembers this choice for the next session.
+
+Mathematics supports `$...$`, GitHub's dollar-and-backtick syntax, `$$...$$`, fenced `math` blocks, and `\(...\)`. Use paths relative to the Markdown file for images inside the project. External images appear as links that open their URLs in the browser.
+
+Relative links in the preview can open other project documents. Double-click a paragraph or heading to move to its corresponding source line. Each Markdown document has its own saved scroll position. Returning to the PDF preview shows the last compiled PDF.
+
+## Read the PDF and navigate to source
+
+The PDF scrolls continuously across pages. The app prioritizes rendering the visible page and nearby pages, so a long document does not require rendering every page into an image at once. You can select and copy PDF text and follow links inside the PDF.
+
+| Action | How to use it |
+| --- | --- |
+| Zoom | Use **＋** / **−**, choose a zoom level, or use `Ctrl + wheel`. Touchpad pinch is also supported |
+| Fit the view | Choose **Fit width** or **Fit page** from the zoom menu |
+| Go to a page | Enter a page number or use the left and right arrows |
+| Search PDF text | Click **Find in PDF** or press `Ctrl + F` while the PDF has focus. Use `Enter` / `Shift + Enter` for the next / previous result |
+| Go from PDF to source | Double-click text in the PDF. The corresponding `.tex` file opens and the destination line is briefly highlighted |
+| Go from source to PDF | `Ctrl + click` a source line, or place the cursor and click the arrow button above the editor to show that position in the PDF. The corresponding PDF position is briefly highlighted |
+| Export the PDF | Click **Save PDF** |
+
+Source–PDF navigation uses TeX Live's `synctex`. The app generates SyncTeX data during compilation and stores it with the matching PDF. TeX macros and the layout of equations can map a clicked character to a nearby source line. Editing the source after compilation displays a notice that the PDF can be updated.
+
+### Add SyncTeX
+
+If `synctex.exe` is missing, use TeX Live Manager to add `synctex` and its Windows executable. For TeX Live 2025 installed at `C:\texlive\2025`, run these commands in PowerShell:
 
 ```powershell
 & 'C:\texlive\2025\bin\windows\tlmgr.bat' --repository 'https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2025/tlnet-final' update --self
@@ -109,47 +229,60 @@ PDF はページをまたいで連続してスクロールできる．表示中�
 & 'C:\texlive\2025\bin\windows\synctex.exe' help
 ```
 
-旧年度の TeX Live にパッケージを追加する際は，その年度の `tlnet-final` を使う．上記の `--repository` は，各コマンドの取得先を指定する．`--reinstall` は，パッケージが登録済みで実行ファイルだけが欠けている場合にもファイルを取り直す．詳細は [TUG の配布先の案内](https://www.tug.org/texlive/acquire.html) と [tlmgr のマニュアル](https://www.tug.org/texlive/doc/tlmgr.html) にある．
+When adding packages to an older TeX Live release, use that year's `tlnet-final`. The `--repository` option above selects the repository for each command. `--reinstall` downloads the files again even if the package is already registered as installed. See [TUG's download guidance](https://www.tug.org/texlive/acquire.html) and the [tlmgr manual](https://www.tug.org/texlive/doc/tlmgr.html).
 
-`synctex.exe help` で使い方が表示されたら，アプリで一度コンパイルしてから相互移動を使う．TeX Live の場所が異なる場合は，コマンドのパスとアプリの「TeX Live のフォルダー」を合わせる．
+Once `synctex.exe help` displays its usage information, compile once in the app before using source–PDF navigation. If your TeX Live installation is elsewhere, change both the command paths and the app's TeX Live folder setting.
 
-再コンパイル後も同じページ付近を表示する．コンパイルが失敗した場合や途中で停止した場合も，前回成功した PDF を参照しながら修正を続けられる．
+After recompiling, the PDF stays near the page you were reading. If compilation fails or is stopped, the last successful PDF remains available while you edit.
 
-ログは右上の「ログ」から必要なときに開ける．コンパイルが失敗した場合は自動で開き，エラーの内容を確認できる．
+Open **Log** at the top right when you need the compilation details. The log opens automatically after a failed compilation.
 
-## コンパイルの設定
+## Configure compilation
 
-コンパイルする文書は，その時点でエディタに表示している `.tex` から選ぶ．`\documentclass` または `\begin{document}` があるファイルを開いて「コンパイル」を押すと，その文書の PDF を表示する．TeX のタブを切り替えただけでは，表示中の PDF は変わらない．画面上部に次のコンパイル対象，PDF の操作欄に表示中の文書名を示す．
+The active `.tex` tab selects the document to compile. If the open file contains `\documentclass` or `\begin{document}`, clicking **Compile** builds that document and displays its PDF. Switching TeX tabs alone leaves the displayed PDF unchanged. The top toolbar shows the next compilation target, and the PDF toolbar shows the document currently displayed.
 
-`\input` で読む章や共通設定のファイルを編集している場合は，設定画面の「既定のメイン文書」をコンパイルする．文書ごとの親ファイルを指定するには，編集するファイルに `% !TeX root = ../main.tex` のようなコメントを書く．パスはそのファイルのフォルダーから指定する．
+When editing a chapter included with `\input`, a shared preamble, or another supporting file, compilation uses **Default main document** in Settings. To choose a parent document for an individual file, add a comment such as `% !TeX root = ../main.tex`. The path is relative to the folder containing that file.
 
-文書ごとに PDF のページ位置と倍率を記録する．別の文書のコンパイルに失敗した場合も，直前に成功した PDF と SyncTeX を使って作業を続けられる．
+The app records the PDF page and zoom for each document. If compilation of a different document fails, you can continue working with the previous successful PDF and its SyncTeX data.
 
-既存の `latexmkrc` がある原稿では，設定画面のコンパイラーを「latexmkrc の設定を使う」にする．`latexmkrc` / `.latexmkrc` に書かれた `uplatex`，`upbibtex`，`dvipdfmx` などの指定を使う．
+For a project with an existing `latexmkrc`, choose **Use latexmkrc settings** as the compiler. The app uses the `uplatex`, `upbibtex`, `dvipdfmx`, and other commands configured in `latexmkrc` or `.latexmkrc`.
 
-`latexmkrc` を置かないプロジェクトでは，pdfLaTeX，upLaTeX，XeLaTeX，LuaLaTeX を選択できる．アプリは `latexmk` を実行し，参考文献や相互参照に必要な再実行も `latexmk` が担当する．
+For projects without `latexmkrc`, you can select pdfLaTeX, upLaTeX, XeLaTeX, or LuaLaTeX. The app runs `latexmk`, which also handles the repeated runs needed for references and citations.
 
-コンパイルの中間ファイルは，プロジェクト内の `.local-tex-editor/build` 以下に文書ごとに保存する．次回のコンパイルでは，同じ文書の中間ファイルを使う．プロジェクトを Git で管理する場合は，そのプロジェクトの `.gitignore` に次を追加できる．
+Intermediate files are stored for each document under `.local-tex-editor/build` inside the project. Later compilations reuse that document's intermediate files. If you manage the project with Git, you can add the following to its `.gitignore`:
 
 ```gitignore
 .local-tex-editor/
 ```
 
-コンパイル時間の上限はアプリ側で設けていない．実行中のコンパイルは，画面の停止ボタンから停止できる．
+The app does not impose a compilation time limit. Use the stop button to stop a running compilation.
 
-## アプリとデータの保存先
+## App files and storage
 
-編集画面に必要な JavaScript，PDF.js の worker，フォントなどは実行ファイルに含む．起動のたびに CDN から取得する処理はない．
+Sizes for **v0.1.4**, rounded to the nearest MB (1 MB = 1,000,000 bytes):
 
-設定，草稿，前回の表示位置，表示用の PDF と SyncTeX のコピーは，Windows ユーザーの設定フォルダー (`%APPDATA%\LocalTeXEditor`) に保存する．原稿そのものは，選択したプロジェクトのフォルダーへ保存する．PDF のコピーを使うことで，TeX が書き込み中の PDF と表示中の PDF が競合する状況を防ぐ．
+| Platform | ZIP download | App after extraction |
+| --- | ---: | ---: |
+| Windows x64 | About **8 MB** | About **16 MB** (`.exe`) |
+| macOS, Apple Silicon + Intel | About **15 MB** | About **32 MB** (`.app`) |
 
-接続は `127.0.0.1` などの loopback のアドレスに限定する．起動ごとに生成する token を使い，ファイルの読み書きとコンパイルの API を呼び出す．
+The ZIP also includes the README files, screenshots, and licenses. The macOS app contains both CPU versions. The download buttons above link to these release files.
 
-## 開発する
+The app includes the JavaScript, PDF.js worker, fonts, and other files needed by the editor. It uses the browser and TeX Live installed on your computer. TeX Live, a browser engine, Python, and Node.js are not included in the download.
 
-以下はアプリを開発する環境での手順である．配布済みの `.exe` を使う PC では実行しない．
+Disk usage also grows with your project files, TeX packages, drafts, and generated PDFs. Compilation files are written under `.local-tex-editor/build` in each project; their size depends on the document and its figures. The ZIP can be deleted after extraction. Creating a Windows Start menu or desktop shortcut copies the executable to the application folder described above. After closing the app and checking that the shortcut opens it, the extracted download folder can be deleted as well.
 
-必要なものは Node.js 22.13 以降と Go 1.25 以降である．Windows での動作確認には TeX Live / TinyTeX と Chromium も使う．
+Settings, drafts, previous view positions, and copies of the PDF and SyncTeX data are stored in `%APPDATA%\LocalTeXEditor` on Windows or `~/Library/Application Support/LocalTeXEditor` on Mac. Source files are saved in the project folder you selected. Using a copy of the PDF lets you keep reading while TeX writes the next version.
+
+The server listens only on a loopback address such as `127.0.0.1`. File and compilation APIs use a token generated when the app starts.
+
+## Development
+
+These instructions are for building and developing the app. The distributed `.exe` and `.app` include their runtime and can be launched directly.
+
+Development requires Node.js 22.13 or later and Go 1.25 or later. Tests also use TeX Live / TinyTeX and Chromium. Building the macOS `.app` requires Xcode Command Line Tools.
+
+Build on Windows:
 
 ```sh
 npm ci
@@ -157,42 +290,55 @@ npm run test:unit
 npm run build
 npm run build:windows-resources
 go test ./...
-go build -o bin/local-tex-editor.exe ./cmd/local-tex-editor
+go build -o bin/local-tex-web-editor.exe ./cmd/local-tex-editor
 ```
 
-Windows 用の配布ファイルは次のコマンドで作成する．
+Build a Windows distribution executable:
 
 ```sh
-go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.4" -o dist/local-tex-editor.exe ./cmd/local-tex-editor
+go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.4" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
 ```
 
-`build:windows-resources` は同梱の ICO から Windows x64 用の resource を生成する．実行ファイルのビルド時に，16〜256 px の 9 サイズのアイコンが組み込まれる．
+`build:windows-resources` generates Windows x64 resources from the bundled ICO. The executable embeds nine icon sizes from 16 to 256 px.
 
-起動時のオプション:
+Build on macOS:
+
+```sh
+npm ci
+npm run test:unit
+npm run build
+go test ./...
+npx playwright install chromium
+node scripts/build-macos.mjs
+```
+
+This creates `dist/local-tex-web-editor-0.1.4-macos-universal.zip` with an app supporting Apple Silicon and Intel, the English and Japanese READMEs, and license files.
+
+Command-line options:
 
 ```text
---project PATH       開くプロジェクトのフォルダー
---tex-bin PATH       TeX Live の実行ファイルのフォルダー
---no-browser         ブラウザを自動で開かない
---listen ADDRESS     loopback のアドレスとポート (既定: 127.0.0.1:0)
---config-dir PATH    設定とキャッシュの保存先
---ready-file PATH    起動したサーバーの URL と token を書くファイル
---version            アプリのバージョンを表示する
+--project PATH       Project folder to open
+--tex-bin PATH       Folder containing TeX Live executables
+--no-browser         Do not open the browser automatically
+--listen ADDRESS     Loopback address and port (default: 127.0.0.1:0)
+--config-dir PATH    Folder for settings and cache
+--ready-file PATH    File to receive the server URL and token
+--version            Print the app version
 ```
 
-`--ready-file` は自動テストなどで使用する．このファイルには，アプリを操作するための token が含まれる．アプリを終了すると削除する．
+`--ready-file` is used by automated tests and similar tools. It contains the token needed to operate the app and is removed when the app exits.
 
-GitHub Actions はアプリをビルドし，Windows で Go のテストとブラウザのテストを実行する．日本語と空白を含むフォルダーでの TeX の実行，参考文献，PDF のスクロール・拡大縮小・検索，SyncTeX の往復，自動保存，草稿の復元，エラー箇所への移動を確認する．日々の原稿のコンパイルは PC の TeX Live が担当する．
+GitHub Actions builds the app and checks it on Windows and on macOS with Apple Silicon and Intel. Windows tests cover TeX in folders containing Japanese characters and spaces, bibliographies, PDF scrolling, zoom and search, SyncTeX in both directions, autosave, draft recovery, and navigation to errors. The macOS jobs extract the same distribution ZIP on both CPU architectures and check app launch, Japanese TeX, SyncTeX, document switching, Markdown, and exit. Everyday document compilation uses TeX Live on your computer.
 
-`main` のテストが成功し，`package.json` のバージョンに対応する Release がまだ存在しない場合は，その実行で確認したアプリを Releases に公開する．新しいバージョンを作る際は，`package.json` を更新し，`release-notes/v<バージョン>.md` を追加する．各ブランチで確認したアプリは，Actions の **Artifacts** にある `local-tex-editor-windows-x64` からも取得できる．
+When the Windows and both macOS test jobs on `main` succeed, and no release exists for the version in `package.json`, that run publishes the tested app archives to Releases. To release a new version, update `package.json` and add `release-notes/v<version>.md`. You can also download the archives from the Actions artifacts named `local-tex-web-editor-windows-x64` and `local-tex-web-editor-macos-universal`. The release's `SHA256SUMS.txt` lists the SHA-256 hash of each ZIP.
 
-## 利用するライブラリ
+## Libraries
 
-- [CodeMirror](https://codemirror.net/): 編集画面 (MIT)
-- [PDF.js](https://mozilla.github.io/pdf.js/): PDF の表示 (Apache-2.0)
-- [markdown-it](https://github.com/markdown-it/markdown-it): Markdown の表示 (MIT)
-- [KaTeX](https://katex.org/): Markdown 内の数式 (MIT)
-- [DOMPurify](https://github.com/cure53/DOMPurify): プレビューの HTML の処理 (Apache-2.0 または MPL-2.0)
-- [Go](https://go.dev/): HTTP サーバーと TeX の実行
+- [CodeMirror](https://codemirror.net/): editor (MIT)
+- [PDF.js](https://mozilla.github.io/pdf.js/): PDF display (Apache-2.0)
+- [markdown-it](https://github.com/markdown-it/markdown-it): Markdown rendering (MIT)
+- [KaTeX](https://katex.org/): mathematics in Markdown (MIT)
+- [DOMPurify](https://github.com/cure53/DOMPurify): preview HTML processing (Apache-2.0 or MPL-2.0)
+- [Go](https://go.dev/): HTTP server and TeX execution
 
-依存する JavaScript のバージョンは `package-lock.json` に記録する．同梱するライブラリのライセンス本文は，アプリの `/THIRD_PARTY_LICENSES.txt` に含む．アプリ自体のライセンスは [MIT](LICENSE) である．
+JavaScript dependency versions are recorded in `package-lock.json`. The bundled libraries' license texts are available at the app's `/THIRD_PARTY_LICENSES.txt`. Local TeX Web Editor itself is licensed under [MIT](LICENSE).

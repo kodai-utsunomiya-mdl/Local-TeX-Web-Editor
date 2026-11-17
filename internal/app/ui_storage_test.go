@@ -14,6 +14,33 @@ import (
 	"unicode/utf8"
 )
 
+func TestSavedInterfaceLanguageUsesEditorPreferences(t *testing.T) {
+	a, _ := testApp(t)
+	if language := SavedInterfaceLanguage(a.options.ConfigDir); language != "en" {
+		t.Fatalf("initial language = %s", language)
+	}
+	for _, test := range []struct {
+		value any
+		want  string
+	}{
+		{map[string]any{"language": "ja", "fontSize": 18}, "ja"},
+		{map[string]any{"language": "en", "fontSize": 18}, "en"},
+		{map[string]any{"fontSize": 18}, "en"},
+		{map[string]any{"language": "fr"}, "en"},
+		{false, "en"},
+	} {
+		written := apiRequest(a, http.MethodPut, "/api/storage", map[string]any{"key": "preferences", "value": test.value}, nil)
+		before := decodeUIStorageResponse(t, written, http.StatusOK)
+		if language := SavedInterfaceLanguage(a.options.ConfigDir); language != test.want {
+			t.Fatalf("preferences %v: language = %s, want %s", test.value, language, test.want)
+		}
+		after := decodeUIStorageResponse(t, apiRequest(a, http.MethodGet, "/api/storage?key=preferences", nil, nil), http.StatusOK)
+		if before.Serialized != after.Serialized || before.Revision != after.Revision {
+			t.Fatal("reading the interface language changed the editor preferences")
+		}
+	}
+}
+
 func TestDraftSurvivesRestartWithADifferentBrowserOrigin(t *testing.T) {
 	a, root := testApp(t)
 	key := "drafts:" + root

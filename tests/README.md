@@ -1,6 +1,8 @@
-# Windows での動作確認
+# Windows と macOS での動作確認
 
-`editor.spec.mjs` は，配布する実行ファイルを起動し，実際の TeX Live と Chromium を使用する．テスト用の原稿は `fixtures/japanese` にある．ユーザーの原稿を CI へ送る処理は含めていない．
+`editor.spec.mjs` は，同梱の `fixtures/japanese` を一時フォルダーへコピーし，配布する実行ファイルを起動する．TeX Live で原稿をコンパイルし，Chromium で編集とプレビューの操作を確認する．
+
+既存の Windows の操作テストでは，表示言語を日本語に指定する．英語のテストは言語を未設定で開始し，英語での保存・コンパイル，日本語への変更，英語に戻して再起動する操作を確認する．言語の変更時にも原稿と PDF の内容，ページ位置と倍率，TeX のログが同じであることを確かめる．
 
 次の操作を確認する．
 
@@ -41,11 +43,13 @@
 - TeX のエラーと終了コードを表示し，エラーの行へ移動する．最後に成功した PDF も表示する．
 - 実行中の TeX を停止し，続けて通常のコンパイルを行う．
 
-Windows のワークフローでは [r-lib/actions/setup-tinytex](https://github.com/r-lib/actions/tree/v2/setup-tinytex) を使い，CI のための TeX Live を用意する．日本語のパッケージは `tlmgr` で導入する．利用者の PC へ TeX Live を導入する操作はアプリに含まれない．
+Windows のワークフローでは [r-lib/actions/setup-tinytex](https://github.com/r-lib/actions/tree/v2/setup-tinytex) で runner に TeX Live を用意し，日本語のパッケージを `tlmgr` で導入する．
 
 Windows の Go テストでは，一時フォルダーでショートカットを作り，リンク先と起動時のフォルダーを読み戻す．実行ファイルの配置と更新，更新先が実行中の場合の応答も確認する．フォルダーの選択画面については，実際にウィンドウを開き，前面への表示，取消，HTTP の切断後に閉じる動作，次回の表示を確認する．
 
 Windows API で配布用の実行ファイルから大小のアイコンを取り出し，埋め込まれた 9 サイズの画像を読み込む．各画像の bytes を同梱の ICO と照合する．既存のショートカットを更新し，同じ実行ファイルのパスでも専用アイコンへ変わることを確認する．
+
+macOS では `scripts/build-macos.mjs` が Apple Silicon と Intel の実行ファイルを含む `.app` を作り，アイコン，バージョン，署名の整合を確認して ZIP に収録する．`scripts/test-macos.mjs` は同じ配布 ZIP を両 CPU の runner で展開し，Launch Services から起動する．ブラウザでの保存，日本語のコンパイル，SyncTeX，別のメイン文書，Markdown，再度開く操作，終了ボタンを使った終了を確認する．OS のフォルダー選択画面も実際に開いて閉じる．
 
 新版の起動時に行う更新について，一時フォルダー内の配置済みアプリと既存のショートカットが変わることを確認する．インストールがまだない場合，別のアプリを指すリンク，外部で変更された実行ファイルも扱う．
 
@@ -53,7 +57,9 @@ Windows API で配布用の実行ファイルから大小のアイコンを取�
 
 `markdown-preview.spec.mjs` は，Markdown の表示，数式，画像を読む際の認証，画像の再利用，文書内のリンク，テーマ，スクロール位置をブラウザで確認する．入力された HTML やプロジェクト外のパスも扱う．`compile-target.test.mjs` は，本文の変更，コメントやコード例，親ファイルの指定からコンパイル対象を選ぶ処理を確認する．
 
-フロントエンドをビルドした後，実行ファイルを `bin/local-tex-editor.exe` に作成する．`LOCAL_TEX_EDITOR_TEST_EXE` で別の場所も指定できる．TeX Live の実行ファイルがある場所は `LOCAL_TEX_EDITOR_TEST_TEX_BIN` で指定する．
+`tex-packages.test.mjs` は，設定済みの TeX を使う追加コマンド，Windows / Mac の引用形式，不足ファイル名から作る検索用の正規表現を確認する．入力されたパッケージ名やファイル名にシェルのコマンドやオプションが含まれる場合も扱う．Go のテストでは，小さめの TeX Live，BasicTeX の symlink，旧年度，不明な年度を含め，表示するプログラムと取得先を確認する．
+
+フロントエンドをビルドした後，実行ファイルを `bin/local-tex-web-editor.exe` に作成する．`LOCAL_TEX_EDITOR_TEST_EXE` で別の場所も指定できる．TeX Live の実行ファイルがある場所は `LOCAL_TEX_EDITOR_TEST_TEX_BIN` で指定する．
 
 ```powershell
 npm ci
@@ -61,12 +67,12 @@ npm run test:unit
 npm run build
 npm run build:windows-resources
 go test ./...
-go build -o bin/local-tex-editor.exe ./cmd/local-tex-editor
+go build -o bin/local-tex-web-editor.exe ./cmd/local-tex-editor
 $env:LOCAL_TEX_EDITOR_TEST_TEX_BIN = 'C:\texlive\2025\bin\windows'
 npx playwright install chromium
 npm test
 ```
 
-テストは一時フォルダーへ原稿のコピーを作り，終了時に削除する．失敗時は `test-results` にブラウザの画像と trace，アプリの出力を保存する．成功したブラウザの画面も同じ場所へ保存する．GitHub Actions は，すべての確認が成功した後に，その確認で使った実行ファイルを `local-tex-editor-windows-x64` へ保存する．
+テストの終了時に一時フォルダーを削除する．失敗時は `test-results` にブラウザの画像と trace，アプリの出力を保存する．成功したブラウザの画面も同じ場所へ保存する．GitHub Actions の `local-tex-web-editor-windows-x64` と `local-tex-web-editor-macos-universal` に配布ファイルを保存する．Release への公開は Windows と両 Mac のテストが成功した後に進む．
 
 日本語のコメントの入力は Unicode 文字列を使って確認する．Windows の各 IME の候補選択や変換中のキー操作は，実際の執筆画面でも確認する．

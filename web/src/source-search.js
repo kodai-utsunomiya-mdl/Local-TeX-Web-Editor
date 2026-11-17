@@ -1,5 +1,7 @@
+import { t, onLanguageChange } from './i18n.js';
 import { Prec } from '@codemirror/state';
 import { keymap, runScopeHandlers } from '@codemirror/view';
+import { shortcutModifier } from './platform-keys.js';
 import {
   search, SearchQuery, getSearchQuery, setSearchQuery, openSearchPanel,
   closeSearchPanel, findNext, findPrevious, replaceNext, replaceAll,
@@ -53,7 +55,7 @@ class SourceSearchPanel {
     this.matches = [];
     this.truncated = false;
     this.dom = element('div', 'cm-search source-search');
-    this.dom.setAttribute('aria-label', '原稿の検索と置換');
+    this.dom.setAttribute('aria-label', t("原稿の検索と置換"));
     this.dom.addEventListener('keydown', event => this.keydown(event));
 
     const textArea = (name, label) => {
@@ -78,15 +80,15 @@ class SourceSearchPanel {
       return node;
     };
 
-    this.searchField = textArea('search', '検索する文字列');
+    this.searchField = textArea('search', t("検索する文字列"));
     this.searchField.setAttribute('main-field', 'true');
     this.searchField.setAttribute('aria-describedby', 'source-search-help');
-    this.nextButton = button('next', '↓', findNext, '次の一致箇所へ (Enter)');
-    this.previousButton = button('previous', '↑', findPrevious, '前の一致箇所へ (Shift + Enter)');
+    this.nextButton = button('next', '↓', findNext, t("次の一致箇所へ (Enter)"));
+    this.previousButton = button('previous', '↑', findPrevious, t("前の一致箇所へ (Shift + Enter)"));
     this.count = element('span', 'source-search-count');
     this.count.setAttribute('role', 'status');
     this.count.dataset.testid = 'source-search-count';
-    const close = button('close', '×', closeSearchPanel, '検索を閉じる (Esc)');
+    const close = button('close', '×', closeSearchPanel, t("検索を閉じる (Esc)"));
     const first = element('div', 'source-search-row');
     first.append(this.searchField, this.count, this.previousButton, this.nextButton, close);
 
@@ -98,20 +100,36 @@ class SourceSearchPanel {
       wrapper.append(input, document.createTextNode(label)); options.append(wrapper);
       return input;
     };
-    this.caseField = checkbox('case', '大文字と小文字を区別');
-    this.regexpField = checkbox('regexp', '正規表現');
-    this.wordField = checkbox('word', '単語単位');
-    const help = element('span', 'source-search-help', 'Ctrl + Enter で改行');
+    this.caseField = checkbox('case', t("大文字と小文字を区別"));
+    this.regexpField = checkbox('regexp', t("正規表現"));
+    this.wordField = checkbox('word', t("単語単位"));
+    const help = element('span', 'source-search-help', t("{value0} + Enter で改行", { value0: shortcutModifier }));
     help.id = 'source-search-help'; options.append(help);
 
-    this.replaceField = textArea('replace', '置換後の文字列');
-    this.replaceButton = button('replace', '置換', replaceNext);
-    this.replaceAllButton = button('replace-all', 'すべて置換', replaceAll);
+    this.replaceField = textArea('replace', t("置換後の文字列"));
+    this.replaceButton = button('replace', t("置換"), replaceNext);
+    this.replaceAllButton = button('replace-all', t("すべて置換"), replaceAll);
     const second = element('div', 'source-search-row source-replace-row');
     second.append(this.replaceField, this.replaceButton, this.replaceAllButton);
     this.dom.append(first, options, second);
     this.setQuery(this.query);
     this.refreshMatches();
+    this.unsubscribeLanguage = onLanguageChange(() => this.refreshLanguage());
+  }
+
+  refreshLanguage() {
+    this.dom.setAttribute('aria-label', t('原稿の検索と置換'));
+    for (const [field, key] of [[this.searchField, '検索する文字列'], [this.replaceField, '置換後の文字列']]) {
+      field.placeholder = t(key); field.setAttribute('aria-label', t(key));
+    }
+    for (const [name, key] of [['next', '次の一致箇所へ (Enter)'], ['previous', '前の一致箇所へ (Shift + Enter)'], ['close', '検索を閉じる (Esc)'], ['replace', '置換'], ['replace-all', 'すべて置換']]) {
+      const button = this.dom.querySelector(`button[name="${name}"]`);
+      button.title = t(key); button.setAttribute('aria-label', t(key));
+      if (name.startsWith('replace')) button.textContent = t(key);
+    }
+    for (const [field, key] of [[this.caseField, '大文字と小文字を区別'], [this.regexpField, '正規表現'], [this.wordField, '単語単位']]) field.nextSibling.textContent = t(key);
+    this.dom.querySelector('.source-search-help').textContent = t('{value0} + Enter で改行', { value0: shortcutModifier });
+    this.updateControls();
   }
 
   commit() {
@@ -161,7 +179,7 @@ class SourceSearchPanel {
     const selection = this.view.state.selection.main;
     const index = this.matches.findIndex(match => match.from === selection.from && match.to === selection.to);
     const total = `${this.matches.length}${this.truncated ? '+' : ''}`;
-    this.count.textContent = !this.query.search ? '' : !this.query.valid ? '正規表現を確認' : index < 0 ? `${total} 件` : `${index + 1} / ${total}`;
+    this.count.textContent = !this.query.search ? '' : !this.query.valid ? t("正規表現を確認") : index < 0 ? t("{value0} 件", { value0: total }) : `${index + 1} / ${total}`;
     this.searchField.setAttribute('aria-invalid', String(!!this.query.search && !this.query.valid));
     this.nextButton.disabled = this.previousButton.disabled = !this.query.valid;
     this.replaceButton.disabled = this.replaceAllButton.disabled = !this.query.valid || this.view.state.readOnly;
@@ -204,7 +222,7 @@ class SourceSearchPanel {
   }
 
   mount() { this.searchField.focus(); this.searchField.select(); }
-  destroy() { clearTimeout(this.timer); }
+  destroy() { clearTimeout(this.timer); this.unsubscribeLanguage?.(); }
   get top() { return true; }
   get pos() { return 80; }
 }

@@ -1,13 +1,78 @@
 package app
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 )
+
+func TestProductRenameUsesExistingSettingsAndDrafts(t *testing.T) {
+	base := t.TempDir()
+	switch runtime.GOOS {
+	case "windows":
+		t.Setenv("APPDATA", base)
+	case "darwin":
+		t.Setenv("HOME", base)
+		base = filepath.Join(base, "Library", "Application Support")
+	default:
+		t.Setenv("XDG_CONFIG_HOME", base)
+	}
+	legacyDirectory := filepath.Join(base, "LocalTeXEditor")
+	project := filepath.Join(t.TempDir(), "Existing manuscript")
+	writeTestFile(t, filepath.Join(project, "main.tex"), []byte("\\documentclass{article}\n\\begin{document}Existing manuscript\\end{document}\n"))
+	project, err := filepath.EvalSymlinks(project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	settings, err := json.Marshal(configuration{
+		TexBin: filepath.Join(t.TempDir(), "TeX Live"), RecentProjects: []string{project},
+		Projects: map[string]projectSettings{project: {Main: "main.tex", Mode: "uplatex"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeTestFile(t, filepath.Join(legacyDirectory, "settings.json"), settings)
+	values := map[string]json.RawMessage{
+		"preferences":       json.RawMessage(`{"language":"ja","theme":"dark","fontSize":18}`),
+		"drafts:" + project: json.RawMessage(`{"main.tex":{"content":"未保存の原稿","revision":"previous-version"}}`),
+	}
+	for key, value := range values {
+		hash := sha256.Sum256([]byte(key))
+		path := filepath.Join(legacyDirectory, "ui-state", hex.EncodeToString(hash[:])+".json")
+		if err := writeStoredUIValue(path, key, value); err != nil {
+			t.Fatal(err)
+		}
+	}
+	a, err := New(Options{Token: testToken, Version: "0.1.4"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer a.Close()
+	a.SetAddress("127.0.0.1:8765")
+	if a.options.ConfigDir != legacyDirectory || a.project == nil || a.project.Main != "main.tex" || a.project.Mode != "uplatex" {
+		t.Fatalf("existing configuration was not opened: directory=%s, project=%#v", a.options.ConfigDir, a.project)
+	}
+	if SavedInterfaceLanguage("") != "ja" {
+		t.Fatal("the update page did not read the existing language preference")
+	}
+	for key, want := range values {
+		response := apiRequest(a, http.MethodGet, "/api/storage?key="+url.QueryEscape(key), nil, nil)
+		value := decodeUIStorageResponse(t, response, http.StatusOK)
+		if string(value.Value) != string(want) {
+			t.Fatalf("stored value %s changed after the rename: %s", key, value.Value)
+		}
+	}
+	if _, err := os.Lstat(filepath.Join(base, "LocalTeXWebEditor")); !os.IsNotExist(err) {
+		t.Fatalf("a second settings directory was created: %v", err)
+	}
+}
 
 func TestSettingsOnlyInvalidatePDFWhenCompilationSettingsChange(t *testing.T) {
 	for _, test := range []struct {

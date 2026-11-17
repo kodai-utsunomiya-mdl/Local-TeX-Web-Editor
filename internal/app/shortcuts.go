@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/messages"
 	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/platform"
 )
 
@@ -50,5 +51,6 @@ func (a *App) shortcutsHandler(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err)
 		return
 	}
+	result.Message = messages.Text(messages.LanguageFromContext(r.Context()), result.Message)
 	writeJSON(w, http.StatusOK, result)
 }

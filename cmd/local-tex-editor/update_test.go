@@ -12,6 +12,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/messages"
 )
 
 func testUpdatePage(t *testing.T) *updatePage {
@@ -31,6 +33,46 @@ func updateRequest(page *updatePage, method, path, body string) *http.Request {
 		r.Header.Set("Content-Type", "application/json")
 	}
 	return r
+}
+
+func TestUpdatePageUsesSavedLanguageAndLocalizesRequests(t *testing.T) {
+	page := testUpdatePage(t)
+	if page.snapshot().Language != "en" {
+		t.Fatal("the update page should start in English")
+	}
+	for _, language := range []string{"en", "ja"} {
+		page.state.Language = language
+		request := updateRequest(page, http.MethodGet, "/", "")
+		request.Header.Set("Accept-Language", "fr, en;q=0.8, ja;q=0.5")
+		response := httptest.NewRecorder()
+		page.handler().ServeHTTP(response, request)
+		if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), `<html lang="`+language+`">`) || response.Header().Get("Content-Language") != language {
+			t.Fatalf("saved language %s was not used by the update page: %d", language, response.Code)
+		}
+	}
+	page.problem = messages.Errorf("旧版の終了を確認できません．起動中の編集画面から「終了」を押してください．")
+	page.state.Executable = `C:\日本語のフォルダー\local-tex-web-editor.exe`
+	for _, test := range []struct{ language, confirmation, problem string }{
+		{"en", "Confirm that you have saved all open documents.", "Could not confirm that the previous version has closed. Use Exit in the running editor."},
+		{"ja", "開いている原稿を保存したことを確認してください．", "旧版の終了を確認できません．起動中の編集画面から「終了」を押してください．"},
+	} {
+		request := updateRequest(page, http.MethodPost, "/api/update/stop", `{}`)
+		request.Header.Set("Accept-Language", test.language)
+		response := httptest.NewRecorder()
+		page.handler().ServeHTTP(response, request)
+		var errorResponse struct{ Error string }
+		if response.Code != http.StatusBadRequest || json.Unmarshal(response.Body.Bytes(), &errorResponse) != nil || errorResponse.Error != test.confirmation {
+			t.Fatalf("confirmation in %s: %d %s", test.language, response.Code, response.Body.String())
+		}
+		request = updateRequest(page, http.MethodGet, "/api/update/state", "")
+		request.Header.Set("Accept-Language", test.language)
+		response = httptest.NewRecorder()
+		page.handler().ServeHTTP(response, request)
+		var state updateState
+		if response.Code != http.StatusOK || json.Unmarshal(response.Body.Bytes(), &state) != nil || state.Language != test.language || state.Error != test.problem || state.Executable != page.state.Executable || response.Header().Get("Content-Language") != test.language {
+			t.Fatalf("state in %s: %d %s", test.language, response.Code, response.Body.String())
+		}
+	}
 }
 
 func TestUpdateRequiresAuthorizationAndSavedConfirmation(t *testing.T) {

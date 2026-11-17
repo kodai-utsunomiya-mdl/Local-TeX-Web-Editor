@@ -56,7 +56,7 @@ func (picker *folderPicker) pick(ctx context.Context) (string, error) {
 			}
 		}
 		if request == nil {
-			nativeContext, cancel := context.WithCancel(context.Background())
+			nativeContext, cancel := context.WithCancel(context.WithoutCancel(ctx))
 			request = &folderPickRequest{ctx: nativeContext, cancel: cancel, done: make(chan struct{}), focus: make(chan struct{}, 1)}
 			picker.active = request
 			go picker.run(request)

@@ -4,12 +4,14 @@ package platform
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"syscall"
 	"time"
 	"unsafe"
+
+	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/branding"
+	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/messages"
 )
 
 // RefreshInstalledShortcuts updates a previous installation when the user opens
@@ -31,7 +33,7 @@ func RefreshInstalledShortcuts() error {
 		}
 	}
 	if err := refreshInstalledShortcutsAt(source, localAppData, directories); err != nil {
-		return fmt.Errorf("ショートカットから起動するアプリを更新できませんでした．設定でショートカットをもう一度作成してください．%w", err)
+		return messages.Errorf("ショートカットから起動するアプリを更新できませんでした．設定でショートカットをもう一度作成してください．%w", err)
 	}
 	return nil
 }
@@ -44,13 +46,13 @@ func existingShortcutFolder(id *nativeGUID) (string, error) {
 		defer ole32.NewProc("CoTaskMemFree").Call(uintptr(unsafe.Pointer(path)))
 	}
 	if int32(result) < 0 || path == nil {
-		return "", fmt.Errorf("Windows の保存先を取得できません (HRESULT 0x%08X)．", uint32(result))
+		return "", messages.Errorf("Windows の保存先を取得できません (HRESULT 0x%08X)．", uint32(result))
 	}
 	return filepath.EvalSymlinks(nativeWideString(path))
 }
 
 func refreshInstalledShortcutsAt(source, localAppData string, directories []string) error {
-	directory := filepath.Join(localAppData, "Programs", "LocalTeXEditor")
+	directory := filepath.Join(localAppData, "Programs", branding.DataDirectoryName)
 	if _, err := os.Lstat(directory); errors.Is(err, os.ErrNotExist) {
 		return nil
 	} else if err != nil {
@@ -73,26 +75,44 @@ func refreshInstalledShortcutsAt(source, localAppData string, directories []stri
 	if err != nil {
 		return err
 	}
+	legacy := filepath.Join(directory, legacyShortcutExecutableName)
+	legacyCurrent := shortcutSameFile(legacy, installed)
+	if !legacyCurrent {
+		current, recordErr := readShortcutInstallation(filepath.Join(directory, shortcutManifestName))
+		hash, hashErr := shortcutFileHash(legacy)
+		legacyCurrent = recordErr == nil && current != nil && hashErr == nil && current.SHA256 == hash
+	}
 	for _, folder := range directories {
-		shortcut := filepath.Join(folder, shortcutName)
-		info, err := shortcutRegularFile(shortcut)
-		if errors.Is(err, os.ErrNotExist) {
-			continue
-		}
-		if err != nil || info.Size() > 1<<20 {
-			continue
-		}
-		link, err := readShellShortcut(shortcut)
-		if err != nil || !shortcutSameFile(link.Target, installed) {
-			continue
-		}
-		// A user may add a project argument or choose another working folder.
-		// The executable is already updated; leave those link settings intact.
-		if link.Arguments != "" || !shortcutSameFile(link.WorkingDirectory, filepath.Dir(installed)) {
-			continue
-		}
-		if _, err := createShortcutAt(source, localAppData, folder); err != nil {
-			return err
+		for _, name := range []string{shortcutName, legacyShortcutName} {
+			shortcut := filepath.Join(folder, name)
+			info, err := shortcutRegularFile(shortcut)
+			if errors.Is(err, os.ErrNotExist) {
+				continue
+			}
+			if err != nil || info.Size() > 1<<20 {
+				continue
+			}
+			link, err := readShellShortcut(shortcut)
+			if err != nil || (!shortcutSameFile(link.Target, installed) && !(legacyCurrent && shortcutSameFile(link.Target, legacy))) {
+				continue
+			}
+			// A user may add a project argument or choose another working folder.
+			// Both executable names are updated, so these links keep working.
+			if link.Arguments != "" || !shortcutSameFile(link.WorkingDirectory, filepath.Dir(installed)) {
+				continue
+			}
+			if _, err := createShortcutAt(source, localAppData, folder); err != nil {
+				return err
+			}
+			if name == legacyShortcutName {
+				current, err := shortcutRegularFile(shortcut)
+				if err == nil && os.SameFile(info, current) && info.Size() == current.Size() && info.ModTime().Equal(current.ModTime()) {
+					if err := os.Remove(shortcut); err != nil {
+						return err
+					}
+					notifyShellChange(shortcut, 0x00000004) // SHCNE_DELETE
+				}
+			}
 		}
 	}
 	notifyShellFileChange(installed, false)

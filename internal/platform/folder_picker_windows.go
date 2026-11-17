@@ -3,13 +3,13 @@
 package platform
 
 import (
-	"errors"
-	"fmt"
 	"runtime"
 	"sync"
 	"syscall"
 	"time"
 	"unsafe"
+
+	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/messages"
 )
 
 const (
@@ -43,7 +43,7 @@ func (object *nativeCOMObject) call(index int, arguments ...uintptr) uintptr {
 }
 
 func folderDialogError(action string, result uintptr) error {
-	return fmt.Errorf("フォルダーの選択画面を%sできません (HRESULT 0x%08X)．", action, uint32(result))
+	return messages.Errorf("フォルダーの選択画面を%sできません (HRESULT 0x%08X)．", messages.Label(action), uint32(result))
 }
 
 func showNativeFolderDialog(request *folderPickRequest) (string, error) {
@@ -75,7 +75,7 @@ func showNativeFolderDialog(request *folderPickRequest) (string, error) {
 	if result = dialog.call(9, uintptr(options|0x20|0x40|0x8|0x800)); int32(result) < 0 {
 		return "", folderDialogError("設定", result)
 	}
-	title, _ := syscall.UTF16PtrFromString(folderDialogTitle)
+	title, _ := syscall.UTF16PtrFromString(messages.Text(messages.LanguageFromContext(request.ctx), folderDialogTitle))
 	if result = dialog.call(17, uintptr(unsafe.Pointer(title))); int32(result) < 0 {
 		return "", folderDialogError("設定", result)
 	}
@@ -103,7 +103,7 @@ func showNativeFolderDialog(request *folderPickRequest) (string, error) {
 	defer item.call(2)
 	var path *uint16
 	if result = item.call(5, 0x80058000, uintptr(unsafe.Pointer(&path))); int32(result) < 0 || path == nil { // SIGDN_FILESYSPATH
-		return "", errors.New("選択したフォルダーのパスを取得できません．")
+		return "", messages.Errorf("選択したフォルダーのパスを取得できません．")
 	}
 	defer ole32.NewProc("CoTaskMemFree").Call(uintptr(unsafe.Pointer(path)))
 	return nativeWideString(path), nil
@@ -152,7 +152,7 @@ func registerFolderControllerClass() error {
 		class.size = uint32(unsafe.Sizeof(class))
 		atom, _, err := user32.NewProc("RegisterClassExW").Call(uintptr(unsafe.Pointer(&class)))
 		if atom == 0 {
-			folderControllerClassError = fmt.Errorf("フォルダーの選択画面を準備できません: %w", err)
+			folderControllerClassError = messages.Errorf("フォルダーの選択画面を準備できません: %w", err)
 		}
 	})
 	return folderControllerClassError
@@ -176,7 +176,7 @@ func newFolderDialogController(request *folderPickRequest, owner uintptr) (*fold
 	hwnd, _, err := user32.NewProc("CreateWindowExW").Call(0x80, uintptr(unsafe.Pointer(folderControllerClassName)), 0, 0x80000000,
 		uintptr(bounds.left), uintptr(bounds.top), uintptr(bounds.right-bounds.left), uintptr(bounds.bottom-bounds.top), owner, 0, instance, 0) // WS_EX_TOOLWINDOW; WS_POPUP
 	if hwnd == 0 {
-		return nil, fmt.Errorf("フォルダーの選択画面を準備できません: %w", err)
+		return nil, messages.Errorf("フォルダーの選択画面を準備できません: %w", err)
 	}
 	return &folderDialogController{hwnd: hwnd, request: request}, nil
 }
@@ -258,7 +258,7 @@ type nativeWindowMessage struct {
 }
 
 func (controller *folderDialogController) dialogWindow() uintptr {
-	title := syscall.StringToUTF16Ptr(folderDialogTitle)
+	title := syscall.StringToUTF16Ptr(messages.Text(messages.LanguageFromContext(controller.request.ctx), folderDialogTitle))
 	var previous uintptr
 	for {
 		hwnd, _, _ := user32.NewProc("FindWindowExW").Call(0, previous, 0, uintptr(unsafe.Pointer(title)))

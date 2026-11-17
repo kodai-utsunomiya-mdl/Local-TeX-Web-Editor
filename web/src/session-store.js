@@ -1,3 +1,4 @@
+import { t } from './i18n.js';
 const encoder = new TextEncoder();
 const keepaliveLimit = 60 * 1024;
 
@@ -126,7 +127,7 @@ export class SessionStore {
         const isDraft = key.startsWith('drafts:');
         if (isDraft && !record.base) {
           record.base = storedValue(await this.api(`/api/storage?key=${encodeURIComponent(key)}`, { projectRoot: null }));
-          if (!record.base) throw new Error('草稿の保存先から版の情報を取得できませんでした．');
+          if (!record.base) throw new Error(t("草稿の保存先から版の情報を取得できませんでした．"));
         }
         const version = record.version;
         const serialized = record.serialized;

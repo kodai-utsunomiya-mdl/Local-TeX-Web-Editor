@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { isMarkdownPath, renderMarkdownHTML, resolveMarkdownReference } from '../web/src/markdown-preview.js';
+import { setLanguage } from '../web/src/i18n.js';
+
+test.beforeEach(() => setLanguage('ja'));
 
 test('Markdown の本文，表，コード，完了した項目を表示用の HTML にする', () => {
   const html = renderMarkdownHTML([

@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/messages"
 	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/platform"
 )
 
@@ -230,7 +231,7 @@ func (a *App) logSyncError(version *synctexVersion, err error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	if a.project != nil && samePath(a.project.Root, version.Root) && a.build != nil {
-		a.appendLogLocked(a.build, []byte("\n[SyncTeX] "+err.Error()+"\n"))
+		a.appendMessageLocked(a.build, "\n[SyncTeX] %v\n", err)
 	}
 }
 
@@ -299,7 +300,7 @@ func (a *App) cacheSyncTeX(root, originalPDF, cachedPDF, id, bin string, revisio
 		}
 	}
 	if source == "" {
-		return nil, errors.New("生成された .synctex.gz / .synctex が見つかりません．latexmkrc の設定でも SyncTeX を有効にしてください．")
+		return nil, messages.Errorf("生成された .synctex.gz / .synctex が見つかりません．latexmkrc の設定でも SyncTeX を有効にしてください．")
 	}
 	in, err := os.Open(source)
 	if err != nil {
@@ -311,7 +312,7 @@ func (a *App) cacheSyncTeX(root, originalPDF, cachedPDF, id, bin string, revisio
 	if magic, _ := buffered.Peek(2); bytes.Equal(magic, []byte{0x1f, 0x8b}) {
 		compressed, err := gzip.NewReader(buffered)
 		if err != nil {
-			return nil, fmt.Errorf("SyncTeX の圧縮データを読めません: %w", err)
+			return nil, messages.Errorf("SyncTeX の圧縮データを読めません: %w", err)
 		}
 		defer compressed.Close()
 		reader = compressed
@@ -360,7 +361,7 @@ func normalizeSyncTeX(in io.Reader, out io.Writer, root string, revisions map[st
 		line := scanner.Text()
 		read += len(line) + 1
 		if read > maxSyncTeXSize {
-			return nil, errors.New("SyncTeX データが 128 MiB を超えています．")
+			return nil, messages.Errorf("SyncTeX データが 128 MiB を超えています．")
 		}
 		if strings.HasPrefix(line, "SyncTeX Version:") {
 			header = true
@@ -374,17 +375,17 @@ func normalizeSyncTeX(in io.Reader, out io.Writer, root string, revisions map[st
 		if strings.HasPrefix(line, "Input:") {
 			parts := strings.SplitN(line, ":", 3)
 			if len(parts) != 3 {
-				return nil, errors.New("SyncTeX の Input 記録を読めません．")
+				return nil, messages.Errorf("SyncTeX の Input 記録を読めません．")
 			}
 			tag, err := strconv.Atoi(parts[1])
 			if err != nil || tag < 1 || len(inputs) >= 50_000 {
-				return nil, errors.New("SyncTeX の Input 番号を読めません．")
+				return nil, messages.Errorf("SyncTeX の Input 番号を読めません．")
 			}
 			alias := fmt.Sprintf("input-%d.tex", tag)
 			rawPath := platform.DecodeOutput([]byte(parts[2]))
 			if previous, exists := seen[tag]; exists {
 				if previous != rawPath {
-					return nil, errors.New("SyncTeX の Input 番号が重複しています．")
+					return nil, messages.Errorf("SyncTeX の Input 番号が重複しています．")
 				}
 			} else {
 				seen[tag] = rawPath
@@ -394,7 +395,7 @@ func normalizeSyncTeX(in io.Reader, out io.Writer, root string, revisions map[st
 			line = "Input:" + strconv.Itoa(tag) + ":" + alias
 		} else if strings.HasPrefix(line, "!") {
 			if _, err := strconv.Atoi(line[1:]); err != nil {
-				return nil, errors.New("SyncTeX の位置記録を読めません．")
+				return nil, messages.Errorf("SyncTeX の位置記録を読めません．")
 			}
 			line = "!" + strconv.Itoa(sinceAnchor)
 			sinceAnchor = 0
@@ -406,13 +407,13 @@ func normalizeSyncTeX(in io.Reader, out io.Writer, root string, revisions map[st
 		sinceAnchor += n
 	}
 	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("SyncTeX データを読めません: %w", err)
+		return nil, messages.Errorf("SyncTeX データを読めません: %w", err)
 	}
 	if limited.N == 0 {
-		return nil, errors.New("SyncTeX データが 128 MiB を超えています．")
+		return nil, messages.Errorf("SyncTeX データが 128 MiB を超えています．")
 	}
 	if !header || !content || !postamble || len(inputs) == 0 {
-		return nil, errors.New("SyncTeX の原稿情報がありません．コンパイルし直してください．")
+		return nil, messages.Errorf("SyncTeX の原稿情報がありません．コンパイルし直してください．")
 	}
 	return inputs, nil
 }
@@ -649,13 +650,13 @@ func parseForwardSync(output string) ([]syncLocation, error) {
 	for _, record := range syncRecords(output) {
 		page, err := strconv.Atoi(record["Page"])
 		if err != nil || page < 1 || page > 100_000 {
-			return nil, errors.New("SyncTeX が返したページ番号を読めません．")
+			return nil, messages.Errorf("SyncTeX が返したページ番号を読めません．")
 		}
 		var values [4]float64
 		for index, key := range []string{"h", "v", "W", "H"} {
 			value, err := strconv.ParseFloat(record[key], 64)
 			if err != nil || !finiteCoordinate(value) {
-				return nil, errors.New("SyncTeX が返した PDF の位置を読めません．")
+				return nil, messages.Errorf("SyncTeX が返した PDF の位置を読めません．")
 			}
 			values[index] = value
 		}

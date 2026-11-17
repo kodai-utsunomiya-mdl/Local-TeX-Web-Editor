@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"io/fs"
 	"net/http"
@@ -17,6 +16,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/messages"
 	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/platform"
 )
 
@@ -60,13 +60,13 @@ func (a *App) loadConfig() error {
 		return nil
 	}
 	if err != nil {
-		return fmt.Errorf("設定を読めません: %w", err)
+		return messages.Errorf("設定を読めません: %w", err)
 	}
 	if len(data) > 1<<20 {
-		return errors.New("設定ファイルが大きすぎます．settings.json を確認してください．")
+		return messages.Errorf("設定ファイルが大きすぎます．settings.json を確認してください．")
 	}
 	if err := json.Unmarshal(data, &a.config); err != nil {
-		return fmt.Errorf("設定ファイル %s を読めません: %w", path, err)
+		return messages.Errorf("設定ファイル %s を読めません: %w", path, err)
 	}
 	if a.config.Projects == nil {
 		a.config.Projects = map[string]projectSettings{}
@@ -99,7 +99,7 @@ func (a *App) openProjectLocked(rawPath string) error {
 	}
 	root, err := filepath.EvalSymlinks(filepath.Clean(rawPath))
 	if err != nil {
-		return fmt.Errorf("原稿フォルダーを開けません: %w", err)
+		return messages.Errorf("原稿フォルダーを開けません: %w", err)
 	}
 	root, err = filepath.Abs(root)
 	if err != nil {
@@ -145,13 +145,14 @@ func (a *App) openProjectLocked(rawPath string) error {
 		}
 	}
 	if err := a.saveConfig(config); err != nil {
-		return fmt.Errorf("プロジェクトの設定を保存できません: %w", err)
+		return messages.Errorf("プロジェクトの設定を保存できません: %w", err)
 	}
 	a.config = config
 	a.project = &Project{Root: root, Main: settings.Main, Mode: settings.Mode, Files: files, Directories: directories}
 	a.build = nil
 	a.lastPDF, a.lastPDFID = "", ""
 	a.lastPDFMain, a.lastPDFChanged = "", false
+	a.lastPDFMarkdownInputs = nil
 	a.pdfVersions = make(map[string]string)
 	a.pdfOrder = nil
 	a.synctexVersions = make(map[string]*synctexVersion)
@@ -208,7 +209,7 @@ func (a *App) updateSettingsLocked(texBin, main, mode *string) error {
 		config.Projects[project.Root] = projectSettings{Main: project.Main, Mode: project.Mode}
 	}
 	if err := a.saveConfig(config); err != nil {
-		return fmt.Errorf("設定を保存できません: %w", err)
+		return messages.Errorf("設定を保存できません: %w", err)
 	}
 	compilationChanged := !samePath(config.TexBin, a.config.TexBin)
 	if a.project != nil {
@@ -312,7 +313,7 @@ func listProjectEntries(root string) ([]ProjectFile, []string, error) {
 	visited := 0
 	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
-			return fmt.Errorf("フォルダーを読み取れません (%s): %w", path, walkErr)
+			return messages.Errorf("フォルダーを読み取れません (%s): %w", path, walkErr)
 		}
 		if path == root {
 			return nil
@@ -426,7 +427,7 @@ func safePath(root, relative string, allowMissing bool) (string, error) {
 			if allowMissing && index == len(parts)-1 && errors.Is(err, os.ErrNotExist) {
 				return current, nil
 			}
-			return "", fmt.Errorf("ファイルを開けません (%s): %w", relative, err)
+			return "", messages.Errorf("ファイルを開けません (%s): %w", relative, err)
 		}
 		linked, err := platform.IsReparsePoint(current)
 		if err != nil {
@@ -552,7 +553,7 @@ func saveDocument(root string, document FileDocument) (FileDocument, error) {
 		}
 		return nil
 	}); err != nil {
-		return FileDocument{}, fmt.Errorf("保存できません: %w", err)
+		return FileDocument{}, messages.Errorf("保存できません: %w", err)
 	}
 	return documentFromBytes(clean, data)
 }

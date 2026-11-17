@@ -4,7 +4,6 @@ import (
 	"crypto/subtle"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"mime"
 	"net"
@@ -18,6 +17,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/branding"
+	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/messages"
 	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/platform"
 )
 
@@ -29,32 +30,33 @@ type Options struct {
 	TexBin            string
 	Token             string
 	Version           string
-	InstallationError string
+	InstallationError error
 	Shutdown          func()
 }
 
 type App struct {
-	uiMu            sync.Mutex
-	mu              sync.Mutex
-	cacheMu         sync.RWMutex
-	shortcutMu      sync.Mutex
-	shortcutCreator func(string) (platform.ShortcutResult, error)
-	options         Options
-	config          configuration
-	project         *Project
-	build           *buildRun
-	address         string
-	closed          bool
-	shutdownOnce    sync.Once
-	workers         sync.WaitGroup
-	lastPDF         string
-	lastPDFID       string
-	lastPDFMain     string
-	lastPDFChanged  bool
-	pdfVersions     map[string]string
-	pdfOrder        []string
-	synctexVersions map[string]*synctexVersion
-	synctexSlots    chan struct{}
+	uiMu                  sync.Mutex
+	mu                    sync.Mutex
+	cacheMu               sync.RWMutex
+	shortcutMu            sync.Mutex
+	shortcutCreator       func(string) (platform.ShortcutResult, error)
+	options               Options
+	config                configuration
+	project               *Project
+	build                 *buildRun
+	address               string
+	closed                bool
+	shutdownOnce          sync.Once
+	workers               sync.WaitGroup
+	lastPDF               string
+	lastPDFID             string
+	lastPDFMain           string
+	lastPDFChanged        bool
+	lastPDFMarkdownInputs map[string]bool
+	pdfVersions           map[string]string
+	pdfOrder              []string
+	synctexVersions       map[string]*synctexVersion
+	synctexSlots          chan struct{}
 
 	browserConnections   int
 	browserEverConnected bool
@@ -65,31 +67,38 @@ type App struct {
 }
 
 type State struct {
-	Version                string   `json:"version"`
-	ExecutablePath         string   `json:"executablePath"`
-	InstallationError      string   `json:"installationError,omitempty"`
-	Platform               string   `json:"platform"`
-	TexBin                 string   `json:"texBin"`
-	Latexmk                string   `json:"latexmk"`
-	ToolError              string   `json:"toolError,omitempty"`
-	Synctex                string   `json:"synctex"`
-	SynctexError           string   `json:"synctexError,omitempty"`
-	SynctexInstallCommands []string `json:"synctexInstallCommands"`
-	ShortcutsSupported     bool     `json:"shortcutsSupported"`
-	Project                *Project `json:"project"`
-	RecentProjects         []string `json:"recentProjects"`
-	Build                  *Build   `json:"build"`
+	Version                string           `json:"version"`
+	ExecutablePath         string           `json:"executablePath"`
+	InstallationError      string           `json:"installationError,omitempty"`
+	Platform               string           `json:"platform"`
+	TexBin                 string           `json:"texBin"`
+	TexPackages            TeXPackageStatus `json:"texPackages"`
+	Latexmk                string           `json:"latexmk"`
+	ToolError              string           `json:"toolError,omitempty"`
+	Synctex                string           `json:"synctex"`
+	SynctexError           string           `json:"synctexError,omitempty"`
+	SynctexInstallCommands []string         `json:"synctexInstallCommands"`
+	ShortcutsSupported     bool             `json:"shortcutsSupported"`
+	Project                *Project         `json:"project"`
+	RecentProjects         []string         `json:"recentProjects"`
+	Build                  *Build           `json:"build"`
 }
 
 type apiError struct {
 	status  int
-	message string
+	message *messages.Message
 }
 
-func (e *apiError) Error() string { return e.message }
+func (e *apiError) Error() string { return e.message.Error() }
+
+func (e *apiError) Unwrap() error { return e.message }
+
+func (e *apiError) LocalizedMessage(language string) string {
+	return e.message.LocalizedMessage(language)
+}
 
 func fail(status int, format string, args ...any) error {
-	return &apiError{status, fmt.Sprintf(format, args...)}
+	return &apiError{status, messages.Errorf(format, args...)}
 }
 
 func New(options Options) (*App, error) {
@@ -99,9 +108,9 @@ func New(options Options) (*App, error) {
 	if options.ConfigDir == "" {
 		base, err := os.UserConfigDir()
 		if err != nil {
-			return nil, fmt.Errorf("設定フォルダーを取得できません: %w", err)
+			return nil, messages.Errorf("設定フォルダーを取得できません: %w", err)
 		}
-		options.ConfigDir = filepath.Join(base, "LocalTeXEditor")
+		options.ConfigDir = filepath.Join(base, branding.DataDirectoryName)
 	}
 	var err error
 	options.ConfigDir, err = filepath.Abs(options.ConfigDir)
@@ -109,7 +118,7 @@ func New(options Options) (*App, error) {
 		return nil, err
 	}
 	if err := os.MkdirAll(options.ConfigDir, 0700); err != nil {
-		return nil, fmt.Errorf("設定フォルダーを作成できません: %w", err)
+		return nil, messages.Errorf("設定フォルダーを作成できません: %w", err)
 	}
 	a := &App{
 		options: options, pdfVersions: make(map[string]string),
@@ -152,7 +161,7 @@ func (a *App) Close() error {
 	case <-done:
 		return nil
 	case <-time.After(15 * time.Second):
-		return errors.New("コンパイルの停止を待っています．")
+		return messages.Errorf("コンパイルの停止を待っています．")
 	}
 }
 
@@ -181,6 +190,10 @@ func (a *App) Handler() http.Handler {
 
 func (a *App) authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		language := messages.Language(r.Header.Get("Accept-Language"))
+		w.Header().Set("Content-Language", language)
+		w.Header().Add("Vary", "Accept-Language")
+		r = r.WithContext(messages.WithLanguage(r.Context(), language))
 		w.Header().Set("Cache-Control", "no-store")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		a.mu.Lock()
@@ -257,10 +270,14 @@ func writeError(w http.ResponseWriter, err error) {
 	} else if errors.Is(err, os.ErrPermission) {
 		status = http.StatusForbidden
 	}
-	writeJSON(w, status, map[string]string{"error": err.Error()})
+	writeJSON(w, status, map[string]string{"error": messages.ErrorText(w.Header().Get("Content-Language"), err)})
 }
 
-func (a *App) stateLocked(refresh bool) State {
+func (a *App) stateLocked(refresh bool, language ...string) State {
+	selected := "ja"
+	if len(language) > 0 {
+		selected = language[0]
+	}
 	if refresh && a.project != nil {
 		if files, directories, err := listProjectEntries(a.project.Root); err == nil {
 			a.project.Files = files
@@ -273,10 +290,10 @@ func (a *App) stateLocked(refresh bool) State {
 	}
 	result := State{
 		Version: a.options.Version, Platform: runtime.GOOS,
-		ExecutablePath: executable, InstallationError: a.options.InstallationError,
+		ExecutablePath: executable, InstallationError: messages.ErrorText(selected, a.options.InstallationError),
 		ShortcutsSupported: runtime.GOOS == "windows",
 		TexBin:             a.config.TexBin, RecentProjects: append([]string{}, a.config.RecentProjects...),
-		Build: a.buildSnapshotLocked(),
+		Build: a.buildSnapshotLocked(selected),
 	}
 	if a.project != nil {
 		copy := *a.project
@@ -286,12 +303,13 @@ func (a *App) stateLocked(refresh bool) State {
 	}
 	tool, bin, err := findLatexmk(a.config.TexBin)
 	result.Latexmk = tool
-	result.Synctex, result.SynctexError, result.SynctexInstallCommands = synctexStatus(bin)
+	result.Synctex, result.SynctexError, result.SynctexInstallCommands = synctexStatus(bin, selected)
 	if a.config.TexBin == "" && bin != "" {
 		result.TexBin = bin
 	}
+	result.TexPackages = texPackagesStatus(result.TexBin)
 	if err != nil {
-		result.ToolError = err.Error()
+		result.ToolError = messages.ErrorText(selected, err)
 	}
 	return result
 }
@@ -301,7 +319,7 @@ func (a *App) stateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.mu.Lock()
-	state := a.stateLocked(true)
+	state := a.stateLocked(true, messages.LanguageFromContext(r.Context()))
 	a.mu.Unlock()
 	writeJSON(w, http.StatusOK, state)
 }
@@ -326,7 +344,7 @@ func (a *App) openHandler(w http.ResponseWriter, r *http.Request) {
 	err := a.openProjectLocked(input.Path)
 	var state State
 	if err == nil {
-		state = a.stateLocked(false)
+		state = a.stateLocked(false, messages.LanguageFromContext(r.Context()))
 	}
 	a.mu.Unlock()
 	if err != nil {
@@ -356,7 +374,7 @@ func (a *App) settingsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	var state State
 	if err == nil {
-		state = a.stateLocked(false)
+		state = a.stateLocked(false, messages.LanguageFromContext(r.Context()))
 	}
 	a.mu.Unlock()
 	if err != nil {
@@ -391,11 +409,8 @@ func (a *App) fileHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		document, err = saveDocument(a.project.Root, input)
 		if err == nil {
-			if a.build != nil && document.Revision != input.Revision {
-				a.build.result.SourceChanged = true
-			}
-			if a.lastPDFID != "" && document.Revision != input.Revision {
-				a.lastPDFChanged = true
+			if document.Revision != input.Revision {
+				a.noteSavedSourceLocked(document.Path)
 			}
 			if files, directories, listErr := listProjectEntries(a.project.Root); listErr == nil {
 				a.project.Files = files
@@ -439,7 +454,7 @@ func (a *App) buildHandler(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err)
 		return
 	}
-	build := a.buildSnapshotLocked()
+	build := a.buildSnapshotLocked(messages.LanguageFromContext(r.Context()))
 	a.mu.Unlock()
 	writeJSON(w, http.StatusOK, build)
 }
@@ -453,7 +468,7 @@ func (a *App) stopHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.mu.Lock()
-	build := a.buildSnapshotLocked()
+	build := a.buildSnapshotLocked(messages.LanguageFromContext(r.Context()))
 	a.mu.Unlock()
 	writeJSON(w, http.StatusOK, build)
 }
@@ -484,7 +499,7 @@ func (a *App) pdfHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	file, err := os.Open(path)
 	if err != nil {
-		writeError(w, fmt.Errorf("PDF を開けません: %w", err))
+		writeError(w, messages.Errorf("PDF を開けません: %w", err))
 		return
 	}
 	defer file.Close()

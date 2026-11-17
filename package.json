@@ -1,9 +1,9 @@
 {
-  "name": "local-tex-editor",
+  "name": "local-tex-web-editor",
   "version": "0.1.4",
   "private": true,
   "type": "module",
-  "description": "A local browser editor for TeX Live projects",
+  "description": "A local LaTeX editor with a browser interface, TeX Live compilation, PDF and Markdown previews",
   "scripts": {
     "build": "node scripts/build.mjs",
     "build:windows-resources": "node scripts/build-windows-resources.mjs",

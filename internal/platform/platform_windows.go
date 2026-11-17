@@ -90,7 +90,7 @@ func OpenBrowser(url string) error {
 }
 
 func ShowError(message string) {
-	title, _ := syscall.UTF16PtrFromString("Local TeX Editor")
+	title, _ := syscall.UTF16PtrFromString("Local TeX Web Editor")
 	text, err := syscall.UTF16PtrFromString(message)
 	if err != nil {
 		return

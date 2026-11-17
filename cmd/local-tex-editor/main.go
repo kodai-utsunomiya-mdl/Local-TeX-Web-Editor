@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/app"
+	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/branding"
 	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/platform"
 	"github.com/kodai-utsunomiya-mdl/local-tex-editor/web"
 )
@@ -59,7 +60,7 @@ func run() error {
 		if err != nil {
 			return err
 		}
-		*configDir = filepath.Join(base, "LocalTeXEditor")
+		*configDir = filepath.Join(base, branding.DataDirectoryName)
 	}
 	*configDir, err = filepath.Abs(*configDir)
 	if err != nil {
@@ -81,10 +82,10 @@ func run() error {
 	if update != nil {
 		defer update.Close()
 	}
-	installationError := ""
+	var installationError error
 	if !noBrowser {
 		if err := platform.RefreshInstalledShortcuts(); err != nil {
-			installationError = err.Error()
+			installationError = err
 		}
 	}
 	listener, err := net.ListenTCP("tcp", address)

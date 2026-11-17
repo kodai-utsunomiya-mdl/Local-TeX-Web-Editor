@@ -135,7 +135,7 @@ func TestNativeFolderPickerForegroundCancelAndReopen(t *testing.T) {
 	if os.Getenv("LOCAL_TEX_EDITOR_TEST_NATIVE_PICKER") != "1" {
 		t.Skip("set LOCAL_TEX_EDITOR_TEST_NATIVE_PICKER=1 on an interactive Windows runner")
 	}
-	owner := nativeTestOwner(t, "Local TeX Editor native owner")
+	owner := nativeTestOwner(t, "Local TeX Web Editor native owner")
 	t.Cleanup(CancelFolderPicker)
 	firstContext, cancelFirst := context.WithTimeout(context.Background(), 25*time.Second)
 	defer cancelFirst()
@@ -150,7 +150,7 @@ func TestNativeFolderPickerForegroundCancelAndReopen(t *testing.T) {
 		t.Fatal("the browser owner was disabled while the folder dialog was open")
 	}
 	t.Logf("the visible dialog %x is in front of its owner %x", hwnd, owner)
-	_ = nativeTestOwner(t, "Local TeX Editor other window")
+	_ = nativeTestOwner(t, "Local TeX Web Editor other window")
 	secondContext, cancelSecond := context.WithTimeout(context.Background(), 25*time.Second)
 	defer cancelSecond()
 	second := pickerAsync(&projectFolderPicker, secondContext)

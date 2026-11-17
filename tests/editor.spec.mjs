@@ -12,7 +12,7 @@ import { checkEditorSelectionVisibility, checkPDFSelectionVisibility } from './s
 const repository = path.resolve(import.meta.dirname, '..');
 const fixture = path.join(import.meta.dirname, 'fixtures', 'japanese');
 const executable = path.resolve(process.env.LOCAL_TEX_EDITOR_TEST_EXE ||
-  path.join(repository, 'bin', process.platform === 'win32' ? 'local-tex-editor.exe' : 'local-tex-editor'));
+  path.join(repository, 'bin', process.platform === 'win32' ? 'local-tex-web-editor.exe' : 'local-tex-web-editor'));
 const execFileAsync = promisify(execFile);
 const applicationVersion = JSON.parse(await readFile(path.join(repository, 'package.json'), 'utf8')).version;
 
@@ -67,6 +67,8 @@ async function openPDFViewer(page, pdf) {
   const script = await bundle({
     stdin: {
       contents: `import { PDFViewer } from './pdf-viewer.js';
+        import { setLanguage } from './i18n.js';
+        setLanguage('ja');
         window.viewerErrors = [];
         window.inverseLocations = [];
         window.testViewer = new PDFViewer({ token: 'test-token',
@@ -254,12 +256,14 @@ async function recordEmptySyncTeX(testInfo, session, buildId, forward) {
 }
 
 const test = base.extend({
-  session: async ({}, use, testInfo) => {
+  interfaceLanguage: ['ja', { option: true }],
+  projectDirectory: ['日本語の原稿 with spaces', { option: true }],
+  session: async ({ interfaceLanguage, projectDirectory }, use, testInfo) => {
     await stat(executable).catch(() => {
       throw new Error(`Build the application before running browser tests: ${executable}`);
     });
     const temp = await mkdtemp(path.join(os.tmpdir(), 'ltex-'));
-    const project = path.join(temp, '日本語の原稿 with spaces');
+    const project = path.join(temp, projectDirectory);
     await cp(fixture, project, { recursive: true });
     const mainLineEnding = (await readFile(path.join(project, 'main.tex'), 'utf8')).includes('\r\n') ? '\r\n' : '\n';
     const readyFile = path.join(temp, 'ready.json');
@@ -319,6 +323,7 @@ const test = base.extend({
     }
     try {
       session = { ...await start(), project, temp, mainLineEnding };
+      if (interfaceLanguage) await json(session, '/api/storage', { method: 'PUT', data: { key: 'preferences', value: { language: interfaceLanguage } } });
       session.restart = async () => {
         await stop();
         Object.assign(session, await start());
@@ -347,6 +352,164 @@ const test = base.extend({
       await rm(temp, { recursive: true, force: true, maxRetries: 6, retryDelay: 200 });
     }
   },
+});
+
+test.describe('Interface language', () => {
+  test.use({ interfaceLanguage: null, projectDirectory: path.join('日本語の原稿', 'Research notes') });
+
+  test('starts in English, saves and compiles, and reopens in the selected language', async ({ page, context, session }, testInfo) => {
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const notes = ['# Research notes', '', 'Keep derivations and reading notes beside the paper. Changes in this file appear in the preview as you type.', '',
+      '## Regularized least squares', '', 'For a design matrix $`X`$ and observations $`y`$, consider', '',
+      '$$', '\\mathcal{L}(w) = \\frac{1}{2n}\\|Xw-y\\|^2 + \\frac{\\lambda}{2}\\|w\\|^2.', '$$', '',
+      'The regularization term controls the size of the coefficients. Differentiating gives the linear system', '',
+      '$$', '(X^\\top X + n\\lambda I)\\widehat{w} = X^\\top y.', '$$', '',
+      '## Writing checklist', '', '- [x] State the model and notation', '- [x] Check the normal equations', '- [ ] Add the experiment figure', '',
+      '| File | Purpose |', '| --- | --- |', '| `main.tex` | Paper and derivation |', '| `references.bib` | Bibliography |', '| `notes.md` | Reading and experiment notes |', '',
+      '## In the paper', '', '```tex', '\\section{Regularized least squares}', '\\label{sec:least-squares}', '```', '',
+      '> Choose **PDF** in the preview selector to keep reading the compiled paper while editing these notes.',
+    ].join('\n');
+    await writeFile(path.join(session.project, 'notes.md'), notes);
+    await openProject(session);
+    await openEditor(page, session);
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await expect(page).toHaveTitle('main.tex — Local TeX Web Editor');
+    await expect(page.locator('.brand')).toHaveAttribute('aria-label', 'Local TeX Web Editor');
+    await expect(page.locator('#compile-label')).toHaveText('Compile');
+    await expect(page.getByTestId('settings-button')).toHaveAccessibleName('Settings');
+    await page.getByTestId('settings-button').click();
+    await page.getByTestId('autosave-setting').uncheck();
+    await page.getByTestId('tex-packages').locator('summary').first().click();
+    await expect(page.getByTestId('tex-packages').locator('summary').first()).toHaveText('Add TeX packages');
+    await page.getByTestId('tex-package-names').fill('siunitx');
+    await expect(page.getByTestId('tex-package-install-command')).toHaveValue(/install(?: --reinstall)? siunitx/);
+    await page.getByTestId('tex-packages').getByText('Find a package from a missing file', { exact: true }).click();
+    await page.getByTestId('tex-package-filename').fill('siunitx.sty');
+    await expect(page.getByTestId('tex-package-search-command')).toHaveValue(/search --global --file '\/siunitx\\\.sty\$'/);
+    await page.locator('#save-settings').click();
+    await expect(page.locator('#settings-dialog')).not.toBeVisible();
+    const original = (await readFile(path.join(session.project, 'main.tex'), 'utf8')).replaceAll('\r\n', '\n');
+    const example = String.raw`
+\section{Regularized least squares}
+Let $X$ be a design matrix with $n$ observations and let $y$ be the response vector.
+We study the objective
+\[
+  L(w) = \frac{1}{2n}\|Xw-y\|^2 + \frac{\lambda}{2}\|w\|^2.
+\]
+The first term measures the residual on the observations. The second term penalizes
+large coefficients and makes the normal equations nonsingular when $\lambda>0$.
+
+\subsection{Normal equations}
+Setting the derivative to zero gives
+\[
+  (X^{\mathsf T}X+n\lambda I)\widehat w=X^{\mathsf T}y.
+\]
+This formulation makes it straightforward to compare several values of $\lambda$
+while using the same observations. In the experiment, we record both the residual
+and the coefficient norm for each choice.
+
+\subsection{Notes for the experiment}
+The source, bibliography and notes live in one project folder. We keep the model
+description next to the derivation so that changes to the assumptions can be
+checked when preparing the figures.
+\begin{center}
+\begin{tabular}{ll}
+\hline
+Quantity & Description \\
+\hline
+$n$ & Number of observations \\
+$\lambda$ & Regularization parameter \\
+$\widehat w$ & Estimated coefficient vector \\
+\hline
+\end{tabular}
+\end{center}
+`;
+    const source = original.replace('Local TeX Web Editor の動作確認', 'Research notes: a linear model').replace('\n\\newpage', `${example}\n\\newpage`);
+    const content = `% 設定，コンパイル，プレビューは原稿の本文にも使う．\n${source}`;
+    await replaceEditor(page, content);
+    await page.keyboard.press('Control+S');
+    await expect.poll(() => readFile(path.join(session.project, 'main.tex'), 'utf8')).toBe(expectedMainContent(session, content));
+    await expect(page.locator('#save-status')).toHaveText('Saved');
+    const compiled = await compileFromUI(page, session);
+    expect(compiled.finished.status, compiled.finished.log + '\n' + compiled.finished.error).toBe('success');
+    await expect(page.getByTestId('build-status')).toHaveText('Compilation complete');
+    await expect(page.getByTestId('pdf-canvas')).toHaveAttribute('data-ready', 'true');
+    if (await page.locator('html').getAttribute('data-theme') !== 'dark') await page.getByTestId('theme-toggle').click();
+    await page.getByTestId('editor').locator('.cm-content').click();
+    await page.keyboard.press('Control+Home');
+    await expect(page.locator('#toast')).not.toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath('editor-english-dark-tex.png') });
+    await page.getByTestId('pdf-zoom').selectOption('1');
+    await page.getByTestId('pdf-next').click();
+    await expect(page.getByTestId('pdf-page')).toHaveValue('2');
+    const texProcessOutput = log => log.match(/\n\n([\s\S]*?)\n\[PDF\] /)?.[1];
+    const output = texProcessOutput(await page.getByTestId('build-log').textContent());
+    expect(output).toContain('This is ');
+    expect(output).toContain('Output written on ');
+    await page.locator('#find-button').click();
+    await page.getByTestId('source-search-input').fill('設定');
+    await expect(page.getByTestId('source-search-input')).toHaveAttribute('placeholder', 'Find');
+    await page.getByTestId('pdf-search-toggle').click();
+    await expect(page.getByTestId('pdf-search-input')).toHaveAttribute('placeholder', 'Find in PDF');
+
+    async function chooseLanguage(value) {
+      await page.getByTestId('settings-button').click();
+      await page.getByTestId('language-setting').selectOption(value);
+      await page.locator('#save-settings').click();
+      await expect(page.locator('#settings-dialog')).not.toBeVisible();
+      await expect(page.locator('html')).toHaveAttribute('lang', value);
+    }
+    await chooseLanguage('ja');
+    await expect(page.locator('#compile-label')).toHaveText('コンパイル');
+    await expect(page.getByTestId('source-search-input')).toHaveAttribute('placeholder', '検索する文字列');
+    await expect(page.getByTestId('source-search-input')).toHaveValue('設定');
+    await expect(page.getByTestId('pdf-search-input')).toHaveAttribute('placeholder', 'PDF 内で検索');
+    await expect(page.getByTestId('pdf-page')).toHaveValue('2');
+    await expect(page.getByTestId('pdf-zoom')).toHaveValue('1');
+    await expect(page.getByTestId('pdf-canvas')).toHaveAttribute('data-build-id', compiled.finished.pdfBuildId);
+    expect((await json(session, '/api/build')).id).toBe(compiled.finished.id);
+    expect(texProcessOutput(await page.getByTestId('build-log').textContent())).toBe(output);
+    expect(await readFile(path.join(session.project, 'main.tex'), 'utf8')).toBe(expectedMainContent(session, content));
+    await expect(page.getByTestId('editor').locator('.cm-content')).toContainText('設定，コンパイル，プレビューは原稿の本文にも使う．');
+    await chooseLanguage('en');
+    await expect(page.getByTestId('source-search-input')).toHaveAttribute('placeholder', 'Find');
+    await page.getByTestId('source-search-input').press('Escape');
+    await expect(page.getByTestId('source-search-input')).not.toBeVisible();
+    await page.getByTestId('pdf-search-input').press('Escape');
+    await expect(page.getByTestId('pdf-search-input')).not.toBeVisible();
+    await page.getByTestId('file-notes.md').click();
+    await expect(page.getByTestId('markdown-preview')).toBeVisible();
+    await expect(page.getByTestId('markdown-document').getByRole('heading', { name: 'Research notes', exact: true })).toBeVisible();
+    await expect(page.getByTestId('markdown-document').locator('.katex')).toHaveCount(4);
+    await page.getByTestId('theme-toggle').click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+    await expect.poll(() => page.getByTestId('editor').locator('.cm-scroller').evaluate(element => element.scrollTop)).toBe(0);
+    await expect(page.locator('#toast')).not.toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath('editor-english-light-markdown.png') });
+    await page.locator('#editor-tabs [data-path="main.tex"]').click();
+    const preferences = await json(session, '/api/storage?key=preferences');
+    expect(preferences.value.language).toBe('en');
+    expect(preferences.value.autoSave).toBe(false);
+    await closeEditorTab(page);
+    await session.waitForExit();
+    await session.restart();
+    const reopened = await context.newPage();
+    reopened.on('pageerror', error => errors.push(error.message));
+    await openEditor(reopened, session);
+    await expect(reopened.locator('html')).toHaveAttribute('lang', 'en');
+    await expect(reopened.getByTestId('settings-button')).toHaveAccessibleName('Settings');
+    await expect(reopened.getByTestId('editor').locator('.cm-content')).toContainText('設定，コンパイル，プレビューは原稿の本文にも使う．');
+    expect(await readFile(path.join(session.project, 'main.tex'), 'utf8')).toBe(expectedMainContent(session, content));
+    await reopened.getByTestId('settings-button').click();
+    await expect(reopened.getByTestId('language-setting')).toHaveValue('en');
+    await reopened.getByTestId('language-setting').selectOption('ja');
+    await reopened.locator('#save-settings').click();
+    await expect(reopened.getByTestId('settings-button')).toHaveAccessibleName('設定');
+    expect((await json(session, '/api/storage?key=preferences')).value.language).toBe('ja');
+    expect(errors).toEqual([]);
+  });
 });
 
 test('起動時のエラーを無人実行でも受け取れる', async () => {
@@ -484,6 +647,12 @@ test('配布済みの古い版から保存を確認して更新し，新しい�
     await expect(updating.getByTestId('update-requested-version')).toHaveText(`v${applicationVersion}`);
     await expect(updating.getByTestId('update-executable')).toHaveText(executable);
     await expect(updating.getByTestId('update-stop-current')).toBeDisabled();
+    await updating.getByTestId('update-language').selectOption('ja');
+    await expect(updating.locator('html')).toHaveAttribute('lang', 'ja');
+    await expect(updating.getByTestId('update-status')).toHaveText(`v${previousVersion} の終了を待っています．`);
+    await updating.getByTestId('update-language').selectOption('en');
+    await expect(updating.locator('html')).toHaveAttribute('lang', 'en');
+    await expect(updating.getByTestId('update-status')).toHaveText(`Waiting for v${previousVersion} to close.`);
     expect(previous.child.exitCode).toBeNull();
     await expect(page.getByTestId('editor').locator('.cm-content')).toContainText(saved.trim());
 
@@ -889,6 +1058,7 @@ test('Markdown を編集し，表示するプレビューを選んで文書を�
   });
   const updated = await compileFromUI(page, session);
   expect(updated.finished.status, updated.finished.log + '\n' + updated.finished.error).toBe('success');
+  expect(updated.finished.pdfMarkdownInputs).toEqual([]);
   await expect.poll(() => waiting).toBe(true);
   await page.getByTestId('file-notes.md').click();
   const preview = page.getByTestId('markdown-preview');
@@ -931,6 +1101,7 @@ test('Markdown を編集し，表示するプレビューを選んで文書を�
   await expect(page.getByTestId('pdf-page')).toHaveValue('2');
   await expect(page.getByTestId('pdf-zoom')).toHaveValue('1');
   await page.locator('#editor-tabs [data-path="notes.md"]').click();
+  await expect(article.locator('img')).toHaveAttribute('data-state', 'ready');
   await expect.poll(() => preview.evaluate(element => element.scrollTop)).toBeCloseTo(markdownTop, 0);
   await expect(page.getByTestId('editor').locator('.cm-content')).toContainText('研究ノートを更新');
 
@@ -950,6 +1121,8 @@ test('Markdown を編集し，表示するプレビューを選んで文書を�
   await page.keyboard.insertText(readingNote);
   await page.keyboard.press('Control+S');
   await expect.poll(() => readFile(path.join(session.project, 'notes.md'), 'utf8')).toContain(readingNote);
+  await expect(page.locator('#pdf-note')).not.toBeVisible();
+  expect((await json(session, '/api/build')).pdfSourceChanged).toBe(false);
   await expect(previewChoice).toHaveValue('pdf');
   await expect(page.locator('#pdf-preview')).toBeVisible();
   await expect(preview).not.toBeVisible();
@@ -965,6 +1138,7 @@ test('Markdown を編集し，表示するプレビューを選んで文書を�
   await expect(page.getByTestId('pdf-page')).toHaveValue('2');
   await expect(page.getByTestId('pdf-zoom')).toHaveValue('1');
   expect((await json(session, '/api/build')).id).toBe(updated.finished.id);
+  await expect(page.locator('#pdf-note')).not.toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('markdown-with-pdf.png') });
 
   await previewChoice.selectOption('markdown');
@@ -1006,6 +1180,16 @@ test('Markdown を編集し，表示するプレビューを選んで文書を�
   await page.locator('#editor-tabs [data-path="main.tex"]').click();
   await expect(page.locator('#pdf-preview')).toBeVisible();
   await expect(preview).not.toBeVisible();
+  // A save from another tab changes the existing build, so the heartbeat must
+  // update its notice even though the build ID itself has not changed.
+  const currentSource = await json(session, '/api/file?path=main.tex');
+  await json(session, '/api/file', { method: 'PUT', data: {
+    path: 'main.tex', content: currentSource.content + '\n% saved from another tab\n', revision: currentSource.revision,
+  } });
+  await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  await expect(page.locator('#pdf-note')).toBeVisible();
+  await expect(page.locator('#pdf-state')).toHaveText('原稿に変更あり');
+  await expect(page.getByTestId('pdf-canvas')).toHaveAttribute('data-build-id', backgroundPDF.finished.pdfBuildId);
   expect(errors).toEqual([]);
 });
 
@@ -1019,7 +1203,7 @@ test('日本語の原稿を編集し，参考文献と PDF を更新する', asy
   await page.getByTestId('project-path').fill(session.project);
   await page.getByTestId('open-project').click();
   const editor = page.getByTestId('editor').locator('.cm-content');
-  await expect(editor).toContainText('Local TeX Editor');
+  await expect(editor).toContainText('Local TeX Web Editor');
   await editor.click();
   await page.keyboard.press('Control+Home');
   const comment = '% ブラウザから保存した日本語のコメント\n';
@@ -1151,12 +1335,12 @@ test('日本語の原稿を編集し，参考文献と PDF を更新する', asy
   expect(await secondPage.evaluate(element => element.getBoundingClientRect().width)).toBeCloseTo(pdfWidthBeforeAppearance, 0);
   expect(await page.evaluate(() => window.visualViewport.scale)).toBe(browserScale);
   await expect(page.getByTestId('pdf-page')).toHaveValue('2');
-  // Use the usual writing size for the remaining editing and screenshots.
+  // A visibility change during a settings save must refresh tools once the
+  // save ends. Hold that response so this ordering is checked on every run.
+  const settingsTools = page.waitForResponse(response => new URL(response.url()).pathname === '/api/state');
   await page.getByTestId('settings-button').click();
+  await (await settingsTools).finished();
   await page.getByTestId('editor-font-size').fill('14');
-  await page.locator('#save-settings').click();
-  await expect.poll(editorSize).toBe(14);
-
   let toolMissing = true;
   await page.route('**/api/state', async route => {
     const response = await route.fetch();
@@ -1168,8 +1352,30 @@ test('日本語の原稿を編集し，参考文献と PDF を更新する', asy
     }
     await route.fulfill({ response, json: metadata });
   });
-  await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  let releasePreferences;
+  let preferencesReceived;
+  const preferencesHeld = new Promise(resolve => { releasePreferences = resolve; });
+  const preferencesRequested = new Promise(resolve => { preferencesReceived = resolve; });
+  await page.route('**/api/storage', async route => {
+    const request = route.request();
+    const data = request.method() === 'PUT' ? request.postDataJSON() : null;
+    if (data?.key !== 'preferences' || data.value?.editorFontSize !== 14) { await route.continue(); return; }
+    const response = await route.fetch();
+    preferencesReceived();
+    await preferencesHeld;
+    await route.fulfill({ response });
+  });
+  try {
+    await page.locator('#save-settings').click();
+    await preferencesRequested;
+    await expect(page.locator('#settings-dialog')).toHaveAttribute('data-busy', 'true');
+    await expect.poll(editorSize).toBe(14);
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  } finally { releasePreferences(); }
+  await expect(page.locator('#settings-dialog')).not.toBeVisible();
   await expect(page.getByTestId('synctex-forward')).toBeDisabled();
+  await expect(page.getByTestId('synctex-forward')).toHaveAttribute('title', 'SyncTeX が見つかりません．設定に導入の手順があります．');
+  await page.unroute('**/api/storage');
   toolMissing = false;
   await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
   await expect(page.getByTestId('synctex-forward')).toBeEnabled();
@@ -1178,6 +1384,11 @@ test('日本語の原稿を編集し，参考文献と PDF を更新する', asy
   await editor.click();
   await page.keyboard.press('Control+Home');
   await page.keyboard.insertText('% 再コンパイル後のページを確認する\n');
+  await page.keyboard.press('Control+S');
+  await expect(page.locator('#save-status')).toHaveText('保存済み');
+  await expect(page.locator('#pdf-note')).toBeVisible();
+  await expect(page.locator('#pdf-state')).toHaveText('原稿に変更あり');
+  expect((await json(session, '/api/build')).pdfSourceChanged).toBe(true);
   const updated = await compileFromUI(page, session);
   expect(updated.finished.status, updated.finished.log).toBe('success');
   await expect(page.getByTestId('build-status')).toHaveAttribute('data-status', 'success');
@@ -1269,7 +1480,7 @@ test('日本語のファイル名で原稿と PDF の位置を行き来する', 
   const sourcePath = '追加の 原稿.tex';
   await openProject(session);
   await page.goto(`${session.url}#token=${encodeURIComponent(session.token)}`);
-  await expect(page.getByTestId('editor').locator('.cm-content')).toContainText('Local TeX Editor');
+  await expect(page.getByTestId('editor').locator('.cm-content')).toContainText('Local TeX Web Editor');
   const { finished } = await compileFromUI(page, session);
   expect(finished.status, finished.log + '\n' + finished.error).toBe('success');
   const canvas = page.getByTestId('pdf-canvas');
@@ -1341,7 +1552,7 @@ test('日本語のファイル名で原稿と PDF の位置を行き来する', 
   // Open another source file first, so that the click proves the inverse query
   // navigates to the included file instead of leaving an existing editor open.
   await page.getByTestId('file-main.tex').click();
-  await expect(editor).toContainText('Local TeX Editor');
+  await expect(editor).toContainText('Local TeX Web Editor');
   const inverseResponse = page.waitForResponse(response =>
     new URL(response.url()).pathname === '/api/synctex/inverse' && response.request().method() === 'POST');
   const referenceText = page.locator('.pdfViewer .page[data-page-number="2"] .textLayer span')
@@ -1377,7 +1588,7 @@ test('自動保存，補完，アウトラインを使い，草稿を再起動�
   await openProject(session);
   await page.goto(`${session.url}#token=${encodeURIComponent(session.token)}`);
   const editor = page.getByTestId('editor').locator('.cm-content');
-  await expect(editor).toContainText('Local TeX Editor');
+  await expect(editor).toContainText('Local TeX Web Editor');
   const autoSavedComment = '% 自動保存でディスクへ書き込む\n';
   await editor.click();
   await page.keyboard.press('Control+Home');
@@ -1432,7 +1643,7 @@ test('自動保存，補完，アウトラインを使い，草稿を再起動�
 test('150 ページの PDF の末尾へ移動し，必要なページを描画する', async ({ page, session }, testInfo) => {
   await openProject(session);
   await page.goto(`${session.url}#token=${encodeURIComponent(session.token)}`);
-  await expect(page.getByTestId('editor').locator('.cm-content')).toContainText('Local TeX Editor');
+  await expect(page.getByTestId('editor').locator('.cm-content')).toContainText('Local TeX Web Editor');
   const source = String.raw`\documentclass[uplatex,dvipdfmx]{jsarticle}
 \begin{document}
 \newcount\editorpagenumber
@@ -1499,7 +1710,7 @@ test('保存の競合と，プロジェクト外へのアクセスを扱う', as
 
   await page.goto(`${session.url}#token=${encodeURIComponent(session.token)}`);
   const editor = page.getByTestId('editor').locator('.cm-content');
-  await expect(editor).toContainText('Local TeX Editor');
+  await expect(editor).toContainText('Local TeX Web Editor');
   await setAutoSave(page, false);
   await editor.click();
   await page.keyboard.press('Control+Home');
@@ -1520,7 +1731,7 @@ test('TeX の失敗を画面に出し，実行中のコンパイルを停止す�
   await openProject(session);
   await page.goto(`${session.url}#token=${encodeURIComponent(session.token)}`);
   const source = await readFile(path.join(session.project, 'main.tex'), 'utf8');
-  await expect(page.getByTestId('editor').locator('.cm-content')).toContainText('Local TeX Editor');
+  await expect(page.getByTestId('editor').locator('.cm-content')).toContainText('Local TeX Web Editor');
   const success = await compileFromUI(page, session);
   expect(success.finished.status, success.finished.log).toBe('success');
   const previousPDF = Buffer.from(await (await request(session, '/api/pdf')).arrayBuffer());

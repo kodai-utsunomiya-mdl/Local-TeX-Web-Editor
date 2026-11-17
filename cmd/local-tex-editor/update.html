@@ -1,15 +1,18 @@
 <!doctype html>
-<html lang="ja">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Local TeX Editor の更新</title>
+  <title>Update Local TeX Web Editor</title>
   <style>
     :root { color-scheme: light dark; font: 15px/1.65 system-ui, sans-serif; color: #20323b; background: #f3f6f7; }
     * { box-sizing: border-box; }
     body { margin: 0; padding: 40px 20px; }
     main { max-width: 640px; margin: auto; padding: 28px; background: #fff; border: 1px solid #d7e1e5; border-radius: 12px; }
     h1 { margin: 0 0 16px; font-size: 21px; line-height: 1.4; }
+    .heading { display: flex; align-items: start; justify-content: space-between; gap: 16px; }
+    .language { margin: 0; align-items: center; font-size: 13px; white-space: nowrap; }
+    select { color: inherit; background: transparent; border: 1px solid #b6c7cc; border-radius: 5px; padding: 5px; font: inherit; }
     p { margin: 12px 0; }
     dl { display: grid; grid-template-columns: 160px 1fr; gap: 8px; padding: 14px 16px; background: #f2f6f6; border-radius: 7px; }
     dt { color: #53676f; } dd { margin: 0; font-weight: 650; }
@@ -37,26 +40,29 @@
 </head>
 <body>
 <main data-testid="version-update-page">
-  <h1>Local TeX Editor を更新</h1>
+  <div class="heading">
+    <h1 data-i18n="title">Update Local TeX Web Editor</h1>
+    <label class="language"><span data-i18n="language">Language</span><select id="update-language" data-testid="update-language"><option value="en">English</option><option value="ja">日本語</option></select></label>
+  </div>
   <dl>
-    <dt>起動中のバージョン</dt><dd id="update-current-version" data-testid="update-current-version">確認中…</dd>
-    <dt>今回開いたバージョン</dt><dd id="update-requested-version" data-testid="update-requested-version">確認中…</dd>
+    <dt data-i18n="currentVersion">Running version</dt><dd id="update-current-version" data-testid="update-current-version">Checking…</dd>
+    <dt data-i18n="requestedVersion">Version being opened</dt><dd id="update-requested-version" data-testid="update-requested-version">Checking…</dd>
   </dl>
-  <p id="update-status" data-testid="update-status" role="status">起動中のアプリを確認しています．</p>
+  <p id="update-status" data-testid="update-status" role="status">Checking the running app.</p>
   <div id="update-options">
-    <p>起動中の編集画面で原稿を保存し，右上の終了ボタンを押すと，今回のバージョンへ切り替わります．</p>
-    <a id="update-open-current" data-testid="update-open-current" class="button" target="_blank" rel="noreferrer">起動中の編集画面を開く</a>
-    <p class="note">旧版のタブをすでに閉じた場合は，保存済みであることを下で確認して切り替えられます．実行中のコンパイルは停止します．</p>
-    <label><input type="checkbox" id="update-saved" data-testid="update-saved"><span>開いているすべての原稿を保存しました．</span></label>
+    <p data-i18n="instructions">Save your documents in the running editor, then use its Exit button in the upper right to open this version.</p>
+    <a id="update-open-current" data-testid="update-open-current" class="button" target="_blank" rel="noreferrer" data-i18n="openCurrent">Open the running editor</a>
+    <p class="note" data-i18n="closedTab">If you already closed the old tab, confirm below that your work is saved. Any running compile will stop.</p>
+    <label><input type="checkbox" id="update-saved" data-testid="update-saved"><span data-i18n="saved">I have saved all open documents.</span></label>
     <div class="actions">
-      <button id="update-stop-current" data-testid="update-stop-current" class="primary" disabled>旧版を終了して新版を開く</button>
-      <button id="update-cancel" data-testid="update-cancel">キャンセル</button>
+      <button id="update-stop-current" data-testid="update-stop-current" class="primary" disabled data-i18n="switchVersion">Close the old version and open the new one</button>
+      <button id="update-cancel" data-testid="update-cancel" data-i18n="cancel">Cancel</button>
     </div>
   </div>
   <p id="update-error" role="alert" hidden></p>
-  <p class="note">今回開いた実行ファイル</p>
+  <p class="note" data-i18n="executable">Executable being opened</p>
   <p class="path"><code id="update-executable" data-testid="update-executable"></code></p>
-  <p class="note">ショートカットを作成済みの場合は，配置したアプリと既存のショートカットも更新します．</p>
+  <p class="note" data-i18n="shortcuts">If you created shortcuts, the installed app and its existing shortcuts will also be updated.</p>
 </main>
 </body>
 </html>
