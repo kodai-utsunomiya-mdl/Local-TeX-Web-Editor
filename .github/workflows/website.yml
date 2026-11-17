@@ -1,0 +1,44 @@
+name: Check the website
+
+on:
+  push:
+    branches: [gh-pages]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: website-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  website:
+    name: English and Japanese on desktop and mobile
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out the website
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+
+      - name: Install the browser for the display check
+        run: |
+          npm install --prefix "$RUNNER_TEMP/website-browser" --no-save --ignore-scripts playwright@1.64.1
+          "$RUNNER_TEMP/website-browser/node_modules/.bin/playwright" install --with-deps chromium
+
+      - name: Check the pages and capture screenshots
+        run: node .github/scripts/check-website.mjs
+
+      - name: Upload the screenshots
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: website-screenshots
+          path: website-checks/
+          if-no-files-found: error
+          retention-days: 7
