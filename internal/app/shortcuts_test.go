@@ -69,3 +69,23 @@ func TestShortcutAPIReportsUnavailableAndConflictingDestinations(t *testing.T) {
 		}
 	}
 }
+
+func TestPackagedAppLeavesInstallationAndShortcutsToWindows(t *testing.T) {
+	a, _ := testApp(t)
+	a.packageIdentity = &platform.PackageIdentity{FullName: "Test_0.1.4.0_x64__publisher", FamilyName: "Test_publisher"}
+	a.shortcutCreator = func(string) (platform.ShortcutResult, error) {
+		t.Fatal("a packaged app must not copy its executable or create unpackaged shortcuts")
+		return platform.ShortcutResult{}, nil
+	}
+	response := apiRequest(a, http.MethodGet, "/api/state", nil, nil)
+	var state State
+	if json.Unmarshal(response.Body.Bytes(), &state) != nil || state.ShortcutsSupported || state.PackageIdentity == nil || *state.PackageIdentity != *a.packageIdentity {
+		t.Fatalf("packaged state: %s", response.Body.String())
+	}
+	for _, destination := range []string{"start-menu", "desktop"} {
+		response := apiRequest(a, http.MethodPost, "/api/shortcuts", map[string]string{"destination": destination}, nil)
+		if response.Code != http.StatusNotImplemented {
+			t.Fatalf("packaged shortcut status = %d: %s", response.Code, response.Body.String())
+		}
+	}
+}

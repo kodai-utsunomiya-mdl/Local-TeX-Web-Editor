@@ -17,12 +17,11 @@ import (
 	"time"
 
 	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/app"
-	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/branding"
 	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/platform"
 	"github.com/kodai-utsunomiya-mdl/local-tex-editor/web"
 )
 
-var version = "0.1.4"
+var version = "0.1.5"
 var noBrowser bool
 
 func main() {
@@ -55,12 +54,13 @@ func run() error {
 	if err != nil || address.IP == nil || !address.IP.IsLoopback() {
 		return errors.New("--listen must use a loopback IP address, for example 127.0.0.1:0")
 	}
+	var importFrom string
 	if *configDir == "" {
-		base, err := os.UserConfigDir()
+		directories, err := platform.DefaultConfigDirectories()
 		if err != nil {
 			return err
 		}
-		*configDir = filepath.Join(base, branding.DataDirectoryName)
+		*configDir, importFrom = directories.Directory, directories.ImportFrom
 	}
 	*configDir, err = filepath.Abs(*configDir)
 	if err != nil {
@@ -81,6 +81,11 @@ func run() error {
 	defer releaseInstance()
 	if update != nil {
 		defer update.Close()
+	}
+	if importFrom != "" {
+		if err := app.ImportLegacySettings(importFrom, *configDir); err != nil {
+			return fmt.Errorf("could not import settings from the ZIP version: %w", err)
+		}
 	}
 	var installationError error
 	if !noBrowser {

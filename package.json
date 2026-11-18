@@ -1,6 +1,6 @@
 {
   "name": "local-tex-web-editor",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "private": true,
   "type": "module",
   "description": "A local LaTeX editor with a browser interface, TeX Live compilation, PDF and Markdown previews",
@@ -9,7 +9,8 @@
     "build:windows-resources": "node scripts/build-windows-resources.mjs",
     "test": "playwright test --config tests/playwright.config.mjs",
     "test:unit": "node --test tests/*.test.mjs",
-    "test:ui": "playwright test --config tests/playwright.config.mjs"
+    "test:ui": "playwright test --config tests/playwright.config.mjs",
+    "build:msix": "node scripts/build-msix.mjs"
   },
   "dependencies": {
     "@codemirror/autocomplete": "6.20.4",

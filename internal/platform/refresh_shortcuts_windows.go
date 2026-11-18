@@ -17,6 +17,13 @@ import (
 // RefreshInstalledShortcuts updates a previous installation when the user opens
 // a newly downloaded executable. It does not create a new installation or link.
 func RefreshInstalledShortcuts() error {
+	identity, err := CurrentPackageIdentity()
+	if err != nil {
+		return err
+	}
+	if identity != nil {
+		return nil
+	}
 	source, err := os.Executable()
 	if err != nil {
 		return err

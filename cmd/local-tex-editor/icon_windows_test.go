@@ -5,7 +5,9 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/xml"
 	"os"
+	"strings"
 	"syscall"
 	"testing"
 	"unsafe"
@@ -95,5 +97,43 @@ func TestWindowsExecutableIcon(t *testing.T) {
 		}
 		user.NewProc("DestroyIcon").Call(icon)
 	}
-	t.Logf("Windows extracted the small and large icons and loaded all %d sizes from %s", count, path)
+	var manifest struct {
+		XMLName xml.Name `xml:"urn:schemas-microsoft-com:asm.v1 assembly"`
+		Trust   struct {
+			Security struct {
+				Privileges struct {
+					Execution struct {
+						Level    string `xml:"level,attr"`
+						UIAccess string `xml:"uiAccess,attr"`
+					} `xml:"urn:schemas-microsoft-com:asm.v3 requestedExecutionLevel"`
+				} `xml:"urn:schemas-microsoft-com:asm.v3 requestedPrivileges"`
+			} `xml:"urn:schemas-microsoft-com:asm.v3 security"`
+		} `xml:"urn:schemas-microsoft-com:asm.v3 trustInfo"`
+		Application struct {
+			Settings struct {
+				Legacy string `xml:"http://schemas.microsoft.com/SMI/2005/WindowsSettings dpiAware"`
+				DPI    string `xml:"http://schemas.microsoft.com/SMI/2016/WindowsSettings dpiAwareness"`
+			} `xml:"urn:schemas-microsoft-com:asm.v3 windowsSettings"`
+		} `xml:"urn:schemas-microsoft-com:asm.v3 application"`
+	}
+	if err := xml.Unmarshal(resourceData(24, 1), &manifest); err != nil {
+		t.Fatalf("read the application manifest from the executable: %v", err)
+	}
+	if execution := manifest.Trust.Security.Privileges.Execution; execution.Level != "asInvoker" || execution.UIAccess != "false" {
+		t.Fatalf("unexpected requested execution level: %+v", execution)
+	}
+	settings := manifest.Application.Settings
+	if strings.TrimSpace(settings.Legacy) != "true/pm" || strings.ReplaceAll(settings.DPI, " ", "") != "PerMonitorV2,PerMonitor" {
+		t.Fatalf("unexpected DPI settings: %+v", settings)
+	}
+	// The test executable contains the same resource object as the application.
+	// Check that Windows applied its manifest when it created this process.
+	context, _, callErr := user.NewProc("GetThreadDpiAwarenessContext").Call()
+	if context == 0 {
+		t.Fatalf("read the process's default DPI context: %v", callErr)
+	}
+	if equal, _, _ := user.NewProc("AreDpiAwarenessContextsEqual").Call(context, ^uintptr(3)); equal == 0 { // DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 (-4)
+		t.Fatalf("Windows did not start the process with Per-Monitor V2 DPI awareness: context=%x", context)
+	}
+	t.Logf("Windows loaded all %d icon sizes and the application manifest from %s; Per-Monitor V2 is active", count, path)
 }

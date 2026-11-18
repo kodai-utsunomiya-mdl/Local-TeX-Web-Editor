@@ -27,6 +27,7 @@ const legacyShortcutName = "Local TeX Editor.lnk"
 const shortcutExecutableLimit int64 = 512 << 20
 
 var ErrShortcutsUnsupported = messages.Errorf("起動用のショートカット作成は Windows で利用できます．")
+var ErrShortcutsManagedByWindows = messages.Errorf("このアプリのインストールと更新は Windows が管理しています．スタートメニューから起動できます．")
 var ErrShortcutConflict = messages.Errorf("作成先のファイルを確認してください．")
 
 type ShortcutResult struct {
