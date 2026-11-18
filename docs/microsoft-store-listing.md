@@ -197,6 +197,8 @@ Trailers, promotional artwork and extra screenshots can be added later. These tw
 
 ## Reviewer notes
 
+In Partner Center, open **Supplemental info > Additional Testing Information** (補足情報 > 追加のテスト情報), paste the notes into **Description**, and choose **Save description**. The app uses no account credentials, so the credentials table can stay empty.
+
 Use these notes with the Store package after checking its launch, save and compile behavior on Windows. The build puts `main.tex` and `notes.md` from [the sample folder](../packaging/windows/review-sample/) at the root of `dist/store-listing/store-review-sample.zip`. The sample URL below already provides that project. Check the download before submitting the app, and update the published ZIP if the sample files have changed.
 
 ### English
@@ -255,8 +257,10 @@ TeX の導入と使い方: https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web
 
 ### Explanation for `runFullTrust`
 
+Enter this explanation in **Submission options > Restricted capabilities**. The text fits the form's 500-character limit.
+
 ```text
-Local TeX Web Editor is an existing Win32 desktop app. It reads and writes files in project folders selected by the user, launches the user's installed latexmk, TeX and SyncTeX executables for document compilation and source/PDF navigation, and opens the default browser to its local loopback interface. These desktop operations require runFullTrust. The app runs in the user's session and does not request administrator elevation. Package-management help displays commands for the user to run separately.
+Local TeX Web Editor is a packaged Win32 desktop app. It requires runFullTrust to read and write files in project folders selected by the user, run the user's installed latexmk, TeX and SyncTeX programs for compilation and navigation between source files and PDFs, and open the default browser to its local loopback interface. The app runs in the user's session with the user's permissions. TeX package installation commands are displayed for the user to run separately.
 ```
 
 If the submitted manifest declares additional restricted capabilities, document the concrete feature that uses each one. Microsoft's [submission-options guide](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/manage-submission-options) explains the information reviewers need.
