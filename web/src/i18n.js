@@ -2,9 +2,11 @@ import { english } from './locales/en.js';
 import { importsEnglish } from './locales/imports-en.js';
 import { writingEnglish } from './locales/writing-en.js';
 import { markdownEditingEnglish } from './locales/markdown-editing-en.js';
+import { pdfAppearanceEnglish } from './locales/pdf-appearance-en.js';
+import { outlineEnglish } from './locales/outline-en.js';
 import { shortcutModifier } from './platform-keys.js';
 
-Object.assign(english, importsEnglish, writingEnglish, markdownEditingEnglish);
+Object.assign(english, importsEnglish, writingEnglish, markdownEditingEnglish, pdfAppearanceEnglish, outlineEnglish);
 
 let language = 'en';
 const listeners = new Set();

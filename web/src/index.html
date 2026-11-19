@@ -9,7 +9,10 @@
   <link rel="icon" type="image/svg+xml" href="/app-icon.svg">
   <link rel="stylesheet" href="/pdf_viewer.css">
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/completion-ui.css">
+  <link rel="stylesheet" href="/outline-tree.css">
   <link rel="stylesheet" href="/pdf-search.css">
+  <link rel="stylesheet" href="/pdf-appearance.css">
   <link rel="stylesheet" href="/source-search.css">
   <link rel="stylesheet" href="/markdown-preview.css">
   <link rel="stylesheet" href="/tex-packages.css">
@@ -125,11 +128,14 @@
           <div class="asset-toolbar">
             <span id="asset-info" class="asset-info"></span>
             <div id="asset-page-controls" class="asset-page-controls" hidden><button type="button" id="asset-prev" class="icon-button" aria-label="Previous page in the selected PDF" data-i18n-aria-label="画像 PDF の前のページ">‹</button><label class="page-control"><input id="asset-page" type="number" value="1" min="1" aria-label="Page number in the selected PDF" data-i18n-aria-label="画像 PDF のページ番号"><span>/</span><span id="asset-pages"></span></label><button type="button" id="asset-next" class="icon-button" aria-label="Next page in the selected PDF" data-i18n-aria-label="画像 PDF の次のページ">›</button></div>
-            <span class="toolbar-spacer"></span>
+            <div id="asset-view-controls" class="asset-view-controls">
             <button type="button" id="asset-zoom-out" class="icon-button" aria-label="Zoom out of the selected image" title="Zoom out" data-i18n-aria-label="選択した画像を縮小" data-i18n-title="縮小">−</button>
             <select id="asset-zoom" aria-label="Image zoom" data-i18n-aria-label="画像の倍率"><option value="page-fit" data-i18n="全体を表示">Fit image</option><option value="page-width" data-i18n="幅に合わせる">Fit width</option><option value="1">100%</option><option data-custom-zoom value="custom" hidden></option></select>
             <button type="button" id="asset-zoom-in" class="icon-button" aria-label="Zoom into the selected image" title="Zoom in" data-i18n-aria-label="選択した画像を拡大" data-i18n-title="拡大">＋</button>
+            <button type="button" id="asset-dark-mode" data-testid="asset-dark-mode" class="icon-button pdf-dark-toggle" aria-label="Dark PDF view" aria-pressed="false" disabled hidden><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M12 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5Z" fill="currentColor" stroke="none"/></svg></button>
             <button type="button" id="asset-reload" class="icon-button" aria-label="Reload file" title="Reload file" data-i18n-aria-label="ファイルを読み直す" data-i18n-title="ファイルを読み直す">↻</button>
+            </div>
+            <button type="button" id="asset-more" data-testid="asset-more" class="icon-button pdf-more-button" aria-label="Preview actions" aria-expanded="false" aria-controls="asset-view-controls" hidden><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></button>
           </div>
           <div class="asset-frame"><div id="asset-scroll" class="asset-scroll" tabindex="0"><div id="asset-image-stage" class="asset-image-stage" hidden><img id="asset-image" data-testid="asset-image" alt=""></div><div id="asset-pdf-stage" class="pdfViewer" hidden></div></div><div id="asset-message" class="asset-message" role="status"></div></div>
         </section>
@@ -153,13 +159,15 @@
           </div>
           <span id="pdf-state" class="pdf-state"></span>
           <span id="pdf-document" data-testid="pdf-document" class="pdf-document"></span>
-          <div class="pdf-view-controls">
+          <div id="pdf-view-controls" class="pdf-view-controls">
             <button type="button" id="pdf-zoom-out" data-testid="pdf-zoom-out" class="icon-button zoom-button" aria-label="Zoom out of the PDF" title="Zoom out (also Ctrl + wheel or pinch)" disabled data-i18n-aria-label="PDF を縮小" data-i18n-title="縮小 (Ctrl + ホイールやピンチでも操作できます)">−</button>
             <label class="zoom-control"><span class="sr-only"><span data-i18n="PDF の倍率">PDF zoom</span></span><select id="pdf-zoom" data-testid="pdf-zoom" aria-label="PDF zoom" disabled data-i18n-aria-label="PDF の倍率"><option value="page-width" data-i18n="幅に合わせる">Fit width</option><option value="page-fit" data-i18n="ページに合わせる">Fit page</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100%</option><option value="1.25">125%</option><option value="1.5">150%</option><option value="2">200%</option><option value="3">300%</option><option data-custom-zoom value="custom" hidden></option></select></label>
             <button type="button" id="pdf-zoom-in" data-testid="pdf-zoom-in" class="icon-button zoom-button" aria-label="Zoom into the PDF" title="Zoom in (also Ctrl + wheel or pinch)" disabled data-i18n-aria-label="PDF を拡大" data-i18n-title="拡大 (Ctrl + ホイールやピンチでも操作できます)">＋</button>
             <span class="toolbar-divider" aria-hidden="true"></span>
+            <button type="button" id="pdf-dark-mode" data-testid="pdf-dark-mode" class="icon-button pdf-dark-toggle" aria-label="Dark PDF view" aria-pressed="false" disabled><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M12 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5Z" fill="currentColor" stroke="none"/></svg></button>
             <button type="button" id="download-pdf" class="icon-button" title="Save the compiled PDF" aria-label="Save PDF" disabled data-i18n-title="コンパイルした PDF を保存" data-i18n-aria-label="PDF を保存"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/></svg></button>
           </div>
+          <button type="button" id="pdf-more" data-testid="pdf-more" class="icon-button pdf-more-button" aria-label="PDF actions" aria-expanded="false" aria-controls="pdf-view-controls" hidden><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></button>
         </div>
         <div id="pdf-note" class="pdf-note" hidden></div>
         <div class="pdf-frame">
@@ -222,6 +230,7 @@
       <div class="dialog-heading"><h2 id="settings-title"><span data-i18n="編集とコンパイルの設定">Editing and compilation settings</span></h2><button type="button" class="icon-button" data-close-dialog="settings-dialog" aria-label="Close" data-i18n-aria-label="閉じる">×</button></div>
       <div class="field-group"><label class="field-label" for="language-setting"><span data-i18n="表示言語">Language</span></label><select id="language-setting" data-testid="language-setting"><option value="en" lang="en">English</option><option value="ja" lang="ja">日本語</option></select></div>
       <div class="field-group"><label class="checkbox-field"><input type="checkbox" id="autosave-setting" data-testid="autosave-setting"><span><span data-i18n="編集が落ち着いたら自動で保存する">Save automatically after a pause in editing</span></span></label><p class="field-help"><span data-i18n="コンパイル中の自動保存は，終了するまで待ちます．自動保存を切っても，編集中の草稿は PC に記録されます．">Autosave waits for compilation to finish. Drafts are recorded on this computer even when autosave is off.</span></p></div>
+      <div class="field-group"><label class="checkbox-field"><input type="checkbox" id="tex-completion-setting" data-testid="tex-completion-setting"><span data-i18n="TeX の入力補完を使う">Enable TeX completion</span></label><p class="field-help" data-i18n="コマンド，環境，引用，相互参照の候補を表示します．環境は対応する終了まで挿入できます．">Show commands, environments, citations, and cross-references. Environments can include their matching end.</p><label class="checkbox-field"><input type="checkbox" id="completion-on-type-setting" data-testid="completion-on-type-setting"><span data-i18n="入力中に候補を自動で表示する">Show suggestions while typing</span></label><p class="field-help" data-i18n="自動表示をオフにしても Ctrl + Space で候補を開けます．Enter で確定し，Tab で次の入力箇所へ進みます．">With automatic suggestions off, use Ctrl + Space to open them. Enter accepts a suggestion and Tab moves to the next field.</p></div>
       <div class="field-group"><label class="field-label" for="editor-font-size"><span data-i18n="エディタの文字サイズ">Editor font size</span></label><div class="font-size-field"><input id="editor-font-size" data-testid="editor-font-size" type="number" min="8" max="40" step="0.1" value="14" required><span>px</span></div><p class="field-help"><span data-i18n="8〜40 px で指定できます．既定は 14 px です．原稿上の Ctrl + ホイールやピンチ操作でも変更できます．">Choose 8–40 px. The default is 14 px. You can also use Ctrl + wheel or pinch in the editor.</span></p></div>
       <div class="field-group appearance-entry"><div><span class="field-label" data-i18n="外観">Appearance</span><p class="field-help" data-i18n="モード，配色，アクセント，原稿のフォントを選びます．">Choose the mode, color scheme, accent, and editor font.</p></div><button type="button" id="open-appearance" data-testid="open-appearance" class="button"><span data-i18n="外観を開く">Open appearance</span></button></div>
       <div class="field-group"><label class="field-label" for="tex-bin"><span data-i18n="TeX Live の bin フォルダー">TeX Live bin folder</span></label><input id="tex-bin" data-testid="tex-bin" type="text" placeholder="Leave blank to detect automatically" autocomplete="off" spellcheck="false" data-i18n-placeholder="空欄で自動検索"><p id="tex-tool-status" class="field-help"></p></div>

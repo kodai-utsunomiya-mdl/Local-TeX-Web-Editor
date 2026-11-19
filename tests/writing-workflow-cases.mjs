@@ -15,8 +15,140 @@ async function tool(page, id) {
   await page.locator(`#${id}`).click();
 }
 const tabs = page => page.locator('#editor-tabs .tab-select').evaluateAll(nodes => nodes.map(node => node.dataset.path));
+const completionMenu = page => page.locator('#editor .tex-completion-menu');
+const completionLabel = (page, label) => completionMenu(page).locator('.cm-completionLabel').filter({ hasText: new RegExp('^' + label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$') });
+async function expectNoCompletion(page) {
+  // Observe the interval in which an automatic suggestion would normally open.
+  // An immediate assertion could pass before a wrongly enabled menu appears.
+  const appeared = await completionMenu(page).waitFor({ state: 'visible', timeout: 750 }).then(() => true, error => {
+    if (error.name === 'TimeoutError') return false;
+    throw error;
+  });
+  expect(appeared).toBe(false);
+}
 
 export function registerWritingWorkflowTests({ test, openProject, openEditor, setAutoSave, json, compileFromUI }) {
+  test('TeX の環境と数式を補完し，Tab で本文や引数を入力して保存する', async ({ page, session }, testInfo) => {
+    const errors = []; page.on('pageerror', error => errors.push(error.message));
+    await writeFile(path.join(session.project, 'completion.tex'), '');
+    await openProject(session); await openEditor(page, session);
+    await page.getByTestId('settings-button').click();
+    await expect(page.getByTestId('tex-completion-setting')).toBeChecked();
+    await expect(page.getByTestId('completion-on-type-setting')).toBeChecked();
+    await expect(page.getByTestId('completion-on-type-setting')).toBeEnabled();
+    await page.getByTestId('autosave-setting').uncheck();
+    await page.locator('#save-settings').click();
+    await expect(page.locator('#settings-dialog')).not.toBeVisible();
+    await page.getByTestId('file-completion.tex').click();
+    await source(page).pressSequentially('\\b');
+    await expect(completionLabel(page, '\\begin')).toBeVisible();
+    await completionLabel(page, '\\begin').click();
+    await expect(source(page)).toHaveText('\\begin{}');
+    await expect(source(page)).toBeFocused();
+    await page.keyboard.type('i');
+    await expect(source(page)).toHaveText('\\begin{i}');
+    await expect(completionLabel(page, 'itemize')).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath('tex-environment-completion.png') });
+    await completionLabel(page, 'itemize').click();
+    await expect(source(page)).toBeFocused();
+    await page.keyboard.insertText('First item.');
+    await expect(source(page)).toContainText('\\item First item.');
+    await page.keyboard.press('Tab');
+    await expect(page.getByTestId('editor')).toHaveAttribute('data-line', '3');
+    await page.keyboard.insertText('% after list');
+    await expect(source(page)).toContainText('\\end{itemize}% after list');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('\\fr');
+    await expect(completionLabel(page, '\\frac')).toBeVisible();
+    await completionLabel(page, '\\frac').click();
+    await page.keyboard.insertText('n + 1');
+    await page.keyboard.press('Tab');
+    await page.keyboard.insertText('d');
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.insertText('n');
+    await page.keyboard.press('Tab');
+    await page.keyboard.insertText('d + 1');
+    await page.keyboard.press('Tab');
+    await page.keyboard.insertText('% after fraction');
+    await expect(source(page)).toContainText('\\frac{n}{d + 1}% after fraction');
+    await page.keyboard.press(`${modifier}+s`);
+    const expected = '\\begin{itemize}\n  \\item First item.\n\\end{itemize}% after list\n\\frac{n}{d + 1}% after fraction';
+    await expect.poll(async () => clean(await readFile(path.join(session.project, 'completion.tex'), 'utf8'))).toBe(expected);
+    await page.screenshot({ path: testInfo.outputPath('tex-snippet-fields.png') });
+    expect(errors).toEqual([]);
+  });
+
+  test('TeX の補完の自動表示と全体を設定で切り替え，再読み込み後も手動補完と引用を使える', async ({ page, session }, testInfo) => {
+    const errors = []; page.on('pageerror', error => errors.push(error.message));
+    await writeFile(path.join(session.project, 'completion.tex'), '');
+    await writeFile(path.join(session.project, 'labels.tex'), '\\section{Method}\n\\label{sec:workflow}\nA method.\n');
+    await openProject(session); await openEditor(page, session); await setAutoSave(page, false);
+    await page.getByTestId('file-completion.tex').click();
+    await page.getByTestId('settings-button').click();
+    await expect(page.getByTestId('tex-completion-setting')).toBeChecked();
+    await page.getByTestId('completion-on-type-setting').uncheck();
+    await page.locator('#save-settings').click();
+    await expect(page.locator('#settings-dialog')).not.toBeVisible();
+    await expect.poll(async () => (await json(session, '/api/storage?key=preferences')).value).toMatchObject({ texCompletion: true, automaticCompletion: false });
+    await page.reload();
+    await expect(source(page)).toBeVisible();
+    await page.getByTestId('file-completion.tex').click();
+    await page.getByTestId('settings-button').click();
+    await expect(page.getByTestId('tex-completion-setting')).toBeChecked();
+    await expect(page.getByTestId('completion-on-type-setting')).not.toBeChecked();
+    await expect(page.getByTestId('completion-on-type-setting')).toBeEnabled();
+    await page.locator('#settings-dialog [data-close-dialog="settings-dialog"]').last().click();
+    await source(page).pressSequentially('\\b');
+    await expectNoCompletion(page);
+    await page.keyboard.press('Control+Space');
+    await expect(completionLabel(page, '\\begin')).toBeVisible();
+    await completionLabel(page, '\\begin').click();
+    await expect(source(page)).toHaveText('\\begin{}');
+
+    await replaceSource(page, '\\cite{sam');
+    await page.keyboard.press('Control+Space');
+    await expect(completionLabel(page, 'sample2026')).toBeVisible();
+    await completionLabel(page, 'sample2026').click();
+    await page.keyboard.insertText('}');
+    await expect(source(page)).toHaveText('\\cite{sample2026}');
+    await replaceSource(page, '\\ref{sec:work');
+    await page.keyboard.press('Control+Space');
+    await expect(completionLabel(page, 'sec:workflow')).toBeVisible();
+    await completionLabel(page, 'sec:workflow').click();
+    await page.keyboard.insertText('}');
+    await expect(source(page)).toHaveText('\\ref{sec:workflow}');
+    await page.keyboard.press(`${modifier}+s`);
+    await expect.poll(async () => clean(await readFile(path.join(session.project, 'completion.tex'), 'utf8'))).toBe('\\ref{sec:workflow}');
+
+    await page.getByTestId('settings-button').click();
+    await page.getByTestId('tex-completion-setting').uncheck();
+    await expect(page.getByTestId('completion-on-type-setting')).toBeDisabled();
+    await page.screenshot({ path: testInfo.outputPath('tex-completion-settings-disabled.png') });
+    await page.locator('#save-settings').click();
+    await expect(page.locator('#settings-dialog')).not.toBeVisible();
+    await expect.poll(async () => (await json(session, '/api/storage?key=preferences')).value).toMatchObject({ texCompletion: false, automaticCompletion: false });
+    await replaceSource(page, '');
+    await source(page).pressSequentially('\\b');
+    await expectNoCompletion(page);
+    await page.keyboard.press('Control+Space');
+    await expectNoCompletion(page);
+    await expect(source(page)).toHaveText('\\b');
+    await page.keyboard.press(`${modifier}+s`);
+    await expect.poll(async () => clean(await readFile(path.join(session.project, 'completion.tex'), 'utf8'))).toBe('\\b');
+    await page.reload();
+    await expect(source(page)).toBeVisible();
+    await page.getByTestId('file-completion.tex').click();
+    await page.getByTestId('settings-button').click();
+    await expect(page.getByTestId('tex-completion-setting')).not.toBeChecked();
+    await expect(page.getByTestId('completion-on-type-setting')).not.toBeChecked();
+    await expect(page.getByTestId('completion-on-type-setting')).toBeDisabled();
+    await page.locator('#settings-dialog [data-close-dialog="settings-dialog"]').last().click();
+    await source(page).click(); await page.keyboard.press(`${modifier}+End`);
+    await page.keyboard.press('Control+Space');
+    await expectNoCompletion(page);
+    expect(errors).toEqual([]);
+  });
+
   test('Markdown の装飾，リンク，コードを編集ボタンで挿入し，Undo で戻せる', async ({ page, session }, testInfo) => {
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await writeFile(path.join(session.project, 'format.md'), 'Draft phrase\n');

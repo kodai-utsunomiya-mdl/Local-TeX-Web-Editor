@@ -4,13 +4,14 @@ import { EventBus, PDFViewer as DocumentViewer, PDFLinkService, LinkTarget, Rend
 import { PDFSearch } from './pdf-search.js';
 import { zoomPDFAt } from './pdf-zoom.js';
 import { afterNavigationFrame, connectPDFNavigation } from './navigation-history.js';
+import { PDFDarkMode, PDFToolbar } from './pdf-appearance.js';
 
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 const cancelled = error => /RenderingCancelledException|AbortException/.test(error?.name || '') || /destroyed|cancelled/i.test(error?.message || '');
 const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
 
 export class PDFViewer {
-  constructor({ token, onError, onReady, onPositionChange, onInverse, onNavigate }) {
+  constructor({ token, onError, onReady, onPositionChange, onInverse, onNavigate, darkMode = false, onDarkModeChange }) {
     this.token = token;
     this.onError = onError;
     this.onReady = onReady;
@@ -37,7 +38,8 @@ export class PDFViewer {
     this.currentCanvas = null;
     this.highlight = null;
     this.highlightTimer = null;
-    this.elements = Object.fromEntries(['scroll', 'stage', 'empty', 'loading', 'prev', 'next', 'page', 'pages', 'zoom', 'zoom-in', 'zoom-out'].map(name => [name, document.getElementById(`pdf-${name}`)]));
+    this.elements = Object.fromEntries(['scroll', 'stage', 'empty', 'loading', 'prev', 'next', 'page', 'pages', 'zoom', 'zoom-in', 'zoom-out', 'dark-mode'].map(name => [name, document.getElementById(`pdf-${name}`)]));
+    this.pdfAppearance = new PDFDarkMode({ container: this.elements.scroll, button: this.elements['dark-mode'], darkMode, onChange: onDarkModeChange });
     this.unsubscribeLanguage = onLanguageChange(() => {
       this.elements.empty.querySelector('h3').textContent = t(this.emptyError ? 'PDF を表示できませんでした' : 'PDF をここに表示します');
       this.elements.empty.querySelector('p').textContent = this.emptyError?.message || (this.emptyError ? String(this.emptyError) : t('原稿を保存し，コンパイルしてください．'));
@@ -46,6 +48,9 @@ export class PDFViewer {
     this.linkService = new PDFLinkService({ eventBus: this.eventBus, externalLinkTarget: LinkTarget.BLANK, externalLinkRel: 'noopener noreferrer', ignoreDestinationZoom: true });
     connectPDFNavigation(this.linkService, action => this.navigate(action), async () => { await afterNavigationFrame(); this.pageViewer.update(); });
     this.search = new PDFSearch({ eventBus: this.eventBus, linkService: this.linkService, pane: document.getElementById('pdf-preview') || document.getElementById('pdf-pane'), toolbar: document.querySelector('.pdf-toolbar'), scroll: this.elements.scroll });
+    const toolbar = document.querySelector('.pdf-toolbar');
+    this.toolbar = new PDFToolbar({ toolbar, panel: document.getElementById('pdf-view-controls'), button: document.getElementById('pdf-more'),
+      moveWhenNarrow: [{ element: toolbar?.querySelector('.navigation-actions'), below: 360 }, { element: toolbar?.querySelector('.preview-choice'), below: 280 }] });
     this.pageViewer = new DocumentViewer({
       container: this.elements.scroll,
       viewer: this.elements.stage,
@@ -120,10 +125,13 @@ export class PDFViewer {
   }
 
   get pageNumber() { return this.pageViewer.currentPageNumber || 1; }
+  get darkMode() { return this.pdfAppearance.darkMode; }
+  setDarkMode(enabled) { this.pdfAppearance.setDarkMode(enabled); }
 
   updateControls() {
     const count = this.document?.numPages || 0;
     const enabled = !!count && this.ready;
+    this.pdfAppearance.setReady(enabled);
     this.search.setEnabled(enabled);
     this.elements.page.value = String(this.pageNumber);
     this.elements.page.max = String(count || 1);

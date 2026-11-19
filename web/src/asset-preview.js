@@ -3,6 +3,7 @@ import * as pdfjs from 'pdfjs-dist/build/pdf.mjs';
 import { EventBus, PDFViewer, PDFLinkService, LinkTarget } from 'pdfjs-dist/web/pdf_viewer.mjs';
 import { zoomPDFAt } from './pdf-zoom.js';
 import { afterNavigationFrame, connectPDFNavigation } from './navigation-history.js';
+import { PDFDarkMode, PDFToolbar } from './pdf-appearance.js';
 
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
@@ -11,11 +12,13 @@ const bytes = value => value < 1024 ? `${value} B` : value < 1024 ** 2 ? `${(val
 // The selected image or PDF has its own view. Source documents stay in the
 // editor's state map, and decoded assets are released when their tab is left.
 export class AssetPreview {
-  constructor({ token, onNavigate }) {
+  constructor({ token, onNavigate, darkMode = false, onDarkModeChange }) {
     this.token = token;
     this.onNavigate = onNavigate;
     this.root = document.getElementById('asset-preview');
-    this.elements = Object.fromEntries(['info', 'page-controls', 'prev', 'next', 'page', 'pages', 'zoom-out', 'zoom-in', 'zoom', 'reload', 'scroll', 'image-stage', 'image', 'pdf-stage', 'message'].map(id => [id, document.getElementById(`asset-${id}`)]));
+    this.elements = Object.fromEntries(['info', 'page-controls', 'prev', 'next', 'page', 'pages', 'zoom-out', 'zoom-in', 'zoom', 'reload', 'scroll', 'image-stage', 'image', 'pdf-stage', 'message', 'dark-mode'].map(id => [id, document.getElementById(`asset-${id}`)]));
+    this.pdfAppearance = new PDFDarkMode({ container: this.elements.scroll, button: this.elements['dark-mode'], darkMode, onChange: onDarkModeChange });
+    this.toolbar = new PDFToolbar({ toolbar: this.root.querySelector('.asset-toolbar'), panel: document.getElementById('asset-view-controls'), button: document.getElementById('asset-more'), compactWidth: 420, label: 'プレビューの操作' });
     this.file = null; this.projectRoot = ''; this.generation = 0;
     this.controller = null; this.objectURL = null; this.loadingTask = null; this.document = null;
     this.loadCompletion = Promise.resolve(false); this.cancelLoadWait = null; this.pdfInitialisation = null;
@@ -27,6 +30,7 @@ export class AssetPreview {
     this.elements.prev.addEventListener('click', () => this.goToPage((this.pdfViewer?.currentPageNumber || 1) - 1));
     this.elements.next.addEventListener('click', () => this.goToPage((this.pdfViewer?.currentPageNumber || 1) + 1));
     this.elements.page.addEventListener('change', () => this.goToPage(Number(this.elements.page.value)));
+    this.elements.page.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); this.elements.page.blur(); } });
     this.elements.reload.addEventListener('click', () => { if (this.file) this.show(this.file, this.projectRoot); });
     this.elements.scroll.addEventListener('wheel', event => {
       if (!event.ctrlKey || !this.ready) return;
@@ -58,6 +62,9 @@ export class AssetPreview {
       scrollLeft: this.elements.scroll.scrollLeft,
     };
   }
+
+  get darkMode() { return this.pdfAppearance.darkMode; }
+  setDarkMode(enabled) { this.pdfAppearance.setDarkMode(enabled); }
 
   getViewState() {
     if (!this.file || !this.ready) return null;
@@ -308,6 +315,9 @@ export class AssetPreview {
 
   updateControls() {
     const pdf = this.file?.kind === 'pdf';
+    this.pdfAppearance.setApplicable(pdf);
+    this.pdfAppearance.setReady(pdf && this.ready);
+    this.toolbar.setLabel(pdf ? 'PDF の操作' : 'プレビューの操作');
     this.elements['page-controls'].hidden = !pdf;
     for (const id of ['zoom', 'zoom-out', 'zoom-in']) this.elements[id].disabled = !this.ready;
     this.elements.reload.disabled = !this.file || !['image', 'pdf'].includes(this.file.kind);

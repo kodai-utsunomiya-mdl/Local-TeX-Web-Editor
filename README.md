@@ -191,7 +191,8 @@ Selected text has a visible background in both themes, including selections on t
 | Find files or headings | Use the search field on the left. **Outline** shows headings from the selected TeX or Markdown tab. Click a heading to show its source line near the top of the editor, with space above it |
 | Insert citations | Inside `\citep{` or `\cite{`, completion offers keys from the project's `.bib` files, with author, year, and title information |
 | Insert cross-references | Inside `\ref{`, `\eqref{`, `\cref{`, and similar commands, completion offers labels from the source |
-| Open completion | Press `Ctrl + Space`. TeX commands are also available |
+| Open completion | Type a TeX command or press `Ctrl + Space`. Use `Tab` / `Shift + Tab` to move between the inserted arguments |
+| Fold source | Click an arrow beside the line numbers to fold or unfold a section, environment, Markdown heading, or code block |
 | Search and replace in source | Press `Ctrl + F` in the editor or click the **Find and replace** button. You can paste a selection containing multiple lines |
 | Search the whole project | Click **Search project** or press `Ctrl + Shift + F`. Review the results and select the occurrences to replace |
 | Return after following a reference | Use the **←** / **→** buttons above the source or PDF, or press `Alt + Left` / `Alt + Right` |
@@ -209,6 +210,14 @@ On Mac, use `Cmd` in place of `Ctrl` for saving, searching, compiling, and the S
 The search and replacement fields accept newlines and TeX backslashes as entered. Press `Enter` for the next match, `Shift + Enter` for the previous match, and `Ctrl + Enter` to insert a newline in a field. A checkbox enables regular expressions. Close the search panel with its **×** button or press `Esc` while a search field has focus.
 
 Changing the font size or theme leaves the document content and compiled PDF unchanged. The notice to recompile appears when source files or compilation settings have changed.
+
+### Complete TeX and navigate the outline
+
+Typing `\b` offers `\begin`. Completing it puts the cursor inside `\begin{}`; typing `i` there offers `itemize`, which inserts the item body and `\end{itemize}`. Commands for sections, formatting, citations, references, figures, tables, and mathematics are included. For example, `\frac` creates numerator and denominator fields. Press `Tab` or `Shift + Tab` to move between fields. Environments defined with `\newtheorem` or `\newenvironment` in the current document also appear in the list.
+
+Citation details appear beside the candidate list, or below it in a narrow editor, with their own scrolling area. In **Settings**, **Enable TeX completion** enables the feature, and **Show suggestions while typing** controls automatic suggestions. When automatic suggestions are off, `Ctrl + Space` still opens completion.
+
+The outline uses vertical guides and arrows to show heading levels. Click an arrow to collapse its children, or click the heading to open its source line. In the source, arrows beside the line numbers fold sections and environments; Markdown headings and code blocks can also be folded. Source jumps from the outline, search, and PDF unfold the destination when needed. The keyboard commands are listed under **Help → Keyboard shortcuts**.
 
 ### Search and replace across the project
 
@@ -315,6 +324,9 @@ The PDF scrolls continuously across pages. The app prioritizes rendering the vis
 | Go from PDF to source | Double-click text in the PDF. The corresponding `.tex` file opens, with space above the destination line near the top of the editor; the line is briefly highlighted |
 | Go from source to PDF | `Ctrl + click` a source line, or place the cursor and click the arrow button above the editor to show that position in the PDF. The corresponding PDF position is briefly highlighted |
 | Export the PDF | Click **Save PDF** |
+| Read with a dark background | Toggle **Dark PDF view** in the PDF toolbar. The choice also applies to project PDFs and is saved for the next session |
+
+Dark PDF view changes the colors shown on screen, including figures and photographs. Saving the PDF uses the original file and colors.
 
 Source–PDF navigation uses TeX Live's `synctex`. The app generates SyncTeX data during compilation and stores it with the matching PDF. TeX macros and the layout of equations can map a clicked character to a nearby source line. Editing the source after compilation displays a notice that the PDF can be updated.
 

@@ -4,7 +4,7 @@ import { EditorView, keymap, Decoration, scrollPastEnd } from '@codemirror/view'
 import { basicSetup } from 'codemirror';
 import { indentWithTab, isolateHistory } from '@codemirror/commands';
 import { StreamLanguage, HighlightStyle, syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language';
-import { autocompletion } from '@codemirror/autocomplete';
+import { autocompletion, closeCompletion } from '@codemirror/autocomplete';
 import { stex } from '@codemirror/legacy-modes/mode/stex';
 import { markdown } from '@codemirror/lang-markdown';
 import { PDFViewer } from './pdf-viewer.js';
@@ -24,12 +24,16 @@ import { createInsertTools } from './insert-tools.js';
 import { createTemplateManager } from './template-manager.js';
 import { createLogIssues } from './log-issues.js';
 import { createMarkdownEditing } from './markdown-editing.js';
+import { completionPresentation } from './completion-ui.js';
+import { createTeXCompletionSource } from './tex-completion.js';
+import { sourceFolding, revealSourceRange } from './source-folding.js';
+import { createOutlineTree } from './outline-tree.js';
 import { tags } from '@lezer/highlight';
 import { SessionStore } from './session-store.js';
 import { BrowserSession } from './browser-session.js';
 import { isMac, shortcutModifier } from './platform-keys.js';
 import { renderTeXPackagesHelp } from './tex-packages.js';
-import { extractTexMetadata, extractCitations, texCompletionSource, compileTarget } from './tex-tools.js';
+import { extractTexMetadata, extractCitations, compileTarget } from './tex-tools.js';
 
 const $ = id => document.getElementById(id);
 const TOKEN_KEY = 'local-tex-editor-token';
@@ -74,7 +78,7 @@ const state = {
   connected: false,
   externalProjectChanged: false,
   reportedBuild: '',
-  preferences: { autoSave: true, theme: null, appearance: normalizeAppearance(), editorFontSize: 14, language: getLanguage(), panelLayout: normalizePanelLayout(), markdownScrollSync: true },
+  preferences: { autoSave: true, theme: null, appearance: normalizeAppearance(), editorFontSize: 14, language: getLanguage(), panelLayout: normalizePanelLayout(), markdownScrollSync: true, texCompletion: true, automaticCompletion: true, pdfDarkMode: false },
   theme: 'light',
   saveQueue: Promise.resolve(),
   autoSaveTimer: null,
@@ -107,12 +111,14 @@ let documentHistory = null;
 let templateManager = null;
 let logIssues = null;
 let markdownEditing = null;
+let outlineTree = null;
 const editorSlots = {
   primary: { host: $('editor'), element: $('source-pane-primary'), select: $('primary-document'), view: null, path: '', cleanup: null },
   secondary: { host: $('editor-secondary'), element: $('source-pane-secondary'), select: $('secondary-document'), view: null, path: '', cleanup: null },
 };
 const editorTheme = new Compartment();
 const editorLanguage = new Compartment();
+const editorCompletion = new Compartment();
 const modeLabels = { project: 'latexmkrc', pdflatex: 'pdfLaTeX', uplatex: 'upLaTeX', xelatex: 'XeLaTeX', lualatex: 'LuaLaTeX' };
 let toastTimer = null;
 let lineFlashTimer = null;
@@ -364,16 +370,16 @@ function updateCursor() {
   updateOutlinePosition(); scheduleSession();
 }
 
-const latexWords = [
-  'begin', 'end', 'documentclass', 'usepackage', 'input', 'include', 'includegraphics', 'section', 'subsection', 'subsubsection',
-  'paragraph', 'title', 'author', 'maketitle', 'label', 'ref', 'eqref', 'cref', 'Cref', 'cite', 'citep', 'citet', 'bibliography',
-  'bibliographystyle', 'textbf', 'textit', 'emph', 'footnote', 'item', 'newcommand', 'renewcommand', 'frac', 'sqrt',
-  'sum', 'prod', 'int', 'left', 'right', 'mathrm', 'mathbf', 'mathbb', 'mathcal', 'displaystyle', 'equation', 'align',
-];
-function latexCompletion(context) {
-  const word = context.matchBefore(/\\[A-Za-z]*$/);
-  if (!word) return null;
-  return { from: word.from, options: latexWords.map(name => ({ label: `\\${name}`, type: 'keyword' })), validFor: /^\\[A-Za-z]*$/ };
+function completionExtension(path) {
+  const enabled = state.preferences.texCompletion && /\.(tex|sty|cls|ltx)$/i.test(path);
+  return autocompletion({
+    override: enabled ? [createTeXCompletionSource(() => state.completionItems)] : [],
+    activateOnTyping: !!enabled && state.preferences.automaticCompletion,
+  });
+}
+function applyCompletionSettings() {
+  for (const [, slot] of visibleEditorSlots()) closeCompletion(slot.view);
+  for (const doc of state.documents.values()) applyDocumentTransaction(doc, doc.state.update({ effects: editorCompletion.reconfigure(completionExtension(doc.path)) }));
 }
 
 const bibLanguage = StreamLanguage.define({
@@ -400,6 +406,7 @@ function makeEditorState(path, content) {
   const language = isMarkdown(path) ? markdown() : extension === 'bib' ? bibLanguage : /^(tex|sty|cls|ltx|def|bst)$/.test(extension) ? StreamLanguage.define(stex) : [];
   return EditorState.create({ doc: normalise(content), extensions: [
     basicSetup,
+    sourceFolding(path),
     sourceSearch(),
     language,
     editorTheme.of(themeExtension()),
@@ -408,7 +415,8 @@ function makeEditorState(path, content) {
     scrollPastEnd(),
     readOnly.of([EditorState.readOnly.of(false), EditorView.editable.of(true)]),
     editorLanguage.of(editorLanguageExtension()),
-    autocompletion({ override: /^(tex|sty|cls|ltx)$/.test(extension) ? [texCompletionSource(() => state.completionItems), latexCompletion] : [] }),
+    completionPresentation(),
+    editorCompletion.of(completionExtension(path)),
     EditorView.domEventHandlers({ mousedown(event, view) {
       if (!(event.ctrlKey || event.metaKey) || event.button !== 0 || view.composing) return false;
       const position = view.posAtCoords({ x: event.clientX, y: event.clientY });
@@ -870,21 +878,24 @@ async function closeDocument(doc) {
     if (answer === 'primary') { await saveDocument(doc); if (isDirty(doc)) return; }
     else removeDraft(doc.draftId);
   }
-  removeOpenFile(doc.path);
+  await removeOpenFile(doc.path);
 }
 
-function removeOpenFile(path) {
+async function removeOpenFile(path) {
   for (const slot of Object.values(editorSlots)) if (slot.pendingPath === path) { slot.openSequence = (slot.openSequence || 0) + 1; slot.pendingPath = ''; }
   if (state.operation) return;
   rememberEditorPosition();
+  const generation = state.projectGeneration;
   const previousPane = state.activePane;
   const paths = [...state.tabOrder], index = paths.indexOf(path);
   state.documents.delete(path); state.assets.delete(path); state.tabOrder = paths.filter(item => item !== path);
-  const next = state.tabOrder.find(item => state.documents.has(item));
+  const following = [...state.tabOrder.slice(index), ...state.tabOrder.slice(0, index).reverse()];
+  const next = following.find(item => state.documents.has(item) || state.meta?.project?.files?.some(file => file.path === item && fileKind(file) === 'text'));
   for (const [name, slot] of Object.entries(editorSlots)) {
     if (slot.path !== path) continue;
     destroyEditorSlot(name);
-    if (next) selectDocument(state.documents.get(next), { pane: name, focus: false });
+    if (next) await openFile(next, { pane: name, focus: false });
+    if (generation !== state.projectGeneration || state.closed) return;
   }
   if (!editorSlots.secondary.view) state.splitEditors = false;
   if (state.activePath === path || !state.documents.has(state.activePath)) {
@@ -1092,6 +1103,9 @@ async function showSettings() {
   $('main-file').value = project?.main || '';
   $('compile-mode').value = project?.mode || 'pdflatex';
   $('autosave-setting').checked = state.preferences.autoSave;
+  $('tex-completion-setting').checked = state.preferences.texCompletion;
+  $('completion-on-type-setting').checked = state.preferences.automaticCompletion;
+  $('completion-on-type-setting').disabled = !state.preferences.texCompletion;
   $('language-setting').value = state.preferences.language;
   $('editor-font-size').value = String(state.preferences.editorFontSize);
   $('main-field').hidden = !project; $('mode-field').hidden = !project;
@@ -1123,6 +1137,9 @@ async function saveSettings(event) {
   try {
     if (Object.keys(body).length) { ++state.toolsGeneration; const meta = await api('/api/settings', { method: 'PUT', body }); await applyMeta(meta); }
     state.preferences.autoSave = $('autosave-setting').checked;
+    state.preferences.texCompletion = $('tex-completion-setting').checked;
+    state.preferences.automaticCompletion = $('completion-on-type-setting').checked;
+    applyCompletionSettings();
     state.preferences.language = language;
     applyEditorFontSize($('editor-font-size').valueAsNumber);
     savePreferences(); await sessionStore.flush();
@@ -1533,6 +1550,15 @@ async function saveAppearance(event) {
 }
 
 function savePreferences(delay = 0) { sessionStore.write('preferences', { ...state.preferences, updatedAt: Date.now() }, delay); }
+function applyPDFDarkMode(enabled) {
+  state.preferences.pdfDarkMode = !!enabled;
+  viewer.setDarkMode(state.preferences.pdfDarkMode);
+  assetPreview.setDarkMode(state.preferences.pdfDarkMode);
+}
+function changePDFDarkMode(enabled) {
+  applyPDFDarkMode(enabled);
+  savePreferences();
+}
 function applyEditorFontSize(value, origin = null) {
   const size = Number.isFinite(value) ? Math.min(40, Math.max(8, Math.round(value * 10) / 10)) : 14;
   const changed = state.preferences.editorFontSize !== size;
@@ -1548,18 +1574,23 @@ async function loadPreferences() {
   const preferences = await sessionStore.read('preferences');
   if (preferences && typeof preferences === 'object') {
     state.preferences.autoSave = preferences.autoSave !== false;
+    state.preferences.texCompletion = preferences.texCompletion !== false;
+    state.preferences.automaticCompletion = preferences.automaticCompletion !== false;
     state.preferences.theme = ['light', 'dark'].includes(preferences.theme) ? preferences.theme : null;
     state.preferences.appearance = normalizeAppearance(preferences.appearance, preferences.theme);
     state.preferences.theme = state.preferences.appearance.mode === 'system' ? null : state.preferences.appearance.mode;
     state.preferences.editorFontSize = preferences.editorFontSize;
     state.preferences.panelLayout = normalizePanelLayout(preferences.panelLayout);
     state.preferences.markdownScrollSync = preferences.markdownScrollSync !== false;
+    state.preferences.pdfDarkMode = preferences.pdfDarkMode === true;
     if (['ja', 'en'].includes(preferences.language)) state.preferences.language = preferences.language;
   }
   applyLanguage(state.preferences.language);
   applyAppearance(state.preferences.appearance, true);
   applyEditorFontSize(state.preferences.editorFontSize);
   applyMarkdownScrollSync(state.preferences.markdownScrollSync);
+  applyPDFDarkMode(state.preferences.pdfDarkMode);
+  applyCompletionSettings();
   updateAutoSaveStatus();
 }
 function updateAutoSaveStatus() { $('autosave-status').textContent = state.preferences.autoSave ? (isRunning() ? t("自動保存はコンパイル後") : t("自動保存オン")) : t("手動で保存"); }
@@ -1760,7 +1791,9 @@ function restoreSourcePosition(name, position) {
   const slot = editorSlots[name];
   if (!slot?.view || slot.path !== position?.path) return;
   const view = slot.view;
-  view.dispatch({ selection: { anchor: Math.min(view.state.doc.length, Math.max(0, Number(position.anchor) || 0)), head: Math.min(view.state.doc.length, Math.max(0, Number(position.head ?? position.anchor) || 0)) }, annotations: Transaction.addToHistory.of(false) });
+  const anchor = Math.min(view.state.doc.length, Math.max(0, Number(position.anchor) || 0));
+  const head = Math.min(view.state.doc.length, Math.max(0, Number(position.head ?? position.anchor) || 0));
+  view.dispatch({ selection: { anchor, head }, effects: revealSourceRange(view.state, anchor, head), annotations: Transaction.addToHistory.of(false) });
   view.scrollDOM.scrollTop = Math.max(0, Number(position.scrollTop) || 0); view.scrollDOM.scrollLeft = Math.max(0, Number(position.scrollLeft) || 0);
 }
 function captureNavigationLocation() {
@@ -1959,41 +1992,19 @@ function setSidebar(mode) {
   renderTree(); renderOutline(); scheduleSession();
 }
 function renderOutline() {
-  const container = $('outline-tree'); container.replaceChildren();
+  if (!outlineTree) return;
   const query = $('file-filter').value.trim().toLowerCase();
   const doc = activeDocument();
   const supported = !!doc && (/\.tex$/i.test(doc.path) || isMarkdown(doc.path));
   if (supported && !state.texIndex.has(doc.path)) updateIndex(doc.path, doc.state.doc.toString(), false);
   const file = supported ? state.texIndex.get(doc.path) : null;
   const outline = file?.outline || [];
-  const items = outline.filter(item => !query || `${item.title} ${doc.path}`.toLowerCase().includes(query));
-  if (state.activePath) {
-    const heading = document.createElement('p'); heading.className = 'outline-file'; heading.textContent = state.activePath; container.append(heading);
-  }
-  const baseLevel = outline.length ? Math.min(...outline.map(item => item.level)) : 0;
-  for (const item of items) {
-    const button = document.createElement('button'); button.type = 'button'; button.className = 'outline-link';
-    button.dataset.path = doc.path; button.dataset.line = String(item.line); button.style.setProperty('--outline-depth', String(Math.max(0, Math.min(4, item.level - baseLevel))));
-    const title = document.createElement('span'); title.textContent = item.title || t("(無題の見出し)");
-    const line = document.createElement('span'); line.className = 'outline-line'; line.textContent = String(item.line);
-    button.append(title, line); button.addEventListener('click', () => runTask(() => navigate(() => goToSource(doc.path, item.line, 1, { align: 'start' }))));
-    container.append(button);
-  }
-  if (!items.length) {
-    const text = document.createElement('p'); text.className = 'tree-empty';
-    text.textContent = !state.activePath ? t("TeX または Markdown ファイルを開くと，その見出しが表示されます．") : !supported ? t("このファイルにはアウトラインがありません．") : query ? t("一致する見出しがありません．") : t("この文書には見出しがありません．");
-    container.append(text);
-  }
+  outlineTree.render({ projectRoot: state.meta?.project?.root || '', path: state.activePath, supported, outline, query });
   updateOutlinePosition();
 }
 function updateOutlinePosition() {
   const line = state.editor ? state.editor.state.doc.lineAt(state.editor.state.selection.main.head).number : 0;
-  let candidate = null;
-  for (const button of $('outline-tree').querySelectorAll('.outline-link')) {
-    button.classList.remove('active');
-    if (button.dataset.path === state.activePath && Number(button.dataset.line) <= line) candidate = button;
-  }
-  candidate?.classList.add('active');
+  outlineTree?.setActive({ path: state.activePath, line });
 }
 function renderLogLocations() {
   logIssues?.update(state.fullLog, state.meta?.project?.files || [], state.meta?.project?.root, { running: isRunning(), main: state.build?.main || state.meta?.project?.main });
@@ -2012,7 +2023,7 @@ async function goToSource(path, lineNumber, column = 1, { align = 'start', from 
   const end = to == null ? position : Math.max(position, Math.min(state.editor.state.doc.length, to));
   const margin = align === 'start' ? Math.max(24, Math.min(96, state.editor.scrollDOM.clientHeight * .12)) : 12;
   pauseMarkdownScrollSync();
-  state.editor.dispatch({ selection: { anchor: position, head: end }, effects: [EditorView.scrollIntoView(position, { y: align, yMargin: margin }), lineFlash.of(number)] });
+  state.editor.dispatch({ selection: { anchor: position, head: end }, effects: [...revealSourceRange(state.editor.state, position, end), EditorView.scrollIntoView(position, { y: align, yMargin: margin }), lineFlash.of(number)] });
   state.editor.focus();
   state.lastSurface = 'source';
   clearTimeout(lineFlashTimer);
@@ -2099,8 +2110,9 @@ const viewer = new PDFViewer({
   onPositionChange: () => scheduleSession(),
   onInverse: position => runTask(() => navigate(() => syncInverse(position))),
   onNavigate: action => navigate(action),
+  onDarkModeChange: changePDFDarkMode,
 });
-const assetPreview = new AssetPreview({ token, onNavigate: action => navigate(action) });
+const assetPreview = new AssetPreview({ token, onNavigate: action => navigate(action), onDarkModeChange: changePDFDarkMode });
 const markdownPreview = new MarkdownPreview({
   container: $('markdown-preview-container'), token,
   onUserScroll: scrollSourceWithMarkdown,
@@ -2120,6 +2132,7 @@ const markdownPreview = new MarkdownPreview({
 });
 
 navigationHistory = new NavigationHistory({ capture: captureNavigationLocation, restore: restoreNavigationLocation, onChange: updateNavigationControls });
+outlineTree = createOutlineTree({ container: $('outline-tree'), onJump: (path, line) => runTask(() => navigate(() => goToSource(path, line, 1, { align: 'start' }))) });
 projectSearch = createProjectSearch({
   api, getOpenDocuments: openDocumentSnapshots,
   onError: showError,
@@ -2181,6 +2194,7 @@ systemColorScheme.addEventListener('change', () => {
 
 onClick('show-project', showProjectDialog); onClick('welcome-open', showProjectDialog);
 onClick('settings-button', showSettings); onClick('main-document', showSettings);
+$('tex-completion-setting').addEventListener('change', () => { $('completion-on-type-setting').disabled = !$('tex-completion-setting').checked; });
 onClick('open-appearance', showAppearance);
 onClick('appearance-reset', () => { appearanceDraft = normalizeAppearance(); renderAppearanceForm(); });
 for (const [id, key] of [['mode', 'mode'], ['palette', 'palette'], ['accent', 'accent'], ['font', 'editorFont']]) $(`appearance-${id}`).addEventListener('change', event => {

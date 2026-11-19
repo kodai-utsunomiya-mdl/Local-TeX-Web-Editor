@@ -1,0 +1,24 @@
+.outline-tree { container-type: inline-size; }
+.outline-tree > .outline-level { padding: 0; margin: 0; }
+.outline-level { list-style: none; }
+.outline-item { min-width: 0; margin: 0; padding: 0; }
+.outline-item > .outline-level { padding: 0 0 0 9px; margin: 0 0 0 11px; border-left: 1px solid var(--border-strong); }
+.outline-row { display: flex; align-items: start; min-width: 0; gap: 1px; }
+.outline-row > :is(.outline-toggle, .outline-toggle-space) { display: flex; align-items: center; justify-content: center; flex: 0 0 22px; width: 22px; height: 30px; padding: 0; }
+.outline-toggle { border: 0; border-radius: 4px; background: transparent; color: var(--muted); cursor: pointer; }
+.outline-toggle:hover { background: var(--hover); color: var(--accent); }
+.outline-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
+.outline-chevron { width: 7px; height: 7px; border: solid currentColor; border-width: 0 1.7px 1.7px 0; transform: rotate(45deg) translate(-1px, -1px); }
+.collapsed > .outline-toggle .outline-chevron { transform: rotate(-45deg) translate(-1px, -1px); }
+.outline-tree .outline-row > .outline-link { flex: 1 1 auto; align-items: baseline; min-width: 0; min-height: 30px; padding: 5px 5px; gap: 4px; font-size: 12px; line-height: 1.6; }
+.outline-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.outline-row .outline-line { margin-left: auto; padding-left: 3px; font-size: 10px; }
+.outline-row.contains-active > .outline-link { color: var(--accent); font-weight: 600; }
+.outline-row.contains-active > .outline-toggle { color: var(--accent); }
+.editor-host .cm-foldGutter .cm-gutterElement { min-width: 18px; padding-inline: 3px; cursor: pointer; }
+.editor-host .cm-foldGutter .cm-gutterElement:hover { color: var(--accent); background: var(--hover); }
+.editor-host .cm-foldPlaceholder { border-color: var(--border-strong); background: var(--subtle); color: var(--secondary); border-radius: 3px; padding: 0 5px; }
+@container (max-width: 180px) {
+  .outline-item > .outline-level { margin-left: 9px; padding-left: 5px; }
+  .outline-row .outline-line { display: none; }
+}

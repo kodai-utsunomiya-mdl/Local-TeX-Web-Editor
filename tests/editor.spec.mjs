@@ -9,6 +9,8 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { promisify } from 'node:util';
 import { checkEditorSelectionVisibility, checkPDFSelectionVisibility } from './selection-checks.mjs';
 import { registerWritingWorkflowTests } from './writing-workflow-cases.mjs';
+import { registerSourceDisplayTests } from './source-display-cases.mjs';
+import { showPDFControls } from './pdf-controls.mjs';
 
 const repository = path.resolve(import.meta.dirname, '..');
 const fixture = path.join(import.meta.dirname, 'fixtures', 'japanese');
@@ -96,9 +98,11 @@ async function openPDFViewer(page, pdf) {
     ['/pdf_viewer.css', { contentType: 'text/css', body: await readFile(path.join(repository, 'node_modules/pdfjs-dist/web/pdf_viewer.css')) }],
     ['/style.css', { contentType: 'text/css', body: await readFile(path.join(repository, 'web/src/style.css')) }],
     ['/pdf-search.css', { contentType: 'text/css', body: await readFile(path.join(repository, 'web/src/pdf-search.css')) }],
+    ['/pdf-appearance.css', { contentType: 'text/css', body: await readFile(path.join(repository, 'web/src/pdf-appearance.css')) }],
+    ['/writing-workspace.css', { contentType: 'text/css', body: await readFile(path.join(repository, 'web/src/writing-workspace.css')) }],
     ['/api/pdf', { contentType: 'application/pdf', body: pdf }],
     ['/', { contentType: 'text/html', body: `<!doctype html><html><head><meta charset="utf-8">
-      <link rel="stylesheet" href="/pdf_viewer.css"><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/pdf-search.css">
+      <link rel="stylesheet" href="/pdf_viewer.css"><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/pdf-search.css"><link rel="stylesheet" href="/writing-workspace.css"><link rel="stylesheet" href="/pdf-appearance.css">
       <style>#pdf-pane { width: 900px; height: 900px; }</style>
       </head><body>${pane}<script type="module" src="/viewer.js"></script></body></html>` }],
   ]);
@@ -1570,19 +1574,27 @@ test('ウィンドウを小さくしても，原稿とログを操作できる�
   expect(smaller.editor.height).toBeGreaterThanOrEqual(159);
   expect(smaller.preview.right).toBeLessThanOrEqual(smaller.workbench.right + 1);
   expect(smaller.log.bottom).toBeLessThanOrEqual(smaller.workbench.bottom + 1);
-  await expect(page.getByTestId('pdf-search-toggle')).toBeVisible();
-  await expect(page.locator('#download-pdf')).toBeVisible();
+  await expect(page.getByTestId('pdf-more')).toBeVisible();
+  expect(await page.locator('.pdf-toolbar').evaluate(element => element.getBoundingClientRect().height)).toBeLessThanOrEqual(40);
   const outsidePreview = await page.locator('.pdf-toolbar').evaluate(toolbar => {
     const pane = document.getElementById('pdf-pane').getBoundingClientRect();
     return [...toolbar.querySelectorAll('button, input, select')].filter(control => {
       const bounds = control.getBoundingClientRect();
+      if (!bounds.width || !bounds.height) return false;
       return bounds.left < pane.left - 1 || bounds.right > pane.right + 1 ||
         bounds.top < pane.top - 1 || bounds.bottom > pane.bottom + 1;
     }).map(control => control.id || control.dataset.testid);
   });
   expect(outsidePreview).toEqual([]);
   expect(await page.locator('.pdf-toolbar').evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+  await showPDFControls(page);
+  await expect(page.getByTestId('pdf-search-toggle')).toBeVisible();
+  await expect(page.locator('#download-pdf')).toBeVisible();
+  const menu = await page.locator('#pdf-view-controls').boundingBox();
+  expect(menu.x).toBeGreaterThanOrEqual(0);
+  expect(menu.x + menu.width).toBeLessThanOrEqual(1000);
   await page.screenshot({ path: testInfo.outputPath('pdf-controls-narrow.png') });
+  await page.keyboard.press('Escape');
 
   await page.setViewportSize({ width: 800, height: 480 });
   await expect(page.locator('#splitter')).not.toBeVisible();
@@ -2656,3 +2668,4 @@ Finished.
 });
 
 registerWritingWorkflowTests({ test, openProject, openEditor, setAutoSave, json, compileFromUI });
+registerSourceDisplayTests({ test, openProject, openEditor, compileFromUI, exampleFigurePDF });

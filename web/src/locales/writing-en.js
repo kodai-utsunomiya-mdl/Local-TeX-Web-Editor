@@ -1,4 +1,11 @@
 export const writingEnglish = {
+  '補完したコマンドの次または前の引数へ移動': 'Move to the next or previous argument in a completion',
+  '現在のセクションや環境を折りたたむ / 展開': 'Fold or unfold the current section or environment',
+  '原稿全体を折りたたむ / 展開': 'Fold or unfold the whole document',
+  'TeX の入力補完を使う': 'Enable TeX completion',
+  '入力中に候補を自動で表示する': 'Show suggestions while typing',
+  'コマンド，環境，引用，相互参照の候補を表示します．環境は対応する終了まで挿入できます．': 'Show commands, environments, citations, and cross-references. Environments can include their matching end.',
+  '自動表示をオフにしても Ctrl + Space で候補を開けます．Enter で確定し，Tab で次の入力箇所へ進みます．': 'With automatic suggestions off, use Ctrl + Space to open them. Enter accepts a suggestion and Tab moves to the next field.',
   'テンプレートから作成': 'Create from a template',
   '移動前の場所へ戻る': 'Go back to the previous location',
   '次の場所へ進む': 'Go forward',
