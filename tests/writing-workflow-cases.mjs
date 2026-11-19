@@ -383,8 +383,14 @@ export function registerWritingWorkflowTests({ test, openProject, openEditor, se
     await page.locator('#insert-table-confirm').click();
     await expect(source(page)).toContainText('| Name | Value |');
     await expect(source(page)).toBeFocused();
+    const savingNotes = page.waitForResponse(response => new URL(response.url()).pathname === '/api/file'
+      && response.request().method() === 'PUT' && response.request().postDataJSON()?.path === 'notes.md');
     await page.keyboard.press(`${modifier}+s`);
+    const savedNotes = await savingNotes;
+    expect(savedNotes.ok(), await savedNotes.text()).toBe(true);
     const notes = clean(await readFile(path.join(session.project, 'notes.md'), 'utf8'));
+    expect(notes).toContain('![A small figure](figures/pasted.png)');
+    expect(notes).toContain('| A&amp;B | 2 |');
     await tool(page, 'project-templates');
     await expect(page.locator('#template-list .template-card')).toHaveCount(4);
     await page.locator('#template-capture > summary').click();

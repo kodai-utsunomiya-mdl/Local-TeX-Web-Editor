@@ -260,10 +260,13 @@ for (const kind of ['pdf', 'asset']) {
       const scroll = window.preview.elements.scroll; scroll.scrollTop = 150; scroll.scrollLeft = 110;
       viewer.update();
     });
+    const link = page.locator(kind === 'pdf' ? '#pdf-stage .annotationLayer a' : '#asset-pdf-stage .annotationLayer a').first();
+    await expect(link).toBeVisible();
+    // Bring the complete link into view before recording the position to restore.
+    await link.scrollIntoViewIfNeeded();
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     const before = await page.evaluate(() => ({ position: window.preview.getViewState(), top: window.preview.elements.scroll.scrollTop, left: window.preview.elements.scroll.scrollLeft }));
-    const link = page.locator(kind === 'pdf' ? '#pdf-stage .annotationLayer a' : '#asset-pdf-stage .annotationLayer a').first();
-    await expect(link).toBeVisible(); await link.click();
+    await link.click();
     await expect(page.locator('#back')).toBeEnabled();
     await expect.poll(() => page.evaluate(() => window.preview.pageNumber || window.preview.pdfViewer.currentPageNumber)).toBe(3);
     const after = await page.evaluate(() => ({ top: window.preview.elements.scroll.scrollTop, left: window.preview.elements.scroll.scrollLeft }));
