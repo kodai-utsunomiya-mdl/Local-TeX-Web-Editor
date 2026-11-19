@@ -378,12 +378,12 @@ The app does not impose a compilation time limit. Use the stop button to stop a 
 
 ## App files and storage
 
-For reference, the published **v0.1.6** files had the sizes below, rounded to the nearest MB (1 MB = 1,000,000 bytes). Check the Assets section of the current [release](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) for its download sizes.
+The **v0.1.7** files have the sizes below, rounded to the nearest MB (1 MB = 1,000,000 bytes). The Assets section of the [release](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) shows each download's size.
 
 | Platform | ZIP download | App after extraction |
 | --- | ---: | ---: |
-| Windows x64 | About **8 MB** | About **16 MB** (`.exe`) |
-| macOS, Apple Silicon + Intel | About **15 MB** | About **32 MB** (`.app`) |
+| Windows x64 | About **8 MB** | About **17 MB** (`.exe`) |
+| macOS, Apple Silicon + Intel | About **15 MB** | About **33 MB** (`.app`) |
 
 The ZIP also includes the README files, screenshots, and licenses. The macOS app contains both CPU versions. The Windows ZIP and macOS download buttons above link to the current release files.
 

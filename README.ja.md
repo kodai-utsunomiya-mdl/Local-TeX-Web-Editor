@@ -378,12 +378,12 @@ PDF のツールバーは 1 行で表示する．表示欄が狭い場合は，�
 
 ## アプリとデータの保存先
 
-参考として，公開済みの **v0.1.6** の配布ファイルの容量を示す．1 MB = 1,000,000 bytes とし，MB 単位に丸めている．現在の配布ファイルの容量は，[Release](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) の Assets で確認できる．
+**v0.1.7** の配布ファイルの容量を示す．1 MB = 1,000,000 bytes とし，MB 単位に丸めている．各配布ファイルの容量は，[Release](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) の Assets で確認できる．
 
 | 対応環境 | ダウンロードする ZIP | 展開後のアプリ本体 |
 | --- | ---: | ---: |
-| Windows x64 | 約 **8 MB** | 約 **16 MB** (`.exe`) |
-| macOS，Apple Silicon + Intel | 約 **15 MB** | 約 **32 MB** (`.app`) |
+| Windows x64 | 約 **8 MB** | 約 **17 MB** (`.exe`) |
+| macOS，Apple Silicon + Intel | 約 **15 MB** | 約 **33 MB** (`.app`) |
 
 ZIP には README，画像，ライセンスも含む．Mac のアプリは両方の CPU 向けの実行ファイルを収録している．冒頭の Windows ZIP と macOS のボタンから，対応する配布ファイルを取得できる．
 
