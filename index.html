@@ -115,7 +115,7 @@
           <p>The app uses <code>latexmk</code> to compile and <code>synctex</code> to move between source and PDF. If your project uses a <code>latexmkrc</code> or <code>.latexmkrc</code> file, keep it with the source files.</p>
           <div class="table-scroll">
             <table class="size-table">
-              <thead><tr><th scope="col">v0.1.5</th><th scope="col">ZIP download</th><th scope="col">App after extraction</th></tr></thead>
+              <thead><tr><th scope="col">v0.1.6</th><th scope="col">ZIP download</th><th scope="col">App after extraction</th></tr></thead>
               <tbody>
                 <tr><th scope="row">Windows x64</th><td>About 8 MB</td><td>About 16 MB</td></tr>
                 <tr><th scope="row">macOS, both CPUs</th><td>About 15 MB</td><td>About 32 MB</td></tr>
@@ -164,10 +164,11 @@
           <p>Files open in tabs. When the preview is showing a PDF, compiling an independent TeX document switches it to that document's PDF. Switching between TeX tabs alone leaves the last compiled PDF visible. For a chapter included by another file, use the default main document or a <code>% !TeX root = ../main.tex</code> comment.</p>
           <p><strong>Outline</strong> shows the headings from the selected TeX or Markdown tab and updates when you switch tabs. Click a heading to move to its source line.</p>
           <p>Drag the right edge of the files and outline sidebar, the divider between the editor and preview, or the top edge of the log to adjust the space you use. You can also focus a divider and use the arrow keys, or double-click it to restore its default position. Your chosen widths and log height are saved for the next launch.</p>
+          <p>In <strong>Settings → Appearance</strong>, choose system, light, or dark mode, a color scheme, an accent color, and the editor font. Changes appear immediately: choose <strong>Save appearance</strong> to use them next time, or <strong>Cancel</strong> to return to the previous appearance. System mode follows your computer's light/dark preference.</p>
 
           <div class="usage-block">
             <h3>Read the PDF and move to the source</h3>
-            <p>Scroll continuously through pages, select PDF text, search, and zoom with the toolbar, <kbd>Ctrl</kbd> + wheel or a trackpad pinch. SyncTeX connects the PDF to the source used to compile it.</p>
+            <p>Scroll continuously through pages, select PDF text and search. The <strong>＋</strong> / <strong>−</strong> buttons and zoom selector use the PDF position at the center of the preview; <kbd>Ctrl</kbd> + wheel and pinch zoom around the pointer or gesture position. SyncTeX connects the PDF to the source used to compile it.</p>
             <dl class="shortcut-list">
               <div><dt>PDF → source</dt><dd>Double-click text in the PDF to open its corresponding source line.</dd></div>
               <div><dt>Source → PDF</dt><dd><kbd>Ctrl</kbd> + click a source line on Windows, or <kbd>Cmd</kbd> + click on Mac.</dd></div>

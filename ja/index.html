@@ -115,7 +115,7 @@
           <p>コンパイルには <code>latexmk</code>，原稿と PDF の相互移動には <code>synctex</code> を使います．<code>latexmkrc</code> / <code>.latexmkrc</code> を使うプロジェクトでは，その設定ファイルも原稿と一緒に用意します．</p>
           <div class="table-scroll">
             <table class="size-table">
-              <thead><tr><th scope="col">v0.1.5</th><th scope="col">ZIP の容量</th><th scope="col">展開後のアプリ本体</th></tr></thead>
+              <thead><tr><th scope="col">v0.1.6</th><th scope="col">ZIP の容量</th><th scope="col">展開後のアプリ本体</th></tr></thead>
               <tbody>
                 <tr><th scope="row">Windows x64</th><td>約 8 MB</td><td>約 16 MB</td></tr>
                 <tr><th scope="row">macOS，両 CPU 共通</th><td>約 15 MB</td><td>約 32 MB</td></tr>
@@ -164,10 +164,11 @@
           <p>ファイルはタブで開きます．PDF を表示しているときに独立した TeX 文書をコンパイルすると，その文書の PDF へ切り替わります．TeX のタブ同士を切り替えただけの場合は，直前の PDF を表示し続けます．親ファイルに読み込む章では，既定のメイン文書または <code>% !TeX root = ../main.tex</code> の指定を使います．</p>
           <p><strong>アウトライン</strong>には，選択中の TeX または Markdown のタブの見出しが表示されます．タブを変えると見出しも切り替わり，クリックすると原稿の対応する行へ移動できます．</p>
           <p>ファイル一覧・アウトラインの右端，原稿とプレビューの境界，ログの上端をドラッグして，幅や高さを調整できます．境界にフォーカスして矢印キーで調整する操作や，ダブルクリックで初期位置に戻す操作も使えます．選んだ幅とログの高さは，次回の起動にも反映されます．</p>
+          <p><strong>設定 → 外観</strong>で，システム・ライト・ダークのモード，配色，アクセントの色，原稿のフォントを選べます．変更はその場で表示され，<strong>外観を保存</strong>すると次回も同じ外観で開きます．<strong>キャンセル</strong>すると開く前の外観へ戻ります．システムを選ぶと，PC のライト／ダーク設定に合わせます．</p>
 
           <div class="usage-block">
             <h3>PDF を読み，原稿へ移動する</h3>
-            <p>ページをまたぐ連続スクロール，文字の選択と検索，操作欄や <kbd>Ctrl</kbd> + ホイール，ピンチによる拡大・縮小ができます．SyncTeX により，PDF とコンパイルに使った原稿を行き来できます．</p>
+            <p>ページをまたぐ連続スクロール，文字の選択と検索ができます．操作欄の <strong>＋</strong> / <strong>−</strong> と倍率の選択はプレビュー中央の PDF 上の位置を，<kbd>Ctrl</kbd> + ホイールとピンチはポインターやジェスチャーの位置を基準に拡大・縮小します．SyncTeX により，PDF とコンパイルに使った原稿を行き来できます．</p>
             <dl class="shortcut-list">
               <div><dt>PDF → 原稿</dt><dd>PDF の文章をダブルクリックすると，原稿の対応する行を開きます．</dd></div>
               <div><dt>原稿 → PDF</dt><dd>Windows では <kbd>Ctrl</kbd> + クリック，Mac では <kbd>Cmd</kbd> + クリックで，原稿の行から PDF へ移動します．</dd></div>
