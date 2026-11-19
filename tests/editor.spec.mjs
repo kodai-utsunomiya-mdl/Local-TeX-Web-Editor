@@ -497,6 +497,7 @@ $\widehat w$ & Estimated coefficient vector \\
     expect(texProcessOutput(await page.getByTestId('build-log').textContent())).toBe(output);
     expect(await readFile(path.join(session.project, 'main.tex'), 'utf8')).toBe(expectedMainContent(session, content));
     await expect(page.getByTestId('editor').locator('.cm-content')).toContainText('設定，コンパイル，プレビューは原稿の本文にも使う．');
+    await page.screenshot({ path: testInfo.outputPath('search-controls-japanese-dark.png') });
     await chooseLanguage('en');
     await expect(page.getByTestId('source-search-input')).toHaveAttribute('placeholder', 'Find');
     await page.getByTestId('source-search-input').press('Escape');
@@ -898,7 +899,7 @@ test('改行を貼り付けて検索し，TeX のコマンドをそのまま置�
   await search.press('Control+V');
   await expect(search).toHaveValue(block);
   await expect(page.getByTestId('source-search-count')).toHaveText('2 件');
-  await search.press('Enter');
+  await page.getByTestId('source-search-next').click();
   await expect(page.getByTestId('source-search-count')).toHaveText('1 / 2');
   await search.press('Enter');
   await expect(page.getByTestId('source-search-count')).toHaveText('2 / 2');

@@ -54,7 +54,7 @@ class SourceSearchPanel {
     this.timer = null;
     this.matches = [];
     this.truncated = false;
-    this.dom = element('div', 'cm-search source-search');
+    this.dom = element('div', 'source-search');
     this.dom.setAttribute('aria-label', t("原稿の検索と置換"));
     this.dom.addEventListener('keydown', event => this.keydown(event));
 

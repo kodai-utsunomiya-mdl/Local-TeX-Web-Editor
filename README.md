@@ -286,7 +286,7 @@ The app does not impose a compilation time limit. Use the stop button to stop a 
 
 ## App files and storage
 
-Sizes for **v0.1.5**, rounded to the nearest MB (1 MB = 1,000,000 bytes):
+Sizes for **v0.1.6**, rounded to the nearest MB (1 MB = 1,000,000 bytes):
 
 | Platform | ZIP download | App after extraction |
 | --- | ---: | ---: |
