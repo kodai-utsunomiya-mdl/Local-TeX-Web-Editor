@@ -119,6 +119,7 @@ Version 0.1.6
 - Open Help with the ? button or F1 for guides, shortcuts, updates, troubleshooting, and environment information you can copy for feedback.
 - Fixed sideways drift when zooming the PDF. Page, zoom, search, and save controls remain visible in narrow previews.
 - Enlarged the search close buttons and improved spacing in the source and PDF search panels.
+- Improved saving on Windows by briefly retrying when file replacement is temporarily blocked. If the source file changes on disk during that wait, the app asks you to review the changes.
 ```
 
 ## 日本語の掲載内容
@@ -200,6 +201,7 @@ TeX のコンパイルには latexmk を含む TeX Live
 ・? ボタンまたは F1 から，使い方，ショートカット，更新内容，問題が起きたときの手順を確認できる．フィードバック用の環境情報もコピーできる．
 ・PDF の拡大・縮小で本文が横へずれる動きを修正した．狭いプレビューでも，ページ移動・倍率・検索・保存の操作が収まるようにした．
 ・原稿と PDF の検索欄で，閉じるボタンを大きくし，余白を広げた．
+・Windows で原稿の置き換えが一時的に拒否された場合，短時間だけ保存を再試行するようにした．待機中にディスク上の原稿が変わった場合は，変更の確認へ進む．
 ```
 
 ## Images and captions
