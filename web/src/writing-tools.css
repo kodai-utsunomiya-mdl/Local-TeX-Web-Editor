@@ -1,0 +1,48 @@
+.writing-dialog { width: min(1040px, calc(100vw - 32px)); max-width: 1040px; max-height: calc(100dvh - 32px); padding: 22px; overflow: auto; }
+.writing-dialog .dialog-heading { margin-bottom: 16px; gap: 16px; }
+.writing-dialog .dialog-heading .icon-button { flex: 0 0 36px; width: 36px; height: 36px; }
+.writing-dialog textarea { box-sizing: border-box; width: 100%; min-height: 48px; padding: 9px 11px; resize: vertical; font: inherit; }
+.project-search-form { display: grid; gap: 10px; }
+.writing-options, .writing-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 18px; }
+.writing-options { padding: 8px 0; }
+.writing-options label { display: flex; align-items: center; gap: 8px; }
+.writing-options input[type=checkbox], .project-search-match > input, .history-change-heading input { width: 18px; height: 18px; flex: 0 0 18px; }
+.writing-status { min-height: 1.5em; margin: 14px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.project-search-results { display: grid; gap: 18px; }
+.project-search-file { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.project-search-file-heading { margin: 0; padding: 10px 14px; font-size: 14px; overflow-wrap: anywhere; background: var(--surface-alt, var(--surface)); }
+.project-search-match { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-top: 1px solid var(--border); }
+.project-search-match-detail { min-width: 0; flex: 1; }
+.writing-location { display: block; width: 100%; text-align: left; border: 0; background: transparent; color: var(--text); font: inherit; cursor: pointer; padding: 4px 0 8px; overflow-wrap: anywhere; white-space: pre-wrap; }
+.writing-location:hover { color: var(--accent); text-decoration: underline; }
+.replacement-preview { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; font-size: 12px; }
+.replacement-preview code { white-space: pre-wrap; overflow-wrap: anywhere; padding: 4px 6px; border-radius: 4px; }
+.replacement-before, .history-current pre { background: color-mix(in srgb, #c94747 12%, transparent); }
+.replacement-after, .history-earlier pre { background: color-mix(in srgb, #2f9b6c 12%, transparent); }
+.history-settings { border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin: 14px 0; }
+.history-settings summary { cursor: pointer; }
+.history-settings input[type=number] { width: 75px; padding: 6px; }
+.history-record-form { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0; }
+.history-record-form input { min-width: 180px; flex: 1; padding: 9px 11px; }
+.history-layout { display: grid; grid-template-columns: minmax(160px, 220px) minmax(0, 1fr); gap: 16px; min-height: 180px; margin: 16px 0; }
+.history-entries { display: flex; flex-direction: column; gap: 6px; max-height: 52vh; overflow: auto; }
+.history-entry { border: 1px solid var(--border); border-radius: 6px; padding: 10px; background: var(--surface); color: var(--text); text-align: left; cursor: pointer; }
+.history-entry[aria-pressed=true] { border-color: var(--accent); box-shadow: inset 3px 0 var(--accent); }
+.history-entry strong, .history-entry span { display: block; overflow-wrap: anywhere; }
+.history-entry span { margin-top: 5px; color: var(--muted); font-size: 12px; }
+.history-changes { min-width: 0; max-height: 52vh; overflow: auto; display: flex; flex-direction: column; gap: 14px; }
+.history-change { border: 1px solid var(--border); border-radius: 6px; padding: 10px; }
+.history-change-heading { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.history-diff-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.history-diff-columns > div { min-width: 0; }
+.history-diff-columns h4 { font-size: 12px; margin: 0 0 6px; color: var(--muted); }
+.history-diff-columns pre { margin: 0; padding: 8px; font-size: 12px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 320px; overflow: auto; }
+@media (max-width: 640px) {
+  .writing-dialog { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); padding: 16px; }
+  .history-layout { grid-template-columns: 1fr; }
+  .history-entries { max-height: 160px; }
+  .history-diff-columns { grid-template-columns: 1fr; }
+  .history-changes { max-height: 40vh; }
+  .writing-actions { align-items: stretch; }
+  .writing-actions .button { flex: 1 1 auto; }
+}

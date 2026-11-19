@@ -1,22 +1,29 @@
+import { completionInfo } from './completion-info.js';
+
 // Positions use JavaScript / CodeMirror's UTF-16 offsets. Blanking comments
 // keeps those offsets unchanged, including for text outside the ASCII range.
-function maskNonCode(text) {
-  const characters = text.split('');
+export function maskNonCode(text, { onLiteral } = {}) {
+  const chunks = [];
+  let copied = 0;
   const blank = (start, end) => {
-    for (let i = start; i < end; i++) if (characters[i] !== '\n' && characters[i] !== '\r') characters[i] = ' ';
+    chunks.push(text.slice(copied, start), text.slice(start, end).replace(/[^\r\n]/g, ' '));
+    copied = end;
   };
-  for (let i = 0; i < text.length; i++) {
+  const markers = /[%\\]/g;
+  for (let match; (match = markers.exec(text));) {
+    const i = match.index;
     if (text[i] === '%') {
       const end = text.indexOf('\n', i);
       blank(i, end < 0 ? text.length : end);
-      i = end < 0 ? text.length : end;
+      markers.lastIndex = end < 0 ? text.length : end;
     } else if (text[i] === '\\') {
       const begin = /^\\begin\s*\{(verbatim\*?|Verbatim|lstlisting|minted|comment)\}/.exec(text.slice(i, i + 96));
       if (begin) {
         const closing = `\\end{${begin[1]}}`;
         const at = text.indexOf(closing, i + begin[0].length);
         const end = at < 0 ? text.length : at + closing.length;
-        blank(i, end); i = end - 1;
+        onLiteral?.({ name: begin[1], from: i, to: end, closed: at >= 0 });
+        blank(i, end); markers.lastIndex = end;
         continue;
       }
       const verb = /^\\verb\*?([^A-Za-z\s])/.exec(text.slice(i, i + 16));
@@ -24,13 +31,15 @@ function maskNonCode(text) {
         const at = text.indexOf(verb[1], i + verb[0].length);
         const newline = text.indexOf('\n', i);
         const end = at >= 0 && (newline < 0 || at < newline) ? at + 1 : (newline < 0 ? text.length : newline);
-        blank(i, end); i = end - 1;
+        blank(i, end); markers.lastIndex = end;
         continue;
       }
-      if (i + 1 < text.length && !/[A-Za-z@]/.test(text[i + 1])) i++;
+      if (i + 1 < text.length && !/[A-Za-z@]/.test(text[i + 1])) markers.lastIndex = i + 2;
     }
   }
-  return characters.join('');
+  if (!chunks.length) return text;
+  chunks.push(text.slice(copied));
+  return chunks.join('');
 }
 
 function escaped(text, offset) {
@@ -232,7 +241,12 @@ export function texCompletionSource(getItems) {
       if (!item?.key || seen.has(item.key) || used.has(item.key)) continue;
       seen.add(item.key);
       const detail = citation ? [item.author, item.year].filter(Boolean).join(' · ') : item.context || item.path;
-      const info = [citation ? item.title : item.context, item.path && `${item.path}:${item.line || 1}`].filter(Boolean).join('\n');
+      const info = () => completionInfo({
+        label: item.key,
+        title: citation ? item.title : item.context,
+        detail: citation ? detail : '',
+        location: item.path && `${item.path}:${item.line || 1}`,
+      });
       options.push({ label: item.key, type: citation ? 'text' : 'variable', detail, info, apply: item.key });
     }
     return options.length ? { from, options, validFor: /^[^{}\s,]*$/ } : null;

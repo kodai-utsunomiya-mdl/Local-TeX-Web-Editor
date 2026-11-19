@@ -141,13 +141,15 @@ export function renderMarkdownHTML(content) {
 }
 
 export class MarkdownPreview {
-  constructor({ container, token, onOpenFile, onSourceLine, onError }) {
+  constructor({ container, token, onOpenFile, onSourceLine, onError, onUserScroll, onNavigate }) {
     if (!container) throw new Error(t("Markdown の表示先がありません．"));
     this.container = container;
     this.token = token;
     this.onOpenFile = onOpenFile;
     this.onSourceLine = onSourceLine;
     this.onError = onError;
+    this.onUserScroll = onUserScroll;
+    this.onNavigate = onNavigate;
     this.document = container.ownerDocument;
     this.window = this.document.defaultView;
     this.purify = createDOMPurify(this.window);
@@ -173,6 +175,8 @@ export class MarkdownPreview {
     this.sourceTarget = null;
     this.sourcePosition = null;
     this.sourceFrame = null;
+    this.userScrollFrame = null;
+    this.userScrolling = false;
     this.highlighted = null;
     this.highlightTimer = null;
     this.layoutObserver = this.window.ResizeObserver ? new this.window.ResizeObserver(() => {
@@ -184,8 +188,21 @@ export class MarkdownPreview {
     this.manualScroll = event => {
       if (event.type === 'keydown' && !['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) return;
       this.sourceTarget = null;
+      this.userScrolling = true;
     };
     for (const type of ['wheel', 'touchstart', 'pointerdown', 'keydown']) this.container.addEventListener(type, this.manualScroll, { passive: true });
+    this.scrolled = () => {
+      this.rememberPosition();
+      if (!this.userScrolling || !this.scrollSync || !this.onUserScroll || this.userScrollFrame !== null) return;
+      this.userScrollFrame = this.window.requestAnimationFrame(() => {
+        this.userScrollFrame = null;
+        if (!this.userScrolling || !this.scrollSync || !this.matchesSource() || this.rendered !== this.current) return;
+        const position = this.sourceAtScroll();
+        this.sourcePosition = { path: position.path, projectRoot: position.projectRoot, line: position.sourceLine, atStart: position.atStart, atEnd: position.atEnd };
+        this.onUserScroll(position);
+      });
+    };
+    this.container.addEventListener('scroll', this.scrolled, { passive: true });
     this.linkClick = event => this.openLink(event);
     this.doubleClick = event => {
       if (!this.onSourceLine || event.target.closest('a, input, button')) return;
@@ -213,6 +230,37 @@ export class MarkdownPreview {
     while (this.positions.size > 50) this.positions.delete(this.positions.keys().next().value);
   }
 
+  getViewState() {
+    if (!this.current) return null;
+    return { path: this.current.path, projectRoot: this.current.projectRoot, top: this.container.scrollTop, left: this.container.scrollLeft };
+  }
+
+  async applyViewState(position) {
+    if (!position || !this.matchesSource(position)) return false;
+    if (this.rendered !== this.current) this.render();
+    this.userScrolling = false; this.sourceTarget = null; this.sourcePosition = null;
+    this.container.scrollTo({ top: Number(position.top) || 0, left: Number(position.left) || 0, behavior: 'instant' });
+    this.rememberPosition();
+    await new Promise(resolve => this.window.requestAnimationFrame(() => this.window.requestAnimationFrame(resolve)));
+    return this.matchesSource(position);
+  }
+
+  sourceAtScroll() {
+    const { anchors, lineCount } = this.measureLines();
+    const padding = parseFloat(this.window.getComputedStyle(this.container).paddingTop) || 0;
+    const top = this.container.scrollTop + padding;
+    let lower = anchors[0], upper = anchors.at(-1);
+    for (const anchor of anchors) {
+      if (anchor.top <= top) lower = anchor;
+      if (anchor.top >= top) { upper = anchor; break; }
+    }
+    const between = upper.top > lower.top ? Math.max(0, Math.min(1, (top - lower.top) / (upper.top - lower.top))) : 0;
+    const sourceLine = Math.max(1, Math.min(lineCount, lower.line + between * (upper.line - lower.line)));
+    const line = Math.floor(sourceLine);
+    return { path: this.current.path, projectRoot: this.current.projectRoot, sourceLine, line, fraction: sourceLine - line,
+      atStart: this.container.scrollTop <= 2, atEnd: this.container.scrollTop + this.container.clientHeight >= this.container.scrollHeight - 2 };
+  }
+
   show() {
     if (!this.container.hidden) return;
     this.container.hidden = false;
@@ -224,6 +272,7 @@ export class MarkdownPreview {
     this.rememberPosition();
     this.sourceTarget = null;
     this.sourcePosition = null;
+    this.userScrolling = false;
     this.clearHighlight();
     this.container.hidden = true;
     clearTimeout(this.timer);
@@ -315,6 +364,7 @@ export class MarkdownPreview {
       this.article.classList.toggle('is-empty', !current.content.trim());
       if (!current.content.trim()) this.article.textContent = t("Markdown を入力すると，ここに表示されます．");
       this.rendered = current;
+      this.userScrolling = false;
       this.container.scrollTop = position?.top || 0;
       this.container.scrollLeft = position?.left || 0;
       this.container.dataset.state = 'ready';
@@ -402,25 +452,26 @@ export class MarkdownPreview {
     return this.scrollSourceLine(line, { align, highlight });
   }
 
-  syncSourceLine(line, { path, projectRoot } = {}) {
+  syncSourceLine(line, { path, projectRoot, atStart = false, atEnd = false } = {}) {
     if (!this.scrollSync || !this.matchesSource({ path, projectRoot }) || !Number.isFinite(Number(line))) {
       this.sourceTarget = null;
       this.sourcePosition = null;
       return false;
     }
-    const target = { line: Number(line), path: this.current.path, projectRoot: this.current.projectRoot };
+    const target = { line: Number(line), path: this.current.path, projectRoot: this.current.projectRoot, atStart: !!atStart, atEnd: !!atEnd };
     // Editing can report the same editor position after the user has scrolled
     // the preview. Follow again when the editor actually moves.
     if (!this.sourceTarget && this.sourcePosition?.path === target.path
       && this.sourcePosition.projectRoot === target.projectRoot
+      && !!this.sourcePosition.atStart === target.atStart && !!this.sourcePosition.atEnd === target.atEnd
       && Math.abs(this.sourcePosition.line - target.line) < 0.0001) return false;
     this.sourceTarget = target;
     this.sourcePosition = target;
     if (this.rendered !== this.current) return true;
-    return this.scrollSourceLine(line, { align: 'start', highlight: false });
+    return this.scrollSourceLine(line, { align: 'start', highlight: false, atStart, atEnd });
   }
 
-  scrollSourceLine(line, { align, highlight }) {
+  scrollSourceLine(line, { align, highlight, atStart = false, atEnd = false }) {
     if (this.rendered !== this.current) {
       clearTimeout(this.timer);
       this.timer = null;
@@ -430,7 +481,9 @@ export class MarkdownPreview {
     const location = this.locateLine(line);
     const padding = parseFloat(this.window.getComputedStyle(this.container).paddingTop) || 0;
     const offset = align === 'center' ? this.container.clientHeight / 2 : padding;
-    const top = Math.max(0, Math.min(this.container.scrollHeight - this.container.clientHeight, location.top - offset));
+    const bottom = Math.max(0, this.container.scrollHeight - this.container.clientHeight);
+    const top = atStart ? 0 : atEnd ? bottom : Math.max(0, Math.min(bottom, location.top - offset));
+    this.userScrolling = false;
     this.container.scrollTo({ top, behavior: 'instant' });
     if (highlight) {
       this.clearHighlight();
@@ -448,7 +501,7 @@ export class MarkdownPreview {
     this.sourceFrame = this.window.requestAnimationFrame(() => {
       this.sourceFrame = null;
       const target = this.sourceTarget;
-      if (this.scrollSync && target && this.rendered === this.current && this.matchesSource(target)) this.scrollSourceLine(target.line, { align: 'start', highlight: false });
+      if (this.scrollSync && target && this.rendered === this.current && this.matchesSource(target)) this.scrollSourceLine(target.line, { align: 'start', highlight: false, atStart: target.atStart, atEnd: target.atEnd });
     });
   }
 
@@ -587,10 +640,11 @@ export class MarkdownPreview {
 
   scrollToHeading(fragment) {
     this.sourceTarget = null;
+    this.userScrolling = false;
     const value = fragment.replace(/^user-content-/, '');
     const heading = [...this.article.querySelectorAll('[data-markdown-heading]')].find(node => node.dataset.markdownHeading === value);
-    if (heading) heading.scrollIntoView({ block: 'start', behavior: 'smooth' });
-    else if (!value) this.container.scrollTo({ top: 0, behavior: 'smooth' });
+    if (heading) heading.scrollIntoView({ block: 'start', behavior: 'instant' });
+    else if (!value) this.container.scrollTo({ top: 0, behavior: 'instant' });
   }
 
   openLink(event) {
@@ -600,8 +654,12 @@ export class MarkdownPreview {
     if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
     const path = link.dataset.markdownPath;
     const fragment = link.dataset.markdownFragment;
-    if (!path || path === this.current?.path) { this.scrollToHeading(fragment); return; }
-    if (this.onOpenFile) Promise.resolve().then(() => this.onOpenFile(path, { fragment })).catch(error => this.onError?.(error));
+    const action = async () => {
+      if (!path || path === this.current?.path) this.scrollToHeading(fragment);
+      else if (this.onOpenFile) await this.onOpenFile(path, { fragment });
+      await new Promise(resolve => this.window.requestAnimationFrame(() => this.window.requestAnimationFrame(resolve)));
+    };
+    Promise.resolve().then(() => this.onNavigate ? this.onNavigate(action) : action()).catch(error => this.onError?.(error));
   }
 
   destroy() {
@@ -609,9 +667,11 @@ export class MarkdownPreview {
     this.reset();
     this.layoutObserver?.disconnect();
     if (this.sourceFrame !== null) this.window.cancelAnimationFrame(this.sourceFrame);
+    if (this.userScrollFrame !== null) this.window.cancelAnimationFrame(this.userScrollFrame);
     for (const type of ['wheel', 'touchstart', 'pointerdown', 'keydown']) this.container.removeEventListener(type, this.manualScroll);
     this.container.removeEventListener('click', this.linkClick);
     this.container.removeEventListener('dblclick', this.doubleClick);
+    this.container.removeEventListener('scroll', this.scrolled);
     this.article.remove();
   }
 }

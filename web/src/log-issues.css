@@ -1,0 +1,9 @@
+.log-issues { display: flex; flex-direction: column; gap: 9px; padding: 10px 12px; max-height: 45%; min-height: 65px; overflow: auto; border-bottom: 1px solid var(--border); flex: 0 1 auto; }
+.log-issue-filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.log-issue-filters [aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.log-issue-status { color: var(--muted); font-size: 10px; line-height: 1.5; }
+.log-issue-list { display: flex; flex-direction: column; gap: 6px; }
+.log-issue { display: flex; align-items: baseline; flex-wrap: wrap; gap: 7px 12px; padding: 7px 9px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface); color: var(--text, inherit); text-align: left; font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
+.log-issue strong { color: var(--accent); font-weight: 550; }
+.log-issue[data-severity="error"] { border-left: 3px solid var(--danger); }
+.log-issue:is(button):hover { background: var(--accent-soft); }

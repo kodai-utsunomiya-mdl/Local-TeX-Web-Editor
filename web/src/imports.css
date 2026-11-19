@@ -1,0 +1,50 @@
+.import-dialog { width: min(720px, calc(100vw - 32px)); }
+.import-dialog[open] { display: flex; flex-direction: column; overflow: hidden; }
+.import-dialog .dialog-heading { align-items: center; flex: 0 0 auto; }
+.import-body { min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 3px; margin: -3px; }
+.import-dialog > .form-error { flex: 0 0 auto; margin-top: 12px; overflow-wrap: anywhere; }
+.import-dialog .dialog-heading > .icon-button { width: 36px; height: 36px; margin: -4px -5px -4px 0; }
+.import-dialog :is(input, select, textarea) { max-width: 100%; }
+.import-dialog textarea { display: block; width: 100%; resize: vertical; font: 12px/1.65 var(--editor-font, ui-monospace, monospace); min-height: 60px; }
+.import-field { margin: 17px 0; min-width: 0; }
+.import-field input[type="file"] { display: block; width: 100%; padding: 9px 0; color: var(--text); }
+.import-field .field-label { font-size: 12px; line-height: 1.7; }
+.import-dialog .field-help { font-size: 11px; }
+.import-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; }
+.import-columns .import-field { margin-top: 8px; }
+.import-image-preview { display: grid; place-items: center; max-height: 200px; overflow: auto; background: var(--subtle); border-radius: 6px; }
+.import-image-preview:empty { display: none; }
+.import-image-preview img { max-width: 100%; max-height: 190px; object-fit: contain; }
+.import-image-preview p { padding: 15px; overflow-wrap: anywhere; font-size: 12px; }
+.import-table-preview { max-height: 240px; overflow: auto; margin: 10px 0; }
+.import-table-preview table { border-collapse: collapse; min-width: 100%; font-size: 11px; }
+.import-table-preview :is(th, td) { border: 1px solid var(--border-strong); padding: 7px 10px; white-space: pre-wrap; min-width: 65px; max-width: 240px; overflow-wrap: anywhere; text-align: left; }
+.import-table-preview th { background: var(--subtle); }
+.import-new-table { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+.import-new-table .import-field { margin: 0; flex: 1 1 80px; }
+.import-new-table input { width: 100%; }
+.import-table-preview .import-table-cell { width: 110px; min-width: 65px; min-height: 32px; padding: 5px 6px; border-color: transparent; background: transparent; font: inherit; line-height: 1.6; resize: vertical; }
+.import-table-preview .import-table-cell:focus { background: var(--surface); border-color: var(--accent); }
+.template-dialog { width: min(760px, calc(100vw - 32px)); }
+.template-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; max-height: 280px; overflow: auto; padding: 3px; }
+.template-card { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; padding: 13px 14px; min-width: 0; text-align: left; border: 1px solid var(--border-strong); border-radius: 7px; background: var(--surface); color: var(--text); cursor: pointer; font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; }
+.template-card.selected { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); background: var(--accent-soft); }
+.template-card .field-help { margin-top: 0; }
+.template-folder-row { display: flex; gap: 8px; min-width: 0; }
+.template-folder-row > input { flex: 1 1 auto; min-width: 0; }
+.template-folder-row > button { flex: 0 0 auto; }
+.template-section { padding-top: 17px; margin-top: 20px; border-top: 1px solid var(--border); }
+.template-section > summary { font-size: 12px; font-weight: 600; line-height: 1.8; cursor: pointer; }
+.template-section .template-actions { margin-top: 13px; }
+.template-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.template-files { border: 1px solid var(--border); border-radius: 6px; max-height: 210px; overflow: auto; margin: 10px 0 14px; padding: 8px; }
+.template-files .checkbox-field { padding: 6px 2px; align-items: flex-start; font-size: 11px; line-height: 1.7; overflow-wrap: anywhere; }
+.template-files input { flex: 0 0 auto; margin-top: 3px; }
+.import-dialog .dialog-actions { flex: 0 0 auto; flex-wrap: wrap; margin-top: 20px; }
+@media (max-width: 480px) {
+  .import-dialog { padding: 20px 17px; }
+  .import-columns, .template-list { grid-template-columns: minmax(0, 1fr); }
+  .template-folder-row { flex-wrap: wrap; }
+  .template-folder-row > input { flex-basis: 100%; }
+  .import-dialog .button { white-space: normal; }
+}

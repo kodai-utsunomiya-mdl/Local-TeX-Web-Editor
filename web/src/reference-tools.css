@@ -1,0 +1,40 @@
+.reference-dialog { width: min(1000px, calc(100vw - 28px)); max-width: none; max-height: calc(100dvh - 36px); padding: 20px; overflow: hidden; }
+.reference-dialog[open] { display: flex; flex-direction: column; gap: 14px; }
+.reference-dialog .dialog-heading { flex: 0 0 auto; margin: 0; }
+.reference-dialog .dialog-heading .icon-button { width: 36px; height: 36px; }
+.reference-search-row { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+.reference-search-row input { flex: 1; }
+.reference-status { flex: 0 0 auto; line-height: 1.6; }
+.reference-status.error { color: var(--danger); }
+.reference-columns { display: grid; grid-template-columns: minmax(180px, 30%) minmax(0, 1fr); gap: 18px; min-height: 0; height: min(580px, 62dvh); }
+.reference-key-list, .reference-details { min-width: 0; overflow: auto; overscroll-behavior: contain; padding: 3px; }
+.reference-key-list { border-right: 1px solid var(--border); padding-right: 12px; }
+.reference-key { display: flex; flex-direction: column; gap: 6px; width: 100%; border: 1px solid transparent; border-radius: 6px; background: transparent; color: inherit; text-align: left; padding: 10px; overflow-wrap: anywhere; }
+.reference-key strong { font-size: 12px; font-weight: 600; }
+.reference-key:hover, .reference-key.selected { background: var(--accent-soft); border-color: var(--border-strong); }
+.reference-key .field-help { font-size: 11px; }
+.reference-selected-key { overflow-wrap: anywhere; font-size: 16px; margin-bottom: 18px; }
+.reference-details h4 { margin: 16px 0 9px; font-size: 12px; }
+.reference-location { padding-bottom: 12px; }
+.reference-location .button { white-space: normal; overflow-wrap: anywhere; text-align: left; }
+.reference-description { margin: 10px 0; font-size: 12px; line-height: 1.7; }
+.reference-excerpt { color: var(--text, inherit); background: var(--subtle, var(--surface)); border: 1px solid var(--border); border-radius: 6px; margin: 8px 0 0; padding: 10px; white-space: pre-wrap; overflow-wrap: anywhere; font: 11px/1.7 var(--editor-font-family, monospace); }
+.reference-rename { border-top: 1px solid var(--border); margin-top: 18px; padding-top: 5px; }
+.reference-rename-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: end; }
+.reference-rename-form label, .reference-rename-form .form-error { grid-column: 1 / -1; }
+.reference-rename-form .form-error:empty { display: none; }
+.reference-change-list { margin: 16px 0; }
+.reference-change-title:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 2px; }
+.reference-change-row { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 5px 8px; margin-bottom: 10px; padding: 9px; border: 1px solid var(--border); border-radius: 6px; font: 11px/1.65 var(--editor-font-family, monospace); overflow-wrap: anywhere; }
+.reference-change-row span { grid-row: 1 / 3; }
+.reference-change-row del, .reference-change-row ins { text-decoration: none; white-space: pre-wrap; }
+.reference-change-row del { background: color-mix(in srgb, var(--danger) 12%, transparent); }
+.reference-change-row ins { background: var(--accent-soft); }
+@media (max-width: 650px) {
+  .reference-dialog { padding: 14px; gap: 10px; }
+  .reference-columns { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(90px, 25%) minmax(0, 1fr); height: 64dvh; gap: 12px; }
+  .reference-key-list { border-right: 0; border-bottom: 1px solid var(--border); padding-right: 3px; }
+  .reference-rename-form { grid-template-columns: minmax(0, 1fr); }
+  .reference-search-row { flex-wrap: wrap; }
+  .reference-search-row input { min-width: 180px; }
+}

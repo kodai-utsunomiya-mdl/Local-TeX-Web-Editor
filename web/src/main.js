@@ -1,10 +1,10 @@
 import { t, getLanguage, setLanguage } from './i18n.js';
-import { EditorState, Compartment, Prec, StateEffect, StateField } from '@codemirror/state';
-import { EditorView, keymap, Decoration } from '@codemirror/view';
+import { EditorState, Compartment, Prec, StateEffect, StateField, Transaction } from '@codemirror/state';
+import { EditorView, keymap, Decoration, scrollPastEnd } from '@codemirror/view';
 import { basicSetup } from 'codemirror';
-import { indentWithTab } from '@codemirror/commands';
+import { indentWithTab, isolateHistory } from '@codemirror/commands';
 import { StreamLanguage, HighlightStyle, syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language';
-import { autocompletion } from '@codemirror/autocomplete';
+import { autocompletion, closeCompletion } from '@codemirror/autocomplete';
 import { stex } from '@codemirror/legacy-modes/mode/stex';
 import { markdown } from '@codemirror/lang-markdown';
 import { PDFViewer } from './pdf-viewer.js';
@@ -15,12 +15,25 @@ import { attachEditorZoom, prepareEditorResize } from './editor-zoom.js';
 import { createPanelLayout, normalizePanelLayout } from './panel-layout.js';
 import { normalizeAppearance, resolveAppearance } from './appearance.js';
 import { createHelp } from './help.js';
+import { stateForOtherView, restoredTabPaths } from './shared-editor.js';
+import { NavigationHistory, afterNavigationFrame } from './navigation-history.js';
+import { createProjectSearch, replaceProjectDocuments } from './project-search.js';
+import { createEditHistory } from './edit-history.js';
+import { createReferenceTools } from './reference-tools.js';
+import { createInsertTools } from './insert-tools.js';
+import { createTemplateManager } from './template-manager.js';
+import { createLogIssues } from './log-issues.js';
+import { createMarkdownEditing } from './markdown-editing.js';
+import { completionPresentation } from './completion-ui.js';
+import { createTeXCompletionSource } from './tex-completion.js';
+import { sourceFolding, revealSourceRange } from './source-folding.js';
+import { createOutlineTree } from './outline-tree.js';
 import { tags } from '@lezer/highlight';
 import { SessionStore } from './session-store.js';
 import { BrowserSession } from './browser-session.js';
 import { isMac, shortcutModifier } from './platform-keys.js';
 import { renderTeXPackagesHelp } from './tex-packages.js';
-import { extractTexMetadata, extractCitations, texCompletionSource, extractLogLocations, compileTarget } from './tex-tools.js';
+import { extractTexMetadata, extractCitations, compileTarget } from './tex-tools.js';
 
 const $ = id => document.getElementById(id);
 const TOKEN_KEY = 'local-tex-editor-token';
@@ -44,6 +57,11 @@ const state = {
   tabElements: new Map(),
   editor: null,
   editorZoomCleanup: null,
+  activePane: 'primary',
+  splitEditors: false,
+  sourceRatio: 1,
+  lastSurface: 'source',
+  synchronizingEditors: false,
   activePath: '',
   projectGeneration: 0,
   toolsGeneration: 0,
@@ -60,7 +78,7 @@ const state = {
   connected: false,
   externalProjectChanged: false,
   reportedBuild: '',
-  preferences: { autoSave: true, theme: null, appearance: normalizeAppearance(), editorFontSize: 14, language: getLanguage(), panelLayout: normalizePanelLayout(), markdownScrollSync: true },
+  preferences: { autoSave: true, theme: null, appearance: normalizeAppearance(), editorFontSize: 14, language: getLanguage(), panelLayout: normalizePanelLayout(), markdownScrollSync: true, texCompletion: true, automaticCompletion: true, pdfDarkMode: false },
   theme: 'light',
   saveQueue: Promise.resolve(),
   autoSaveTimer: null,
@@ -85,14 +103,29 @@ const readOnly = new Compartment();
 const systemColorScheme = matchMedia('(prefers-color-scheme: dark)');
 let appearanceDraft = null;
 let help = null;
+let navigationHistory = null;
+let insertTools = null;
+let referenceTools = null;
+let projectSearch = null;
+let documentHistory = null;
+let templateManager = null;
+let logIssues = null;
+let markdownEditing = null;
+let outlineTree = null;
+const editorSlots = {
+  primary: { host: $('editor'), element: $('source-pane-primary'), select: $('primary-document'), view: null, path: '', cleanup: null },
+  secondary: { host: $('editor-secondary'), element: $('source-pane-secondary'), select: $('secondary-document'), view: null, path: '', cleanup: null },
+};
 const editorTheme = new Compartment();
 const editorLanguage = new Compartment();
+const editorCompletion = new Compartment();
 const modeLabels = { project: 'latexmkrc', pdflatex: 'pdfLaTeX', uplatex: 'upLaTeX', xelatex: 'XeLaTeX', lualatex: 'LuaLaTeX' };
 let toastTimer = null;
 let lineFlashTimer = null;
 let markdownScrollFrame = 0;
 let markdownScrollPauseSequence = 0;
 let markdownScrollPaused = false;
+let draggedTabPath = '';
 const lineFlash = StateEffect.define();
 const lineFlashField = StateField.define({
   create: () => Decoration.none,
@@ -133,7 +166,7 @@ async function api(path, { method = 'GET', body, timeout = 15000, projectRoot = 
   if (state.closed) throw new Error(t("アプリは終了しています．実行ファイルから開き直してください．"));
   if (!token) throw new APIError(t("接続に必要な情報が見つかりません．アプリの実行ファイルを起動して開いたページを使用してください．"), 401);
   const headers = { 'X-Local-Token': token, Accept: 'application/json', 'Accept-Language': getLanguage() };
-  if (projectRoot && !/^\/api\/(state|project\/|shutdown)/.test(path)) headers['X-Project-Root'] = encodeURIComponent(projectRoot);
+  if (projectRoot && !/^\/api\/(state|project\/(open|pick)|shutdown)(\?|$)/.test(path)) headers['X-Project-Root'] = encodeURIComponent(projectRoot);
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   const controller = new AbortController();
   const cancel = () => controller.abort(signal.reason);
@@ -180,6 +213,7 @@ function toast(message) {
   $('toast').hidden = false;
   toastTimer = setTimeout(() => { $('toast').hidden = true; }, 3200);
 }
+function navigate(action) { return navigationHistory ? navigationHistory.navigate(action) : action(); }
 function runTask(fn) { Promise.resolve().then(fn).catch(error => { if (!error?.shown) showError(error); }); }
 function onClick(id, fn) { $(id).addEventListener('click', () => runTask(fn)); }
 function normalise(text) { return (text || '').replace(/\r\n?/g, '\n'); }
@@ -187,6 +221,10 @@ function basename(path) { return path.replace(/[\\/]+$/, '').split(/[\\/]/).pop(
 function isDirty(doc) { return !!doc && !doc.state.doc.eq(doc.savedDoc); }
 function dirtyDocuments() { return [...state.documents.values()].filter(isDirty); }
 function activeDocument() { return state.documents.get(state.activePath); }
+function documentText(doc) {
+  if (doc.textSnapshotDoc !== doc.state.doc) { doc.textSnapshotDoc = doc.state.doc; doc.textSnapshot = doc.state.doc.toString(); }
+  return doc.textSnapshot;
+}
 function isMarkdown(path) { return /\.(md|markdown)$/i.test(path || ''); }
 function sourceAffectsPDF(path) {
   if (!isMarkdown(path)) return true;
@@ -225,7 +263,7 @@ function updateDocumentPreview({ immediate = false } = {}) {
     const path = markdownDocument?.path || '';
     $('markdown-document-name').textContent = path || t("Markdown ファイルを開いてください");
     $('markdown-document-name').title = path;
-    markdownPreview.update(markdownDocument?.state.doc.toString() || '', { path, projectRoot: state.meta?.project?.root, immediate });
+    markdownPreview.update(markdownDocument ? documentText(markdownDocument) : '', { path, projectRoot: state.meta?.project?.root, immediate });
     if (changed) markdownPreview.show();
   } else {
     if (changed) { markdownPreview.hide(); requestAnimationFrame(() => viewer.refreshLayout()); }
@@ -255,7 +293,7 @@ function scheduleMarkdownScrollSync() {
     const doc = activeDocument();
     if (markdownScrollPaused || state.closed || !view || !doc || !isMarkdown(doc.path) ||
         !state.preferences.markdownScrollSync || state.previewMode !== 'markdown' ||
-        !view.scrollDOM.clientHeight || $('editor').hidden) return;
+        !view.scrollDOM.clientHeight || editorSlots[state.activePane].host.hidden) return;
     const height = Math.max(0, view.scrollDOM.getBoundingClientRect().top + view.scrollDOM.clientTop - view.documentTop);
     const block = view.lineBlockAtHeight(height);
     const first = view.state.doc.lineAt(block.from).number;
@@ -263,6 +301,8 @@ function scheduleMarkdownScrollSync() {
     const fraction = block.height > 0 ? Math.min(1, Math.max(0, (height - block.top) / block.height)) : 0;
     markdownPreview.syncSourceLine(first + fraction * (last - first + 1), {
       path: doc.path, projectRoot: state.meta?.project?.root,
+      atStart: view.scrollDOM.scrollTop <= 2,
+      atEnd: view.scrollDOM.scrollHeight - view.scrollDOM.clientHeight - view.scrollDOM.scrollTop <= 2,
     });
   });
 }
@@ -272,11 +312,30 @@ function applyMarkdownScrollSync(enabled) {
   markdownPreview.setScrollSync(enabled);
   if (!enabled) { cancelAnimationFrame(markdownScrollFrame); markdownScrollFrame = 0; }
 }
+function scrollSourceWithMarkdown(position) {
+  if (!state.preferences.markdownScrollSync || state.closed || state.operation || position.projectRoot !== state.meta?.project?.root) return;
+  const candidates = visibleEditorSlots(position.path);
+  const slot = candidates.find(([name]) => name === state.activePane)?.[1] || candidates[0]?.[1];
+  if (!slot?.view) return;
+  const view = slot.view;
+  const sourceLine = Math.max(1, Math.min(view.state.doc.lines, position.sourceLine));
+  const line = view.state.doc.line(Math.floor(sourceLine));
+  const block = view.lineBlockAt(line.from);
+  const firstLine = view.state.doc.lineAt(block.from).number;
+  const lastLine = view.state.doc.lineAt(block.to).number;
+  pauseMarkdownScrollSync();
+  const offset = view.documentTop - view.scrollDOM.getBoundingClientRect().top - view.scrollDOM.clientTop;
+  const target = view.scrollDOM.scrollTop + offset + block.top + (sourceLine - firstLine) / (lastLine - firstLine + 1) * block.height;
+  view.scrollDOM.scrollTop = position.atStart ? 0 : position.atEnd ? view.scrollDOM.scrollHeight - view.scrollDOM.clientHeight : Math.max(0, target);
+  state.lastSurface = 'markdown'; scheduleSession();
+}
 function fileKind(file) { return file?.kind || 'text'; }
 function rememberTab(path) { if (!state.tabOrder.includes(path)) state.tabOrder.push(path); }
 function rememberEditorPosition() {
-  const doc = activeDocument();
-  if (doc && state.editor) doc.scrollTop = state.editor.scrollDOM.scrollTop;
+  for (const [, slot] of visibleEditorSlots()) {
+    const doc = state.documents.get(slot.path);
+    if (doc) doc.scrollTop = slot.view.scrollDOM.scrollTop;
+  }
 }
 function updateTreeSelection() {
   for (const [path, button] of state.treeButtons) {
@@ -289,7 +348,7 @@ function isRunning() { return state.build?.status === 'running'; }
 
 function setOperation(operation) {
   state.operation = operation;
-  if (state.editor) state.editor.dispatch({ effects: readOnly.reconfigure([EditorState.readOnly.of(!!operation), EditorView.editable.of(!operation)]) });
+  for (const doc of state.documents.values()) applyDocumentTransaction(doc, doc.state.update({ effects: readOnly.reconfigure([EditorState.readOnly.of(!!operation), EditorView.editable.of(!operation)]) }));
   renderControls();
   if (!operation) {
     scheduleAutoSave();
@@ -298,27 +357,29 @@ function setOperation(operation) {
 }
 
 function updateCursor() {
+  markdownEditing?.update();
   const view = state.editor;
   if (!view || !activeDocument()) { $('cursor-status').textContent = ''; $('document-encoding').textContent = ''; delete $('editor').dataset.path; delete $('editor').dataset.line; delete $('editor').dataset.column; return; }
   const head = view.state.selection.main.head;
   const line = view.state.doc.lineAt(head);
   $('cursor-status').textContent = t("{value0} 行，{value1} 列", { value0: line.number, value1: head - line.from + 1 });
-  $('editor').dataset.path = state.activePath; $('editor').dataset.line = String(line.number); $('editor').dataset.column = String(head - line.from + 1);
+  const host = editorSlots[state.activePane].host;
+  host.dataset.path = state.activePath; host.dataset.line = String(line.number); host.dataset.column = String(head - line.from + 1);
   const doc = activeDocument();
   $('document-encoding').textContent = `UTF-8 · ${doc?.lineEnding === 'crlf' ? 'CRLF' : 'LF'}`;
   updateOutlinePosition(); scheduleSession();
 }
 
-const latexWords = [
-  'begin', 'end', 'documentclass', 'usepackage', 'input', 'include', 'includegraphics', 'section', 'subsection', 'subsubsection',
-  'paragraph', 'title', 'author', 'maketitle', 'label', 'ref', 'eqref', 'cref', 'Cref', 'cite', 'citep', 'citet', 'bibliography',
-  'bibliographystyle', 'textbf', 'textit', 'emph', 'footnote', 'item', 'newcommand', 'renewcommand', 'frac', 'sqrt',
-  'sum', 'prod', 'int', 'left', 'right', 'mathrm', 'mathbf', 'mathbb', 'mathcal', 'displaystyle', 'equation', 'align',
-];
-function latexCompletion(context) {
-  const word = context.matchBefore(/\\[A-Za-z]*$/);
-  if (!word) return null;
-  return { from: word.from, options: latexWords.map(name => ({ label: `\\${name}`, type: 'keyword' })), validFor: /^\\[A-Za-z]*$/ };
+function completionExtension(path) {
+  const enabled = state.preferences.texCompletion && /\.(tex|sty|cls|ltx)$/i.test(path);
+  return autocompletion({
+    override: enabled ? [createTeXCompletionSource(() => state.completionItems)] : [],
+    activateOnTyping: !!enabled && state.preferences.automaticCompletion,
+  });
+}
+function applyCompletionSettings() {
+  for (const [, slot] of visibleEditorSlots()) closeCompletion(slot.view);
+  for (const doc of state.documents.values()) applyDocumentTransaction(doc, doc.state.update({ effects: editorCompletion.reconfigure(completionExtension(doc.path)) }));
 }
 
 const bibLanguage = StreamLanguage.define({
@@ -345,33 +406,37 @@ function makeEditorState(path, content) {
   const language = isMarkdown(path) ? markdown() : extension === 'bib' ? bibLanguage : /^(tex|sty|cls|ltx|def|bst)$/.test(extension) ? StreamLanguage.define(stex) : [];
   return EditorState.create({ doc: normalise(content), extensions: [
     basicSetup,
+    sourceFolding(path),
     sourceSearch(),
     language,
     editorTheme.of(themeExtension()),
     lineFlashField,
     EditorView.lineWrapping,
+    scrollPastEnd(),
     readOnly.of([EditorState.readOnly.of(false), EditorView.editable.of(true)]),
     editorLanguage.of(editorLanguageExtension()),
-    autocompletion({ override: /^(tex|sty|cls|ltx)$/.test(extension) ? [texCompletionSource(() => state.completionItems), latexCompletion] : [] }),
+    completionPresentation(),
+    editorCompletion.of(completionExtension(path)),
     EditorView.domEventHandlers({ mousedown(event, view) {
       if (!(event.ctrlKey || event.metaKey) || event.button !== 0 || view.composing) return false;
       const position = view.posAtCoords({ x: event.clientX, y: event.clientY });
       if (position == null) return false;
-      event.preventDefault(); view.dispatch({ selection: { anchor: position } }); runTask(() => syncForward(position)); return true;
+      activateEditorPane(slotForView(view)); event.preventDefault(); view.dispatch({ selection: { anchor: position } }); runTask(() => navigate(() => syncForward(position))); return true;
+    }, paste(event, view) {
+      activateEditorPane(slotForView(view)); return insertTools?.handlePaste(event) || false;
+    }, drop(event, view) {
+      activateEditorPane(slotForView(view)); return insertTools?.handleDrop(event) || false;
+    }, dragover(event) {
+      if ([...(event.dataTransfer?.types || [])].includes('Files')) { event.preventDefault(); return true; } return false;
     } }),
     keymap.of([indentWithTab]),
     Prec.highest(keymap.of([
+      { key: 'Mod-Shift-f', run: () => { projectSearch?.open(); return true; } },
       { key: 'Mod-s', run: view => { if (view.composing) return false; runTask(saveCurrent); return true; } },
       { key: 'Mod-Shift-s', run: view => { if (view.composing) return false; runTask(saveEveryDocument); return true; } },
       { key: 'Mod-Enter', run: view => { if (view.composing) return false; runTask(startBuild); return true; } },
     ])),
-    EditorView.updateListener.of(update => {
-      const doc = activeDocument();
-      if (doc) doc.state = update.state;
-      if (update.docChanged && doc) { updateDocumentIndicators(doc); updatePreviewNote(); updateDocumentPreview(); queueDrafts(); scheduleAutoSave(); scheduleIndex(doc); }
-      if (update.selectionSet || update.docChanged) updateCursor();
-      if (update.docChanged || update.geometryChanged) scheduleMarkdownScrollSync();
-    }),
+    EditorView.updateListener.of(update => receiveEditorUpdate(update, path)),
   ] });
 }
 
@@ -380,49 +445,177 @@ function makeDocument(file) {
   return { path: file.path, revision: file.revision, lineEnding: file.lineEnding || 'lf', state: editorState, savedDoc: editorState.doc, saving: null, conflict: null, draftId: crypto.randomUUID(), visited: false };
 }
 
-function selectDocument(doc) {
-  pauseMarkdownScrollSync();
-  rememberEditorPosition(); assetPreview.hide(); rememberTab(doc.path);
-  doc.state = doc.state.update({ effects: readOnly.reconfigure([EditorState.readOnly.of(!!state.operation), EditorView.editable.of(!state.operation)]) }).state;
-  const position = (!doc.visited ? state.session?.positions?.[doc.path] : { scrollTop: doc.scrollTop || 0 }) || { scrollTop: 0 };
-  if (position && !doc.visited) doc.state = doc.state.update({ selection: { anchor: Math.min(doc.state.doc.length, Math.max(0, Number(position.anchor) || 0)), head: Math.min(doc.state.doc.length, Math.max(0, Number(position.head) || 0)) } }).state;
-  doc.visited = true;
-  state.activePath = doc.path;
-  $('editor').hidden = false;
-  $('editor-empty').hidden = true;
-  if (state.editor) state.editor.setState(doc.state);
-  else {
-    state.editor = new EditorView({ state: doc.state, parent: $('editor') });
-    state.editor.scrollDOM.addEventListener('scroll', scheduleSession, { passive: true });
-    state.editor.scrollDOM.addEventListener('scroll', scheduleMarkdownScrollSync, { passive: true });
-    const view = state.editor;
-    state.editorZoomCleanup = attachEditorZoom(view, {
-      getSize: () => state.preferences.editorFontSize,
-      isActive: () => state.editor === view && !!activeDocument() && !state.closed,
-      onSize: (size, origin) => { if (applyEditorFontSize(size, origin)) savePreferences(650); },
-    });
-  }
-  renderTabs();
-  updateTreeSelection();
-  $('active-filename').textContent = doc.path;
-  $('active-filename').title = doc.path;
-  updateDocumentIndicators(doc);
-  updateCursor();
-  state.editor.focus();
-  if (position) { const view = state.editor; requestAnimationFrame(() => { if (state.editor === view && state.activePath === doc.path) { view.scrollDOM.scrollTop = Math.max(0, Number(position.scrollTop) || 0); view.dispatch({ effects: EditorView.scrollIntoView(view.state.selection.main.head, { y: 'nearest' }) }); } }); }
-  if ((/\.(tex|bib)$/i.test(doc.path) || isMarkdown(doc.path)) && doc.indexedDoc !== doc.state.doc) updateIndex(doc.path, doc.state.doc.toString());
-  else renderOutline();
-  renderRecovery(); scheduleSession();
-  updateDocumentPreview({ immediate: true });
+function slotForView(view) { return Object.entries(editorSlots).find(([, slot]) => slot.view === view)?.[0]; }
+function visibleEditorSlots(path = null) { return Object.entries(editorSlots).filter(([name, slot]) => slot.view && (!path || slot.path === path) && (name === 'primary' || state.splitEditors)); }
+
+function activateEditorPane(name, focus = false) {
+  const slot = editorSlots[name];
+  if (!slot?.view || !state.documents.has(slot.path) || (name === 'secondary' && !state.splitEditors)) return;
+  state.activePane = name; state.editor = slot.view; state.activePath = slot.path;
+  const doc = state.documents.get(slot.path); doc.state = slot.view.state;
+  for (const [key, item] of Object.entries(editorSlots)) item.element.classList.toggle('active', key === name);
+  $('active-filename').textContent = doc.path; $('active-filename').title = doc.path;
+  renderTabs(); updateTreeSelection(); updateDocumentIndicators(doc); updateCursor(); renderOutline();
+  updateDocumentPreview(); renderControls();
+  if (focus) slot.view.focus();
   document.title = `${isDirty(doc) ? '● ' : ''}${basename(doc.path)} — Local TeX Web Editor`;
 }
 
-async function openFile(path) {
+function synchronizeEditorViews(doc, origin, changes = null) {
+  if (state.synchronizingEditors) return;
+  state.synchronizingEditors = true;
+  try {
+    for (const [, slot] of visibleEditorSlots(doc.path)) {
+      if (slot.view === origin) continue;
+      const view = slot.view;
+      const top = view.scrollDOM.scrollTop, left = view.scrollDOM.scrollLeft;
+      const next = stateForOtherView(doc.state, view.state.selection, changes);
+      view.setState(next);
+      view.scrollDOM.scrollTop = top; view.scrollDOM.scrollLeft = left;
+      view.requestMeasure({ read: () => ({ top, left }), write: position => {
+        if (slot.view === view && slot.path === doc.path) { view.scrollDOM.scrollTop = position.top; view.scrollDOM.scrollLeft = position.left; }
+      } });
+    }
+  } finally { state.synchronizingEditors = false; }
+}
+
+function applyDocumentTransaction(doc, transaction) {
+  const current = visibleEditorSlots(doc.path).find(([, slot]) => slot.view.state === transaction.startState);
+  if (current) current[1].view.update([transaction]);
+  else {
+    doc.state = transaction.state;
+    synchronizeEditorViews(doc, null, transaction.changes);
+    if (transaction.docChanged) { mapSourcePositions(doc.path, transaction.changes); updateDocumentIndicators(doc); updatePreviewNote(); updateDocumentPreview(); queueDrafts(); scheduleAutoSave(); scheduleIndex(doc); }
+  }
+}
+
+function mapSourcePositions(path, changes) {
+  const mapPosition = value => changes.mapPos(Math.max(0, Math.min(changes.length, Number(value) || 0)));
+  navigationHistory?.mapEntries?.(entry => entry.source?.path === path ? { ...entry, source: { ...entry.source, anchor: mapPosition(entry.source.anchor), head: mapPosition(entry.source.head) } } : entry);
+}
+
+function receiveEditorUpdate(update, path) {
+  if (state.synchronizingEditors) return;
+  const doc = state.documents.get(path);
+  if (!doc) return;
+  if (update.docChanged || update.selectionSet || update.view === state.editor || update.transactions.length) doc.state = update.state;
+  if (update.docChanged || update.transactions.some(transaction => transaction.effects.length)) synchronizeEditorViews(doc, update.view, update.changes);
+  if (update.docChanged) {
+    mapSourcePositions(path, update.changes);
+    updateDocumentIndicators(doc); updatePreviewNote(); updateDocumentPreview(); queueDrafts(); scheduleAutoSave(); scheduleIndex(doc); }
+  if ((update.selectionSet || update.docChanged) && update.view === state.editor) updateCursor();
+  if ((update.docChanged || update.geometryChanged) && update.view === state.editor) scheduleMarkdownScrollSync();
+}
+
+function destroyEditorSlot(name) {
+  const slot = editorSlots[name];
+  slot.openSequence = (slot.openSequence || 0) + 1; slot.pendingPath = '';
+  if (slot.view && state.documents.has(slot.path)) state.documents.get(slot.path).scrollTop = slot.view.scrollDOM.scrollTop;
+  slot.cleanup?.(); slot.cleanup = null; slot.view?.destroy(); slot.view = null; slot.path = ''; slot.host.replaceChildren();
+}
+function destroyEditors() {
+  destroyEditorSlot('primary'); destroyEditorSlot('secondary');
+  state.editor = null; state.editorZoomCleanup = null; state.activePane = 'primary'; state.splitEditors = false;
+  updateSourceLayout();
+}
+
+function createEditorView(slot, name, editorState) {
+  const view = new EditorView({ state: editorState, parent: slot.host });
+  slot.view = view;
+  view.dom.addEventListener('focusin', () => { if (slot.view === view) { state.lastSurface = 'source'; activateEditorPane(name); } });
+  view.scrollDOM.addEventListener('scroll', () => {
+    if (slot.view !== view) return;
+    scheduleSession(); if (view === state.editor) scheduleMarkdownScrollSync();
+  }, { passive: true });
+  slot.cleanup = attachEditorZoom(view, {
+    getSize: () => state.preferences.editorFontSize,
+    isActive: () => slot.view === view && !!state.documents.get(slot.path) && !state.closed,
+    onSize: (size, origin) => { activateEditorPane(name); if (applyEditorFontSize(size, origin)) savePreferences(650); },
+  });
+  return view;
+}
+
+function renderPaneSelectors() {
+  const files = (state.meta?.project?.files || []).filter(file => fileKind(file) === 'text');
+  const choices = [...new Set([...files.map(file => file.path), ...state.documents.keys()])];
+  const signature = JSON.stringify(choices);
+  for (const slot of Object.values(editorSlots)) {
+    if (slot.choices !== signature) {
+      slot.select.replaceChildren();
+      for (const path of choices) { const option = document.createElement('option'); option.value = path; option.textContent = path; slot.select.append(option); }
+      slot.choices = signature;
+    }
+    slot.select.value = slot.path;
+  }
+}
+
+function updateSourceLayout() {
+  const container = $('source-workspace');
+  container.classList.toggle('split', state.splitEditors);
+  container.classList.toggle('stacked', state.splitEditors && container.clientWidth < 600);
+  container.style.setProperty('--source-ratio', String(state.sourceRatio));
+  editorSlots.primary.element.querySelector('.source-pane-heading').hidden = !state.splitEditors;
+  editorSlots.secondary.element.hidden = !state.splitEditors;
+  $('source-splitter').hidden = !state.splitEditors;
+  $('source-splitter').setAttribute('aria-orientation', container.classList.contains('stacked') ? 'horizontal' : 'vertical');
+  $('source-splitter').setAttribute('aria-valuemin', '20'); $('source-splitter').setAttribute('aria-valuemax', '80');
+  $('source-splitter').setAttribute('aria-valuenow', String(Math.round(100 * state.sourceRatio / (1 + state.sourceRatio))));
+  $('split-editors').setAttribute('aria-pressed', String(state.splitEditors));
+  renderPaneSelectors();
+}
+
+async function toggleSplitEditors(enabled = !state.splitEditors) {
+  if (state.operation || state.closed || !state.meta?.project) return;
+  if (enabled) {
+    if (!activeDocument()) return;
+    const first = activeDocument();
+    if (state.activePane !== 'primary') selectDocument(first, { pane: 'primary' });
+    state.splitEditors = true; updateSourceLayout();
+    const other = state.tabOrder.find(path => path !== first.path && state.documents.has(path)) || first.path;
+    await openFile(other, { pane: 'secondary' });
+  } else {
+    rememberEditorPosition();
+    destroyEditorSlot('secondary'); state.splitEditors = false;
+    if (editorSlots.primary.view && state.documents.has(editorSlots.primary.path)) activateEditorPane('primary', true);
+    else { state.activePane = 'primary'; state.editor = null; state.activePath = editorSlots.primary.path; }
+    updateSourceLayout();
+  }
+  scheduleSession(); panelLayout.refresh();
+}
+
+function selectDocument(doc, { pane = state.activePane, focus = true, activate = true, position: requestedPosition = null } = {}) {
+  if (pane === 'secondary' && !state.splitEditors) pane = 'primary';
+  pauseMarkdownScrollSync(); rememberEditorPosition(); rememberTab(doc.path);
+  const slot = editorSlots[pane];
+  const sameDocument = slot.path === doc.path && slot.view;
+  const position = requestedPosition || (sameDocument ? { scrollTop: slot.view.scrollDOM.scrollTop, anchor: slot.view.state.selection.main.anchor, head: slot.view.state.selection.main.head }
+    : (!doc.visited ? state.session?.positions?.[doc.path] : { scrollTop: doc.scrollTop || 0 }) || { scrollTop: 0 });
+  doc.state = doc.state.update({ effects: readOnly.reconfigure([EditorState.readOnly.of(!!state.operation), EditorView.editable.of(!state.operation)]) }).state;
+  let editorState = doc.state;
+  if (position?.anchor != null) editorState = editorState.update({ selection: { anchor: Math.min(editorState.doc.length, Math.max(0, Number(position.anchor) || 0)), head: Math.min(editorState.doc.length, Math.max(0, Number(position.head) || 0)) } }).state;
+  doc.visited = true; slot.path = doc.path;
+  if (pane === 'primary') { assetPreview.hide(); $('editor').hidden = false; $('editor-empty').hidden = true; }
+  if (slot.view) slot.view.setState(editorState); else createEditorView(slot, pane, editorState);
+  doc.state = slot.view.state;
+  synchronizeEditorViews(doc, slot.view);
+  if (activate) activateEditorPane(pane, focus);
+  else { renderTabs(); updateTreeSelection(); renderControls(); }
+  const view = slot.view, restoreSequence = slot.restoreSequence = (slot.restoreSequence || 0) + 1;
+  requestAnimationFrame(() => { if (slot.view === view && slot.path === doc.path && slot.restoreSequence === restoreSequence) { view.scrollDOM.scrollTop = Math.max(0, Number(position?.scrollTop) || 0); view.dispatch({ effects: EditorView.scrollIntoView(view.state.selection.main.head, { y: 'nearest' }) }); } });
+  if ((/\.(tex|bib)$/i.test(doc.path) || isMarkdown(doc.path)) && doc.indexedDoc !== doc.state.doc) updateIndex(doc.path, doc.state.doc.toString());
+  renderRecovery(); renderPaneSelectors(); scheduleSession(); updateDocumentPreview({ immediate: true });
+}
+
+async function openFile(path, { pane = state.activePane, focus = true } = {}) {
   if (state.operation || state.closed) return;
   const sequence = ++state.openSequence;
   const generation = state.projectGeneration;
   const file = state.meta?.project?.files?.find(item => item.path === path);
-  if (file && fileKind(file) !== 'text') { selectAsset(file); return; }
+  if ((file && fileKind(file) !== 'text') || (pane === 'secondary' && !state.splitEditors)) pane = 'primary';
+  const slot = editorSlots[pane];
+  const paneSequence = slot.openSequence = (slot.openSequence || 0) + 1;
+  slot.pendingPath = path;
+  if (file && fileKind(file) !== 'text') { await selectAsset(file); return; }
   let doc = state.documents.get(path);
   if (!doc) {
     let promise = state.pendingFiles.get(path);
@@ -438,11 +631,16 @@ async function openFile(path) {
     try { doc = await promise; }
     catch (error) { if (generation !== state.projectGeneration) return; throw error; }
   }
-  if (doc && generation === state.projectGeneration && sequence === state.openSequence) selectDocument(doc);
+  if (doc && generation === state.projectGeneration && paneSequence === slot.openSequence && !state.operation && !state.closed) {
+    slot.pendingPath = '';
+    selectDocument(doc, { pane, focus: focus && sequence === state.openSequence, activate: state.activePane === pane || sequence === state.openSequence });
+  }
 }
 
-function selectAsset(file) {
+async function selectAsset(file) {
   rememberEditorPosition(); rememberTab(file.path);
+  destroyEditorSlot('primary'); editorSlots.primary.path = file.path; state.activePane = 'primary'; state.editor = null;
+  for (const [name, slot] of Object.entries(editorSlots)) slot.element.classList.toggle('active', name === 'primary');
   const asset = state.assets.get(file.path) || {};
   Object.assign(asset, file);
   state.assets.set(file.path, asset); state.activePath = file.path;
@@ -451,8 +649,8 @@ function selectAsset(file) {
   $('save-status').textContent = ''; $('save-status').classList.remove('dirty', 'error');
   renderTabs(); updateTreeSelection(); renderControls(); updateCursor(); renderOutline(); scheduleSession();
   document.title = `${basename(file.path)} — Local TeX Web Editor`;
-  assetPreview.show(asset, state.meta.project.root);
   updateDocumentPreview();
+  await assetPreview.show(asset, state.meta.project.root);
 }
 
 function renderTabs() {
@@ -462,7 +660,7 @@ function renderTabs() {
   state.tabElements.clear();
   for (const path of state.tabOrder) {
     const doc = state.documents.get(path);
-    const file = doc || state.assets.get(path);
+    const file = doc || state.assets.get(path) || state.meta?.project?.files?.find(file => file.path === path);
     if (!file) continue;
     const tab = document.createElement('div');
     tab.className = `editor-tab${state.activePath === path ? ' active' : ''}`;
@@ -474,6 +672,23 @@ function renderTabs() {
     const dirty = document.createElement('span'); dirty.className = 'tab-dirty'; dirty.hidden = !isDirty(doc); dirty.setAttribute('aria-label', t("未保存"));
     button.append(name, dirty);
     button.addEventListener('click', () => runTask(() => openFile(path)));
+    tab.draggable = true;
+    tab.addEventListener('dragstart', event => {
+      if (state.operation) { event.preventDefault(); return; }
+      draggedTabPath = path; tab.classList.add('dragging');
+      event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', path);
+    });
+    tab.addEventListener('dragover', event => { if (draggedTabPath && draggedTabPath !== path) { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; tab.classList.add('drop-before'); } });
+    tab.addEventListener('dragleave', () => tab.classList.remove('drop-before'));
+    tab.addEventListener('drop', event => {
+      if (!draggedTabPath || draggedTabPath === path) return;
+      event.preventDefault();
+      const moved = draggedTabPath; draggedTabPath = '';
+      state.tabOrder = state.tabOrder.filter(item => item !== moved);
+      state.tabOrder.splice(state.tabOrder.indexOf(path), 0, moved);
+      renderTabs(); scheduleSession();
+    });
+    tab.addEventListener('dragend', () => { draggedTabPath = ''; for (const element of container.children) element.classList.remove('dragging', 'drop-before'); });
     const close = document.createElement('button');
     close.type = 'button'; close.className = 'icon-button tab-close'; close.textContent = '×';
     close.setAttribute('aria-label', t("{value0} を閉じる", { value0: path })); close.disabled = !!state.operation;
@@ -575,6 +790,7 @@ async function saveDocument(doc) {
       doc.lineEnding = result.lineEnding || doc.lineEnding;
       doc.savedDoc = snapshot;
       doc.conflict = null;
+      if (result.historyWarning) toast(result.historyWarning);
       if (state.build) {
         if (!isMarkdown(doc.path)) state.build.sourceChanged = true;
         if (state.build.pdfReady && sourceAffectsPDF(doc.path)) state.build.pdfSourceChanged = true;
@@ -662,26 +878,38 @@ async function closeDocument(doc) {
     if (answer === 'primary') { await saveDocument(doc); if (isDirty(doc)) return; }
     else removeDraft(doc.draftId);
   }
-  removeOpenFile(doc.path);
+  await removeOpenFile(doc.path);
 }
 
-function removeOpenFile(path) {
+async function removeOpenFile(path) {
+  for (const slot of Object.values(editorSlots)) if (slot.pendingPath === path) { slot.openSequence = (slot.openSequence || 0) + 1; slot.pendingPath = ''; }
   if (state.operation) return;
   rememberEditorPosition();
-  const paths = [...state.tabOrder]; const index = paths.indexOf(path);
+  const generation = state.projectGeneration;
+  const previousPane = state.activePane;
+  const paths = [...state.tabOrder], index = paths.indexOf(path);
   state.documents.delete(path); state.assets.delete(path); state.tabOrder = paths.filter(item => item !== path);
-  if (state.activePath === path) {
-    const next = paths[index + 1] || paths[index - 1];
-    if (next && state.documents.has(next)) selectDocument(state.documents.get(next));
-    else if (next && state.assets.has(next)) selectAsset(state.assets.get(next));
-    else {
-      assetPreview.hide();
-      state.activePath = ''; state.editorZoomCleanup?.(); state.editorZoomCleanup = null; state.editor?.destroy(); state.editor = null; $('editor').replaceChildren();
-      $('editor').hidden = true; $('editor-empty').hidden = false; $('active-filename').textContent = t("原稿");
-      $('save-status').textContent = ''; $('conflict-banner').hidden = true; updateCursor(); document.title = 'Local TeX Web Editor';
-    }
+  const following = [...state.tabOrder.slice(index), ...state.tabOrder.slice(0, index).reverse()];
+  const next = following.find(item => state.documents.has(item) || state.meta?.project?.files?.some(file => file.path === item && fileKind(file) === 'text'));
+  for (const [name, slot] of Object.entries(editorSlots)) {
+    if (slot.path !== path) continue;
+    destroyEditorSlot(name);
+    if (next) await openFile(next, { pane: name, focus: false });
+    if (generation !== state.projectGeneration || state.closed) return;
   }
-  renderTabs(); renderTree(); renderOutline(); renderControls(); updatePreviewNote(); updateDocumentPreview(); persistSession();
+  if (!editorSlots.secondary.view) state.splitEditors = false;
+  if (state.activePath === path || !state.documents.has(state.activePath)) {
+    const slot = editorSlots[previousPane].view ? previousPane : editorSlots.primary.view ? 'primary' : editorSlots.secondary.view ? 'secondary' : null;
+    if (slot) activateEditorPane(slot, true);
+    else {
+      state.activePath = ''; state.editor = null; state.activePane = 'primary'; assetPreview.hide();
+      $('editor').hidden = true; $('editor-empty').hidden = false; $('active-filename').textContent = t('原稿');
+      $('save-status').textContent = ''; $('conflict-banner').hidden = true; updateCursor(); document.title = 'Local TeX Web Editor';
+      const remaining = state.tabOrder[Math.min(index, state.tabOrder.length - 1)];
+      if (remaining) runTask(() => openFile(remaining, { pane: 'primary' }));
+    }
+  } else if (editorSlots[previousPane].view) activateEditorPane(previousPane);
+  updateSourceLayout(); renderTabs(); renderTree(); renderOutline(); renderControls(); updatePreviewNote(); updateDocumentPreview(); persistSession();
 }
 
 async function resolveConflict(doc) {
@@ -706,7 +934,7 @@ async function resolveConflict(doc) {
     doc.revision = remote.revision; doc.lineEnding = remote.lineEnding || 'lf'; doc.conflict = null;
     const transaction = doc.state.update({ changes: { from: 0, to: doc.state.doc.length, insert: content } });
     doc.savedDoc = transaction.state.doc;
-    if (state.activePath === doc.path) state.editor.update([transaction]); else doc.state = transaction.state;
+    applyDocumentTransaction(doc, transaction);
     clearError(); updateDocumentIndicators(doc); updatePreviewNote(); syncDrafts(); toast(t("ディスクの内容を読み込みました．"));
   } else {
     doc.revision = remote.revision;
@@ -747,6 +975,7 @@ async function applyMeta(meta, resetProject = false) {
   state.texPackages = meta.texPackages || null;
   state.externalProjectChanged = false;
   if (resetProject) {
+    projectSearch?.close(); documentHistory?.close();
     clearTimeout(state.autoSaveTimer); clearTimeout(state.draftTimer); clearTimeout(state.sessionTimer); clearTimeout(state.outlineTimer);
     state.persistenceReady = false; state.initialFilePending = !!meta.project; state.session = null; state.drafts = { entries: [] }; state.recoverySelection = null;
     state.texIndex.clear(); state.completionItems = { citations: [], labels: [] }; state.indexError = ''; state.indexing = false;
@@ -755,9 +984,9 @@ async function applyMeta(meta, resetProject = false) {
     assetPreview.hide(); markdownPreview.reset();
     state.previewMode = 'pdf'; state.previewChoice = 'auto'; state.lastMarkdownPath = '';
     $('pdf-preview').hidden = false; $('markdown-preview-panel').hidden = true;
-    state.editorZoomCleanup?.(); state.editorZoomCleanup = null; state.editor?.destroy(); state.editor = null; $('editor').replaceChildren(); $('editor').hidden = true; $('editor-empty').hidden = false;
+    destroyEditors(); $('editor').hidden = true; $('editor-empty').hidden = false;
     $('conflict-banner').hidden = true; $('file-filter').value = ''; $('save-status').textContent = ''; $('active-filename').textContent = t("原稿");
-    state.build = null; state.reportedBuild = ''; await viewer.reset();
+    navigationHistory?.clear(); state.build = null; state.reportedBuild = ''; await viewer.reset();
   }
   if (generation !== state.projectGeneration) return;
   const project = meta.project;
@@ -874,6 +1103,9 @@ async function showSettings() {
   $('main-file').value = project?.main || '';
   $('compile-mode').value = project?.mode || 'pdflatex';
   $('autosave-setting').checked = state.preferences.autoSave;
+  $('tex-completion-setting').checked = state.preferences.texCompletion;
+  $('completion-on-type-setting').checked = state.preferences.automaticCompletion;
+  $('completion-on-type-setting').disabled = !state.preferences.texCompletion;
   $('language-setting').value = state.preferences.language;
   $('editor-font-size').value = String(state.preferences.editorFontSize);
   $('main-field').hidden = !project; $('mode-field').hidden = !project;
@@ -905,6 +1137,9 @@ async function saveSettings(event) {
   try {
     if (Object.keys(body).length) { ++state.toolsGeneration; const meta = await api('/api/settings', { method: 'PUT', body }); await applyMeta(meta); }
     state.preferences.autoSave = $('autosave-setting').checked;
+    state.preferences.texCompletion = $('tex-completion-setting').checked;
+    state.preferences.automaticCompletion = $('completion-on-type-setting').checked;
+    applyCompletionSettings();
     state.preferences.language = language;
     applyEditorFontSize($('editor-font-size').valueAsNumber);
     savePreferences(); await sessionStore.flush();
@@ -1107,6 +1342,13 @@ function renderControls() {
   $('theme-toggle').disabled = state.closed;
   $('help-button').disabled = state.closed;
   help?.refresh();
+  $('project-search-button').disabled = busy || !project;
+  $('split-editors').disabled = busy || !doc;
+  for (const id of ['reference-tools', 'document-history', 'insert-image', 'insert-table']) $(id).disabled = busy || !doc;
+  for (const id of ['project-templates', 'welcome-template']) $(id).disabled = busy || running;
+  for (const slot of Object.values(editorSlots)) slot.select.disabled = busy;
+  for (const control of $('markdown-editing').querySelectorAll('button, select')) control.disabled = busy;
+  updateNavigationControls();
   for (const button of state.treeButtons.values()) button.disabled = busy;
   for (const tab of state.tabElements.values()) { tab.button.disabled = busy; tab.close.disabled = busy; }
 }
@@ -1173,7 +1415,7 @@ async function shutdown() {
     for (const timer of [state.pollTimer, state.autoSaveTimer, state.draftTimer, state.sessionTimer, state.outlineTimer, toastTimer, lineFlashTimer]) clearTimeout(timer);
     clearInterval(state.heartbeat); state.build = null; setConnected(false);
     try { sessionStorage.removeItem(TOKEN_KEY); } catch { /* No persistent storage is required. */ }
-    state.editorZoomCleanup?.(); state.editorZoomCleanup = null; state.editor?.destroy(); state.editor = null;
+    destroyEditors();
     state.documents.clear(); state.assets.clear(); assetPreview.hide(); markdownPreview.reset(); viewer.reset().catch(() => {});
     $('app-shell').classList.add('app-closed');
     $('workbench').hidden = true; $('welcome').hidden = true; $('recovery-banner').hidden = true; $('toast').hidden = true;
@@ -1215,7 +1457,7 @@ function applyLanguage(language) {
   $('language-setting').value = state.preferences.language;
   for (const doc of state.documents.values()) {
     const transaction = doc.state.update({ effects: editorLanguage.reconfigure(editorLanguageExtension()) });
-    if (doc.path === state.activePath && state.editor) state.editor.update([transaction]); else doc.state = transaction.state;
+    applyDocumentTransaction(doc, transaction);
   }
   $('find-button').title = t('検索・置換 ({value0}+F)', { value0: shortcutModifier });
   $('save-button').title = t('現在のファイルを保存 ({value0}+S)', { value0: shortcutModifier });
@@ -1247,7 +1489,7 @@ function applyTheme(theme) {
   if (previous !== state.theme) {
     for (const doc of state.documents.values()) {
       const transaction = doc.state.update({ effects: editorTheme.reconfigure(themeExtension()) });
-      if (doc.path === state.activePath && state.editor) state.editor.update([transaction]); else doc.state = transaction.state;
+      applyDocumentTransaction(doc, transaction);
     }
   }
 }
@@ -1308,6 +1550,15 @@ async function saveAppearance(event) {
 }
 
 function savePreferences(delay = 0) { sessionStore.write('preferences', { ...state.preferences, updatedAt: Date.now() }, delay); }
+function applyPDFDarkMode(enabled) {
+  state.preferences.pdfDarkMode = !!enabled;
+  viewer.setDarkMode(state.preferences.pdfDarkMode);
+  assetPreview.setDarkMode(state.preferences.pdfDarkMode);
+}
+function changePDFDarkMode(enabled) {
+  applyPDFDarkMode(enabled);
+  savePreferences();
+}
 function applyEditorFontSize(value, origin = null) {
   const size = Number.isFinite(value) ? Math.min(40, Math.max(8, Math.round(value * 10) / 10)) : 14;
   const changed = state.preferences.editorFontSize !== size;
@@ -1323,18 +1574,23 @@ async function loadPreferences() {
   const preferences = await sessionStore.read('preferences');
   if (preferences && typeof preferences === 'object') {
     state.preferences.autoSave = preferences.autoSave !== false;
+    state.preferences.texCompletion = preferences.texCompletion !== false;
+    state.preferences.automaticCompletion = preferences.automaticCompletion !== false;
     state.preferences.theme = ['light', 'dark'].includes(preferences.theme) ? preferences.theme : null;
     state.preferences.appearance = normalizeAppearance(preferences.appearance, preferences.theme);
     state.preferences.theme = state.preferences.appearance.mode === 'system' ? null : state.preferences.appearance.mode;
     state.preferences.editorFontSize = preferences.editorFontSize;
     state.preferences.panelLayout = normalizePanelLayout(preferences.panelLayout);
     state.preferences.markdownScrollSync = preferences.markdownScrollSync !== false;
+    state.preferences.pdfDarkMode = preferences.pdfDarkMode === true;
     if (['ja', 'en'].includes(preferences.language)) state.preferences.language = preferences.language;
   }
   applyLanguage(state.preferences.language);
   applyAppearance(state.preferences.appearance, true);
   applyEditorFontSize(state.preferences.editorFontSize);
   applyMarkdownScrollSync(state.preferences.markdownScrollSync);
+  applyPDFDarkMode(state.preferences.pdfDarkMode);
+  applyCompletionSettings();
   updateAutoSaveStatus();
 }
 function updateAutoSaveStatus() { $('autosave-status').textContent = state.preferences.autoSave ? (isRunning() ? t("自動保存はコンパイル後") : t("自動保存オン")) : t("手動で保存"); }
@@ -1344,7 +1600,10 @@ function scheduleAutoSave() {
   if (!state.preferences.autoSave || state.closed || !state.persistenceReady) return;
   state.autoSaveTimer = setTimeout(() => runTask(async () => {
     if (state.operation || isRunning() || state.externalProjectChanged || document.querySelector('dialog[open]')) return;
+    const generation = state.projectGeneration;
     for (const doc of state.documents.values()) {
+      if (doc.saving) await doc.saving;
+      if (generation !== state.projectGeneration || state.documents.get(doc.path) !== doc) break;
       if (state.operation || isRunning() || state.closed) break;
       if (isDirty(doc) && !doc.conflict) await saveDocument(doc);
     }
@@ -1440,7 +1699,9 @@ async function restoreDraft() {
   doc.visited = true;
   if (remote.revision !== doc.revision) doc.conflict = new APIError(t("草稿を記録した後にディスクの内容が変更されています．保存する内容を確認してください．"), 409);
   state.documents.set(doc.path, doc);
-  $('recovery-dialog').close(); switchView(false); selectDocument(doc);
+  const selection = doc.state.selection.main;
+  $('recovery-dialog').close(); switchView(false); selectDocument(doc, { position: { anchor: selection.anchor, head: selection.head } });
+  editorSlots[state.activePane].restoreSequence++;
   state.editor.dispatch({ effects: EditorView.scrollIntoView(state.editor.state.selection.main.head, { y: 'center' }) });
   updateIndex(doc.path, doc.state.doc.toString());
   syncDrafts(); renderRecovery(); scheduleAutoSave();
@@ -1466,7 +1727,7 @@ function persistSession() {
     const selection = doc.state.selection.main;
     positions[doc.path] = { anchor: selection.anchor, head: selection.head, scrollTop: doc.path === state.activePath && state.editor ? state.editor.scrollDOM.scrollTop : doc.scrollTop ?? positions[doc.path]?.scrollTop ?? 0 };
   }
-  state.session = { version: 1, updatedAt: Date.now(), activePath: state.activePath, positions, pdf: viewer.getViewState(), pdfPositions: viewer.getPositions(), previewChoice: state.previewChoice, lastMarkdownPath: state.lastMarkdownPath, sidebar: state.sidebar, directories: Object.fromEntries(state.directoryState) };
+  state.session = { version: 2, updatedAt: Date.now(), activePath: state.activePath, tabs: [...state.tabOrder], workspace: captureSourceWorkspace(), positions, pdf: viewer.getViewState(), pdfPositions: viewer.getPositions(), previewChoice: state.previewChoice, lastMarkdownPath: state.lastMarkdownPath, sidebar: state.sidebar, directories: Object.fromEntries(state.directoryState) };
   sessionStore.write(`session:${state.meta.project.root}`, state.session, 0);
 }
 async function loadProjectSession(root, generation) {
@@ -1496,9 +1757,185 @@ async function openInitialFile() {
   const project = state.meta?.project;
   if (!project || state.operation) return;
   if (state.activePath) { state.initialFilePending = false; return; }
-  const file = project.files?.find(item => item.path === state.session?.activePath) || project.files?.find(item => item.path === project.main) || project.files?.find(item => /\.tex$/i.test(item.path)) || project.files?.[0];
-  try { if (file) await openFile(file.path); }
-  finally { state.initialFilePending = false; scheduleSession(); }
+  const generation = state.projectGeneration;
+  const workspace = state.session?.workspace;
+  state.tabOrder = restoredTabPaths(state.session, project.files || []);
+  const file = project.files?.find(item => item.path === (workspace?.primary?.path || state.session?.activePath)) || project.files?.find(item => item.path === project.main) || project.files?.find(item => /\.tex$/i.test(item.path)) || project.files?.[0];
+  try {
+    if (file) await openFile(file.path, { pane: 'primary', focus: false });
+    if (generation !== state.projectGeneration) return;
+    const second = workspace?.split && project.files?.find(item => item.path === workspace.secondary?.path && fileKind(item) === 'text');
+    if (second) {
+      state.splitEditors = true; state.sourceRatio = Math.max(.25, Math.min(4, Number(workspace.ratio) || 1)); updateSourceLayout();
+      await openFile(second.path, { pane: 'secondary', focus: false });
+    }
+    if (generation !== state.projectGeneration) return;
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    for (const name of ['primary', 'secondary']) if (workspace?.[name]) restoreSourcePosition(name, workspace[name]);
+    const active = workspace?.activePane === 'secondary' && second ? 'secondary' : 'primary';
+    if (editorSlots[active].view) activateEditorPane(active, false);
+    updateSourceLayout(); renderTabs();
+  } finally { if (generation === state.projectGeneration) { state.initialFilePending = false; scheduleSession(); } }
+}
+
+function sourcePosition(name = state.activePane) {
+  const slot = editorSlots[name];
+  if (!slot?.view || !state.documents.has(slot.path)) return slot?.path ? { path: slot.path, pane: name } : null;
+  const selection = slot.view.state.selection.main;
+  return { path: slot.path, pane: name, anchor: selection.anchor, head: selection.head, scrollTop: slot.view.scrollDOM.scrollTop, scrollLeft: slot.view.scrollDOM.scrollLeft };
+}
+function captureSourceWorkspace() {
+  return { split: state.splitEditors, ratio: state.sourceRatio, activePane: state.activePane, primary: sourcePosition('primary'), secondary: state.splitEditors ? sourcePosition('secondary') : null };
+}
+function restoreSourcePosition(name, position) {
+  const slot = editorSlots[name];
+  if (!slot?.view || slot.path !== position?.path) return;
+  const view = slot.view;
+  const anchor = Math.min(view.state.doc.length, Math.max(0, Number(position.anchor) || 0));
+  const head = Math.min(view.state.doc.length, Math.max(0, Number(position.head ?? position.anchor) || 0));
+  view.dispatch({ selection: { anchor, head }, effects: revealSourceRange(view.state, anchor, head), annotations: Transaction.addToHistory.of(false) });
+  view.scrollDOM.scrollTop = Math.max(0, Number(position.scrollTop) || 0); view.scrollDOM.scrollLeft = Math.max(0, Number(position.scrollLeft) || 0);
+}
+function captureNavigationLocation() {
+  if (!state.meta?.project) return null;
+  return { projectRoot: state.meta.project.root, source: sourcePosition(), pdf: viewer.document ? viewer.getViewState() : null, asset: assetPreview.getViewState?.(), markdown: markdownPreview.getViewState?.(), previewChoice: state.previewChoice, previewVisible: $('app-shell').classList.contains('preview-mode'), surface: state.lastSurface };
+}
+async function restoreNavigationLocation(location) {
+  if (!location || state.closed || state.operation || location.projectRoot !== state.meta?.project?.root) return false;
+  const generation = state.projectGeneration;
+  pauseMarkdownScrollSync();
+  const source = location.source;
+  if (location.surface === 'asset' && location.asset?.path) {
+    if (source?.pane === 'secondary' && !state.splitEditors) { state.splitEditors = true; updateSourceLayout(); }
+    await openFile(location.asset.path, { pane: 'primary', focus: false });
+    if (generation !== state.projectGeneration) return false;
+  }
+  if (source?.path) {
+    const pane = source.pane === 'secondary' && state.splitEditors ? 'secondary' : 'primary';
+    await openFile(source.path, { pane, focus: false });
+    if (generation !== state.projectGeneration || state.activePath !== source.path) return false;
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    if (generation !== state.projectGeneration) return false;
+    restoreSourcePosition(pane, source);
+  }
+  if (location.markdown?.path) {
+    let doc = state.documents.get(location.markdown.path);
+    if (!doc && state.meta?.project?.files?.some(file => file.path === location.markdown.path)) {
+      const file = await api(`/api/file?path=${encodeURIComponent(location.markdown.path)}`, { projectRoot: location.projectRoot });
+      if (generation !== state.projectGeneration) return false;
+      doc = makeDocument(file); state.documents.set(file.path, doc); rememberTab(file.path); renderTabs();
+    }
+    if (doc) state.lastMarkdownPath = doc.path;
+  }
+  if (location.previewChoice) setPreviewChoice(location.previewChoice);
+  switchView(!!location.previewVisible);
+  if (location.pdf?.main && viewer.documentMain !== location.pdf.main && location.pdf.buildId) await viewer.load(location.pdf.buildId, state.meta.project.root, location.pdf.main);
+  if (generation !== state.projectGeneration) return false;
+  const restoredPDF = location.pdf ? await viewer.applyViewState(location.pdf) : false;
+  if (generation !== state.projectGeneration) return false;
+  const restoredAsset = location.asset ? await assetPreview.applyViewState(location.asset) : false;
+  if (generation !== state.projectGeneration) return false;
+  const restoredMarkdown = location.markdown ? await markdownPreview.applyViewState(location.markdown) : false;
+  if (generation !== state.projectGeneration) return false;
+  if ((location.surface === 'pdf' && !restoredPDF) || (location.surface === 'asset' && !restoredAsset) || (location.surface === 'markdown' && !restoredMarkdown)) return false;
+  state.lastSurface = location.surface || 'source';
+  if (state.lastSurface === 'pdf') $('pdf-scroll').focus({ preventScroll: true });
+  else if (state.lastSurface === 'markdown') $('markdown-preview-container').focus({ preventScroll: true });
+  else if (state.lastSurface === 'asset') $('asset-scroll').focus({ preventScroll: true });
+  else state.editor?.focus();
+  pauseMarkdownScrollSync(); scheduleSession();
+  return true;
+}
+function updateNavigationControls() {
+  for (const button of document.querySelectorAll('[data-navigation-back]')) button.disabled = !!state.operation || state.closed || !navigationHistory?.canBack;
+  for (const button of document.querySelectorAll('[data-navigation-forward]')) button.disabled = !!state.operation || state.closed || !navigationHistory?.canForward;
+}
+
+function openDocumentSnapshots() {
+  return [...state.documents.values()].map(doc => ({ path: doc.path, content: doc.state.doc.toString(), revision: doc.revision, dirty: isDirty(doc) }));
+}
+function currentDocumentSnapshot() {
+  const doc = activeDocument();
+  if (!doc || !state.editor) return null;
+  return { path: doc.path, content: documentText(doc), revision: doc.revision, projectRoot: state.meta?.project?.root, position: state.editor.state.selection.main.head, ...sourcePosition() };
+}
+function changedText(before, after) {
+  let from = 0;
+  while (from < before.length && from < after.length && before[from] === after[from]) from++;
+  let oldEnd = before.length, newEnd = after.length;
+  while (oldEnd > from && newEnd > from && before[oldEnd - 1] === after[newEnd - 1]) { oldEnd--; newEnd--; }
+  return { from, to: oldEnd, insert: after.slice(from, newEnd) };
+}
+function replaceEditorText(path, content, expectedContent, edits = null) {
+  const doc = state.documents.get(path);
+  if (state.operation || state.closed || !doc || doc.state.doc.toString() !== expectedContent) throw new Error(t('原稿が変更されています．内容を開き直してから操作してください．'));
+  const next = normalise(content);
+  if (next === expectedContent) return;
+  applyDocumentTransaction(doc, doc.state.update({ changes: edits || changedText(expectedContent, next), userEvent: 'input', annotations: isolateHistory.of('full') }));
+  syncDrafts();
+}
+async function applyProjectReplacements(changes) {
+  if (state.operation || state.closed || state.externalProjectChanged || !state.meta?.project) throw new Error(t('処理が終わってから操作してください．'));
+  if (isRunning()) throw new Error(t('コンパイルが終わってから置換してください．'));
+  setOperation('replacing');
+  try {
+    await state.saveQueue;
+    return await replaceProjectDocuments(api, changes, openDocumentSnapshots(), (documents, plans) => {
+      const planned = new Map(plans.map(change => [change.path, change]));
+      for (const result of documents) {
+        const doc = state.documents.get(result.path), plan = planned.get(result.path);
+        if (doc) {
+          const content = normalise(result.content);
+          const transaction = doc.state.update({ changes: plan?.edits || changedText(doc.state.doc.toString(), content), userEvent: 'input', annotations: isolateHistory.of('full') });
+          doc.revision = result.revision; doc.lineEnding = result.lineEnding || doc.lineEnding; doc.savedDoc = transaction.state.doc; doc.conflict = null;
+          applyDocumentTransaction(doc, transaction); updateDocumentIndicators(doc);
+        }
+        updateIndex(result.path, result.content, false);
+        if (result.historyWarning) toast(result.historyWarning);
+        if (state.build) {
+          if (!isMarkdown(result.path)) state.build.sourceChanged = true;
+          if (state.build.pdfReady && sourceAffectsPDF(result.path)) state.build.pdfSourceChanged = true;
+        }
+      }
+      rebuildIndex(); updatePreviewNote(); syncDrafts();
+    });
+  } finally { setOperation(''); }
+}
+function focusSourceDocument(snapshot) {
+  requestAnimationFrame(() => {
+    if (!snapshot || state.closed || state.operation || snapshot.projectRoot !== state.meta?.project?.root || document.querySelector('dialog[open]')) return;
+    const slot = editorSlots[snapshot.pane];
+    if (slot?.view && slot.path === snapshot.path && (snapshot.pane === 'primary' || state.splitEditors)) slot.view.focus();
+  });
+}
+async function insertSourceText(text, snapshot = {}) {
+  const { path, projectRoot, pane, anchor, head, content } = snapshot;
+  if (state.operation || state.closed || projectRoot !== state.meta?.project?.root) throw new Error(t('プロジェクトが切り替わりました．原稿を開き直してから挿入してください．'));
+  const doc = state.documents.get(path);
+  const slot = editorSlots[pane];
+  if (!doc || !slot?.view || slot.path !== path || (pane === 'secondary' && !state.splitEditors)) throw new Error(t('挿入先の原稿を開き直してください．'));
+  const view = slot.view, selection = view.state.selection.main;
+  if (view.state.doc.toString() !== content || selection.anchor !== anchor || selection.head !== head) throw new Error(t('原稿が変更されています．内容を開き直してから操作してください．'));
+  const from = Math.min(anchor, head), to = Math.max(anchor, head);
+  applyDocumentTransaction(doc, view.state.update({ changes: { from, to, insert: text }, selection: { anchor: from + text.length }, userEvent: 'input', annotations: isolateHistory.of('full'), scrollIntoView: true }));
+  activateEditorPane(pane); focusSourceDocument(snapshot);
+  syncDrafts();
+}
+function applyMarkdownEdit(edit, snapshot) {
+  const current = currentDocumentSnapshot();
+  if (state.operation || state.closed || !current || current.projectRoot !== snapshot.projectRoot || current.path !== snapshot.path || current.pane !== snapshot.pane || current.content !== snapshot.content || current.anchor !== snapshot.anchor || current.head !== snapshot.head) throw new Error(t('原稿が変更されています．内容を開き直してから操作してください．'));
+  const doc = activeDocument(), view = state.editor;
+  applyDocumentTransaction(doc, view.state.update({ ...edit, userEvent: 'input', annotations: isolateHistory.of('full'), scrollIntoView: true }));
+  focusSourceDocument(snapshot);
+}
+async function openCreatedProject(path) {
+  if (state.operation || state.closed || isRunning()) throw new Error(t('コンパイルが終了してからプロジェクトを切り替えてください．'));
+  setOperation('opening');
+  try {
+    if (!await confirmUnsaved(t('プロジェクトを切り替える前に，変更を保存しますか？'))) return;
+    const meta = await api('/api/project/open', { method: 'POST', body: { path } });
+    await applyMeta(meta, true); clearError();
+  } finally { setOperation(''); await openInitialFile(); }
 }
 
 function updateIndex(path, content, rebuild = true) {
@@ -1555,74 +1992,48 @@ function setSidebar(mode) {
   renderTree(); renderOutline(); scheduleSession();
 }
 function renderOutline() {
-  const container = $('outline-tree'); container.replaceChildren();
+  if (!outlineTree) return;
   const query = $('file-filter').value.trim().toLowerCase();
   const doc = activeDocument();
   const supported = !!doc && (/\.tex$/i.test(doc.path) || isMarkdown(doc.path));
   if (supported && !state.texIndex.has(doc.path)) updateIndex(doc.path, doc.state.doc.toString(), false);
   const file = supported ? state.texIndex.get(doc.path) : null;
   const outline = file?.outline || [];
-  const items = outline.filter(item => !query || `${item.title} ${doc.path}`.toLowerCase().includes(query));
-  if (state.activePath) {
-    const heading = document.createElement('p'); heading.className = 'outline-file'; heading.textContent = state.activePath; container.append(heading);
-  }
-  const baseLevel = outline.length ? Math.min(...outline.map(item => item.level)) : 0;
-  for (const item of items) {
-    const button = document.createElement('button'); button.type = 'button'; button.className = 'outline-link';
-    button.dataset.path = doc.path; button.dataset.line = String(item.line); button.style.setProperty('--outline-depth', String(Math.max(0, Math.min(4, item.level - baseLevel))));
-    const title = document.createElement('span'); title.textContent = item.title || t("(無題の見出し)");
-    const line = document.createElement('span'); line.className = 'outline-line'; line.textContent = String(item.line);
-    button.append(title, line); button.addEventListener('click', () => runTask(() => goToSource(doc.path, item.line)));
-    container.append(button);
-  }
-  if (!items.length) {
-    const text = document.createElement('p'); text.className = 'tree-empty';
-    text.textContent = !state.activePath ? t("TeX または Markdown ファイルを開くと，その見出しが表示されます．") : !supported ? t("このファイルにはアウトラインがありません．") : query ? t("一致する見出しがありません．") : t("この文書には見出しがありません．");
-    container.append(text);
-  }
+  outlineTree.render({ projectRoot: state.meta?.project?.root || '', path: state.activePath, supported, outline, query });
   updateOutlinePosition();
 }
 function updateOutlinePosition() {
   const line = state.editor ? state.editor.state.doc.lineAt(state.editor.state.selection.main.head).number : 0;
-  let candidate = null;
-  for (const button of $('outline-tree').querySelectorAll('.outline-link')) {
-    button.classList.remove('active');
-    if (button.dataset.path === state.activePath && Number(button.dataset.line) <= line) candidate = button;
-  }
-  candidate?.classList.add('active');
+  outlineTree?.setActive({ path: state.activePath, line });
 }
 function renderLogLocations() {
-  const container = $('log-locations'); container.replaceChildren();
-  const locations = extractLogLocations(state.fullLog, state.meta?.project?.files || [], state.meta?.project?.root);
-  container.hidden = !locations.length;
-  for (const location of locations.slice(0, 40)) {
-    const button = document.createElement('button'); button.type = 'button'; button.className = 'log-location'; button.title = location.message || '';
-    button.dataset.path = location.path; button.dataset.line = String(location.line);
-    const label = document.createElement('span'); label.textContent = `${location.path}:${location.line}`;
-    const message = document.createElement('span'); message.className = 'log-location-message'; message.textContent = location.message;
-    button.append(label, message); button.addEventListener('click', () => runTask(() => goToSource(location.path, location.line)));
-    container.append(button);
-  }
+  logIssues?.update(state.fullLog, state.meta?.project?.files || [], state.meta?.project?.root, { running: isRunning(), main: state.build?.main || state.meta?.project?.main });
 }
 
-async function goToSource(path, lineNumber, column = 1) {
+async function goToSource(path, lineNumber, column = 1, { align = 'start', from = null, to = null } = {}) {
   if (state.operation || state.closed) return false;
   const generation = state.projectGeneration;
   await openFile(path);
   if (generation !== state.projectGeneration || state.activePath !== path || !state.editor || !activeDocument()) return false;
+  editorSlots[state.activePane].restoreSequence = (editorSlots[state.activePane].restoreSequence || 0) + 1;
   switchView(false);
   const number = Math.min(state.editor.state.doc.lines, Math.max(1, Number(lineNumber) || 1));
   const line = state.editor.state.doc.line(number);
-  const position = Math.min(line.to, line.from + Math.max(0, Number(column) - 1 || 0));
-  state.editor.dispatch({ selection: { anchor: position }, effects: [EditorView.scrollIntoView(position, { y: 'center' }), lineFlash.of(number)] });
+  const position = from == null ? Math.min(line.to, line.from + Math.max(0, Number(column) - 1 || 0)) : Math.max(0, Math.min(state.editor.state.doc.length, from));
+  const end = to == null ? position : Math.max(position, Math.min(state.editor.state.doc.length, to));
+  const margin = align === 'start' ? Math.max(24, Math.min(96, state.editor.scrollDOM.clientHeight * .12)) : 12;
+  pauseMarkdownScrollSync();
+  state.editor.dispatch({ selection: { anchor: position, head: end }, effects: [...revealSourceRange(state.editor.state, position, end), EditorView.scrollIntoView(position, { y: align, yMargin: margin }), lineFlash.of(number)] });
   state.editor.focus();
+  state.lastSurface = 'source';
   clearTimeout(lineFlashTimer);
   const target = activeDocument();
   lineFlashTimer = setTimeout(() => {
     if (!target || !state.documents.has(target.path)) return;
     const transaction = target.state.update({ effects: lineFlash.of(null) });
-    if (state.activePath === target.path && state.editor) state.editor.update([transaction]); else target.state = transaction.state;
+    applyDocumentTransaction(target, transaction);
   }, 2600);
+  await afterNavigationFrame();
   return true;
 }
 function noteSourceChanged(result) {
@@ -1643,6 +2054,8 @@ async function syncForward(position = null) {
     if (state.closed || generation !== state.projectGeneration || doc !== activeDocument()) return;
     pauseMarkdownScrollSync();
     markdownPreview.revealSourceLine(line, { path: doc.path, projectRoot: state.meta.project.root });
+    state.lastSurface = 'markdown';
+    await afterNavigationFrame();
     return;
   }
   if (!viewer.document || !viewer.buildId) throw new Error(t("PDF をコンパイルしてから，原稿と PDF の位置を対応させてください．"));
@@ -1667,6 +2080,8 @@ async function syncForward(position = null) {
     await new Promise(resolve => requestAnimationFrame(resolve));
     viewer.refreshLayout();
     await viewer.showLocation(target, buildId);
+    state.lastSurface = 'pdf';
+    await afterNavigationFrame();
     clearError(); noteSourceChanged(result);
   } catch (error) {
     if (error.status === 503) showError(error, { label: t("設定を開く"), run: showSettings });
@@ -1693,23 +2108,55 @@ const viewer = new PDFViewer({
   onError: error => showError(error, { label: t("PDF を再表示"), run: async () => { clearError(); await viewer.retry(); } }),
   onReady: () => { updatePreviewNote(); renderControls(); },
   onPositionChange: () => scheduleSession(),
-  onInverse: position => runTask(() => syncInverse(position)),
+  onInverse: position => runTask(() => navigate(() => syncInverse(position))),
+  onNavigate: action => navigate(action),
+  onDarkModeChange: changePDFDarkMode,
 });
-const assetPreview = new AssetPreview({ token });
+const assetPreview = new AssetPreview({ token, onNavigate: action => navigate(action), onDarkModeChange: changePDFDarkMode });
 const markdownPreview = new MarkdownPreview({
   container: $('markdown-preview-container'), token,
+  onUserScroll: scrollSourceWithMarkdown,
+  onNavigate: action => navigate(action),
   onError: error => showError(error),
-  onOpenFile: (path, { fragment } = {}) => runTask(async () => {
+  onOpenFile: (path, { fragment } = {}) => runTask(() => navigate(async () => {
     await openFile(path);
     const doc = activeDocument();
     if (doc?.path === path && isMarkdown(path) && fragment) markdownPreview.update(doc.state.doc.toString(), { path, projectRoot: state.meta.project.root, immediate: true, fragment });
-  }),
-  onSourceLine: (line, path) => runTask(async () => {
+    await afterNavigationFrame();
+  })),
+  onSourceLine: (line, path) => runTask(() => navigate(async () => {
     pauseMarkdownScrollSync();
     await goToSource(path, line);
     pauseMarkdownScrollSync();
-  }),
+  })),
 });
+
+navigationHistory = new NavigationHistory({ capture: captureNavigationLocation, restore: restoreNavigationLocation, onChange: updateNavigationControls });
+outlineTree = createOutlineTree({ container: $('outline-tree'), onJump: (path, line) => runTask(() => navigate(() => goToSource(path, line, 1, { align: 'start' }))) });
+projectSearch = createProjectSearch({
+  api, getOpenDocuments: openDocumentSnapshots,
+  onError: showError,
+  openSource: (path, line, column, from, to) => navigate(() => goToSource(path, line, column, { from, to })),
+  replaceDocuments: applyProjectReplacements,
+});
+documentHistory = createEditHistory({ api, getActiveDocument: currentDocumentSnapshot, replaceEditorText });
+referenceTools = createReferenceTools({
+  getFiles: () => state.meta?.project?.files || [],
+  readFile: async path => {
+    const doc = state.documents.get(path);
+    if (doc) return { content: doc.state.doc.toString(), revision: doc.revision };
+    const file = await api(`/api/file?path=${encodeURIComponent(path)}`);
+    return { ...file, content: normalise(file.content) };
+  },
+  getCurrent: currentDocumentSnapshot,
+  onOpen: (path, line, column, from) => navigate(() => goToSource(path, line, column, { from })),
+  onApply: plans => applyProjectReplacements(plans.map(plan => ({ ...plan, expectedContent: plan.before, edits: plan.changes.map(({ from, to, insert }) => ({ from, to, insert })) }))),
+  onError: showError,
+});
+insertTools = createInsertTools({ api, getDocument: currentDocumentSnapshot, getProject: () => state.meta?.project, insertText: insertSourceText, refreshProject: refreshFiles, focusDocument: focusSourceDocument, onError: showError });
+templateManager = createTemplateManager({ api, getProject: () => state.meta?.project, saveAll, openProject: openCreatedProject, onError: showError });
+logIssues = createLogIssues({ container: $('log-locations'), onOpen: (path, line) => runTask(() => navigate(() => goToSource(path, line))) });
+markdownEditing = createMarkdownEditing({ container: $('markdown-editing'), getDocument: currentDocumentSnapshot, applyEdit: applyMarkdownEdit, focusDocument: focusSourceDocument, onTable: () => insertTools.openTable(), onError: showError });
 
 help = createHelp({
   button: $('help-button'), dialog: $('help-dialog'), getMeta: () => state.meta, isClosed: () => state.closed,
@@ -1747,6 +2194,7 @@ systemColorScheme.addEventListener('change', () => {
 
 onClick('show-project', showProjectDialog); onClick('welcome-open', showProjectDialog);
 onClick('settings-button', showSettings); onClick('main-document', showSettings);
+$('tex-completion-setting').addEventListener('change', () => { $('completion-on-type-setting').disabled = !$('tex-completion-setting').checked; });
 onClick('open-appearance', showAppearance);
 onClick('appearance-reset', () => { appearanceDraft = normalizeAppearance(); renderAppearanceForm(); });
 for (const [id, key] of [['mode', 'mode'], ['palette', 'palette'], ['accent', 'accent'], ['font', 'editorFont']]) $(`appearance-${id}`).addEventListener('change', event => {
@@ -1764,6 +2212,66 @@ onClick('shortcut-start-menu', () => createShortcut('start-menu')); onClick('sho
 onClick('copy-synctex-setup', async () => { await navigator.clipboard.writeText($('synctex-install-commands').textContent); toast(t("コマンドをコピーしました．")); });
 onClick('pick-project', pickProject); onClick('cancel-picker', cancelPicker); onClick('shutdown-button', shutdown);
 onClick('save-button', saveCurrent); onClick('compile-button', startBuild); onClick('stop-button', stopBuild);
+onClick('project-search-button', () => projectSearch.open());
+onClick('split-editors', () => toggleSplitEditors());
+onClick('close-second-editor', () => toggleSplitEditors(false));
+function openWritingTool(action) { $('writing-menu').open = false; return action(); }
+onClick('reference-tools', () => openWritingTool(() => referenceTools.open()));
+onClick('document-history', () => openWritingTool(() => documentHistory.open()));
+onClick('insert-image', () => openWritingTool(() => insertTools.openImage()));
+onClick('insert-table', () => openWritingTool(() => insertTools.openTable()));
+onClick('project-templates', () => openWritingTool(() => templateManager.open()));
+onClick('welcome-template', () => templateManager.open());
+for (const [name, slot] of Object.entries(editorSlots)) slot.select.addEventListener('change', () => runTask(() => openFile(slot.select.value, { pane: name })));
+for (const button of document.querySelectorAll('[data-navigation-back]')) button.addEventListener('click', () => runTask(() => navigationHistory.back()));
+for (const button of document.querySelectorAll('[data-navigation-forward]')) button.addEventListener('click', () => runTask(() => navigationHistory.forward()));
+for (const [id, surface] of [['pdf-scroll', 'pdf'], ['markdown-preview-container', 'markdown'], ['asset-scroll', 'asset']]) {
+  $(id).addEventListener('pointerdown', () => { state.lastSurface = surface; }, { passive: true });
+  $(id).addEventListener('focusin', () => { state.lastSurface = surface; });
+}
+function positionWritingMenu() {
+  if (!$('writing-menu').open) return;
+  const menu = $('writing-menu').querySelector('.writing-menu-items');
+  const anchor = $('writing-menu').getBoundingClientRect();
+  menu.style.maxHeight = `${Math.max(80, innerHeight - anchor.bottom - 16)}px`;
+  menu.style.top = `${anchor.bottom + 5}px`;
+  menu.style.left = `${Math.max(8, Math.min(innerWidth - menu.offsetWidth - 8, anchor.right - menu.offsetWidth))}px`;
+}
+$('writing-menu').addEventListener('toggle', positionWritingMenu);
+document.addEventListener('pointerdown', event => { if (!$('writing-menu').contains(event.target)) $('writing-menu').open = false; });
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && $('writing-menu').open) { $('writing-menu').open = false; $('writing-menu').querySelector('summary').focus(); }
+});
+window.addEventListener('resize', positionWritingMenu);
+
+const sourceDivider = $('source-splitter');
+let sourceDrag = null;
+function resizeSourcePanes(fraction) {
+  fraction = Math.max(.2, Math.min(.8, fraction));
+  const restores = visibleEditorSlots().map(([, slot]) => prepareEditorResize(slot.view));
+  state.sourceRatio = fraction / (1 - fraction); updateSourceLayout();
+  for (const restore of restores) restore();
+  scheduleSession();
+}
+sourceDivider.addEventListener('pointerdown', event => {
+  if (event.button !== 0 || !state.splitEditors) return;
+  event.preventDefault(); sourceDivider.focus(); sourceDivider.setPointerCapture(event.pointerId);
+  sourceDrag = { pointer: event.pointerId, stacked: $('source-workspace').classList.contains('stacked'), bounds: $('source-workspace').getBoundingClientRect() };
+});
+sourceDivider.addEventListener('pointermove', event => {
+  if (!sourceDrag || sourceDrag.pointer !== event.pointerId) return;
+  const { stacked, bounds } = sourceDrag;
+  resizeSourcePanes(stacked ? (event.clientY - bounds.top) / bounds.height : (event.clientX - bounds.left) / bounds.width);
+});
+for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) sourceDivider.addEventListener(event, () => { sourceDrag = null; });
+sourceDivider.addEventListener('dblclick', () => resizeSourcePanes(.5));
+sourceDivider.addEventListener('keydown', event => {
+  const step = event.shiftKey ? .1 : .025;
+  const current = state.sourceRatio / (1 + state.sourceRatio);
+  const values = { ArrowLeft: current - step, ArrowUp: current - step, ArrowRight: current + step, ArrowDown: current + step, Home: .2, End: .8, Enter: .5 };
+  if (Object.hasOwn(values, event.key)) { event.preventDefault(); resizeSourcePanes(values[event.key]); }
+});
+new ResizeObserver(updateSourceLayout).observe($('source-workspace'));
 for (const select of document.querySelectorAll('[data-preview-choice]')) select.addEventListener('change', () => setPreviewChoice(select.value));
 $('markdown-scroll-sync').addEventListener('change', () => {
   applyMarkdownScrollSync($('markdown-scroll-sync').checked);
@@ -1771,7 +2279,7 @@ $('markdown-scroll-sync').addEventListener('change', () => {
   if (state.preferences.markdownScrollSync) scheduleMarkdownScrollSync();
 });
 onClick('refresh-files', refreshFiles); onClick('download-pdf', downloadPDF); onClick('copy-log', copyLog);
-onClick('synctex-forward', () => syncForward());
+onClick('synctex-forward', () => navigate(() => syncForward()));
 onClick('files-tab', () => { $('file-filter').value = ''; setSidebar('files'); });
 onClick('outline-tab', () => { $('file-filter').value = ''; setSidebar('outline'); });
 onClick('review-drafts', showRecovery); onClick('dismiss-recovery', () => { $('recovery-banner').hidden = true; });
@@ -1810,6 +2318,11 @@ function switchView(preview) {
 onClick('show-editor', () => switchView(false)); onClick('show-preview', () => switchView(true));
 
 document.addEventListener('keydown', event => {
+  if (event.isComposing || document.querySelector('dialog[open]')) return;
+  if (event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey && ['ArrowLeft', 'ArrowRight'].includes(event.key)) {
+    event.preventDefault(); runTask(() => event.key === 'ArrowLeft' ? navigationHistory.back() : navigationHistory.forward()); return;
+  }
+  if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'f') { event.preventDefault(); if (!state.operation && state.meta?.project) projectSearch.open(); return; }
   if (!event.ctrlKey && !event.metaKey) return;
   if (event.isComposing || state.editor?.composing || document.querySelector('dialog[open]')) return;
   if (event.target.closest('.cm-editor')) return;

@@ -8,6 +8,9 @@ import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { promisify } from 'node:util';
 import { checkEditorSelectionVisibility, checkPDFSelectionVisibility } from './selection-checks.mjs';
+import { registerWritingWorkflowTests } from './writing-workflow-cases.mjs';
+import { registerSourceDisplayTests } from './source-display-cases.mjs';
+import { showPDFControls } from './pdf-controls.mjs';
 
 const repository = path.resolve(import.meta.dirname, '..');
 const fixture = path.join(import.meta.dirname, 'fixtures', 'japanese');
@@ -95,9 +98,11 @@ async function openPDFViewer(page, pdf) {
     ['/pdf_viewer.css', { contentType: 'text/css', body: await readFile(path.join(repository, 'node_modules/pdfjs-dist/web/pdf_viewer.css')) }],
     ['/style.css', { contentType: 'text/css', body: await readFile(path.join(repository, 'web/src/style.css')) }],
     ['/pdf-search.css', { contentType: 'text/css', body: await readFile(path.join(repository, 'web/src/pdf-search.css')) }],
+    ['/pdf-appearance.css', { contentType: 'text/css', body: await readFile(path.join(repository, 'web/src/pdf-appearance.css')) }],
+    ['/writing-workspace.css', { contentType: 'text/css', body: await readFile(path.join(repository, 'web/src/writing-workspace.css')) }],
     ['/api/pdf', { contentType: 'application/pdf', body: pdf }],
     ['/', { contentType: 'text/html', body: `<!doctype html><html><head><meta charset="utf-8">
-      <link rel="stylesheet" href="/pdf_viewer.css"><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/pdf-search.css">
+      <link rel="stylesheet" href="/pdf_viewer.css"><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/pdf-search.css"><link rel="stylesheet" href="/writing-workspace.css"><link rel="stylesheet" href="/pdf-appearance.css">
       <style>#pdf-pane { width: 900px; height: 900px; }</style>
       </head><body>${pane}<script type="module" src="/viewer.js"></script></body></html>` }],
   ]);
@@ -867,6 +872,8 @@ test('長い原稿の中央への最後の入力をタブが閉じた後に草�
   await reopened.getByTestId('review-drafts').click();
   await expect(reopened.locator('#recovery-draft')).toHaveValue(expected);
   await reopened.getByTestId('restore-draft').click();
+  await expect(reopened.getByTestId('editor')).toHaveAttribute('data-line', '6001');
+  await expect(reopened.getByTestId('editor')).toHaveAttribute('data-column', String(marker.length + finalInput.length + 1));
   await expect(reopened.getByTestId('editor').locator('.cm-content')).toContainText(marker + finalInput);
   expect(await readFile(path.join(session.project, 'main.tex'), 'utf8')).toBe(original);
 });
@@ -920,8 +927,12 @@ test('終了確認中に別のファイルが読み込まれても，取消後�
     await requestStarted;
     await page.locator('#shutdown-button').click();
     await expect(page.locator('#decision-dialog')).toBeVisible();
+    const responseFinished = page.waitForResponse(response => fileURL(new URL(response.url())));
     release();
-    await expect(page.getByTestId('editor')).toHaveAttribute('data-path', 'notes.txt');
+    await (await responseFinished).finished();
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    // A completed read must not change the selected document during shutdown.
+    await expect(page.getByTestId('editor')).toHaveAttribute('data-path', 'main.tex');
     await expect(page.getByTestId('editor').locator('.cm-content')).toHaveAttribute('contenteditable', 'false');
     await page.locator('#decision-cancel').click();
     await expect(page.locator('#decision-dialog')).not.toBeVisible();
@@ -937,6 +948,10 @@ test('終了確認中に別のファイルが読み込まれても，取消後�
     await expect(editor).toContainText('続けて入力できた');
     await page.keyboard.press('Control+S');
     await expect.poll(() => readFile(path.join(session.project, 'main.tex'), 'utf8')).toBe(expectedMainContent(session, content + '% 続けて入力できた\n'));
+    await page.getByTestId('file-notes.txt').click();
+    await expect(page.getByTestId('editor')).toHaveAttribute('data-path', 'notes.txt');
+    await expect(editor).toContainText('読み込みを待つファイル');
+    await expect(editor).toHaveAttribute('contenteditable', 'true');
   } finally {
     release();
     await page.unroute(fileURL);
@@ -1094,11 +1109,14 @@ test('フォルダーから画像と PDF を開き，編集中の原稿へ戻る
   await page.setViewportSize({ width: 1440, height: 900 });
   const dimensions = await page.evaluate(() => ({
     toolbar: document.querySelector('.app-header').getBoundingClientRect().height,
+    writingToolbar: document.querySelector('.writing-toolbar').getBoundingClientRect().height,
     editorTop: document.querySelector('#editor').getBoundingClientRect().top,
     pdfTop: document.querySelector('#pdf-scroll').getBoundingClientRect().top,
   }));
   expect(dimensions.toolbar).toBeLessThanOrEqual(48);
-  expect(dimensions.editorTop).toBeLessThanOrEqual(100);
+  expect(dimensions.writingToolbar).toBeGreaterThan(0);
+  expect(dimensions.writingToolbar).toBeLessThanOrEqual(40);
+  expect(dimensions.editorTop - dimensions.writingToolbar).toBeLessThanOrEqual(100);
   expect(dimensions.pdfTop).toBeLessThanOrEqual(100);
   await page.screenshot({ path: testInfo.outputPath('compact-editor.png') });
   expect(errors).toEqual([]);
@@ -1399,6 +1417,19 @@ test('Markdown の原稿からプレビューへ移動し，スクロールの�
   await sourceScroll.hover();
   await page.mouse.wheel(0, 600);
   await expect.poll(() => preview.evaluate(element => element.scrollTop)).toBeGreaterThan(followedTop + 100);
+  const beforePreviewScroll = await sourceScroll.evaluate(element => element.scrollTop);
+  await preview.hover(); await page.mouse.wheel(0, 600);
+  await expect.poll(() => sourceScroll.evaluate(element => element.scrollTop)).toBeGreaterThan(beforePreviewScroll + 50);
+  await settleLayout();
+  const settledSource = await sourceScroll.evaluate(element => element.scrollTop);
+  await settleLayout();
+  expect(await sourceScroll.evaluate(element => element.scrollTop)).toBeCloseTo(settledSource, 0);
+  await follow.uncheck();
+  const independentSource = await sourceScroll.evaluate(element => element.scrollTop);
+  await preview.hover(); await page.mouse.wheel(0, 500);
+  await settleLayout();
+  expect(await sourceScroll.evaluate(element => element.scrollTop)).toBeCloseTo(independentSource, 0);
+  await follow.check();
   await page.screenshot({ path: testInfo.outputPath('markdown-scroll-sync.png') });
 
   await dragPanelSeparator(page, '#splitter', { dx: 2000 });
@@ -1543,19 +1574,27 @@ test('ウィンドウを小さくしても，原稿とログを操作できる�
   expect(smaller.editor.height).toBeGreaterThanOrEqual(159);
   expect(smaller.preview.right).toBeLessThanOrEqual(smaller.workbench.right + 1);
   expect(smaller.log.bottom).toBeLessThanOrEqual(smaller.workbench.bottom + 1);
-  await expect(page.getByTestId('pdf-search-toggle')).toBeVisible();
-  await expect(page.locator('#download-pdf')).toBeVisible();
+  await expect(page.getByTestId('pdf-more')).toBeVisible();
+  expect(await page.locator('.pdf-toolbar').evaluate(element => element.getBoundingClientRect().height)).toBeLessThanOrEqual(40);
   const outsidePreview = await page.locator('.pdf-toolbar').evaluate(toolbar => {
     const pane = document.getElementById('pdf-pane').getBoundingClientRect();
     return [...toolbar.querySelectorAll('button, input, select')].filter(control => {
       const bounds = control.getBoundingClientRect();
+      if (!bounds.width || !bounds.height) return false;
       return bounds.left < pane.left - 1 || bounds.right > pane.right + 1 ||
         bounds.top < pane.top - 1 || bounds.bottom > pane.bottom + 1;
     }).map(control => control.id || control.dataset.testid);
   });
   expect(outsidePreview).toEqual([]);
   expect(await page.locator('.pdf-toolbar').evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+  await showPDFControls(page);
+  await expect(page.getByTestId('pdf-search-toggle')).toBeVisible();
+  await expect(page.locator('#download-pdf')).toBeVisible();
+  const menu = await page.locator('#pdf-view-controls').boundingBox();
+  expect(menu.x).toBeGreaterThanOrEqual(0);
+  expect(menu.x + menu.width).toBeLessThanOrEqual(1000);
   await page.screenshot({ path: testInfo.outputPath('pdf-controls-narrow.png') });
+  await page.keyboard.press('Escape');
 
   await page.setViewportSize({ width: 800, height: 480 });
   await expect(page.locator('#splitter')).not.toBeVisible();
@@ -1779,6 +1818,24 @@ test('外観の配色，アクセント，原稿フォントを保存し，再�
   await reopened.locator('#appearance-cancel').click();
   await closeSettings(reopened);
   await expect(reopened.getByTestId('pdf-page')).toHaveValue('2');
+
+  await openAppearance(reopened);
+  await reopened.locator('#appearance-palette').selectOption('gray');
+  const gray = await readEditorAppearance(reopened);
+  await reopened.locator('#appearance-palette').selectOption('black');
+  const black = await readEditorAppearance(reopened);
+  expect(black).toMatchObject({ theme: 'dark', palette: 'black', accent: 'purple', editorFont: saved.editorFont });
+  const brightness = color => color.match(/\d+/g).slice(0, 3).reduce((sum, value) => sum + Number(value), 0);
+  expect(brightness(black.headerBackground)).toBeLessThan(brightness(gray.headerBackground));
+  await reopened.screenshot({ path: testInfo.outputPath('appearance-black-settings.png') });
+  await reopened.locator('#save-appearance').click();
+  await closeSettings(reopened);
+  await expect.poll(async () => (await json(session, '/api/storage?key=preferences')).value?.appearance).toEqual({ ...appearance, mode: 'dark', palette: 'black' });
+  await reopened.reload();
+  await expect(reopened.getByTestId('editor').locator('.cm-content')).toContainText(comment.trim());
+  await expect.poll(() => readEditorAppearance(reopened)).toEqual(black);
+  await expect(reopened.getByTestId('pdf-canvas')).toHaveAttribute('data-ready', 'true');
+  await reopened.screenshot({ path: testInfo.outputPath('appearance-black-editor.png') });
   expect(errors).toEqual([]);
 });
 
@@ -1800,10 +1857,11 @@ test('外観の変更をキャンセルや Escape で戻し，OS とテーマボ
   await page.getByTestId('compile-mode').selectOption('xelatex');
   await page.locator('#open-appearance').click();
   await page.locator('#appearance-mode').selectOption('dark');
-  await page.locator('#appearance-palette').selectOption('gray');
+  await page.locator('#appearance-palette').selectOption('default');
   await page.locator('#appearance-accent').selectOption('orange');
-  await page.locator('#appearance-font').selectOption('consolas');
+  await page.locator('#appearance-font').selectOption('monospace');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(page.locator('html')).toHaveAttribute('data-palette', 'default');
   await expect.poll(() => readEditorAppearance(page).then(value => value.editorFont)).not.toBe(initial.editorFont);
   await page.setViewportSize({ width: 480, height: 900 });
   const dialog = page.locator('#appearance-dialog');
@@ -2626,3 +2684,6 @@ Finished.
   const recovered = await compileFromUI(page, session);
   expect(recovered.finished.status, recovered.finished.log + '\n' + recovered.finished.error).toBe('success');
 });
+
+registerWritingWorkflowTests({ test, openProject, openEditor, setAutoSave, json, compileFromUI });
+registerSourceDisplayTests({ test, openProject, openEditor, compileFromUI, exampleFigurePDF });

@@ -4,11 +4,11 @@ English | [日本語](README.ja.md) · [Website and guide](https://kodai-utsunom
 
 [![Get the free Windows app from Microsoft Store](docs/download-store.svg)](https://apps.microsoft.com/detail/9P6QF32N19HG)
 &nbsp;&nbsp;
-[![Download Windows ZIP](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.6/local-tex-web-editor-0.1.6-windows-x64.zip)
+[![Download Windows ZIP](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.7/local-tex-web-editor-0.1.7-windows-x64.zip)
 &nbsp;&nbsp;
-[![Download for macOS](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.6/local-tex-web-editor-0.1.6-macos-universal.zip)
+[![Download for macOS](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.7/local-tex-web-editor-0.1.7-macos-universal.zip)
 
-**v0.1.6** · [All downloads and release notes](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [Requirements](#requirements) · [App size](#app-files-and-storage) · [Get started](#download-and-launch)
+**v0.1.7** · [All downloads and release notes](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [Requirements](#requirements) · [App size](#app-files-and-storage) · [Get started](#download-and-launch)
 
 Edit TeX documents in your browser on Windows or macOS, and compile them with TeX Live on your computer. The editor and PDF preview appear in the same window. Launching the app opens a `localhost` page in your default browser. Markdown editing and preview are also supported.
 
@@ -122,7 +122,7 @@ Microsoft Store manages installation and app updates. TeX Live is installed sepa
 #### ZIP download
 
 1. Open [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) and select the latest version.
-2. Under **Assets**, download `local-tex-web-editor-0.1.6-windows-x64.zip`. The **Source code** archives contain the files for development.
+2. Under **Assets**, download `local-tex-web-editor-0.1.7-windows-x64.zip`. The **Source code** archives contain the files for development.
 3. Extract the ZIP and double-click `local-tex-web-editor.exe`.
 4. In the browser window, choose your project folder. You can also enter its path.
 5. If TeX Live is not found automatically, open Settings and select the folder containing `latexmk.exe`, for example `C:\texlive\2025\bin\windows`.
@@ -132,7 +132,7 @@ The Windows executable in the ZIP download does not have a code signature. If Sm
 
 ### macOS
 
-1. Under **Assets** in [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases), download `local-tex-web-editor-0.1.6-macos-universal.zip`. The same ZIP supports Apple Silicon and Intel.
+1. Under **Assets** in [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases), download `local-tex-web-editor-0.1.7-macos-universal.zip`. The same ZIP supports Apple Silicon and Intel.
 2. Extract the ZIP and move `Local TeX Web Editor.app` to **Applications**.
 3. Open **Local TeX Web Editor** from Finder or Spotlight. The editor opens in your browser.
 4. Open your project folder. If TeX is not found automatically, select `/Library/TeX/texbin` in Settings.
@@ -178,7 +178,7 @@ Launching the `.exe` from a new ZIP updates the installed copy and the Start men
 
 The interface starts in **English**. Use **Settings → Language → 日本語** to switch to Japanese. Your language choice is saved for future sessions. This setting changes the app's controls and messages; documents, PDFs, and Markdown content are displayed as written.
 
-Open `.tex`, `.bib`, and other files from the file list on the left. Each file opens in a tab. Settings lets you choose an editor font size from 8 to 40 px; the default is 14 px. The font size is saved for future sessions.
+Open `.tex`, `.bib`, and other files from the file list on the left. Each file opens in a tab, and you can drag tabs to change their order. The next session restores the open tabs and their order. Settings lets you choose an editor font size from 8 to 40 px; the default is 14 px. The font size is saved for future sessions.
 
 Drag the right edge of the file list or outline to change its width, the divider between the editor and preview to change their widths, or the top edge of the log to change its height. You can also focus a divider with `Tab` and use the left/right or up/down arrow keys. Double-click a divider to restore its default position. Your chosen sizes are saved for future sessions and adjusted to fit smaller windows.
 
@@ -188,15 +188,22 @@ Selected text has a visible background in both themes, including selections on t
 
 | Action | How to use it |
 | --- | --- |
-| Find files or headings | Use the search field on the left. **Outline** shows headings from the selected TeX or Markdown tab and updates when you switch tabs. Click a heading to move to its source line |
+| Find files or headings | Use the search field on the left. **Outline** shows headings from the selected TeX or Markdown tab. Click a heading to show its source line near the top of the editor, with space above it |
 | Insert citations | Inside `\citep{` or `\cite{`, completion offers keys from the project's `.bib` files, with author, year, and title information |
 | Insert cross-references | Inside `\ref{`, `\eqref{`, `\cref{`, and similar commands, completion offers labels from the source |
-| Open completion | Press `Ctrl + Space`. TeX commands are also available |
+| Open completion | Type a TeX command or press `Ctrl + Space`. Use `Tab` / `Shift + Tab` to move between the inserted arguments |
+| Fold source | Click an arrow beside the line numbers to fold or unfold a section, environment, Markdown heading, or code block |
 | Search and replace in source | Press `Ctrl + F` in the editor or click the **Find and replace** button. You can paste a selection containing multiple lines |
+| Search the whole project | Click **Search project** or press `Ctrl + Shift + F`. Review the results and select the occurrences to replace |
+| Return after following a reference | Use the **←** / **→** buttons above the source or PDF, or press `Alt + Left` / `Alt + Right` |
+| View two source documents | Click **Open two source editors**, then choose a document above each editor |
+| Compare earlier text | Open **Editing tools → Document history** |
+| Inspect a citation or reference | Open **Editing tools → References and citations** to find definitions and uses |
+| Insert an image or table | Use **Editing tools → Insert an image** or **Insert a table** |
 | Change the editor font size | Use `Ctrl + wheel` over the editor, pinch on a touchpad, or use two fingers on a touchscreen. Settings reflects the new size |
 | Save | Press `Ctrl + S` for the current file or `Ctrl + Shift + S` for all open files |
 | Compile | Press `Ctrl + Enter` or click **Compile**. The app saves the files and compiles the TeX document selected by the active editor tab |
-| Go to an error | Click the file name and line number shown above the log |
+| Review errors and warnings | Open **Log**, choose a category, and click an item with a file name and line number to open the source |
 
 On Mac, use `Cmd` in place of `Ctrl` for saving, searching, compiling, and the SyncTeX click action. Zoom with `Ctrl + wheel` or a trackpad pinch.
 
@@ -204,9 +211,67 @@ The search and replacement fields accept newlines and TeX backslashes as entered
 
 Changing the font size or theme leaves the document content and compiled PDF unchanged. The notice to recompile appears when source files or compilation settings have changed.
 
+### Complete TeX and navigate the outline
+
+Typing `\b` offers `\begin`. Completing it puts the cursor inside `\begin{}`; typing `i` there offers `itemize`, which inserts the item body and `\end{itemize}`. Commands for sections, formatting, citations, references, figures, tables, and mathematics are included. For example, `\frac` creates numerator and denominator fields. Press `Tab` or `Shift + Tab` to move between fields. Environments defined with `\newtheorem` or `\newenvironment` in the current document also appear in the list.
+
+Citation details appear beside the candidate list, or below it in a narrow editor, with their own scrolling area. In **Settings**, **Enable TeX completion** enables the feature, and **Show suggestions while typing** controls automatic suggestions. When automatic suggestions are off, `Ctrl + Space` still opens completion.
+
+The outline uses vertical guides and arrows to show heading levels. Click an arrow to collapse its children, or click the heading to open its source line. In the source, arrows beside the line numbers fold sections and environments; Markdown headings and code blocks can also be folded. Source jumps from the outline, search, and PDF unfold the destination when needed. The keyboard commands are listed under **Help → Keyboard shortcuts**.
+
+### Search and replace across the project
+
+**Search project** searches the text of `.tex`, `.bib`, Markdown, and other supported text files. Unsaved documents use the text currently in the editor. Generated compilation files are omitted. Select a result to open its location in the source.
+
+Enter the replacement text before searching to see the before/after preview for each occurrence. Tick the occurrences you want to change, or use **Select / clear all**, then choose **Replace … selected matches**. Replacement saves the affected files. The app checks both the current editor text and the disk revisions before saving; if a file has changed, search again to review the new text.
+
+The dialog supports multiline text, case matching, whole words, and regular expressions. Regular expressions use RE2, with `$1` or `${name}` for captured text in replacements. Results are limited to 1000 matches, and **Cancel search** stops a search. A message appears when file sizes or another search limit prevent a complete search; use a more specific query in that case.
+
+### Work in two source editors
+
+Click **Open two source editors** above the tabs. The selectors above the two editors let you choose different documents, or view two parts of the same document. Each editor has its own cursor and scroll position. Changes to the same document appear in both views, and Undo and Redo work from either view.
+
+Drag the divider to change the space given to each editor. In a narrow window, the editors appear above and below one another. Click **Close the second editor** to return to one source view. The app restores the two displayed documents, the active editor, their positions, and the divider size when you reopen the project.
+
+### Check citations and cross-references
+
+Place the cursor on a citation key or label and open **Editing tools → References and citations**. You can also search the list by key, title, or author. **Definitions** and **Uses** show excerpts and links to their source locations.
+
+To change a key, enter its new name under **Rename the key**, choose **Preview changes**, and review the affected lines before choosing **Apply these changes**. The operation covers standard citation and reference commands; comments, code examples, and custom command definitions stay as written. The app checks the files again before saving the changes.
+
+### Compare and restore earlier text
+
+Open **Editing tools → Document history**, select an earlier version, and tick the changes you want to bring back. **Restore … selected changes** applies them to the editor, where you can use Undo or continue editing before saving. Large rewrites may appear as one selectable change. **Record current text** lets you record the current text with an optional version name, including text you have not saved yet.
+
+Automatic history is enabled initially. When an edited file is saved, the app compresses its previous text, with at least one minute between automatic versions of that file. Open **History settings** in the same dialog to change the period or total storage, or clear **Record edit history** to stop recording new versions.
+
+| History setting | Default or limit |
+| --- | --- |
+| Period | 30 days; adjustable from 1 to 365 days |
+| Total compressed storage | 50 MiB; adjustable from 5 to 200 MiB |
+| Versions of one file | At most 50 |
+| Versions across all projects | At most 2000 |
+| Document size | At most 2 MiB per version |
+
+Older versions are removed when an age, capacity, or count limit is reached, including versions with names. Turning history off stops new records; existing versions remain subject to those limits. History is stored in the app's local data folder listed under [App files and storage](#app-files-and-storage).
+
+### Insert images and tables
+
+Paste an image from the clipboard, drop a file onto the source editor, or open **Editing tools → Insert an image**. The dialog accepts one PNG, JPEG, or PDF at a time, up to **8 MiB**. Choose its destination in the project and review the source to insert. Existing filenames receive a numeric suffix for the new copy. TeX insertion supports a caption, label, and width and uses `graphicx`; Markdown insertion uses a relative image link, or a normal link for a PDF.
+
+Open **Editing tools → Insert a table** to paste tab- or comma-delimited cells copied from a spreadsheet. You can also enter **Rows** and **Columns** and choose **Create a new table**. Edit the preview cells, choose whether the first row is a header, and review the TeX or Markdown source before inserting it. Tables support up to 500 rows, 50 columns, and 10,000 cells in total. The preview displays the first 30 rows and 12 columns; the inserted source includes the whole table.
+
+### Create a project from a template
+
+Choose **Create from a template** on the opening screen, or **Editing tools → Manage templates** in a project. Built-in choices include a Japanese LuaLaTeX document, an English article, Beamer slides, and Markdown notes. Select a template, its destination folder, and a new project folder name, then choose **Create and open**.
+
+To add your own template, expand **Add the current project as a template**, enter a name, and select the source files and images to include. **Save and add as a template** saves the open documents and registers those files. Generated PDFs, auxiliary compilation files, and edit history are omitted. Each custom template can contain up to 200 files and 32 MiB, with up to 20 custom templates. You can rename a custom template, edit its description, or delete its registration under **Edit the selected template**.
+
 ### Choose the appearance
 
-Open **Settings → Appearance** to choose **System**, **Light**, or **Dark** mode, a **Default**, **Gray**, or **Warm** color scheme, an accent color, and the editor font. **System** follows your computer's light/dark preference. The dialog shows the editor's background and text colors with a sample of the selected appearance.
+Open **Settings → Appearance** to choose **System**, **Light**, or **Dark** mode, a **Default**, **Gray**, **Black**, or **Warm** color scheme, an accent color, and the editor font. For a black background, select **Dark** mode and the **Black** color scheme. **System** follows your computer's light/dark preference. The dialog shows the editor's background and text colors with a sample of the selected appearance.
+
+The initial appearance uses **System** mode, the **Gray** color scheme, and **Consolas** for the editor. Your previously saved appearance continues to apply. If Consolas is unavailable, the editor follows the existing Default font order through Cascadia Code, Menlo, DejaVu Sans Mono, and the browser's monospace font.
 
 Changes appear immediately. Choose **Save appearance** to use them in future sessions. **Cancel**, `Esc`, or **×** restores the appearance you had when opening the dialog. **Reset appearance** previews the defaults; choose **Save appearance** to apply them.
 
@@ -226,11 +291,13 @@ Autosave is enabled initially. The app saves the source file when typing pauses.
 
 Drafts are recorded on your computer in addition to saving the project files. If a draft is available when you reopen the app, choose **Review drafts**, compare it with the file, and select **Open draft in the editor**. If another application changes a source file, the app lets you compare the disk version with your edits and choose what to save.
 
-The next session opens the previous project and restores source cursor positions, the PDF page, and the zoom level. The last successfully compiled PDF is available immediately for reading.
+The next session opens the previous project and restores all open tabs in their order, the two-editor layout when used, source cursor and scroll positions, the PDF page, and the zoom level. The last successfully compiled PDF is available immediately for reading.
 
 ### Edit Markdown
 
 With the preview type set to **Auto**, opening a `.md` or `.markdown` file displays its Markdown preview on the right. The preview updates as you type and supports headings, lists, tables, code blocks, task lists, links, images, and mathematics. Click **Preview** or press `Ctrl + Enter` to save and refresh it.
+
+The Markdown editing toolbar appears above the source. Select text or place the cursor, then choose a heading level, bold, italic, strikethrough, a bullet or numbered list, a task list, a blockquote, or inline code. **Insert a link** lets you enter the display text and a web, email, or project-relative destination. **Code block** accepts code and an optional language name. The table button opens the same dialog for pasting cells or creating a new table. These actions edit the Markdown source and can be undone.
 
 ![Local TeX Web Editor displaying Markdown source and its live preview in light mode](docs/screenshots/editor-markdown-light.png)
 
@@ -240,13 +307,15 @@ Mathematics supports `$...$`, GitHub's dollar-and-backtick syntax, `$$...$$`, fe
 
 To move from Markdown source to its preview, `Ctrl + click` a source line (`Cmd + click` on Mac), or place the cursor and click the arrow button above the editor. The corresponding passage in the preview is briefly highlighted. Double-click a paragraph or heading in the preview to move to its source line.
 
-Use **Sync scrolling** in the Markdown toolbar to make the preview follow scrolling in the editor. It is enabled initially, and your choice is saved for future sessions. Each Markdown document has its own saved preview scroll position.
+Use **Sync scrolling** in the Markdown preview toolbar to link scrolling in both directions: scrolling the source moves the preview, and scrolling the preview moves the corresponding source view. Clear it to scroll them independently. It is enabled initially, and your choice is saved for future sessions. Each Markdown document has its own saved preview scroll position.
 
 Relative links in the preview can open other project documents. Returning to the PDF preview shows the last compiled PDF.
 
 ## Read the PDF and navigate to source
 
-The PDF scrolls continuously across pages. The app prioritizes rendering the visible page and nearby pages, so a long document does not require rendering every page into an image at once. You can select and copy PDF text and follow links inside the PDF.
+The PDF scrolls continuously across pages. The app prioritizes rendering the visible page and nearby pages, so a long document does not require rendering every page into an image at once. You can select and copy PDF text and follow links inside the PDF. After following an internal reference link, use **←** above the PDF to return to the position you were reading; **→** moves forward again. `Alt + Left` and `Alt + Right` provide the same navigation from the source or preview. Source links, search results, outline entries, and SyncTeX jumps also participate in this navigation.
+
+The PDF toolbar uses one row. In a narrow preview, open **… (PDF actions)** at the right to find zoom, dark display, search, and save controls. Page navigation stays in the toolbar; very narrow panes also move Back, Forward, and the preview selector into the menu.
 
 | Action | How to use it |
 | --- | --- |
@@ -254,11 +323,18 @@ The PDF scrolls continuously across pages. The app prioritizes rendering the vis
 | Fit the view | Choose **Fit width** or **Fit page** from the zoom menu |
 | Go to a page | Enter a page number or use the left and right arrows |
 | Search PDF text | Click **Find in PDF** or press `Ctrl + F` while the PDF has focus. Use `Enter` / `Shift + Enter` for the next / previous result |
-| Go from PDF to source | Double-click text in the PDF. The corresponding `.tex` file opens and the destination line is briefly highlighted |
+| Go from PDF to source | Double-click text in the PDF. The corresponding `.tex` file opens, with space above the destination line near the top of the editor; the line is briefly highlighted |
 | Go from source to PDF | `Ctrl + click` a source line, or place the cursor and click the arrow button above the editor to show that position in the PDF. The corresponding PDF position is briefly highlighted |
 | Export the PDF | Click **Save PDF** |
+| Read with a dark background | Toggle **Dark PDF view** in the PDF toolbar. The choice also applies to project PDFs and is saved for the next session |
+
+Dark PDF view changes the colors shown on screen, including figures and photographs. Saving the PDF uses the original file and colors.
 
 Source–PDF navigation uses TeX Live's `synctex`. The app generates SyncTeX data during compilation and stores it with the matching PDF. TeX macros and the layout of equations can map a clicked character to a nearby source line. Editing the source after compilation displays a notice that the PDF can be updated.
+
+### Review compilation errors and warnings
+
+Open **Log** to see a list above the complete compilation output. Filter it by **Errors**, **References**, **Citations**, **Overfull / underfull boxes**, or **Other warnings**. Select an item with a file name and line number to move to that source location. While compilation runs, the list reflects the available output; when it finishes, the list shows the issues remaining in the final TeX pass.
 
 ### Add SyncTeX
 
@@ -302,20 +378,20 @@ The app does not impose a compilation time limit. Use the stop button to stop a 
 
 ## App files and storage
 
-Sizes for **v0.1.6**, rounded to the nearest MB (1 MB = 1,000,000 bytes):
+The **v0.1.7** files have the sizes below, rounded to the nearest MB (1 MB = 1,000,000 bytes). The Assets section of the [release](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) shows each download's size.
 
 | Platform | ZIP download | App after extraction |
 | --- | ---: | ---: |
-| Windows x64 | About **8 MB** | About **16 MB** (`.exe`) |
-| macOS, Apple Silicon + Intel | About **15 MB** | About **32 MB** (`.app`) |
+| Windows x64 | About **8 MB** | About **17 MB** (`.exe`) |
+| macOS, Apple Silicon + Intel | About **15 MB** | About **33 MB** (`.app`) |
 
-The ZIP also includes the README files, screenshots, and licenses. The macOS app contains both CPU versions. The Windows ZIP and macOS download buttons above link to these release files.
+The ZIP also includes the README files, screenshots, and licenses. The macOS app contains both CPU versions. The Windows ZIP and macOS download buttons above link to the current release files.
 
 The app includes the JavaScript, PDF.js worker, fonts, and other files needed by the editor. It uses the browser and TeX Live installed on your computer. TeX Live, a browser engine, Python, and Node.js are not included in the download.
 
 Disk usage also grows with your project files, TeX packages, drafts, and generated PDFs. Compilation files are written under `.local-tex-editor/build` in each project; their size depends on the document and its figures. The ZIP can be deleted after extraction. Creating a Start menu or desktop shortcut in the Windows ZIP edition copies the executable to the application folder described above. After closing the app and checking that the shortcut opens it, the extracted download folder can be deleted as well.
 
-Settings, drafts, previous view positions, and copies of the PDF and SyncTeX data use these folders:
+Settings, drafts, edit history, custom templates, previous view positions, and copies of the PDF and SyncTeX data use these folders:
 
 - **Microsoft Store edition:** the app package's `LocalState\LocalTeXEditor` folder. See [the full path and migration details](docs/microsoft-store.md#installation-and-data).
 - **Windows ZIP edition:** `%APPDATA%\LocalTeXEditor`.
@@ -345,7 +421,7 @@ go build -o bin/local-tex-web-editor.exe ./cmd/local-tex-editor
 Build a Windows distribution executable:
 
 ```sh
-go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.6" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
+go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.7" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
 ```
 
 `build:windows-resources` generates Windows x64 resources from the bundled ICO. The executable embeds nine icon sizes from 16 to 256 px.
@@ -361,7 +437,7 @@ npx playwright install chromium
 node scripts/build-macos.mjs
 ```
 
-This creates `dist/local-tex-web-editor-0.1.6-macos-universal.zip` with an app supporting Apple Silicon and Intel, the English and Japanese READMEs, and license files.
+This creates `dist/local-tex-web-editor-0.1.7-macos-universal.zip` with an app supporting Apple Silicon and Intel, the English and Japanese READMEs, and license files.
 
 Command-line options:
 

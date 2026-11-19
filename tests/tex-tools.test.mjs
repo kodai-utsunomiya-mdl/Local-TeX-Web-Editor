@@ -1,7 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { EditorState } from '@codemirror/state';
-import { extractOutline, extractLabels, extractCitations, extractLogLocations, texCompletionSource } from '../web/src/tex-tools.js';
+import { maskNonCode, extractOutline, extractLabels, extractCitations, extractLogLocations, texCompletionSource } from '../web/src/tex-tools.js';
+
+test('masking comments and examples keeps UTF-16 offsets and Windows line endings', () => {
+  const text = '本文 📖 50\\%\r\n% ignored 📚 \\section{Hidden}\r\n\\verb|\\label{example}|\r\n\\section{Visible}\\label{sec:visible}\r\n\\begin{verbatim}\r\n\\section{Example}\r\n\\end{verbatim}\r\n';
+  const literals = [];
+  const masked = maskNonCode(text, { onLiteral: value => literals.push(value) });
+  assert.equal(masked.length, text.length);
+  assert.deepEqual([...masked.matchAll(/\r\n/g)].map(match => match.index), [...text.matchAll(/\r\n/g)].map(match => match.index));
+  assert.ok(masked.startsWith('本文 📖 50\\%\r\n'));
+  assert.equal(masked.indexOf('\\section{Visible}'), text.indexOf('\\section{Visible}'));
+  assert.equal(masked.includes('Hidden'), false);
+  assert.equal(masked.includes('example'), false);
+  assert.equal(masked.includes('Example'), false);
+  assert.deepEqual(literals.map(value => ({ name: value.name, closed: value.closed })), [{ name: 'verbatim', closed: true }]);
+  assert.equal(text.slice(literals[0].from, literals[0].to), '\\begin{verbatim}\r\n\\section{Example}\r\n\\end{verbatim}');
+});
 
 test('outline follows multiline headings and ignores comments, examples, and escaped commands', () => {
   const text = String.raw`% \section{コメント}
@@ -65,7 +80,7 @@ test('citation and reference completion inserts at the current comma-separated k
   const result = invoke(text);
   assert.equal(result.from, text.length - 2);
   assert.deepEqual(result.options.map(option => option.label), ['beta2025']);
-  assert.equal(result.options[0].info, 'Another article\nref.bib:8');
+  assert.equal(typeof result.options[0].info, 'function');
   assert.equal(result.options[0].apply, 'beta2025');
   assert.deepEqual(invoke(String.raw`\Cref{sec:`).options.map(option => option.label), ['sec:intro']);
   assert.deepEqual(invoke(String.raw`\ref*{sec:`).options.map(option => option.label), ['sec:intro']);

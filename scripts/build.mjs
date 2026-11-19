@@ -20,12 +20,9 @@ const bundle = await build({
 });
 await cp(path.join(root, 'web/src/index.html'), path.join(out, 'index.html'));
 await cp(path.join(root, 'internal/branding/app-icon.svg'), path.join(out, 'app-icon.svg'));
-await cp(path.join(root, 'web/src/style.css'), path.join(out, 'style.css'));
-await cp(path.join(root, 'web/src/pdf-search.css'), path.join(out, 'pdf-search.css'));
-await cp(path.join(root, 'web/src/source-search.css'), path.join(out, 'source-search.css'));
-await cp(path.join(root, 'web/src/markdown-preview.css'), path.join(out, 'markdown-preview.css'));
-await cp(path.join(root, 'web/src/tex-packages.css'), path.join(out, 'tex-packages.css'));
-await cp(path.join(root, 'web/src/help.css'), path.join(out, 'help.css'));
+for (const file of await readdir(path.join(root, 'web/src'))) {
+  if (file.endsWith('.css')) await cp(path.join(root, 'web/src', file), path.join(out, file));
+}
 await mkdir(path.join(out, 'katex'), { recursive: true });
 await cp(path.join(root, 'node_modules/katex/dist/katex.min.css'), path.join(out, 'katex/katex.min.css'));
 await cp(path.join(root, 'node_modules/katex/dist/fonts'), path.join(out, 'katex/fonts'), { recursive: true });

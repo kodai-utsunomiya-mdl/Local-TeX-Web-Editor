@@ -3,20 +3,25 @@ import * as pdfjs from 'pdfjs-dist/build/pdf.mjs';
 import { EventBus, PDFViewer as DocumentViewer, PDFLinkService, LinkTarget, RenderingStates } from 'pdfjs-dist/web/pdf_viewer.mjs';
 import { PDFSearch } from './pdf-search.js';
 import { zoomPDFAt } from './pdf-zoom.js';
+import { afterNavigationFrame, connectPDFNavigation } from './navigation-history.js';
+import { PDFDarkMode, PDFToolbar } from './pdf-appearance.js';
 
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 const cancelled = error => /RenderingCancelledException|AbortException/.test(error?.name || '') || /destroyed|cancelled/i.test(error?.message || '');
 const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
 
 export class PDFViewer {
-  constructor({ token, onError, onReady, onPositionChange, onInverse }) {
+  constructor({ token, onError, onReady, onPositionChange, onInverse, onNavigate, darkMode = false, onDarkModeChange }) {
     this.token = token;
     this.onError = onError;
     this.onReady = onReady;
     this.onPositionChange = onPositionChange;
     this.onInverse = onInverse;
+    this.onNavigate = onNavigate;
     this.document = null;
     this.loadingTask = null;
+    this.loadCompletion = Promise.resolve(false);
+    this.cancelLoadWait = null;
     this.buildId = '';
     this.documentMain = '';
     this.positions = new Map();
@@ -33,14 +38,19 @@ export class PDFViewer {
     this.currentCanvas = null;
     this.highlight = null;
     this.highlightTimer = null;
-    this.elements = Object.fromEntries(['scroll', 'stage', 'empty', 'loading', 'prev', 'next', 'page', 'pages', 'zoom', 'zoom-in', 'zoom-out'].map(name => [name, document.getElementById(`pdf-${name}`)]));
+    this.elements = Object.fromEntries(['scroll', 'stage', 'empty', 'loading', 'prev', 'next', 'page', 'pages', 'zoom', 'zoom-in', 'zoom-out', 'dark-mode'].map(name => [name, document.getElementById(`pdf-${name}`)]));
+    this.pdfAppearance = new PDFDarkMode({ container: this.elements.scroll, button: this.elements['dark-mode'], darkMode, onChange: onDarkModeChange });
     this.unsubscribeLanguage = onLanguageChange(() => {
       this.elements.empty.querySelector('h3').textContent = t(this.emptyError ? 'PDF を表示できませんでした' : 'PDF をここに表示します');
       this.elements.empty.querySelector('p').textContent = this.emptyError?.message || (this.emptyError ? String(this.emptyError) : t('原稿を保存し，コンパイルしてください．'));
     });
     this.eventBus = new EventBus();
     this.linkService = new PDFLinkService({ eventBus: this.eventBus, externalLinkTarget: LinkTarget.BLANK, externalLinkRel: 'noopener noreferrer', ignoreDestinationZoom: true });
+    connectPDFNavigation(this.linkService, action => this.navigate(action), async () => { await afterNavigationFrame(); this.pageViewer.update(); });
     this.search = new PDFSearch({ eventBus: this.eventBus, linkService: this.linkService, pane: document.getElementById('pdf-preview') || document.getElementById('pdf-pane'), toolbar: document.querySelector('.pdf-toolbar'), scroll: this.elements.scroll });
+    const toolbar = document.querySelector('.pdf-toolbar');
+    this.toolbar = new PDFToolbar({ toolbar, panel: document.getElementById('pdf-view-controls'), button: document.getElementById('pdf-more'),
+      moveWhenNarrow: [{ element: toolbar?.querySelector('.navigation-actions'), below: 360 }, { element: toolbar?.querySelector('.preview-choice'), below: 280 }] });
     this.pageViewer = new DocumentViewer({
       container: this.elements.scroll,
       viewer: this.elements.stage,
@@ -115,10 +125,13 @@ export class PDFViewer {
   }
 
   get pageNumber() { return this.pageViewer.currentPageNumber || 1; }
+  get darkMode() { return this.pdfAppearance.darkMode; }
+  setDarkMode(enabled) { this.pdfAppearance.setDarkMode(enabled); }
 
   updateControls() {
     const count = this.document?.numPages || 0;
     const enabled = !!count && this.ready;
+    this.pdfAppearance.setReady(enabled);
     this.search.setEnabled(enabled);
     this.elements.page.value = String(this.pageNumber);
     this.elements.page.max = String(count || 1);
@@ -144,9 +157,45 @@ export class PDFViewer {
 
   getViewState() {
     if (!this.document) return this.initialPosition;
-    if (!this.ready) return this.pendingPosition ? { ...this.pendingPosition, main: this.documentMain } : this.initialPosition;
+    if (!this.ready) return this.pendingPosition ? { ...this.pendingPosition, main: this.documentMain, buildId: this.buildId } : this.initialPosition;
     const location = this.lastLocation;
-    return { main: this.documentMain, pageNumber: location?.pageNumber || this.pageNumber, left: location?.left ?? 0, top: location?.top ?? null, zoom: this.zoomSetting };
+    return { main: this.documentMain, buildId: this.buildId, pageNumber: location?.pageNumber || this.pageNumber, left: location?.left ?? 0, top: location?.top ?? null, zoom: this.zoomSetting };
+  }
+
+  async navigate(action) {
+    try { return await (this.onNavigate ? this.onNavigate(action) : action()); }
+    catch (error) { this.report(error); return false; }
+  }
+
+  async applyViewState(position) {
+    if (!position) return false;
+    const generation = this.generation;
+    if (!this.document || !this.ready || this.requestedBuildId !== this.buildId) await this.loadCompletion;
+    if (generation !== this.generation || !this.document || (position.main && position.main !== this.documentMain)) return false;
+    if (this.elements.scroll.clientWidth < 50 || this.elements.scroll.clientHeight < 50) {
+      this.pendingPosition = { ...position };
+      this.ready = false;
+      return true;
+    }
+    if (!this.ready) await this.initialisePages();
+    if (!this.ready) return false;
+    const document = this.document;
+    const number = clamp(Math.round(Number(position.pageNumber) || 1), 1, document.numPages);
+    const page = await document.getPage(number);
+    if (generation !== this.generation || document !== this.document) return false;
+    const view = this.pageViewer.getPageView(number - 1);
+    if (!view?.pdfPage) view?.setPdfPage(page);
+    this.clearHighlight();
+    this.zoomSetting = position.zoom || this.zoomSetting;
+    this.pageViewer.currentScaleValue = this.zoomSetting;
+    this.pageViewer.scrollPageIntoView({ pageNumber: number,
+      ...(Number.isFinite(position.left) && Number.isFinite(position.top) ? { destArray: [null, { name: 'XYZ' }, position.left, position.top, null], allowNegativeOffset: true } : {}),
+      ignoreDestinationZoom: true });
+    this.pageViewer.update();
+    await afterNavigationFrame();
+    if (generation !== this.generation) return false;
+    this.pageViewer.update(); this.updateControls(); this.markCurrentCanvas();
+    return true;
   }
 
   getPositions() {
@@ -155,9 +204,17 @@ export class PDFViewer {
     return Object.fromEntries([...this.positions].slice(-128));
   }
 
-  async load(buildId, projectRoot, main = '') {
-    if (!buildId || buildId === this.requestedBuildId) return;
+  load(buildId, projectRoot, main = '') {
+    if (!buildId) return Promise.resolve(false);
+    if (buildId === this.requestedBuildId) return this.loadCompletion;
+    this.cancelLoadWait?.();
     const generation = ++this.generation;
+    const cancelledWait = new Promise(resolve => { this.cancelLoadWait = () => resolve(false); });
+    this.loadCompletion = Promise.race([this.loadDocument(buildId, projectRoot, main, generation, cancelledWait), cancelledWait]);
+    return this.loadCompletion;
+  }
+
+  async loadDocument(buildId, projectRoot, main, generation, cancelledWait) {
     this.requestedBuildId = buildId;
     this.lastRequest = { buildId, projectRoot, main };
     this.elements.loading.hidden = false;
@@ -201,6 +258,10 @@ export class PDFViewer {
       this.pageViewer.pagesPromise?.catch(error => { if (generation === this.generation) this.report(error); });
       this.updateControls();
       await previous?.loadingTask.destroy();
+      await Promise.race([this.pageViewer.firstPagePromise, cancelledWait]);
+      if (generation !== this.generation) return false;
+      await this.initialisePages();
+      return true;
     } catch (error) {
       if (generation !== this.generation || cancelled(error)) return;
       if (task && task !== this.document?.loadingTask) await task.destroy().catch(() => {});
@@ -213,6 +274,7 @@ export class PDFViewer {
       }
       this.report(error);
     }
+    return false;
   }
 
   async initialisePages() {
@@ -304,9 +366,12 @@ export class PDFViewer {
 
   goToPage(value) {
     if (!this.document || !this.ready) return;
-    this.pageViewer.currentPageNumber = clamp(Math.round(Number(value) || this.pageNumber), 1, this.document.numPages);
-    this.pageViewer.update();
-    this.updateControls(); this.markCurrentCanvas();
+    return this.navigate(async () => {
+      this.pageViewer.currentPageNumber = clamp(Math.round(Number(value) || this.pageNumber), 1, this.document.numPages);
+      this.pageViewer.update();
+      await afterNavigationFrame();
+      this.pageViewer.update(); this.updateControls(); this.markCurrentCanvas();
+    });
   }
 
   inverseAt(event) {
@@ -388,6 +453,7 @@ export class PDFViewer {
   async reset() {
     this.emptyError = null;
     ++this.generation;
+    this.cancelLoadWait?.(); this.cancelLoadWait = null; this.loadCompletion = Promise.resolve(false);
     const loadingTask = this.loadingTask;
     const document = this.document;
     this.loadingTask = null; this.document = null;

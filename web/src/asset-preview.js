@@ -2,6 +2,8 @@ import { t, getLanguage, onLanguageChange } from './i18n.js';
 import * as pdfjs from 'pdfjs-dist/build/pdf.mjs';
 import { EventBus, PDFViewer, PDFLinkService, LinkTarget } from 'pdfjs-dist/web/pdf_viewer.mjs';
 import { zoomPDFAt } from './pdf-zoom.js';
+import { afterNavigationFrame, connectPDFNavigation } from './navigation-history.js';
+import { PDFDarkMode, PDFToolbar } from './pdf-appearance.js';
 
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
@@ -10,13 +12,17 @@ const bytes = value => value < 1024 ? `${value} B` : value < 1024 ** 2 ? `${(val
 // The selected image or PDF has its own view. Source documents stay in the
 // editor's state map, and decoded assets are released when their tab is left.
 export class AssetPreview {
-  constructor({ token }) {
+  constructor({ token, onNavigate, darkMode = false, onDarkModeChange }) {
     this.token = token;
+    this.onNavigate = onNavigate;
     this.root = document.getElementById('asset-preview');
-    this.elements = Object.fromEntries(['info', 'page-controls', 'prev', 'next', 'page', 'pages', 'zoom-out', 'zoom-in', 'zoom', 'reload', 'scroll', 'image-stage', 'image', 'pdf-stage', 'message'].map(id => [id, document.getElementById(`asset-${id}`)]));
+    this.elements = Object.fromEntries(['info', 'page-controls', 'prev', 'next', 'page', 'pages', 'zoom-out', 'zoom-in', 'zoom', 'reload', 'scroll', 'image-stage', 'image', 'pdf-stage', 'message', 'dark-mode'].map(id => [id, document.getElementById(`asset-${id}`)]));
+    this.pdfAppearance = new PDFDarkMode({ container: this.elements.scroll, button: this.elements['dark-mode'], darkMode, onChange: onDarkModeChange });
+    this.toolbar = new PDFToolbar({ toolbar: this.root.querySelector('.asset-toolbar'), panel: document.getElementById('asset-view-controls'), button: document.getElementById('asset-more'), compactWidth: 420, label: 'プレビューの操作' });
     this.file = null; this.projectRoot = ''; this.generation = 0;
     this.controller = null; this.objectURL = null; this.loadingTask = null; this.document = null;
-    this.ready = false; this.scale = 1; this.zoomSetting = 'page-fit'; this.location = null;
+    this.loadCompletion = Promise.resolve(false); this.cancelLoadWait = null; this.pdfInitialisation = null;
+    this.ready = false; this.scale = 1; this.zoomSetting = 'page-fit'; this.location = null; this.pendingViewState = null;
     this.elements['pdf-stage'].dataset.testid = 'asset-pdf';
     this.elements['zoom-in'].addEventListener('click', () => this.changeZoom(1.2));
     this.elements['zoom-out'].addEventListener('click', () => this.changeZoom(1 / 1.2));
@@ -24,6 +30,7 @@ export class AssetPreview {
     this.elements.prev.addEventListener('click', () => this.goToPage((this.pdfViewer?.currentPageNumber || 1) - 1));
     this.elements.next.addEventListener('click', () => this.goToPage((this.pdfViewer?.currentPageNumber || 1) + 1));
     this.elements.page.addEventListener('change', () => this.goToPage(Number(this.elements.page.value)));
+    this.elements.page.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); this.elements.page.blur(); } });
     this.elements.reload.addEventListener('click', () => { if (this.file) this.show(this.file, this.projectRoot); });
     this.elements.scroll.addEventListener('wheel', event => {
       if (!event.ctrlKey || !this.ready) return;
@@ -32,6 +39,11 @@ export class AssetPreview {
       this.changeZoom(clamp(Math.exp(-delta * .002), .6, 1.5), [event.clientX, event.clientY]);
     }, { passive: false });
     this.resizeObserver = new ResizeObserver(() => {
+      if (this.ready && this.pendingViewState && this.elements.scroll.clientWidth >= 50 && this.elements.scroll.clientHeight >= 50) {
+        const position = this.pendingViewState; this.pendingViewState = null;
+        this.applyViewState(position).catch(error => this.fail(error));
+        return;
+      }
       if (this.ready && !this.root.hidden && ['page-fit', 'page-width'].includes(this.zoomSetting)) this.applyZoom();
     });
     this.resizeObserver.observe(this.elements.scroll);
@@ -40,7 +52,7 @@ export class AssetPreview {
   }
 
   savePosition() {
-    if (!this.file || !this.ready) return;
+    if (!this.file || !this.ready || this.pendingViewState || this.elements.scroll.clientWidth < 50 || this.elements.scroll.clientHeight < 50) return;
     this.file.preview = {
       zoom: this.zoomSetting,
       page: this.pdfViewer?.currentPageNumber || 1,
@@ -51,8 +63,63 @@ export class AssetPreview {
     };
   }
 
+  get darkMode() { return this.pdfAppearance.darkMode; }
+  setDarkMode(enabled) { this.pdfAppearance.setDarkMode(enabled); }
+
+  getViewState() {
+    if (!this.file || !this.ready) return null;
+    this.savePosition();
+    return { path: this.file.path, kind: this.file.kind, ...this.file.preview };
+  }
+
+  async navigate(action) {
+    try { return await (this.onNavigate ? this.onNavigate(action) : action()); }
+    catch (error) { this.fail(error); return false; }
+  }
+
+  async applyViewState(position) {
+    if (!this.file || !position || position.path !== this.file.path) return false;
+    const generation = this.generation;
+    this.file.preview = { ...position };
+    if (!this.ready) {
+      await this.loadCompletion;
+      if (generation !== this.generation || !this.file || position.path !== this.file.path) return false;
+      if (!this.ready && this.file.kind === 'pdf') await this.initialisePDF();
+      if (!this.ready) return false;
+    }
+    this.zoomSetting = position.zoom || this.zoomSetting;
+    if (this.elements.scroll.clientWidth < 50 || this.elements.scroll.clientHeight < 50) {
+      this.pendingViewState = { ...position };
+      return true;
+    }
+    this.pendingViewState = null;
+    if (this.file.kind === 'pdf') {
+      const document = this.document, generation = this.generation;
+      const number = clamp(Math.round(Number(position.page) || 1), 1, document.numPages);
+      const page = await document.getPage(number);
+      if (generation !== this.generation || document !== this.document) return false;
+      const view = this.pdfViewer.getPageView(number - 1);
+      if (!view?.pdfPage) view?.setPdfPage(page);
+      this.pdfViewer.currentScaleValue = this.zoomSetting;
+      this.pdfViewer.scrollPageIntoView({ pageNumber: number,
+        ...(Number.isFinite(position.left) && Number.isFinite(position.top) ? { destArray: [null, { name: 'XYZ' }, position.left, position.top, null], allowNegativeOffset: true } : {}),
+        ignoreDestinationZoom: true });
+      this.pdfViewer.update();
+      await afterNavigationFrame();
+      if (generation !== this.generation) return false;
+      this.pdfViewer.update();
+    } else {
+      this.applyZoom();
+      this.elements.scroll.scrollTop = position.scrollTop || 0;
+      this.elements.scroll.scrollLeft = position.scrollLeft || 0;
+    }
+    this.updateControls();
+    return true;
+  }
+
   hide() {
     this.savePosition(); ++this.generation; this.ready = false;
+    this.cancelLoadWait?.(); this.cancelLoadWait = null; this.loadCompletion = Promise.resolve(false); this.pdfInitialisation = null;
     this.root.hidden = true; this.root.dataset.state = 'idle';
     this.controller?.abort(); this.controller = null;
     this.pdfViewer?.setDocument(null); this.linkService?.setDocument(null);
@@ -60,13 +127,19 @@ export class AssetPreview {
     task?.destroy().catch(() => {});
     this.elements.image.removeAttribute('src'); this.elements.image.dataset.ready = 'false';
     if (this.objectURL) URL.revokeObjectURL(this.objectURL);
-    this.objectURL = null; this.file = null; this.location = null;
+    this.objectURL = null; this.file = null; this.location = null; this.pendingViewState = null;
     this.elements['pdf-stage'].dataset.ready = 'false';
   }
 
-  async show(file, projectRoot) {
+  show(file, projectRoot) {
     this.hide();
     const generation = this.generation;
+    const cancelled = new Promise(resolve => { this.cancelLoadWait = () => resolve(false); });
+    this.loadCompletion = Promise.race([this.loadFile(file, projectRoot, generation, cancelled), cancelled]);
+    return this.loadCompletion;
+  }
+
+  async loadFile(file, projectRoot, generation, cancelled) {
     this.file = file; this.projectRoot = projectRoot;
     this.root.hidden = false; this.root.dataset.path = file.path; this.root.dataset.kind = file.kind; this.root.dataset.state = 'loading';
     this.zoomSetting = file.preview?.zoom || 'page-fit'; this.scale = 1;
@@ -78,7 +151,7 @@ export class AssetPreview {
     if (!['image', 'pdf'].includes(file.kind)) {
       this.root.dataset.state = 'unsupported';
       this.message(t("{value0}\n{value1}\n\nこの種類のファイルはプレビューに対応していません．", { value0: file.path, value1: bytes(file.size || 0) }));
-      return;
+      return false;
     }
     try {
       const url = `/api/asset?path=${encodeURIComponent(file.path)}`;
@@ -100,6 +173,7 @@ export class AssetPreview {
         this.elements['image-stage'].hidden = false; this.ready = true;
         this.applyZoom();
         this.elements.scroll.scrollLeft = file.preview?.scrollLeft || 0; this.elements.scroll.scrollTop = file.preview?.scrollTop || 0;
+        if (this.elements.scroll.clientWidth < 50 || this.elements.scroll.clientHeight < 50) this.pendingViewState = { path: file.path, kind: file.kind, ...file.preview };
         this.elements.info.textContent = `${image.naturalWidth} × ${image.naturalHeight} px · ${bytes(blob.size)}`;
         image.dataset.ready = 'true'; this.root.dataset.state = 'ready'; this.message('');
         this.updateControls();
@@ -116,14 +190,20 @@ export class AssetPreview {
         if (generation !== this.generation) return;
         this.document = document; this.linkService.setDocument(document); this.pdfViewer.setDocument(document);
         this.pdfViewer.pagesPromise?.catch(error => { if (generation === this.generation) this.fail(error); });
+        await Promise.race([this.pdfViewer.firstPagePromise, cancelled]);
+        if (generation !== this.generation) return false;
+        await this.initialisePDF();
       }
+      return generation === this.generation && this.ready;
     } catch (error) { if (generation === this.generation && error?.name !== 'AbortError') this.fail(error); }
+    return false;
   }
 
   ensurePDFViewer() {
     if (this.pdfViewer) return;
     this.eventBus = new EventBus();
     this.linkService = new PDFLinkService({ eventBus: this.eventBus, externalLinkTarget: LinkTarget.BLANK, externalLinkRel: 'noopener noreferrer', ignoreDestinationZoom: true });
+    connectPDFNavigation(this.linkService, action => this.navigate(action), async () => { await afterNavigationFrame(); this.pdfViewer.update(); });
     this.pdfViewer = new PDFViewer({
       container: this.elements.scroll, viewer: this.elements['pdf-stage'],
       eventBus: this.eventBus, linkService: this.linkService,
@@ -148,15 +228,30 @@ export class AssetPreview {
 
   async initialisePDF() {
     const document = this.document; const generation = this.generation;
-    if (!document || this.pdfViewer.pdfDocument !== document) return;
-    const position = this.file.preview;
-    const number = clamp(Math.round(Number(position?.page) || 1), 1, document.numPages);
-    const page = await document.getPage(number);
-    if (generation !== this.generation || document !== this.document) return;
-    const view = this.pdfViewer.getPageView(number - 1); if (!view.pdfPage) view.setPdfPage(page);
-    this.pdfViewer.currentPageNumber = number; this.ready = true; this.applyZoom();
-    if (Number.isFinite(position?.left) && Number.isFinite(position?.top)) this.pdfViewer.scrollPageIntoView({ pageNumber: number, destArray: [null, { name: 'XYZ' }, position.left, position.top, null], allowNegativeOffset: true, ignoreDestinationZoom: true });
-    this.pdfViewer.update(); this.updateControls();
+    if (!document || this.ready || this.pdfViewer.pdfDocument !== document || !this.pdfViewer.getPageView(0)) return;
+    const active = this.pdfInitialisation;
+    if (active?.document === document && active.generation === generation) return active.promise;
+    const task = { document, generation, promise: null };
+    this.pdfInitialisation = task;
+    task.promise = (async () => {
+      const position = this.file.preview;
+      const number = clamp(Math.round(Number(position?.page) || 1), 1, document.numPages);
+      const page = await document.getPage(number);
+      if (generation !== this.generation || document !== this.document) return;
+      const view = this.pdfViewer.getPageView(number - 1);
+      if (!view) return;
+      if (!view.pdfPage) view.setPdfPage(page);
+      this.pdfViewer.currentPageNumber = number; this.ready = true;
+      if (this.elements.scroll.clientWidth < 50 || this.elements.scroll.clientHeight < 50) {
+        this.pendingViewState = { path: this.file.path, kind: this.file.kind, ...position };
+        this.updateControls();
+        return;
+      }
+      this.applyZoom();
+      if (Number.isFinite(position?.left) && Number.isFinite(position?.top)) this.pdfViewer.scrollPageIntoView({ pageNumber: number, destArray: [null, { name: 'XYZ' }, position.left, position.top, null], allowNegativeOffset: true, ignoreDestinationZoom: true });
+      this.pdfViewer.update(); this.updateControls();
+    })().finally(() => { if (this.pdfInitialisation === task) this.pdfInitialisation = null; });
+    return task.promise;
   }
 
   message(text, error = false) {
@@ -182,8 +277,11 @@ export class AssetPreview {
 
   goToPage(value) {
     if (!this.document || !this.ready) return;
-    this.pdfViewer.currentPageNumber = clamp(Math.round(value) || 1, 1, this.document.numPages);
-    this.updateControls();
+    return this.navigate(async () => {
+      this.pdfViewer.currentPageNumber = clamp(Math.round(value) || 1, 1, this.document.numPages);
+      this.pdfViewer.update(); await afterNavigationFrame();
+      this.pdfViewer.update(); this.updateControls();
+    });
   }
 
   applyZoom(origin = null) {
@@ -217,6 +315,9 @@ export class AssetPreview {
 
   updateControls() {
     const pdf = this.file?.kind === 'pdf';
+    this.pdfAppearance.setApplicable(pdf);
+    this.pdfAppearance.setReady(pdf && this.ready);
+    this.toolbar.setLabel(pdf ? 'PDF の操作' : 'プレビューの操作');
     this.elements['page-controls'].hidden = !pdf;
     for (const id of ['zoom', 'zoom-out', 'zoom-in']) this.elements[id].disabled = !this.ready;
     this.elements.reload.disabled = !this.file || !['image', 'pdf'].includes(this.file.kind);

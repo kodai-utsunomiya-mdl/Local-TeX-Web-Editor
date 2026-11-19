@@ -51,24 +51,19 @@ Edit TeX and Markdown in your browser, compile with TeX Live on your PC, and use
 ### Description
 
 ```text
-Local TeX Web Editor opens an editor in your browser for projects stored on your Windows PC. TeX compilation uses TeX Live, which you install separately. The resulting PDF appears beside the source.
+Local TeX Web Editor edits TeX and Markdown projects on your Windows PC in a browser. Compile with your own TeX Live and read the PDF beside the source. No account or subscription is needed.
 
-Read PDFs with continuous scrolling, text selection, search and zoom. Double-click text in the PDF to open the corresponding source line, or Ctrl-click a source line to move to its position in the PDF. These navigation features use SyncTeX.
+Complete TeX commands, environments, citations and labels. Tab moves between inserted fields; Ctrl + Space opens suggestions. Fold source sections and environments, and expand or collapse the outline.
 
-Open several documents in tabs. Compiling an independent TeX document produces that document's PDF. Chapter files can use a configured main document or a TeX root comment. Multiline search and replacement, citation and reference completion, autosave and local drafts support editing longer projects.
+PDF tools include continuous scrolling, search, zoom and SyncTeX navigation. Back and Forward return to earlier positions, including after PDF links. Dark PDF view changes screen colors; saved PDFs keep their original colors. Narrow previews put more controls in PDF actions.
 
-Markdown files have a live preview with tables, code blocks, images and mathematics. Choose PDF, Markdown or Auto in the preview toolbar. You can read a compiled PDF while editing Markdown notes, or keep a Markdown preview visible while working on TeX.
+Search and replace across the project, compare local edit history, inspect citation and reference uses, and edit two source documents. Tabs and their order reopen with your project. Filter compilation errors and warnings.
 
-The interface is available in English and Japanese, with light and dark themes. Launching the app opens a localhost page in your browser. Documents, settings and drafts are stored on your computer.
+Paste images, create or paste tables, and start from built-in or custom templates. Markdown has formatting controls, live mathematics and two-way scroll sync.
 
-Requirements:
-• Windows 10 version 2004 (build 19041) or later, or Windows 11, on an x64 PC.
-• A current version of Microsoft Edge or Google Chrome.
-• TeX Live with latexmk and the engines, packages and fonts your documents use. SyncTeX is needed for navigation between source and PDF.
+Choose English or Japanese, adjust panes and appearance, and use autosave and local drafts. Documents, history and templates stay on your PC.
 
-TeX Live is installed separately. You can use an existing installation or start with a smaller one and add packages as needed. The app's Settings includes guidance for preparing package-install commands. Markdown editing and preview work without TeX Live.
-
-The app is free and open source under the MIT license. No app account or subscription is needed.
+Requires an x64 PC with Windows 10 build 19041 or later, or Windows 11, and current Edge or Chrome. Install TeX Live with latexmk, SyncTeX and the packages your documents need separately. Markdown works without TeX Live. Free and open source under the MIT license.
 ```
 
 ### Product features
@@ -81,9 +76,20 @@ Read PDFs with continuous scrolling, search, selection and zoom
 Move between corresponding source and PDF positions with SyncTeX
 Edit Markdown with live previews of mathematics, tables and images
 Choose a PDF or Markdown preview while working in another document
-Search and replace pasted text across multiple lines
+Search project text, review replacements, and include unsaved edits
+Return to earlier source and PDF positions with Back and Forward
+Compare local edit history and restore selected changes
+Find citation and reference definitions and uses, and preview key renames
+Use two source editors and restore open tabs and their order
+Filter compilation errors and warnings by category
+Import images, paste tables, or create and edit a new table
+Create projects from built-in templates or add your own
+Format Markdown and synchronize source and preview scrolling in both directions
 Use autosave and local drafts while editing files in project folders
-Choose an English or Japanese interface and a light or dark theme
+Choose an English or Japanese interface, colors, and editor font
+Complete TeX commands and environments and read citation details with the list
+Fold source sections and environments and expand or collapse the outline
+Use dark PDF colors and find controls in PDF actions when the preview is narrow
 ```
 
 ### Search terms
@@ -110,16 +116,21 @@ Document-specific TeX packages, fonts and bibliography tools
 ### What's new
 
 ```text
-Version 0.1.6
+Version 0.1.7
 
-- Resize the file list and outline, the editor/preview split, and the compilation log. Your layout is saved for the next launch.
-- The outline now follows the selected TeX or Markdown tab.
-- Jump from Markdown source to the preview with Ctrl+click or the navigation button. Turn Sync scrolling on or off to make the preview follow the editor.
-- Choose system, light, or dark mode, a color scheme, an accent, and the editor font in Settings > Appearance.
-- Open Help with the ? button or F1 for guides, shortcuts, updates, troubleshooting, and environment information you can copy for feedback.
-- Fixed sideways drift when zooming the PDF. Page, zoom, search, and save controls remain visible in narrow previews.
-- Enlarged the search close buttons and improved spacing in the source and PDF search panels.
-- Improved saving on Windows by briefly retrying when file replacement is temporarily blocked. If the source file changes on disk during that wait, the app asks you to review the changes.
+- Search and replace across the project, including unsaved edits; review and choose the changes.
+- Use Back and Forward after following source or PDF links.
+- Compare local edit history and restore selected changes. Defaults: 30 days and 50 MiB. Change or stop recording in Editing tools > Document history > History settings.
+- Inspect citation and reference definitions and uses; preview key renames.
+- Open two source editors and restore tabs, their order and layout.
+- Filter compilation errors and warnings by category.
+- Paste or drop PNG, JPEG and PDF files up to 8 MiB. Paste tables or create one and edit its cells.
+- Start projects from built-in templates or add your own.
+- Use Markdown formatting, link, code-block and table controls. Sync source and preview scrolling in both directions, or turn it off.
+- Complete TeX commands and environments; use Tab to move between fields. Settings can turn completion or automatic suggestions off. Citation details have their own area.
+- Fold source sections, environments and Markdown headings. Expand or collapse child headings in the outline. Source jumps open the destination with space above it.
+- Toggle Dark PDF view without changing saved PDF colors. The PDF toolbar stays on one row; narrow previews use PDF actions.
+- New appearance defaults: Gray and Consolas. Saved choices still apply; the usual Default font order is used when Consolas is absent. The new Black color scheme gives Dark mode a black background.
 ```
 
 ## 日本語の掲載内容
@@ -133,22 +144,21 @@ Version 0.1.6
 ### 説明
 
 ```text
-Local TeX Web Editor は，Windows PC にあるプロジェクトをブラウザで編集するアプリです．TeX のコンパイルには別途導入した TeX Live を使い，原稿と PDF を並べて表示します．
+Local TeX Web Editor は，Windows PC にある TeX と Markdown のプロジェクトをブラウザで編集するアプリです．別途導入した TeX Live でコンパイルし，原稿と PDF を並べて表示します．
 
-PDF はページをまたいで連続してスクロールでき，文字の選択・検索，拡大・縮小にも対応します．PDF の文章をダブルクリックすると原稿の対応する行へ移動し，原稿の行を Ctrl + クリックすると PDF の対応する位置へ移動します．この相互移動には SyncTeX を使います．
+TeX のコマンド，環境，引用キー，相互参照の候補を表示します．環境は対応する終了コマンドまで挿入でき，Tab で次の入力箇所へ進めます．長い文献の題名や著者は候補一覧の横または下で読めます．設定で補完や候補の自動表示をオフにできます．原稿のセクションや環境，Markdown の見出しも折りたためます．アウトラインの縦線で階層を確認し，矢印で下位の見出しを開閉できます．
 
-複数の文書をタブで開けます．独立した TeX 文書を編集中にコンパイルすると，その文書の PDF を作成します．章のファイルでは，既定のメイン文書や TeX root の指定を使えます．複数行の検索・置換，引用と相互参照の補完，自動保存，PC に記録する草稿も利用できます．
+PDF は連続スクロール，文字の検索・選択，拡大・縮小に対応します．PDF の文章をダブルクリックすると原稿へ，原稿を Ctrl + クリックすると PDF の対応箇所へ移動します．「戻る」「進む」で，PDF 内の参照リンクを開く前の位置にも戻れます．「PDF を暗く表示」で画面上の配色を変更でき，保存する PDF は元の色です．狭い表示欄では「PDF の操作」に倍率などの操作をまとめます．
 
-Markdown では，入力に合わせて表，コード，画像，数式をプレビューします．表示欄で「PDF・Markdown・自動」を選べるので，コンパイルした PDF を読みながら Markdown のメモを編集したり，メモの表示を続けながら TeX を編集したりできます．
+未保存の編集も含めてプロジェクト全体を検索し，変更内容を確認して選んだ箇所を置換できます．引用キーやラベルの定義・使用箇所を確認し，名前の変更も事前に確認できます．二つの原稿を並べて編集でき，次回はタブと順番，配置を読み戻します．コンパイルのエラーと警告は種類で絞れます．
 
-表示言語は英語と日本語，テーマはライトとダークを選べます．起動するとブラウザに localhost のページが開き，原稿，設定，草稿は PC に保存します．
+編集履歴から以前の版と比較し，選んだ箇所を戻せます．「編集の操作 → 編集履歴を開く → 履歴の設定」で，初期値の 30 日・合計 50 MiB を変更したり，記録を停止したりできます．自動保存と草稿も使えます．
 
-必要な環境:
-・Windows 10 version 2004 (build 19041) 以降，または Windows 11 の x64 PC．
-・現在の Microsoft Edge または Google Chrome．
-・latexmk と，原稿で使うエンジン・パッケージ・フォントを含む TeX Live．原稿と PDF の相互移動には SyncTeX を使います．
+PNG・JPEG・PDF を 8 MiB まで取り込み，表計算ソフトからコピーした表や，行数と列数から作った表を挿入できます．標準のテンプレートからプロジェクトを作成し，自分の原稿や画像をテンプレートへ追加できます．Markdown では装飾，リンク，コード，表，数式のプレビューと，両方向のスクロール同期を使えます．
 
-TeX Live は別途導入します．すでにある環境を使うことも，小さめの構成から始めて必要なパッケージを追加することもできます．アプリの設定には，追加コマンドを用意する案内があります．Markdown の編集とプレビューは TeX Live がなくても使えます．
+英語・日本語の表示，配色，フォント，各欄の大きさを選べます．原稿，設定，草稿，履歴，テンプレートは PC に保存します．
+
+必要な環境は Windows 10 build 19041 以降または Windows 11 の x64 PC と，現在の Edge または Chrome です．TeX のコンパイルには latexmk，SyncTeX と原稿で使うパッケージを含む TeX Live を別途導入します．Markdown は TeX Live がなくても使えます．
 
 MIT ライセンスで公開されている無料のアプリです．アプリ用のアカウント登録やサブスクリプションは不要です．
 ```
@@ -163,9 +173,20 @@ PDF の連続スクロール，文字の検索・選択，拡大・縮小
 SyncTeX による原稿と PDF の対応位置への相互移動
 数式，表，画像に対応した Markdown のプレビュー
 別の文書を編集しながら PDF や Markdown を表示
-複数行をそのまま貼り付けて検索・置換
+未保存の内容も含めてプロジェクト全体を検索し，選んだ箇所を置換
+原稿や PDF の移動前の位置へ「戻る」「進む」で移動
+以前の編集履歴と比較し，選んだ箇所を原稿へ戻す
+引用と相互参照の定義・使用箇所を確認し，名前の変更を事前に確認
+原稿を二つ並べ，開いていたタブと並び順を復元
+コンパイルのエラーと警告を種類で絞り込み
+画像の取り込み，コピーした表の挿入，新しい表の作成と編集
+標準のテンプレートから作成し，自分のテンプレートも追加
+Markdown の装飾と，原稿・プレビューの両方向のスクロール同期
 プロジェクト内のファイルを編集し，自動保存と草稿を利用
-日本語・英語の UI と，ライト・ダークのテーマを選択
+日本語・英語の UI，配色，原稿のフォントを選択
+TeX のコマンドと環境を補完し，候補一覧と文献の詳細を確認
+原稿のセクションや環境を折りたたみ，アウトラインの階層を開閉
+PDF を暗い配色で表示し，狭いときは「PDF の操作」から倍率などを変更
 ```
 
 ### 検索語
@@ -189,19 +210,25 @@ TeX のコンパイルには latexmk を含む TeX Live
 原稿で使う TeX パッケージ，フォント，文献処理のプログラム
 ```
 
-### このバージョンの新機能
+### このバージョンの最新情報
 
 ```text
-バージョン 0.1.6
+バージョン 0.1.7
 
-・ファイル一覧・アウトライン，原稿とプレビュー，コンパイルログの幅や高さを調整し，次回の起動でも同じ配置を使えるようにした．
-・アウトラインが，選択中の TeX または Markdown のタブに合わせて切り替わるようにした．
-・Markdown の原稿から Ctrl+クリックや移動ボタンでプレビューへ進めるようにした．「スクロールを同期」で，原稿にプレビューを追従させるかを選べる．
-・「設定 → 外観」で，システム・ライト・ダークのモード，配色，アクセント，原稿のフォントを選べるようにした．
-・? ボタンまたは F1 から，使い方，ショートカット，更新内容，問題が起きたときの手順を確認できる．フィードバック用の環境情報もコピーできる．
-・PDF の拡大・縮小で本文が横へずれる動きを修正した．狭いプレビューでも，ページ移動・倍率・検索・保存の操作が収まるようにした．
-・原稿と PDF の検索欄で，閉じるボタンを大きくし，余白を広げた．
-・Windows で原稿の置き換えが一時的に拒否された場合，短時間だけ保存を再試行するようにした．待機中にディスク上の原稿が変わった場合は，変更の確認へ進む．
+・未保存の本文も含めてプロジェクト全体を検索し，変更を確認して選んだ箇所を置換できるようにした．
+・原稿や PDF の参照先から「戻る」「進む」で元の位置へ移動できるようにした．
+・編集履歴と現在の原稿を比較し，選んだ箇所を戻せるようにした．初期値は 30 日・合計 50 MiB．「編集の操作 → 編集履歴を開く → 履歴の設定」で変更や無効化ができる．
+・引用と相互参照の定義・使用箇所を確認し，名前の変更を事前に確認できるようにした．
+・原稿を二つ並べ，全てのタブと並び順，配置を読み戻せるようにした．
+・コンパイルのエラーと警告を種類で絞り込めるようにした．
+・PNG・JPEG・PDF を 8 MiB まで取り込み，コピーした表の挿入や新しい表の作成・編集に対応した．
+・標準のテンプレートからプロジェクトを作成し，自分のテンプレートも追加できるようにした．
+・Markdown の装飾，リンク，コードブロック，表を操作欄から挿入できるようにした．原稿とプレビューのスクロール同期は両方向に対応し，オフにもできる．
+・TeX のコマンドと環境の補完を追加した．Tab で次の入力箇所へ進め，設定で補完や候補の自動表示をオフにできる．文献の詳細は候補一覧の横または下で読める．
+・原稿のセクションや環境，Markdown の見出しを折りたためるようにした．アウトラインは縦線で階層を示し，下位の見出しを開閉できる．移動先の原稿は展開し，上側に余白を設けて表示する．
+・「PDF を暗く表示」を追加した．保存する PDF は元の配色である．ツールバーを 1 行にし，狭い表示欄では「PDF の操作」に倍率などの操作をまとめた．
+・外観の初期値をグレーと Consolas にした．保存済みの選択は引き続き使い，Consolas がない場合は従来の「標準」と同じ順序でフォントを選ぶ．
+・配色に「ブラック」を追加した．「設定 → 外観」でモードに「ダーク」，配色に「ブラック」を選ぶと黒い背景で使える．
 ```
 
 ## Images and captions
@@ -244,11 +271,13 @@ Sample project: https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/down
 8. Open notes.md and choose PDF in the preview toolbar. Editing and saving the Markdown keeps the PDF visible. Select Auto to return to the Markdown preview.
 9. Save the files and close the last browser tab showing this app. The local app stops after about five seconds. Reopen it to continue with the previous project.
 
-For version 0.1.6, also check F1 for Help, Settings > Appearance for the color scheme and editor font, Ctrl+click in notes.md for navigation to its Markdown preview, and dragging the sidebar's right edge, the editor/preview divider, and the top edge of the open log for panel sizing.
+For version 0.1.7, also try Search project with an unsaved edit and review a selected replacement; use Back after following a source or PDF link; and open the second source editor. In Editing tools, try Document history, References and citations, Insert an image, Insert a table, and Manage templates. History settings explains the storage limits and allows recording to be disabled. The Markdown toolbar in notes.md adds formatting, links, code blocks and tables; Sync scrolling links source and preview in both directions. Reopen the app to review the saved tabs and layout. F1 opens Help, and Settings > Appearance provides the color scheme and editor font.
+
+In main.tex, type \b, accept \begin, type i inside the braces, and accept itemize; Tab / Shift+Tab moves between fields. In Settings, try Enable TeX completion and Show suggestions while typing; with automatic suggestions off, Ctrl+Space opens the list. Add \subsection{Details} below the sample section. Fold the section with its line-number arrow or Ctrl+Shift+[, then select Details in Outline: its source should unfold with space above it. Ctrl+Shift+] unfolds at the cursor. Use the Outline arrows to collapse and expand child headings, and also try folding a heading in notes.md. For the compiled PDF, toggle Dark PDF view, narrow the preview, and use … (PDF actions) for zoom, search, and Save PDF. Confirm that the toolbar stays on one row and the saved PDF uses its original colors.
 
 TeX Live is an external prerequisite for TeX compilation. Markdown editing and preview work without it. The app prepares package-install commands for the user to run; it does not install TeX or packages automatically.
 
-The Store edition uses Windows to manage installation and app updates. Source files remain in the selected project folder. Settings, drafts and PDF preview copies are stored in the app's local user data.
+The Store edition uses Windows to manage installation and app updates. Source files remain in the selected project folder. Settings, drafts, edit history, custom templates and PDF preview copies are stored in the app's local user data.
 
 TeX setup and usage: https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/blob/main/README.md#requirements
 Privacy: https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/privacy/
@@ -273,11 +302,13 @@ Local TeX Web Editor は，ブラウザを画面として使う Windows のデ�
 8. notes.md を開いてプレビューを PDF にすると，Markdown の編集・保存中も PDF を表示します．Auto に戻すと Markdown を表示します．
 9. 原稿を保存し，このアプリを開いている最後のブラウザタブを閉じると，約 5 秒後にアプリが終了します．起動し直すと前回のプロジェクトを開きます．
 
-v0.1.6 の追加機能として，F1 からヘルプを開く操作，Settings → Appearance で配色と原稿のフォントを変更する操作，notes.md の原稿を Ctrl+クリックして Markdown のプレビューへ移動する操作，ファイル一覧・アウトラインの右端，原稿とプレビューの境界，開いたログの上端をドラッグして大きさを変える操作を確認できます．
+v0.1.7 では，未保存の編集を含む Search project と選んだ箇所の置換，原稿や PDF のリンクから Back で戻る操作，二つ目のエディタを開く操作も確認できます．Editing tools には Document history，References and citations，Insert an image，Insert a table，Manage templates があります．History settings で上限を確認し，記録を停止できます．notes.md の Markdown ツールバーから装飾・リンク・コードブロック・表を挿入でき，Sync scrolling では原稿とプレビューが両方向に動きます．アプリを開き直すと，タブと配置を読み戻します．F1 ではヘルプ，Settings → Appearance では配色と原稿のフォントを確認できます．
+
+main.tex で \b から \begin を選び，中括弧に i と入力して itemize を選びます．Tab / Shift + Tab で入力箇所を移動できます．「設定」の「TeX の入力補完を使う」と「入力中に候補を自動で表示する」を試し，自動表示をオフにした状態で Ctrl + Space から候補を開きます．サンプルのセクションの下に \subsection{Details} を追加し，行番号の横の矢印か Ctrl + Shift + [ でセクションを折りたたみます．アウトラインの Details を選び，原稿が展開され，上側に余白を付けて表示されることを確認します．Ctrl + Shift + ] でも展開できます．アウトラインの矢印で下位の見出しを開閉し，notes.md の見出しも折りたたんでください．コンパイルした PDF で「PDF を暗く表示」を切り替え，表示欄を狭くして「… (PDF の操作)」から倍率・検索・保存を試します．操作欄が 1 行に収まり，保存した PDF が元の配色であることを確認します．
 
 TeX Live はコンパイルに使う外部のソフトウェアです．Markdown の編集とプレビューは TeX Live がなくても使えます．アプリはパッケージ追加用のコマンドを用意し，ユーザーが必要に応じて実行します．TeX やパッケージの自動導入は行いません．
 
-Store 版のインストールとアプリの更新は Windows が管理します．原稿は選んだプロジェクトフォルダーに保存し，設定・草稿・PDF の表示用コピーはアプリのローカルデータへ保存します．
+Store 版のインストールとアプリの更新は Windows が管理します．原稿は選んだプロジェクトフォルダーに保存し，設定・草稿・編集履歴・自分のテンプレート・PDF の表示用コピーはアプリのローカルデータへ保存します．
 
 TeX の導入と使い方: https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/blob/main/README.ja.md
 プライバシー: https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/ja/privacy/

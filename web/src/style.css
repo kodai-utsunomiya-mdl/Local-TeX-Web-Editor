@@ -156,7 +156,7 @@ h1, h2, h3, p { margin: 0; }
 /* CodeMirror draws selections behind the line. An opaque active-line color
    would cover the selected part of that line. */
 .editor-host .cm-activeLine { background: var(--line-highlight); }
-#editor .cm-selectionBackground { background: var(--selection); }
+.editor-host .cm-selectionBackground { background: var(--selection); }
 .editor-host .cm-focused { outline: none; }
 .editor-host .cm-cursor { border-left-color: #0a766a; }
 .editor-host .cm-panels { background: #f3f7f8; color: #486070; font-size: 11px; }

@@ -1,6 +1,6 @@
 # Privacy policy for Local TeX Web Editor
 
-Last updated: 18 November 2026
+Last updated: 20 November 2026
 
 [日本語](privacy.ja.md)
 
@@ -15,12 +15,14 @@ To support saving and resuming work, the app stores the following on your comput
 - Project and TeX installation paths, recent projects and compilation settings.
 - Interface language, theme, font size and autosave preferences.
 - Local drafts, including text that has not yet been saved to a project file.
+- Compressed versions of earlier document text for edit history, with any version names you enter.
+- Custom templates containing the project files you select, and their names and descriptions.
 - Open documents, cursor positions and preview positions.
 - Copies of compiled PDFs, SyncTeX data and information about the corresponding source files.
 
 These files are used to operate the editor and resume your previous session. The developer does not receive their contents through the app.
 
-Settings, drafts and preview copies are stored in the app's user-data folder. On Windows, the Microsoft Store edition uses its package's `LocalState` folder; the ZIP edition uses `%APPDATA%\LocalTeXEditor`. On Mac, the default location is `~/Library/Application Support/LocalTeXEditor`. Compilation files and logs are also written within the project's `.local-tex-editor/build` folder or the output location selected by the project's TeX configuration.
+Settings, drafts, edit history, custom templates and preview copies are stored in the app's user-data folder. Edit history uses its `history` subfolder, and custom templates use its `templates` subfolder. On Windows, the Microsoft Store edition uses its package's `LocalState` folder; the ZIP edition uses `%APPDATA%\LocalTeXEditor`. On Mac, the default location is `~/Library/Application Support/LocalTeXEditor`. Compilation files and logs are also written within the project's `.local-tex-editor/build` folder or the output location selected by the project's TeX configuration.
 
 On its first launch, the Store edition can copy settings, drafts and view preferences from an existing ZIP installation into its own user-data folder. The original files remain in the ZIP edition's folder. Project source files remain where you placed them.
 
@@ -46,7 +48,11 @@ If you install the app through Microsoft Store, Microsoft handles Store installa
 
 You can edit, copy and delete project files using your normal file tools. The app's draft-recovery dialog offers an option to delete a saved draft. Settings lets you turn autosave on or off; local drafts are recorded independently of that setting.
 
-To remove the app's saved settings, drafts and preview copies, first save the documents you want to keep and close the app, then remove its user-data folder. Browser site-data controls can remove the saved theme and any remaining browser draft backups. Project files and files in a previous ZIP installation's data folder are managed separately.
+Open **Editing tools → Document history → History settings** to change the history period and capacity, or stop recording new versions. The defaults are 30 days and 50 MiB across all projects, with at most 50 versions per file and 2000 versions overall. Documents larger than 2 MiB are omitted from history. Older versions are removed when these limits are reached, including named versions. Turning recording off leaves existing history subject to the same limits. To delete all stored history, close the app and remove the `history` subfolder from its user-data folder.
+
+You choose which files to register as a custom template. Open **Editing tools → Manage templates → Edit the selected template** to change its name or description or delete its registration. Deleting a template leaves the original project files and projects previously created from it in their own folders.
+
+To remove the app's saved settings, drafts, history, templates and preview copies, first save the documents you want to keep and close the app, then remove its user-data folder. Browser site-data controls can remove the saved theme and any remaining browser draft backups. Project files and files in a previous ZIP installation's data folder are managed separately.
 
 ## Support and the project website
 
