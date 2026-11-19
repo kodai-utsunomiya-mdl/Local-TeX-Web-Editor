@@ -7,6 +7,7 @@ test('外観の初期値を選び，既存のライトとダークの設定を�
   assert.deepEqual(normalizeAppearance(), defaults);
   assert.deepEqual(normalizeAppearance(null, 'dark'), { ...defaults, mode: 'dark' });
   assert.deepEqual(normalizeAppearance(undefined, 'light'), { ...defaults, mode: 'light' });
+  assert.deepEqual(normalizeAppearance({ palette: 'black' }), { ...defaults, palette: 'black' });
   assert.deepEqual(normalizeAppearance({ mode: 'system', palette: 'warm', accent: 'purple', editorFont: 'menlo' }, 'dark'),
     { mode: 'system', palette: 'warm', accent: 'purple', editorFont: 'menlo' });
   assert.deepEqual(normalizeAppearance({ mode: 'unknown', palette: '__proto__', accent: 'constructor', editorFont: 'url(example)' }), defaults);
@@ -35,7 +36,7 @@ function contrast(first, second) {
 }
 
 test('各配色とアクセントで本文，補足，ボタン，選択部分の文字を読めるコントラストにする', () => {
-  for (const mode of ['light', 'dark']) for (const palette of ['default', 'gray', 'warm']) for (const accent of ['teal', 'blue', 'purple', 'orange', 'gray']) {
+  for (const mode of ['light', 'dark']) for (const palette of ['default', 'gray', 'black', 'warm']) for (const accent of ['teal', 'blue', 'purple', 'orange', 'gray']) {
     const { colors } = resolveAppearance({ mode, palette, accent });
     for (const [foreground, background, minimum] of [
       ['text', 'surface', 7], ['secondary', 'subtle', 4.5], ['muted', 'subtle', 4.5],

@@ -25,6 +25,7 @@ export const english = {
   '配色': 'Color scheme',
   '標準': 'Default',
   'グレー': 'Gray',
+  'ブラック': 'Black',
   '暖色': 'Warm',
   'アクセント': 'Accent',
   '緑': 'Green',

@@ -130,7 +130,7 @@ Version 0.1.7
 - Complete TeX commands and environments; use Tab to move between fields. Settings can turn completion or automatic suggestions off. Citation details have their own area.
 - Fold source sections, environments and Markdown headings. Expand or collapse child headings in the outline. Source jumps open the destination with space above it.
 - Toggle Dark PDF view without changing saved PDF colors. The PDF toolbar stays on one row; narrow previews use PDF actions.
-- New appearance defaults: Gray and Consolas. Saved choices still apply; the usual Default font order is used when Consolas is absent.
+- New appearance defaults: Gray and Consolas. Saved choices still apply; the usual Default font order is used when Consolas is absent. The new Black color scheme gives Dark mode a black background.
 ```
 
 ## 日本語の掲載内容
@@ -228,6 +228,7 @@ TeX のコンパイルには latexmk を含む TeX Live
 ・原稿のセクションや環境，Markdown の見出しを折りたためるようにした．アウトラインは縦線で階層を示し，下位の見出しを開閉できる．移動先の原稿は展開し，上側に余白を設けて表示する．
 ・「PDF を暗く表示」を追加した．保存する PDF は元の配色である．ツールバーを 1 行にし，狭い表示欄では「PDF の操作」に倍率などの操作をまとめた．
 ・外観の初期値をグレーと Consolas にした．保存済みの選択は引き続き使い，Consolas がない場合は従来の「標準」と同じ順序でフォントを選ぶ．
+・配色に「ブラック」を追加した．「設定 → 外観」でモードに「ダーク」，配色に「ブラック」を選ぶと黒い背景で使える．
 ```
 
 ## Images and captions

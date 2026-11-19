@@ -7,6 +7,10 @@ const palettes = {
     light: { background: '#f2f3f5', surface: '#ffffff', text: '#292b30', secondary: '#575b63', muted: '#6d717a', subtle: '#f6f6f7', hover: '#e8eaee', border: '#dddfe4', 'border-strong': '#b9bdc6', 'input-surface': '#ffffff', 'preview-surface': '#e6e7eb', gutter: '#858995', 'code-surface': '#f3f3f5' },
     dark: { background: '#18191c', surface: '#212226', text: '#e5e6e9', secondary: '#b8bbc2', muted: '#a0a4ae', subtle: '#1b1c20', hover: '#303237', border: '#41434b', 'border-strong': '#61656f', 'input-surface': '#191a1e', 'preview-surface': '#141518', gutter: '#858b99', 'code-surface': '#1a1b1f' },
   },
+  black: {
+    light: { background: '#f3f3f3', surface: '#ffffff', text: '#181818', secondary: '#505050', muted: '#686868', subtle: '#f7f7f7', hover: '#e8e8e8', border: '#d5d5d5', 'border-strong': '#ababab', 'input-surface': '#ffffff', 'preview-surface': '#e9e9e9', gutter: '#7a7a7a', 'code-surface': '#f4f4f4' },
+    dark: { background: '#080808', surface: '#111111', text: '#ededed', secondary: '#c3c3c3', muted: '#a6a6a6', subtle: '#0d0d0d', hover: '#232323', border: '#454545', 'border-strong': '#666666', 'input-surface': '#080808', 'preview-surface': '#080808', gutter: '#a0a0a0', 'code-surface': '#0b0b0b' },
+  },
   warm: {
     light: { background: '#f4eee4', surface: '#fffaf2', text: '#3e352b', secondary: '#695d4d', muted: '#786b5b', subtle: '#f6efe3', hover: '#eee3d1', border: '#ded2bf', 'border-strong': '#b8a88f', 'input-surface': '#fffdf8', 'preview-surface': '#e9dfcf', gutter: '#8b7961', 'code-surface': '#f3eadb' },
     dark: { background: '#201d19', surface: '#29241f', text: '#ede3d6', secondary: '#c7b8a2', muted: '#b3a18c', subtle: '#231f1b', hover: '#3d342b', border: '#4c4034', 'border-strong': '#75604c', 'input-surface': '#201c18', 'preview-surface': '#1b1815', gutter: '#a38b70', 'code-surface': '#221d18' },

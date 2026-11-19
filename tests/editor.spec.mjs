@@ -1818,6 +1818,24 @@ test('外観の配色，アクセント，原稿フォントを保存し，再�
   await reopened.locator('#appearance-cancel').click();
   await closeSettings(reopened);
   await expect(reopened.getByTestId('pdf-page')).toHaveValue('2');
+
+  await openAppearance(reopened);
+  await reopened.locator('#appearance-palette').selectOption('gray');
+  const gray = await readEditorAppearance(reopened);
+  await reopened.locator('#appearance-palette').selectOption('black');
+  const black = await readEditorAppearance(reopened);
+  expect(black).toMatchObject({ theme: 'dark', palette: 'black', accent: 'purple', editorFont: saved.editorFont });
+  const brightness = color => color.match(/\d+/g).slice(0, 3).reduce((sum, value) => sum + Number(value), 0);
+  expect(brightness(black.headerBackground)).toBeLessThan(brightness(gray.headerBackground));
+  await reopened.screenshot({ path: testInfo.outputPath('appearance-black-settings.png') });
+  await reopened.locator('#save-appearance').click();
+  await closeSettings(reopened);
+  await expect.poll(async () => (await json(session, '/api/storage?key=preferences')).value?.appearance).toEqual({ ...appearance, mode: 'dark', palette: 'black' });
+  await reopened.reload();
+  await expect(reopened.getByTestId('editor').locator('.cm-content')).toContainText(comment.trim());
+  await expect.poll(() => readEditorAppearance(reopened)).toEqual(black);
+  await expect(reopened.getByTestId('pdf-canvas')).toHaveAttribute('data-ready', 'true');
+  await reopened.screenshot({ path: testInfo.outputPath('appearance-black-editor.png') });
   expect(errors).toEqual([]);
 });
 

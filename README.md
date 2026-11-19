@@ -269,7 +269,7 @@ To add your own template, expand **Add the current project as a template**, ente
 
 ### Choose the appearance
 
-Open **Settings → Appearance** to choose **System**, **Light**, or **Dark** mode, a **Default**, **Gray**, or **Warm** color scheme, an accent color, and the editor font. **System** follows your computer's light/dark preference. The dialog shows the editor's background and text colors with a sample of the selected appearance.
+Open **Settings → Appearance** to choose **System**, **Light**, or **Dark** mode, a **Default**, **Gray**, **Black**, or **Warm** color scheme, an accent color, and the editor font. For a black background, select **Dark** mode and the **Black** color scheme. **System** follows your computer's light/dark preference. The dialog shows the editor's background and text colors with a sample of the selected appearance.
 
 The initial appearance uses **System** mode, the **Gray** color scheme, and **Consolas** for the editor. Your previously saved appearance continues to apply. If Consolas is unavailable, the editor follows the existing Default font order through Cascadia Code, Menlo, DejaVu Sans Mono, and the browser's monospace font.
 
