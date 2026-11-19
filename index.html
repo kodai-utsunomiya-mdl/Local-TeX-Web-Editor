@@ -134,14 +134,14 @@
           <p>The app uses <code>latexmk</code> to compile and <code>synctex</code> to move between source and PDF. If your project uses a <code>latexmkrc</code> or <code>.latexmkrc</code> file, keep it with the source files.</p>
           <div class="table-scroll">
             <table class="size-table">
-              <thead><tr><th scope="col">Reference: v0.1.6</th><th scope="col">ZIP download</th><th scope="col">App after extraction</th></tr></thead>
+              <thead><tr><th scope="col">v0.1.7</th><th scope="col">ZIP download</th><th scope="col">App after extraction</th></tr></thead>
               <tbody>
-                <tr><th scope="row">Windows x64</th><td>About 8 MB</td><td>About 16 MB</td></tr>
-                <tr><th scope="row">macOS, both CPUs</th><td>About 15 MB</td><td>About 32 MB</td></tr>
+                <tr><th scope="row">Windows x64</th><td>About 8 MB</td><td>About 17 MB</td></tr>
+                <tr><th scope="row">macOS, both CPUs</th><td>About 15 MB</td><td>About 33 MB</td></tr>
               </tbody>
             </table>
           </div>
-          <p class="small-note">These are the published v0.1.6 sizes; see the <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.7">v0.1.7 release assets</a> for current download sizes. 1 MB = 1,000,000 bytes. TeX Live, documents, drafts, edit history, templates and compilation files use additional space. The app includes its editor and PDF viewer; it runs without installing Python, Node.js, Go or VS Code.</p>
+          <p class="small-note">Sizes are rounded to the nearest MB; see the <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.7">v0.1.7 release assets</a> for each download's size. 1 MB = 1,000,000 bytes. TeX Live, documents, drafts, edit history, templates and compilation files use additional space. The app includes its editor and PDF viewer; it runs without installing Python, Node.js, Go or VS Code.</p>
           <details>
             <summary>Starting with a smaller TeX installation</summary>
             <p>On Windows, the <a href="https://tug.org/texlive/acquire-netinstall.html">TeX Live installer</a> lets you choose a smaller installation scheme. On Mac, <a href="https://tug.org/mactex/morepackages.html">BasicTeX</a> provides a small starting point. Add <code>latexmk</code>, <code>synctex</code> and packages needed by your documents.</p>
@@ -167,7 +167,7 @@
             </li>
             <li>
               <h3>Open a TeX document and compile</h3>
-              <p>Select the document in the file list and click <strong>Compile</strong>, or press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> on Windows or <kbd>Cmd</kbd> + <kbd>Enter</kbd> on Mac. The resulting PDF appears on the right.</p>
+              <p>Select the document in the file list and click <strong>Compile</strong>, or press <span class="shortcut"><kbd>Ctrl</kbd> + <kbd>Enter</kbd></span> on Windows or <span class="shortcut"><kbd>Cmd</kbd> + <kbd>Enter</kbd></span> on Mac. The resulting PDF appears on the right.</p>
               <p class="file-note">The interface starts in English. Choose <strong>Settings → Language → 日本語</strong> to switch to Japanese.</p>
             </li>
           </ol>
@@ -188,9 +188,9 @@
 
           <div class="usage-block">
             <h3>Complete TeX and fold sections</h3>
-            <p>Type <code>\b</code> and accept <code>\begin</code>, then type <code>i</code> inside its braces to choose an <code>itemize</code> block. Completion inserts the item and its matching ending. Press <kbd>Enter</kbd> to accept a candidate and <kbd>Tab</kbd> / <kbd>Shift</kbd> + <kbd>Tab</kbd> to move between inserted fields. Citation keys and labels also appear in the list; read the title, authors and file location beside or below it.</p>
-            <p>In <strong>Settings</strong>, use <strong>Enable TeX completion</strong> and <strong>Show suggestions while typing</strong> to choose when suggestions appear. With automatic suggestions off, <kbd>Ctrl</kbd> + <kbd>Space</kbd> still opens the list.</p>
-            <p>Click an arrow beside the line numbers to fold a section or environment. Markdown headings and code blocks can also be folded. Use <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>[</kbd> / <kbd>]</kbd> on Windows, or <kbd>Cmd</kbd> + <kbd>Alt</kbd> + <kbd>[</kbd> / <kbd>]</kbd> on Mac, to fold or unfold at the cursor.</p>
+            <p>Type <code>\b</code> and accept <code>\begin</code>, then type <code>i</code> inside its braces to choose an <code>itemize</code> block. Completion inserts the item and its matching ending. Press <kbd>Enter</kbd> to accept a candidate and <span class="shortcut"><kbd>Tab</kbd> / <kbd>Shift</kbd> + <kbd>Tab</kbd></span> to move between inserted fields. Citation keys and labels also appear in the list; read the title, authors and file location beside or below it.</p>
+            <p>In <strong>Settings</strong>, use <strong>Enable TeX completion</strong> and <strong>Show suggestions while typing</strong> to choose when suggestions appear. With automatic suggestions off, <span class="shortcut"><kbd>Ctrl</kbd> + <kbd>Space</kbd></span> still opens the list.</p>
+            <p>Click an arrow beside the line numbers to fold a section or environment. Markdown headings and code blocks can also be folded. Use <span class="shortcut"><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>[</kbd> / <kbd>]</kbd></span> on Windows, or <span class="shortcut"><kbd>Cmd</kbd> + <kbd>Alt</kbd> + <kbd>[</kbd> / <kbd>]</kbd></span> on Mac, to fold or unfold at the cursor.</p>
           </div>
 
           <div class="usage-block">
@@ -226,7 +226,7 @@
           <p>Use <strong>Search project</strong> above the editor, or open <strong>Editing tools</strong> for references, history, images, tables and templates.</p>
           <div class="usage-block">
             <h3>Search the whole project and follow references</h3>
-            <p><strong>Search project</strong> searches the text in project files, including unsaved edits in open tabs. Use <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd> on Windows or <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd> on Mac. Review the before-and-after text, select the matches to replace, and apply the changes. Selecting a result opens its source location.</p>
+            <p><strong>Search project</strong> searches the text in project files, including unsaved edits in open tabs. Use <span class="shortcut"><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd></span> on Windows or <span class="shortcut"><kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd></span> on Mac. Review the before-and-after text, select the matches to replace, and apply the changes. Selecting a result opens its source location.</p>
             <p><strong>Editing tools → References and citations</strong> lists citation keys and labels with their definitions and uses. Search by key, title or author, jump to a location, or enter a new key and preview its changes before saving. The tool handles standard TeX citation and reference commands.</p>
           </div>
           <div class="usage-block">

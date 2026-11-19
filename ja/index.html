@@ -134,14 +134,14 @@
           <p>コンパイルには <code>latexmk</code>，原稿と PDF の相互移動には <code>synctex</code> を使います．<code>latexmkrc</code> / <code>.latexmkrc</code> を使うプロジェクトでは，その設定ファイルも原稿と一緒に用意します．</p>
           <div class="table-scroll">
             <table class="size-table">
-              <thead><tr><th scope="col">参考: v0.1.6</th><th scope="col">ZIP の容量</th><th scope="col">展開後のアプリ本体</th></tr></thead>
+              <thead><tr><th scope="col">v0.1.7</th><th scope="col">ZIP の容量</th><th scope="col">展開後のアプリ本体</th></tr></thead>
               <tbody>
-                <tr><th scope="row">Windows x64</th><td>約 8 MB</td><td>約 16 MB</td></tr>
-                <tr><th scope="row">macOS，両 CPU 共通</th><td>約 15 MB</td><td>約 32 MB</td></tr>
+                <tr><th scope="row">Windows x64</th><td>約 8 MB</td><td>約 17 MB</td></tr>
+                <tr><th scope="row">macOS，両 CPU 共通</th><td>約 15 MB</td><td>約 33 MB</td></tr>
               </tbody>
             </table>
           </div>
-          <p class="small-note">表は公開済みの v0.1.6 の容量です．現在のダウンロード容量は <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.7">v0.1.7 の配布ファイル</a> で確認できます．1 MB = 1,000,000 bytes．TeX Live，原稿，草稿，編集履歴，テンプレート，コンパイル中のファイルにも容量を使います．アプリにはエディタと PDF ビューアーが含まれており，Python，Node.js，Go，VS Code の導入は不要です．</p>
+          <p class="small-note">容量は MB 単位に丸めています．各ダウンロードの容量は <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.7">v0.1.7 の配布ファイル</a> で確認できます．1 MB = 1,000,000 bytes．TeX Live，原稿，草稿，編集履歴，テンプレート，コンパイル中のファイルにも容量を使います．アプリにはエディタと PDF ビューアーが含まれており，Python，Node.js，Go，VS Code の導入は不要です．</p>
           <details>
             <summary>小さめの TeX の構成から始める場合</summary>
             <p>Windows の <a href="https://tug.org/texlive/acquire-netinstall.html">TeX Live インストーラー</a> では，少ないパッケージから始める構成を選べます．Mac では <a href="https://tug.org/mactex/morepackages.html">BasicTeX</a> を使えます．<code>latexmk</code>，<code>synctex</code> と，原稿で必要なパッケージを追加します．</p>
@@ -167,7 +167,7 @@
             </li>
             <li>
               <h3>TeX 文書を開いてコンパイルする</h3>
-              <p>ファイル一覧から文書を開き，<strong>Compile</strong> を押します．Windows では <kbd>Ctrl</kbd> + <kbd>Enter</kbd>，Mac では <kbd>Cmd</kbd> + <kbd>Enter</kbd> も使えます．コンパイルした PDF が右側に表示されます．</p>
+              <p>ファイル一覧から文書を開き，<strong>Compile</strong> を押します．Windows では <span class="shortcut"><kbd>Ctrl</kbd> + <kbd>Enter</kbd></span>，Mac では <span class="shortcut"><kbd>Cmd</kbd> + <kbd>Enter</kbd></span> も使えます．コンパイルした PDF が右側に表示されます．</p>
               <p class="file-note">初回は英語で表示します．<strong>Settings → Language → 日本語</strong> で切り替えられます．</p>
             </li>
           </ol>
@@ -188,9 +188,9 @@
 
           <div class="usage-block">
             <h3>TeX を補完し，節を折りたたむ</h3>
-            <p><code>\b</code> と入力して <code>\begin</code> を選び，中括弧の中で <code>i</code> と入力すると <code>itemize</code> を選べます．項目と対応する終了コマンドまで挿入されます．<kbd>Enter</kbd> で候補を確定し，<kbd>Tab</kbd> / <kbd>Shift</kbd> + <kbd>Tab</kbd> で入力箇所を移動します．引用キーやラベルも候補に表示され，文献の詳細は一覧の横または下で読めます．</p>
-            <p><strong>設定</strong>の<strong>「TeX の入力補完を使う」</strong>と<strong>「入力中に候補を自動で表示する」</strong>で表示を選べます．自動表示をオフにしても，<kbd>Ctrl</kbd> + <kbd>Space</kbd> で候補を開けます．</p>
-            <p>行番号の横にある矢印で，セクションや環境を折りたためます．Markdown の見出しとコードブロックにも使えます．カーソルの位置を折りたたむ／展開する操作は，Windows では <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>[</kbd> / <kbd>]</kbd>，Mac では <kbd>Cmd</kbd> + <kbd>Alt</kbd> + <kbd>[</kbd> / <kbd>]</kbd> です．</p>
+            <p><code>\b</code> と入力して <code>\begin</code> を選び，中括弧の中で <code>i</code> と入力すると <code>itemize</code> を選べます．項目と対応する終了コマンドまで挿入されます．<kbd>Enter</kbd> で候補を確定し，<span class="shortcut"><kbd>Tab</kbd> / <kbd>Shift</kbd> + <kbd>Tab</kbd></span> で入力箇所を移動します．引用キーやラベルも候補に表示され，文献の詳細は一覧の横または下で読めます．</p>
+            <p><strong>設定</strong>の<strong>「TeX の入力補完を使う」</strong>と<strong>「入力中に候補を自動で表示する」</strong>で表示を選べます．自動表示をオフにしても，<span class="shortcut"><kbd>Ctrl</kbd> + <kbd>Space</kbd></span> で候補を開けます．</p>
+            <p>行番号の横にある矢印で，セクションや環境を折りたためます．Markdown の見出しとコードブロックにも使えます．カーソルの位置を折りたたむ／展開する操作は，Windows では <span class="shortcut"><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>[</kbd> / <kbd>]</kbd></span>，Mac では <span class="shortcut"><kbd>Cmd</kbd> + <kbd>Alt</kbd> + <kbd>[</kbd> / <kbd>]</kbd></span> です．</p>
           </div>
 
           <div class="usage-block">
@@ -226,7 +226,7 @@
           <p>原稿の上にある<strong>「全体を検索」</strong>から検索・置換を開けます．引用・参照，履歴，画像，表，テンプレートは<strong>「編集の操作」</strong>にあります．</p>
           <div class="usage-block">
             <h3>プロジェクト全体を検索し，参照先を確認する</h3>
-            <p><strong>全体を検索</strong>では，開いているタブの未保存の文章も含めてプロジェクトの本文を探せます．Windows の <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd>，Mac の <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd> でも開けます．置換する前後の文章を確認し，変更する箇所を選んで適用します．検索結果を押すと，原稿のその位置へ移動できます．</p>
+            <p><strong>全体を検索</strong>では，開いているタブの未保存の文章も含めてプロジェクトの本文を探せます．Windows の <span class="shortcut"><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd></span>，Mac の <span class="shortcut"><kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd></span> でも開けます．置換する前後の文章を確認し，変更する箇所を選んで適用します．検索結果を押すと，原稿のその位置へ移動できます．</p>
             <p><strong>編集の操作 → 引用・参照を確認</strong>には，引用のキーやラベルと，その定義・使用箇所が表示されます．キー，題名，著者から探して原稿を開くほか，新しいキーを入力して変更内容を確認し，名前を変更できます．標準的な TeX の引用・参照コマンドを対象とします．</p>
           </div>
           <div class="usage-block">
