@@ -9,6 +9,12 @@ function edit(from, to, insert, anchor = from, head = anchor) {
   return { changes: [{ from, to, insert }], selection: { anchor, head } };
 }
 
+function longestBackticks(text) {
+  let longest = 0;
+  for (const match of text.matchAll(/`+/g)) longest = Math.max(longest, match[0].length);
+  return longest;
+}
+
 function selectedLines(document) {
   const selection = sourceSelection(document);
   const from = selection.from === 0 ? 0 : selection.content.lastIndexOf('\n', selection.from - 1) + 1;
@@ -42,12 +48,14 @@ function inlineCode(document, placeholder) {
     if (body.startsWith(' ') && body.endsWith(' ') && /[^ ]/.test(body)) body = body.slice(1, -1);
     return edit(from, to, body, from, from + body.length);
   }
-  const before = content.slice(0, from).match(/`+$/)?.[0];
-  const after = content.slice(to).match(/^`+/)?.[0];
-  if (before && before === after && selected) return edit(from - before.length, to + after.length, selected, from - before.length, to - before.length);
+  const before = content.slice(0, from).match(/(`+)( ?)$/);
+  const after = content.slice(to).match(/^( ?)(`+)/);
+  if (before && after && before[1] === after[2] && before[2] === after[1] && selected) {
+    const start = from - before[0].length;
+    return edit(start, to + after[0].length, selected, start, start + selected.length);
+  }
   selected ||= placeholder;
-  const longest = Math.max(0, ...[...selected.matchAll(/`+/g)].map(match => match[0].length));
-  const delimiter = '`'.repeat(longest + 1);
+  const delimiter = '`'.repeat(longestBackticks(selected) + 1);
   const padding = selected.startsWith('`') || selected.endsWith('`') || (/^ .+ $/s.test(selected) && /[^ ]/.test(selected)) ? ' ' : '';
   const insert = delimiter + padding + selected + padding + delimiter;
   const start = from + delimiter.length + padding.length;
@@ -57,12 +65,13 @@ function inlineCode(document, placeholder) {
 function linesWithPrefix(document, kind, level = 1) {
   const selected = selectedLines(document);
   const nonempty = selected.lines.filter(line => line.trim());
+  const emptyCurrentLine = selected.anchor === selected.head && selected.lines.length === 1;
   const expressions = { bullet: /^(\s*)[-+*] (?!\[[ xX]\] )/, ordered: /^(\s*)\d+[.)] /, task: /^(\s*)[-+*] \[[ xX]\] /, quote: /^(\s*)> ?/ };
   let transformed;
   if (kind === 'heading') {
     const depth = Math.max(0, Math.min(6, Number(level) || 0));
     transformed = selected.lines.map(line => {
-      if (!line.trim()) return line;
+      if (!line.trim() && !emptyCurrentLine) return line;
       const stripped = line.replace(/^( {0,3})#{1,6}(?:[ \t]+|$)/, '$1');
       return depth ? '#'.repeat(depth) + ' ' + stripped : stripped;
     });
@@ -73,7 +82,7 @@ function linesWithPrefix(document, kind, level = 1) {
     const remove = nonempty.length > 0 && nonempty.every(line => expressions[kind].test(line));
     let index = 0;
     transformed = selected.lines.map(line => {
-      if (!line.trim()) return line;
+      if (!line.trim() && !emptyCurrentLine) return line;
       if (remove) return line.replace(expressions[kind], '$1');
       const indent = line.match(/^\s*/)[0];
       const text = line.slice(indent.length).replace(/^(?:[-+*]|\d+[.)])\s+(?:\[[ xX]\]\s+)?/, '');
@@ -97,23 +106,23 @@ function markdownLink(document, { label, url, placeholder }) {
   const scheme = href.match(/^([a-z][a-z0-9+.-]*):/i)?.[1]?.toLowerCase();
   if (scheme && !['http', 'https', 'mailto'].includes(scheme)) throw new Error('link-url');
   const text = String((label ?? content.slice(from, to)) || placeholder || href).replace(/\r?\n/g, ' ');
-  const escaped = text.replace(/[\\[\]]/g, character => `\\${character}`);
+  const escaped = text.replaceAll('&', '&amp;').replace(/[\\[\]`*_<>]/g, character => `\\${character}`);
   const target = href.replace(/[\\\s<>()[\]]/g, character => encodeURIComponent(character).replace(/[!'()*]/g, value => `%${value.charCodeAt(0).toString(16).toUpperCase()}`));
   const insert = `[${escaped}](${target})`;
   return edit(from, to, insert, from + 1, from + 1 + escaped.length);
 }
 
-function fencedCode(document, { language = '', placeholder = 'code' } = {}) {
+function fencedCode(document, { language = '', placeholder = 'code', code } = {}) {
   const selection = sourceSelection(document);
   let { content, from, to } = selection;
   if (from === to) ({ from, to } = selectedLines(document));
   let selected = content.slice(from, to);
   const wholeFence = selected.match(/^( {0,3})(`{3,}|~{3,})([^\n]*)\n([\s\S]*?)\n\1\2\s*$/);
-  if (wholeFence) return edit(from, to, wholeFence[4], from, from + wholeFence[4].length);
+  if (wholeFence && code === undefined) return edit(from, to, wholeFence[4], from, from + wholeFence[4].length);
   const tag = String(language).trim();
   if (tag.length > 50 || /[\s`<>]/.test(tag)) throw new Error('code-language');
-  selected ||= placeholder;
-  const fence = '`'.repeat(Math.max(3, ...[...selected.matchAll(/`+/g)].map(match => match[0].length + 1)));
+  selected = code === undefined ? selected || placeholder : String(code) || placeholder;
+  const fence = '`'.repeat(Math.max(3, longestBackticks(selected) + 1));
   const prefix = from === 0 ? '' : content[from - 1] === '\n' ? (from > 1 && content[from - 2] === '\n' ? '' : '\n') : '\n\n';
   const suffix = to === content.length ? '\n' : content[to] === '\n' ? (content[to + 1] === '\n' ? '' : '\n') : '\n\n';
   const opening = prefix + fence + tag + '\n';

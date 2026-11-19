@@ -20,6 +20,8 @@ export function getHelpShortcuts(modifier = shortcutModifier) {
     [`${modifier} + Shift + S`, t('開いているファイルをすべて保存')],
     [`${modifier} + Enter`, t('保存して TeX をコンパイル，または Markdown を更新')],
     [`${modifier} + F`, t('フォーカス中の原稿または PDF を検索')],
+    [`${modifier} + Shift + F`, t('プロジェクト全体を検索・置換')],
+    ['Alt + ← / →', t('移動した場所を戻る / 進む')],
     [`${modifier} + Z`, t('原稿の編集を元に戻す')],
     [modifier === 'Cmd' ? 'Cmd + Shift + Z' : 'Ctrl + Y', t('原稿の編集をやり直す')],
     [`${modifier} + /`, t('原稿のコメントを切り替える')],

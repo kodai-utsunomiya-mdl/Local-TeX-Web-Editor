@@ -19,6 +19,8 @@ export class PDFViewer {
     this.onNavigate = onNavigate;
     this.document = null;
     this.loadingTask = null;
+    this.loadCompletion = Promise.resolve(false);
+    this.cancelLoadWait = null;
     this.buildId = '';
     this.documentMain = '';
     this.positions = new Map();
@@ -147,7 +149,7 @@ export class PDFViewer {
 
   getViewState() {
     if (!this.document) return this.initialPosition;
-    if (!this.ready) return this.pendingPosition ? { ...this.pendingPosition, main: this.documentMain } : this.initialPosition;
+    if (!this.ready) return this.pendingPosition ? { ...this.pendingPosition, main: this.documentMain, buildId: this.buildId } : this.initialPosition;
     const location = this.lastLocation;
     return { main: this.documentMain, buildId: this.buildId, pageNumber: location?.pageNumber || this.pageNumber, left: location?.left ?? 0, top: location?.top ?? null, zoom: this.zoomSetting };
   }
@@ -158,10 +160,18 @@ export class PDFViewer {
   }
 
   async applyViewState(position) {
-    if (!position || !this.document || (position.main && position.main !== this.documentMain)) return false;
+    if (!position) return false;
+    const generation = this.generation;
+    if (!this.document || !this.ready || this.requestedBuildId !== this.buildId) await this.loadCompletion;
+    if (generation !== this.generation || !this.document || (position.main && position.main !== this.documentMain)) return false;
+    if (this.elements.scroll.clientWidth < 50 || this.elements.scroll.clientHeight < 50) {
+      this.pendingPosition = { ...position };
+      this.ready = false;
+      return true;
+    }
     if (!this.ready) await this.initialisePages();
     if (!this.ready) return false;
-    const document = this.document, generation = this.generation;
+    const document = this.document;
     const number = clamp(Math.round(Number(position.pageNumber) || 1), 1, document.numPages);
     const page = await document.getPage(number);
     if (generation !== this.generation || document !== this.document) return false;
@@ -186,9 +196,17 @@ export class PDFViewer {
     return Object.fromEntries([...this.positions].slice(-128));
   }
 
-  async load(buildId, projectRoot, main = '') {
-    if (!buildId || buildId === this.requestedBuildId) return;
+  load(buildId, projectRoot, main = '') {
+    if (!buildId) return Promise.resolve(false);
+    if (buildId === this.requestedBuildId) return this.loadCompletion;
+    this.cancelLoadWait?.();
     const generation = ++this.generation;
+    const cancelledWait = new Promise(resolve => { this.cancelLoadWait = () => resolve(false); });
+    this.loadCompletion = Promise.race([this.loadDocument(buildId, projectRoot, main, generation, cancelledWait), cancelledWait]);
+    return this.loadCompletion;
+  }
+
+  async loadDocument(buildId, projectRoot, main, generation, cancelledWait) {
     this.requestedBuildId = buildId;
     this.lastRequest = { buildId, projectRoot, main };
     this.elements.loading.hidden = false;
@@ -232,6 +250,10 @@ export class PDFViewer {
       this.pageViewer.pagesPromise?.catch(error => { if (generation === this.generation) this.report(error); });
       this.updateControls();
       await previous?.loadingTask.destroy();
+      await Promise.race([this.pageViewer.firstPagePromise, cancelledWait]);
+      if (generation !== this.generation) return false;
+      await this.initialisePages();
+      return true;
     } catch (error) {
       if (generation !== this.generation || cancelled(error)) return;
       if (task && task !== this.document?.loadingTask) await task.destroy().catch(() => {});
@@ -244,6 +266,7 @@ export class PDFViewer {
       }
       this.report(error);
     }
+    return false;
   }
 
   async initialisePages() {
@@ -422,6 +445,7 @@ export class PDFViewer {
   async reset() {
     this.emptyError = null;
     ++this.generation;
+    this.cancelLoadWait?.(); this.cancelLoadWait = null; this.loadCompletion = Promise.resolve(false);
     const loadingTask = this.loadingTask;
     const document = this.document;
     this.loadingTask = null; this.document = null;

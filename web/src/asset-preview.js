@@ -18,6 +18,7 @@ export class AssetPreview {
     this.elements = Object.fromEntries(['info', 'page-controls', 'prev', 'next', 'page', 'pages', 'zoom-out', 'zoom-in', 'zoom', 'reload', 'scroll', 'image-stage', 'image', 'pdf-stage', 'message'].map(id => [id, document.getElementById(`asset-${id}`)]));
     this.file = null; this.projectRoot = ''; this.generation = 0;
     this.controller = null; this.objectURL = null; this.loadingTask = null; this.document = null;
+    this.loadCompletion = Promise.resolve(false); this.cancelLoadWait = null; this.pdfInitialisation = null;
     this.ready = false; this.scale = 1; this.zoomSetting = 'page-fit'; this.location = null;
     this.elements['pdf-stage'].dataset.testid = 'asset-pdf';
     this.elements['zoom-in'].addEventListener('click', () => this.changeZoom(1.2));
@@ -66,10 +67,13 @@ export class AssetPreview {
 
   async applyViewState(position) {
     if (!this.file || !position || position.path !== this.file.path) return false;
+    const generation = this.generation;
     this.file.preview = { ...position };
     if (!this.ready) {
-      if (this.file.kind === 'pdf' && this.document) await this.initialisePDF();
-      else return false;
+      await this.loadCompletion;
+      if (generation !== this.generation || !this.file || position.path !== this.file.path) return false;
+      if (!this.ready && this.file.kind === 'pdf') await this.initialisePDF();
+      if (!this.ready) return false;
     }
     this.zoomSetting = position.zoom || this.zoomSetting;
     if (this.file.kind === 'pdf') {
@@ -98,6 +102,7 @@ export class AssetPreview {
 
   hide() {
     this.savePosition(); ++this.generation; this.ready = false;
+    this.cancelLoadWait?.(); this.cancelLoadWait = null; this.loadCompletion = Promise.resolve(false); this.pdfInitialisation = null;
     this.root.hidden = true; this.root.dataset.state = 'idle';
     this.controller?.abort(); this.controller = null;
     this.pdfViewer?.setDocument(null); this.linkService?.setDocument(null);
@@ -109,9 +114,15 @@ export class AssetPreview {
     this.elements['pdf-stage'].dataset.ready = 'false';
   }
 
-  async show(file, projectRoot) {
+  show(file, projectRoot) {
     this.hide();
     const generation = this.generation;
+    const cancelled = new Promise(resolve => { this.cancelLoadWait = () => resolve(false); });
+    this.loadCompletion = Promise.race([this.loadFile(file, projectRoot, generation, cancelled), cancelled]);
+    return this.loadCompletion;
+  }
+
+  async loadFile(file, projectRoot, generation, cancelled) {
     this.file = file; this.projectRoot = projectRoot;
     this.root.hidden = false; this.root.dataset.path = file.path; this.root.dataset.kind = file.kind; this.root.dataset.state = 'loading';
     this.zoomSetting = file.preview?.zoom || 'page-fit'; this.scale = 1;
@@ -123,7 +134,7 @@ export class AssetPreview {
     if (!['image', 'pdf'].includes(file.kind)) {
       this.root.dataset.state = 'unsupported';
       this.message(t("{value0}\n{value1}\n\nこの種類のファイルはプレビューに対応していません．", { value0: file.path, value1: bytes(file.size || 0) }));
-      return;
+      return false;
     }
     try {
       const url = `/api/asset?path=${encodeURIComponent(file.path)}`;
@@ -161,8 +172,13 @@ export class AssetPreview {
         if (generation !== this.generation) return;
         this.document = document; this.linkService.setDocument(document); this.pdfViewer.setDocument(document);
         this.pdfViewer.pagesPromise?.catch(error => { if (generation === this.generation) this.fail(error); });
+        await Promise.race([this.pdfViewer.firstPagePromise, cancelled]);
+        if (generation !== this.generation) return false;
+        await this.initialisePDF();
       }
+      return generation === this.generation && this.ready;
     } catch (error) { if (generation === this.generation && error?.name !== 'AbortError') this.fail(error); }
+    return false;
   }
 
   ensurePDFViewer() {
@@ -194,15 +210,24 @@ export class AssetPreview {
 
   async initialisePDF() {
     const document = this.document; const generation = this.generation;
-    if (!document || this.pdfViewer.pdfDocument !== document) return;
-    const position = this.file.preview;
-    const number = clamp(Math.round(Number(position?.page) || 1), 1, document.numPages);
-    const page = await document.getPage(number);
-    if (generation !== this.generation || document !== this.document) return;
-    const view = this.pdfViewer.getPageView(number - 1); if (!view.pdfPage) view.setPdfPage(page);
-    this.pdfViewer.currentPageNumber = number; this.ready = true; this.applyZoom();
-    if (Number.isFinite(position?.left) && Number.isFinite(position?.top)) this.pdfViewer.scrollPageIntoView({ pageNumber: number, destArray: [null, { name: 'XYZ' }, position.left, position.top, null], allowNegativeOffset: true, ignoreDestinationZoom: true });
-    this.pdfViewer.update(); this.updateControls();
+    if (!document || this.ready || this.pdfViewer.pdfDocument !== document || !this.pdfViewer.getPageView(0)) return;
+    const active = this.pdfInitialisation;
+    if (active?.document === document && active.generation === generation) return active.promise;
+    const task = { document, generation, promise: null };
+    this.pdfInitialisation = task;
+    task.promise = (async () => {
+      const position = this.file.preview;
+      const number = clamp(Math.round(Number(position?.page) || 1), 1, document.numPages);
+      const page = await document.getPage(number);
+      if (generation !== this.generation || document !== this.document) return;
+      const view = this.pdfViewer.getPageView(number - 1);
+      if (!view) return;
+      if (!view.pdfPage) view.setPdfPage(page);
+      this.pdfViewer.currentPageNumber = number; this.ready = true; this.applyZoom();
+      if (Number.isFinite(position?.left) && Number.isFinite(position?.top)) this.pdfViewer.scrollPageIntoView({ pageNumber: number, destArray: [null, { name: 'XYZ' }, position.left, position.top, null], allowNegativeOffset: true, ignoreDestinationZoom: true });
+      this.pdfViewer.update(); this.updateControls();
+    })().finally(() => { if (this.pdfInitialisation === task) this.pdfInitialisation = null; });
+    return task.promise;
   }
 
   message(text, error = false) {

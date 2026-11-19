@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { relativeAssetPath, assetInsertion, suggestedAssetName, parseTable, tableInsertion } from '../web/src/insert-content.js';
+import { relativeAssetPath, assetInsertion, suggestedAssetName, parseTable, tableInsertion, tableToTSV } from '../web/src/insert-content.js';
 import { importsEnglish } from '../web/src/locales/imports-en.js';
 
 test('image insertion uses the relative path from a chapter and quotes text separately', () => {
@@ -48,6 +48,12 @@ test('TeX tables escape literal content and support line breaks inside a cell', 
 test('Markdown tables escape literal punctuation and can add an empty header', () => {
   const source = tableInsertion([['a|b', '<tag>'], ['x\ny', '*value*']], { format: 'markdown', header: false });
   assert.equal(source, '|  |  |\n| --- | --- |\n| a\\|b | &lt;tag&gt; |\n| x y | \\*value\\* |\n');
+});
+
+test('editing the table preview round trips newlines, quotes, and tabs through TSV', () => {
+  const rows = [['Name', 'Value'], ['a\tb', '"first"\nsecond']];
+  assert.deepEqual(parseTable(tableToTSV(rows), 'tab'), rows);
+  assert.deepEqual(parseTable(tableToTSV([['Name'], [''], ['']]), 'tab'), [['Name'], [''], ['']]);
 });
 
 test('English labels preserve every interpolation parameter', () => {

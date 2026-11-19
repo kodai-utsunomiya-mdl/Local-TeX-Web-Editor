@@ -40,7 +40,7 @@ export async function replaceProjectDocuments(api, changes, openDocuments, onRep
   return result;
 }
 
-export function createProjectSearch({ api, getOpenDocuments, openSource, replaceDocuments }) {
+export function createProjectSearch({ api, getOpenDocuments, openSource, replaceDocuments, onError }) {
   const dialog = element('dialog', 'dialog writing-dialog project-search-dialog');
   dialog.id = 'project-search-dialog'; dialog.dataset.testid = 'project-search-dialog';
   dialog.setAttribute('aria-labelledby', 'project-search-title');
@@ -81,6 +81,11 @@ export function createProjectSearch({ api, getOpenDocuments, openSource, replace
   }
   const optionsValue = () => JSON.stringify({ query: query.value, replacement: replacement.value, caseSensitive: matchCase.input.checked, regexp: regexp.input.checked, wholeWord: word.input.checked });
   function showError(error) { status.textContent = error.message || String(error); status.classList.add('form-error'); }
+  function showSourceError(error) {
+    if (onError) { onError(error); return; }
+    if (!dialog.open && dialog.isConnected) dialog.showModal();
+    showError(error);
+  }
   function updateSelection() {
     for (const box of results.querySelectorAll('input[data-match]')) box.checked = selected.has(box.dataset.match);
     replace.disabled = replacing || !selected.size || optionsValue() !== lastOptions;
@@ -99,7 +104,7 @@ export function createProjectSearch({ api, getOpenDocuments, openSource, replace
         const checkbox = element('input'); checkbox.type = 'checkbox'; checkbox.dataset.match = `${file.path}\0${index}`; checkbox.checked = selected.has(checkbox.dataset.match); checkbox.setAttribute('aria-label', tr(`${file.path} の ${match.line} 行目を置換`, `Replace the match at ${file.path}:${match.line}`));
         checkbox.addEventListener('change', () => { checkbox.checked ? selected.add(checkbox.dataset.match) : selected.delete(checkbox.dataset.match); updateSelection(); });
         const details = element('div', 'project-search-match-detail');
-        const location = element('button', 'writing-location', `${match.line}:${match.column}  ${match.snippet}`); location.type = 'button'; location.addEventListener('click', () => { dialog.close(); Promise.resolve(openSource(file.path, match.line, match.column, match.from, match.to)).catch(showError); });
+        const location = element('button', 'writing-location', `${match.line}:${match.column}  ${match.snippet}`); location.type = 'button'; location.addEventListener('click', () => { dialog.close(); Promise.resolve().then(() => openSource(file.path, match.line, match.column, match.from, match.to)).catch(showSourceError); });
         const preview = element('div', 'replacement-preview');
         const before = element('code', 'replacement-before', compact(match.text)); const after = element('code', 'replacement-after', compact(match.replacement));
         before.setAttribute('aria-label', tr('変更前', 'Before')); after.setAttribute('aria-label', tr('変更後', 'After')); preview.append(before, element('span', 'replacement-arrow', '→'), after);

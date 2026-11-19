@@ -35,4 +35,6 @@ test('同じ原稿の二つの表示で編集，Undo，Redoを行い，各表示
 test('タブの復元では並び順を使い，重複と削除されたファイルを除く', () => {
   assert.deepEqual(restoredTabPaths({ tabs: ['b.tex', 'a.tex', 'b.tex', '../gone.tex', 7] }, ['a.tex', 'b.tex']), ['b.tex', 'a.tex']);
   assert.deepEqual(restoredTabPaths({ activePath: 'a.tex' }, [{ path: 'a.tex' }]), ['a.tex']);
+  const many = Array.from({ length: 150 }, (_, index) => `chapter-${index}.tex`);
+  assert.deepEqual(restoredTabPaths({ tabs: many }, many), many);
 });

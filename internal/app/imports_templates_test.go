@@ -102,13 +102,26 @@ func TestBuiltinTemplateCreatesANewFolderAndLeavesTheCurrentProjectOpen(t *testi
 	if response.Code != http.StatusCreated {
 		t.Fatalf("create: %d %s", response.Code, response.Body.String())
 	}
-	path := filepath.Join(parent, "日本語の原稿")
+	var created struct {
+		Path string `json:"path"`
+		Main string `json:"main"`
+		Mode string `json:"mode"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &created); err != nil {
+		t.Fatal(err)
+	}
+	// Use the path returned by the API, which expands aliases such as /var on
+	// macOS and temporary folders with 8.3 names on Windows.
+	path := created.Path
 	content, err := os.ReadFile(filepath.Join(path, "main.tex"))
 	if err != nil || !bytes.Contains(content, []byte("ltjsarticle")) {
 		t.Fatalf("Japanese source: %s (%v)", content, err)
 	}
-	if !samePath(a.project.Root, current) || a.config.Projects[path].Mode != "lualatex" {
-		t.Fatal("creating a template changed the open project or lost the compiler setting")
+	if !samePath(a.project.Root, current) {
+		t.Fatalf("creating a template changed the open project: %q instead of %q", a.project.Root, current)
+	}
+	if settings := a.config.Projects[path]; settings.Main != "main.tex" || settings.Mode != "lualatex" || created.Main != settings.Main || created.Mode != settings.Mode {
+		t.Fatalf("the new project's compiler setting does not match its response: %#v, %#v", settings, created)
 	}
 	response = apiRequest(a, http.MethodPost, "/api/templates/create-project", map[string]string{"id": "builtin-article", "parent": parent, "name": "日本語の原稿"}, nil)
 	if response.Code != http.StatusConflict {

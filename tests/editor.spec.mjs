@@ -8,6 +8,7 @@ import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { promisify } from 'node:util';
 import { checkEditorSelectionVisibility, checkPDFSelectionVisibility } from './selection-checks.mjs';
+import { registerWritingWorkflowTests } from './writing-workflow-cases.mjs';
 
 const repository = path.resolve(import.meta.dirname, '..');
 const fixture = path.join(import.meta.dirname, 'fixtures', 'japanese');
@@ -1399,6 +1400,19 @@ test('Markdown の原稿からプレビューへ移動し，スクロールの�
   await sourceScroll.hover();
   await page.mouse.wheel(0, 600);
   await expect.poll(() => preview.evaluate(element => element.scrollTop)).toBeGreaterThan(followedTop + 100);
+  const beforePreviewScroll = await sourceScroll.evaluate(element => element.scrollTop);
+  await preview.hover(); await page.mouse.wheel(0, 600);
+  await expect.poll(() => sourceScroll.evaluate(element => element.scrollTop)).toBeGreaterThan(beforePreviewScroll + 50);
+  await settleLayout();
+  const settledSource = await sourceScroll.evaluate(element => element.scrollTop);
+  await settleLayout();
+  expect(await sourceScroll.evaluate(element => element.scrollTop)).toBeCloseTo(settledSource, 0);
+  await follow.uncheck();
+  const independentSource = await sourceScroll.evaluate(element => element.scrollTop);
+  await preview.hover(); await page.mouse.wheel(0, 500);
+  await settleLayout();
+  expect(await sourceScroll.evaluate(element => element.scrollTop)).toBeCloseTo(independentSource, 0);
+  await follow.check();
   await page.screenshot({ path: testInfo.outputPath('markdown-scroll-sync.png') });
 
   await dragPanelSeparator(page, '#splitter', { dx: 2000 });
@@ -2626,3 +2640,5 @@ Finished.
   const recovered = await compileFromUI(page, session);
   expect(recovered.finished.status, recovered.finished.log + '\n' + recovered.finished.error).toBe('success');
 });
+
+registerWritingWorkflowTests({ test, openProject, openEditor, setAutoSave, json, compileFromUI });

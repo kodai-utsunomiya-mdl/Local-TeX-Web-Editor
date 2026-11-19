@@ -2,7 +2,7 @@ import { t, getLanguage, setLanguage } from './i18n.js';
 import { EditorState, Compartment, Prec, StateEffect, StateField, Transaction } from '@codemirror/state';
 import { EditorView, keymap, Decoration, scrollPastEnd } from '@codemirror/view';
 import { basicSetup } from 'codemirror';
-import { indentWithTab } from '@codemirror/commands';
+import { indentWithTab, isolateHistory } from '@codemirror/commands';
 import { StreamLanguage, HighlightStyle, syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language';
 import { autocompletion } from '@codemirror/autocomplete';
 import { stex } from '@codemirror/legacy-modes/mode/stex';
@@ -23,6 +23,7 @@ import { createReferenceTools } from './reference-tools.js';
 import { createInsertTools } from './insert-tools.js';
 import { createTemplateManager } from './template-manager.js';
 import { createLogIssues } from './log-issues.js';
+import { createMarkdownEditing } from './markdown-editing.js';
 import { tags } from '@lezer/highlight';
 import { SessionStore } from './session-store.js';
 import { BrowserSession } from './browser-session.js';
@@ -105,6 +106,7 @@ let projectSearch = null;
 let documentHistory = null;
 let templateManager = null;
 let logIssues = null;
+let markdownEditing = null;
 const editorSlots = {
   primary: { host: $('editor'), element: $('source-pane-primary'), select: $('primary-document'), view: null, path: '', cleanup: null },
   secondary: { host: $('editor-secondary'), element: $('source-pane-secondary'), select: $('secondary-document'), view: null, path: '', cleanup: null },
@@ -213,6 +215,10 @@ function basename(path) { return path.replace(/[\\/]+$/, '').split(/[\\/]/).pop(
 function isDirty(doc) { return !!doc && !doc.state.doc.eq(doc.savedDoc); }
 function dirtyDocuments() { return [...state.documents.values()].filter(isDirty); }
 function activeDocument() { return state.documents.get(state.activePath); }
+function documentText(doc) {
+  if (doc.textSnapshotDoc !== doc.state.doc) { doc.textSnapshotDoc = doc.state.doc; doc.textSnapshot = doc.state.doc.toString(); }
+  return doc.textSnapshot;
+}
 function isMarkdown(path) { return /\.(md|markdown)$/i.test(path || ''); }
 function sourceAffectsPDF(path) {
   if (!isMarkdown(path)) return true;
@@ -251,7 +257,7 @@ function updateDocumentPreview({ immediate = false } = {}) {
     const path = markdownDocument?.path || '';
     $('markdown-document-name').textContent = path || t("Markdown ファイルを開いてください");
     $('markdown-document-name').title = path;
-    markdownPreview.update(markdownDocument?.state.doc.toString() || '', { path, projectRoot: state.meta?.project?.root, immediate });
+    markdownPreview.update(markdownDocument ? documentText(markdownDocument) : '', { path, projectRoot: state.meta?.project?.root, immediate });
     if (changed) markdownPreview.show();
   } else {
     if (changed) { markdownPreview.hide(); requestAnimationFrame(() => viewer.refreshLayout()); }
@@ -341,6 +347,7 @@ function setOperation(operation) {
 }
 
 function updateCursor() {
+  markdownEditing?.update();
   const view = state.editor;
   if (!view || !activeDocument()) { $('cursor-status').textContent = ''; $('document-encoding').textContent = ''; delete $('editor').dataset.path; delete $('editor').dataset.line; delete $('editor').dataset.column; return; }
   const head = view.state.selection.main.head;
@@ -485,6 +492,7 @@ function receiveEditorUpdate(update, path) {
 
 function destroyEditorSlot(name) {
   const slot = editorSlots[name];
+  slot.openSequence = (slot.openSequence || 0) + 1; slot.pendingPath = '';
   if (slot.view && state.documents.has(slot.path)) state.documents.get(slot.path).scrollTop = slot.view.scrollDOM.scrollTop;
   slot.cleanup?.(); slot.cleanup = null; slot.view?.destroy(); slot.view = null; slot.path = ''; slot.host.replaceChildren();
 }
@@ -558,7 +566,7 @@ async function toggleSplitEditors(enabled = !state.splitEditors) {
   scheduleSession(); panelLayout.refresh();
 }
 
-function selectDocument(doc, { pane = state.activePane, focus = true } = {}) {
+function selectDocument(doc, { pane = state.activePane, focus = true, activate = true } = {}) {
   if (pane === 'secondary' && !state.splitEditors) pane = 'primary';
   pauseMarkdownScrollSync(); rememberEditorPosition(); rememberTab(doc.path);
   const slot = editorSlots[pane];
@@ -571,8 +579,10 @@ function selectDocument(doc, { pane = state.activePane, focus = true } = {}) {
   doc.visited = true; slot.path = doc.path;
   if (pane === 'primary') { assetPreview.hide(); $('editor').hidden = false; $('editor-empty').hidden = true; }
   if (slot.view) slot.view.setState(editorState); else createEditorView(slot, pane, editorState);
-  state.activePane = pane; state.activePath = doc.path; state.editor = slot.view; doc.state = slot.view.state;
-  activateEditorPane(pane, focus);
+  doc.state = slot.view.state;
+  synchronizeEditorViews(doc, slot.view);
+  if (activate) activateEditorPane(pane, focus);
+  else { renderTabs(); updateTreeSelection(); renderControls(); }
   const view = slot.view, restoreSequence = slot.restoreSequence = (slot.restoreSequence || 0) + 1;
   requestAnimationFrame(() => { if (slot.view === view && slot.path === doc.path && slot.restoreSequence === restoreSequence) { view.scrollDOM.scrollTop = Math.max(0, Number(position?.scrollTop) || 0); view.dispatch({ effects: EditorView.scrollIntoView(view.state.selection.main.head, { y: 'nearest' }) }); } });
   if ((/\.(tex|bib)$/i.test(doc.path) || isMarkdown(doc.path)) && doc.indexedDoc !== doc.state.doc) updateIndex(doc.path, doc.state.doc.toString());
@@ -584,7 +594,11 @@ async function openFile(path, { pane = state.activePane, focus = true } = {}) {
   const sequence = ++state.openSequence;
   const generation = state.projectGeneration;
   const file = state.meta?.project?.files?.find(item => item.path === path);
-  if (file && fileKind(file) !== 'text') { selectAsset(file); return; }
+  if ((file && fileKind(file) !== 'text') || (pane === 'secondary' && !state.splitEditors)) pane = 'primary';
+  const slot = editorSlots[pane];
+  const paneSequence = slot.openSequence = (slot.openSequence || 0) + 1;
+  slot.pendingPath = path;
+  if (file && fileKind(file) !== 'text') { await selectAsset(file); return; }
   let doc = state.documents.get(path);
   if (!doc) {
     let promise = state.pendingFiles.get(path);
@@ -600,10 +614,13 @@ async function openFile(path, { pane = state.activePane, focus = true } = {}) {
     try { doc = await promise; }
     catch (error) { if (generation !== state.projectGeneration) return; throw error; }
   }
-  if (doc && generation === state.projectGeneration && sequence === state.openSequence) selectDocument(doc, { pane, focus });
+  if (doc && generation === state.projectGeneration && paneSequence === slot.openSequence && !state.operation && !state.closed) {
+    slot.pendingPath = '';
+    selectDocument(doc, { pane, focus: focus && sequence === state.openSequence, activate: state.activePane === pane || sequence === state.openSequence });
+  }
 }
 
-function selectAsset(file) {
+async function selectAsset(file) {
   rememberEditorPosition(); rememberTab(file.path);
   destroyEditorSlot('primary'); editorSlots.primary.path = file.path; state.activePane = 'primary'; state.editor = null;
   for (const [name, slot] of Object.entries(editorSlots)) slot.element.classList.toggle('active', name === 'primary');
@@ -615,8 +632,8 @@ function selectAsset(file) {
   $('save-status').textContent = ''; $('save-status').classList.remove('dirty', 'error');
   renderTabs(); updateTreeSelection(); renderControls(); updateCursor(); renderOutline(); scheduleSession();
   document.title = `${basename(file.path)} — Local TeX Web Editor`;
-  assetPreview.show(asset, state.meta.project.root);
   updateDocumentPreview();
+  await assetPreview.show(asset, state.meta.project.root);
 }
 
 function renderTabs() {
@@ -848,6 +865,7 @@ async function closeDocument(doc) {
 }
 
 function removeOpenFile(path) {
+  for (const slot of Object.values(editorSlots)) if (slot.pendingPath === path) { slot.openSequence = (slot.openSequence || 0) + 1; slot.pendingPath = ''; }
   if (state.operation) return;
   rememberEditorPosition();
   const previousPane = state.activePane;
@@ -1303,6 +1321,7 @@ function renderControls() {
   for (const id of ['reference-tools', 'document-history', 'insert-image', 'insert-table']) $(id).disabled = busy || !doc;
   for (const id of ['project-templates', 'welcome-template']) $(id).disabled = busy || running;
   for (const slot of Object.values(editorSlots)) slot.select.disabled = busy;
+  for (const control of $('markdown-editing').querySelectorAll('button, select')) control.disabled = busy;
   updateNavigationControls();
   for (const button of state.treeButtons.values()) button.disabled = busy;
   for (const tab of state.tabElements.values()) { tab.button.disabled = busy; tab.close.disabled = busy; }
@@ -1541,7 +1560,10 @@ function scheduleAutoSave() {
   if (!state.preferences.autoSave || state.closed || !state.persistenceReady) return;
   state.autoSaveTimer = setTimeout(() => runTask(async () => {
     if (state.operation || isRunning() || state.externalProjectChanged || document.querySelector('dialog[open]')) return;
+    const generation = state.projectGeneration;
     for (const doc of state.documents.values()) {
+      if (doc.saving) await doc.saving;
+      if (generation !== state.projectGeneration || state.documents.get(doc.path) !== doc) break;
       if (state.operation || isRunning() || state.closed) break;
       if (isDirty(doc) && !doc.conflict) await saveDocument(doc);
     }
@@ -1736,23 +1758,40 @@ function captureNavigationLocation() {
 }
 async function restoreNavigationLocation(location) {
   if (!location || state.closed || state.operation || location.projectRoot !== state.meta?.project?.root) return false;
+  const generation = state.projectGeneration;
   pauseMarkdownScrollSync();
   const source = location.source;
+  if (location.surface === 'asset' && location.asset?.path) {
+    if (source?.pane === 'secondary' && !state.splitEditors) { state.splitEditors = true; updateSourceLayout(); }
+    await openFile(location.asset.path, { pane: 'primary', focus: false });
+  }
   if (source?.path) {
     const pane = source.pane === 'secondary' && state.splitEditors ? 'secondary' : 'primary';
     await openFile(source.path, { pane, focus: false });
+    if (state.activePath !== source.path) return false;
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     restoreSourcePosition(pane, source);
+  }
+  if (location.markdown?.path) {
+    let doc = state.documents.get(location.markdown.path);
+    if (!doc && state.meta?.project?.files?.some(file => file.path === location.markdown.path)) {
+      const file = await api(`/api/file?path=${encodeURIComponent(location.markdown.path)}`, { projectRoot: location.projectRoot });
+      if (generation !== state.projectGeneration) return false;
+      doc = makeDocument(file); state.documents.set(file.path, doc); rememberTab(file.path); renderTabs();
+    }
+    if (doc) state.lastMarkdownPath = doc.path;
   }
   if (location.previewChoice) setPreviewChoice(location.previewChoice);
   switchView(!!location.previewVisible);
   if (location.pdf?.main && viewer.documentMain !== location.pdf.main && location.pdf.buildId) await viewer.load(location.pdf.buildId, state.meta.project.root, location.pdf.main);
-  if (location.pdf) await viewer.applyViewState?.(location.pdf);
-  if (location.asset) await assetPreview.applyViewState?.(location.asset);
-  if (location.markdown) await markdownPreview.applyViewState?.(location.markdown);
+  const restoredPDF = location.pdf ? await viewer.applyViewState(location.pdf) : false;
+  const restoredAsset = location.asset ? await assetPreview.applyViewState(location.asset) : false;
+  const restoredMarkdown = location.markdown ? await markdownPreview.applyViewState(location.markdown) : false;
+  if ((location.surface === 'pdf' && !restoredPDF) || (location.surface === 'asset' && !restoredAsset) || (location.surface === 'markdown' && !restoredMarkdown)) return false;
   state.lastSurface = location.surface || 'source';
   if (state.lastSurface === 'pdf') $('pdf-scroll').focus({ preventScroll: true });
   else if (state.lastSurface === 'markdown') $('markdown-preview-container').focus({ preventScroll: true });
+  else if (state.lastSurface === 'asset') $('asset-scroll').focus({ preventScroll: true });
   else state.editor?.focus();
   pauseMarkdownScrollSync(); scheduleSession();
   return true;
@@ -1768,7 +1807,7 @@ function openDocumentSnapshots() {
 function currentDocumentSnapshot() {
   const doc = activeDocument();
   if (!doc || !state.editor) return null;
-  return { path: doc.path, content: doc.state.doc.toString(), revision: doc.revision, projectRoot: state.meta?.project?.root, position: state.editor.state.selection.main.head, ...sourcePosition() };
+  return { path: doc.path, content: documentText(doc), revision: doc.revision, projectRoot: state.meta?.project?.root, position: state.editor.state.selection.main.head, ...sourcePosition() };
 }
 function changedText(before, after) {
   let from = 0;
@@ -1782,7 +1821,7 @@ function replaceEditorText(path, content, expectedContent, edits = null) {
   if (state.operation || state.closed || !doc || doc.state.doc.toString() !== expectedContent) throw new Error(t('原稿が変更されています．内容を開き直してから操作してください．'));
   const next = normalise(content);
   if (next === expectedContent) return;
-  applyDocumentTransaction(doc, doc.state.update({ changes: edits || changedText(expectedContent, next), userEvent: 'input' }));
+  applyDocumentTransaction(doc, doc.state.update({ changes: edits || changedText(expectedContent, next), userEvent: 'input', annotations: isolateHistory.of('full') }));
   syncDrafts();
 }
 async function applyProjectReplacements(changes) {
@@ -1797,7 +1836,7 @@ async function applyProjectReplacements(changes) {
         const doc = state.documents.get(result.path), plan = planned.get(result.path);
         if (doc) {
           const content = normalise(result.content);
-          const transaction = doc.state.update({ changes: plan?.edits || changedText(doc.state.doc.toString(), content), userEvent: 'input' });
+          const transaction = doc.state.update({ changes: plan?.edits || changedText(doc.state.doc.toString(), content), userEvent: 'input', annotations: isolateHistory.of('full') });
           doc.revision = result.revision; doc.lineEnding = result.lineEnding || doc.lineEnding; doc.savedDoc = transaction.state.doc; doc.conflict = null;
           applyDocumentTransaction(doc, transaction); updateDocumentIndicators(doc);
         }
@@ -1821,9 +1860,17 @@ async function insertSourceText(text, { path, projectRoot, pane = state.activePa
   const start = Math.max(0, Math.min(doc.state.doc.length, Number.isFinite(anchor) ? anchor : selection.anchor));
   const end = Math.max(0, Math.min(doc.state.doc.length, Number.isFinite(head) ? head : selection.head));
   const from = Math.min(start, end), to = Math.max(start, end);
-  applyDocumentTransaction(doc, doc.state.update({ changes: { from, to, insert: text }, selection: { anchor: from + text.length }, userEvent: 'input' }));
+  applyDocumentTransaction(doc, doc.state.update({ changes: { from, to, insert: text }, selection: { anchor: from + text.length }, userEvent: 'input', annotations: isolateHistory.of('full') }));
   await openFile(path, { pane });
+  requestAnimationFrame(() => { if (state.activePath === path && !document.querySelector('dialog[open]')) state.editor?.focus(); });
   syncDrafts();
+}
+function applyMarkdownEdit(edit, snapshot) {
+  const current = currentDocumentSnapshot();
+  if (state.operation || state.closed || !current || current.projectRoot !== snapshot.projectRoot || current.path !== snapshot.path || current.pane !== snapshot.pane || current.content !== snapshot.content || current.anchor !== snapshot.anchor || current.head !== snapshot.head) throw new Error(t('原稿が変更されています．内容を開き直してから操作してください．'));
+  const doc = activeDocument(), view = state.editor;
+  applyDocumentTransaction(doc, doc.state.update({ ...edit, userEvent: 'input', annotations: isolateHistory.of('full'), scrollIntoView: true }));
+  requestAnimationFrame(() => { if (state.editor === view && !document.querySelector('dialog[open]')) view.focus(); });
 }
 async function openCreatedProject(path) {
   if (state.operation || state.closed || isRunning()) throw new Error(t('コンパイルが終了してからプロジェクトを切り替えてください．'));
@@ -2052,6 +2099,7 @@ const markdownPreview = new MarkdownPreview({
 navigationHistory = new NavigationHistory({ capture: captureNavigationLocation, restore: restoreNavigationLocation, onChange: updateNavigationControls });
 projectSearch = createProjectSearch({
   api, getOpenDocuments: openDocumentSnapshots,
+  onError: showError,
   openSource: (path, line, column, from, to) => navigate(() => goToSource(path, line, column, { from, to })),
   replaceDocuments: applyProjectReplacements,
 });
@@ -2072,6 +2120,7 @@ referenceTools = createReferenceTools({
 insertTools = createInsertTools({ api, getDocument: currentDocumentSnapshot, getProject: () => state.meta?.project, insertText: insertSourceText, refreshProject: refreshFiles, onError: showError });
 templateManager = createTemplateManager({ api, getProject: () => state.meta?.project, saveAll, openProject: openCreatedProject, onError: showError });
 logIssues = createLogIssues({ container: $('log-locations'), onOpen: (path, line) => runTask(() => navigate(() => goToSource(path, line))) });
+markdownEditing = createMarkdownEditing({ container: $('markdown-editing'), getDocument: currentDocumentSnapshot, applyEdit: applyMarkdownEdit, onTable: () => insertTools.openTable(), onError: showError });
 
 help = createHelp({
   button: $('help-button'), dialog: $('help-dialog'), getMeta: () => state.meta, isClosed: () => state.closed,

@@ -1,6 +1,6 @@
 import { t } from './i18n.js';
 import { createImportDialog, element, labelledInput, translated } from './import-dialog.js';
-import { assetInsertion, suggestedAssetName, parseTable, tableInsertion } from './insert-content.js';
+import { assetInsertion, suggestedAssetName, parseTable, tableInsertion, tableToTSV } from './insert-content.js';
 
 const MAX_IMAGE = 8 * 1024 * 1024;
 const isMarkdown = path => /\.(md|markdown)$/i.test(path || '');
@@ -83,6 +83,10 @@ export function createInsertTools({ api, getDocument, getProject = () => null, i
   }).then(done => { if (done) imageDialog.dialog.close(); });
 
   const tableInput = labelledInput('insert-table-input', 'コピーした表を貼り付けてください', 'textarea', { rows: '6', spellcheck: 'false' });
+  const newRows = labelledInput('insert-table-rows', '行数', 'input', { type: 'number', min: '1', max: '500', value: '3' });
+  const newColumns = labelledInput('insert-table-columns', '列数', 'input', { type: 'number', min: '1', max: '50', value: '3' });
+  const newTable = translated('button', '新しい表を作る', { type: 'button', class: 'button', id: 'insert-table-new' });
+  const gridRow = element('div', { class: 'import-new-table' }); gridRow.append(newRows.group, newColumns.group, newTable);
   const format = labelledInput('insert-table-format', '挿入する形式', 'select');
   format.input.append(element('option', { value: 'tex' }, 'TeX'), element('option', { value: 'markdown' }, 'Markdown'));
   const delimiter = labelledInput('insert-table-delimiter', '区切り文字', 'select');
@@ -97,7 +101,7 @@ export function createInsertTools({ api, getDocument, getProject = () => null, i
   const tableInsert = translated('button', '表を挿入', { type: 'button', class: 'button button-primary', id: 'insert-table-confirm' });
   const tableCancel = translated('button', 'キャンセル', { type: 'button', class: 'button' });
   const tableRow = element('div', { class: 'import-columns' }); tableRow.append(format.group, delimiter.group);
-  tableDialog.body.append(tableInput.group, tableHelp, tableRow, headerLabel, tableCount, tablePreview, tableSource.group);
+  tableDialog.body.append(gridRow, tableInput.group, tableHelp, tableRow, headerLabel, tableCount, translated('p', '見本のセルを直接編集できます．', { class: 'field-help' }), tablePreview, tableSource.group);
   tableDialog.footer.append(tableCancel, tableInsert);
   tableCancel.onclick = () => tableDialog.close();
   let tableTimer = null, rows = [];
@@ -112,7 +116,17 @@ export function createInsertTools({ api, getDocument, getProject = () => null, i
       const table = element('table');
       for (const [index, row] of rows.slice(0, 30).entries()) {
         const tr = element('tr');
-        for (const cell of row.slice(0, 12)) tr.append(element(header.checked && index === 0 ? 'th' : 'td', {}, cell));
+        for (const [column, cell] of row.slice(0, 12).entries()) {
+          const td = element(header.checked && index === 0 ? 'th' : 'td');
+          const input = element('textarea', { class: 'import-table-cell', rows: '1', 'aria-label': t('{row} 行 {column} 列', { row: index + 1, column: column + 1 }) });
+          input.value = cell;
+          input.addEventListener('input', () => {
+            rows[index][column] = input.value;
+            tableInput.input.value = tableToTSV(rows); delimiter.input.value = 'tab';
+            tableSource.input.value = tableInsertion(rows, { format: format.input.value, header: header.checked });
+          });
+          td.append(input); tr.append(td);
+        }
         table.append(tr);
       }
       tablePreview.append(table);
@@ -123,6 +137,16 @@ export function createInsertTools({ api, getDocument, getProject = () => null, i
     }
   }
   tableInput.input.addEventListener('input', () => { clearTimeout(tableTimer); tableTimer = setTimeout(updateTable, 180); });
+  newTable.onclick = () => {
+    const rowCount = Number(newRows.input.value), columnCount = Number(newColumns.input.value);
+    if (!Number.isInteger(rowCount) || !Number.isInteger(columnCount) || rowCount < 1 || rowCount > 500 || columnCount < 1 || columnCount > 50 || rowCount * columnCount > 10_000) {
+      tableDialog.showError(t('表が大きすぎます．500 行・50 列・合計 10000 セル以内にしてください．'));
+      return;
+    }
+    const created = Array.from({ length: rowCount }, (_, row) => Array.from({ length: columnCount }, (_, column) => row === 0 ? t('列 {number}', { number: column + 1 }) : ''));
+    tableInput.input.value = tableToTSV(created); delimiter.input.value = 'tab'; header.checked = true; updateTable();
+    tablePreview.querySelector('textarea')?.focus();
+  };
   for (const field of [format.input, delimiter.input, header]) field.addEventListener('change', updateTable);
   tableInsert.onclick = () => tableDialog.run(async () => {
     updateTable();

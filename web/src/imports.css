@@ -17,6 +17,11 @@
 .import-table-preview table { border-collapse: collapse; min-width: 100%; font-size: 11px; }
 .import-table-preview :is(th, td) { border: 1px solid var(--border-strong); padding: 7px 10px; white-space: pre-wrap; min-width: 65px; max-width: 240px; overflow-wrap: anywhere; text-align: left; }
 .import-table-preview th { background: var(--subtle); }
+.import-new-table { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+.import-new-table .import-field { margin: 0; flex: 1 1 80px; }
+.import-new-table input { width: 100%; }
+.import-table-preview .import-table-cell { width: 110px; min-width: 65px; min-height: 32px; padding: 5px 6px; border-color: transparent; background: transparent; font: inherit; line-height: 1.6; resize: vertical; }
+.import-table-preview .import-table-cell:focus { background: var(--surface); border-color: var(--accent); }
 .template-dialog { width: min(760px, calc(100vw - 32px)); }
 .template-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; max-height: 280px; overflow: auto; padding: 3px; }
 .template-card { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; padding: 13px 14px; min-width: 0; text-align: left; border: 1px solid var(--border-strong); border-radius: 7px; background: var(--surface); color: var(--text); cursor: pointer; font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; }

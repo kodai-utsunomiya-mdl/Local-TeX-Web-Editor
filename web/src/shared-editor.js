@@ -13,8 +13,8 @@ export function stateForOtherView(state, selection, changes) {
   }).state;
 }
 
-export function restoredTabPaths(session, files, limit = 80) {
+export function restoredTabPaths(session, files) {
   const available = new Set(files.map(file => typeof file === 'string' ? file : file.path));
   const paths = Array.isArray(session?.tabs) ? session.tabs : [session?.activePath];
-  return [...new Set(paths.filter(path => typeof path === 'string' && available.has(path)))].slice(0, limit);
+  return [...new Set(paths.filter(path => typeof path === 'string' && available.has(path)))];
 }

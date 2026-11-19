@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="/reference-tools.css">
   <link rel="stylesheet" href="/imports.css">
   <link rel="stylesheet" href="/log-issues.css">
+  <link rel="stylesheet" href="/markdown-editing.css">
   <link rel="stylesheet" href="/katex/katex.min.css">
   <script type="module" src="/app.js"></script>
 </head>
@@ -114,6 +115,7 @@
           </div>
         </div>
         <div id="conflict-banner" class="conflict-banner" hidden><span><span data-i18n="ディスクの内容が変更されました．編集中の内容を確認して保存してください．">The file has changed on disk. Review your edits before saving.</span></span><button type="button" id="review-conflict" class="button button-small"><span data-i18n="内容を確認">Review changes</span></button></div>
+        <div id="markdown-editing" hidden></div>
         <div id="source-workspace" class="source-workspace">
         <section id="source-pane-primary" class="source-pane active" aria-label="First source editor" data-i18n-aria-label="一つ目の原稿">
         <div class="source-pane-heading" hidden><label class="sr-only" for="primary-document" data-i18n="一つ目に表示する原稿">First source document</label><select id="primary-document" aria-label="First source document" data-i18n-aria-label="一つ目に表示する原稿"></select></div>

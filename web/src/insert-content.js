@@ -115,3 +115,10 @@ export function tableInsertion(rows, { format = 'markdown', header = true, align
   lines.push('\\end{tabular}');
   return lines.join('\n') + '\n';
 }
+
+export function tableToTSV(rows) {
+  return rows.map(row => row.map(cell => {
+    const value = String(cell);
+    return /["\t\r\n]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value;
+  }).join('\t')).join('\n') + (rows.length ? '\n' : '');
+}
