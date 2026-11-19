@@ -7,6 +7,8 @@ Listing text and review instructions for the Windows x64 MSIX edition of Local T
 | Field | Value |
 | --- | --- |
 | Product name | Local TeX Web Editor |
+| Store ID | `9P6QF32N19HG` |
+| Published Store page | https://apps.microsoft.com/detail/9P6QF32N19HG |
 | Price | Free |
 | Suggested category | Productivity |
 | Device family | Windows desktop |
@@ -22,11 +24,11 @@ Listing text and review instructions for the Windows x64 MSIX edition of Local T
 | License | MIT |
 | Copyright | Copyright (c) 2026 Local TeX Web Editor contributors |
 
-Use the publisher name and package identity assigned to this product in Partner Center. Reserve **Local TeX Web Editor** there before producing the final Store package. The manifest's identity and publisher values must match the product's identity page. [Microsoft's preparation guide](https://learn.microsoft.com/en-us/windows/apps/publish/store-readiness-checklist)
+The published product uses the publisher name and package identity configured in `packaging/windows/store-identity.json`. The manifest's identity and publisher values must match the product's identity page in Partner Center. [Microsoft's preparation guide](https://learn.microsoft.com/en-us/windows/apps/publish/store-readiness-checklist)
 
-Copy the three public identity values from that page into `packaging/windows/store-identity.json`: `identityName`, `publisher` and `publisherDisplayName`. The build also accepts `MSIX_IDENTITY_NAME`, `MSIX_PUBLISHER` and `MSIX_PUBLISHER_DISPLAY_NAME` as overrides. These are product identity fields; account passwords and identity-verification documents are not part of this file.
+The three public identity fields in `packaging/windows/store-identity.json` are `identityName`, `publisher` and `publisherDisplayName`. The build also accepts `MSIX_IDENTITY_NAME`, `MSIX_PUBLISHER` and `MSIX_PUBLISHER_DISPLAY_NAME` as overrides. These are product identity fields; account passwords and identity-verification documents are not part of this file.
 
-### Free registration and submission
+### Initial registration and submission
 
 1. Start at [storedeveloper.microsoft.com](https://storedeveloper.microsoft.com/), choose **Get started for free**, then **Individual developer** for the personal project account.
 2. The account owner signs in with a Microsoft account and completes the requested identity verification using a government-issued ID and a selfie.
