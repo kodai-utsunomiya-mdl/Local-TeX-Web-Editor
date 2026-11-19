@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { normalizeAppearance, resolveAppearance } from '../web/src/appearance.js';
 
 test('外観の初期値を選び，既存のライトとダークの設定を引き継ぐ', () => {
-  const defaults = { mode: 'system', palette: 'default', accent: 'teal', editorFont: 'default' };
+  const defaults = { mode: 'system', palette: 'gray', accent: 'teal', editorFont: 'consolas' };
   assert.deepEqual(normalizeAppearance(), defaults);
   assert.deepEqual(normalizeAppearance(null, 'dark'), { ...defaults, mode: 'dark' });
   assert.deepEqual(normalizeAppearance(undefined, 'light'), { ...defaults, mode: 'light' });

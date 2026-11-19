@@ -3,18 +3,20 @@ import * as pdfjs from 'pdfjs-dist/build/pdf.mjs';
 import { EventBus, PDFViewer as DocumentViewer, PDFLinkService, LinkTarget, RenderingStates } from 'pdfjs-dist/web/pdf_viewer.mjs';
 import { PDFSearch } from './pdf-search.js';
 import { zoomPDFAt } from './pdf-zoom.js';
+import { afterNavigationFrame, connectPDFNavigation } from './navigation-history.js';
 
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 const cancelled = error => /RenderingCancelledException|AbortException/.test(error?.name || '') || /destroyed|cancelled/i.test(error?.message || '');
 const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
 
 export class PDFViewer {
-  constructor({ token, onError, onReady, onPositionChange, onInverse }) {
+  constructor({ token, onError, onReady, onPositionChange, onInverse, onNavigate }) {
     this.token = token;
     this.onError = onError;
     this.onReady = onReady;
     this.onPositionChange = onPositionChange;
     this.onInverse = onInverse;
+    this.onNavigate = onNavigate;
     this.document = null;
     this.loadingTask = null;
     this.buildId = '';
@@ -40,6 +42,7 @@ export class PDFViewer {
     });
     this.eventBus = new EventBus();
     this.linkService = new PDFLinkService({ eventBus: this.eventBus, externalLinkTarget: LinkTarget.BLANK, externalLinkRel: 'noopener noreferrer', ignoreDestinationZoom: true });
+    connectPDFNavigation(this.linkService, action => this.navigate(action), async () => { await afterNavigationFrame(); this.pageViewer.update(); });
     this.search = new PDFSearch({ eventBus: this.eventBus, linkService: this.linkService, pane: document.getElementById('pdf-preview') || document.getElementById('pdf-pane'), toolbar: document.querySelector('.pdf-toolbar'), scroll: this.elements.scroll });
     this.pageViewer = new DocumentViewer({
       container: this.elements.scroll,
@@ -146,7 +149,35 @@ export class PDFViewer {
     if (!this.document) return this.initialPosition;
     if (!this.ready) return this.pendingPosition ? { ...this.pendingPosition, main: this.documentMain } : this.initialPosition;
     const location = this.lastLocation;
-    return { main: this.documentMain, pageNumber: location?.pageNumber || this.pageNumber, left: location?.left ?? 0, top: location?.top ?? null, zoom: this.zoomSetting };
+    return { main: this.documentMain, buildId: this.buildId, pageNumber: location?.pageNumber || this.pageNumber, left: location?.left ?? 0, top: location?.top ?? null, zoom: this.zoomSetting };
+  }
+
+  async navigate(action) {
+    try { return await (this.onNavigate ? this.onNavigate(action) : action()); }
+    catch (error) { this.report(error); return false; }
+  }
+
+  async applyViewState(position) {
+    if (!position || !this.document || (position.main && position.main !== this.documentMain)) return false;
+    if (!this.ready) await this.initialisePages();
+    if (!this.ready) return false;
+    const document = this.document, generation = this.generation;
+    const number = clamp(Math.round(Number(position.pageNumber) || 1), 1, document.numPages);
+    const page = await document.getPage(number);
+    if (generation !== this.generation || document !== this.document) return false;
+    const view = this.pageViewer.getPageView(number - 1);
+    if (!view?.pdfPage) view?.setPdfPage(page);
+    this.clearHighlight();
+    this.zoomSetting = position.zoom || this.zoomSetting;
+    this.pageViewer.currentScaleValue = this.zoomSetting;
+    this.pageViewer.scrollPageIntoView({ pageNumber: number,
+      ...(Number.isFinite(position.left) && Number.isFinite(position.top) ? { destArray: [null, { name: 'XYZ' }, position.left, position.top, null], allowNegativeOffset: true } : {}),
+      ignoreDestinationZoom: true });
+    this.pageViewer.update();
+    await afterNavigationFrame();
+    if (generation !== this.generation) return false;
+    this.pageViewer.update(); this.updateControls(); this.markCurrentCanvas();
+    return true;
   }
 
   getPositions() {
@@ -304,9 +335,12 @@ export class PDFViewer {
 
   goToPage(value) {
     if (!this.document || !this.ready) return;
-    this.pageViewer.currentPageNumber = clamp(Math.round(Number(value) || this.pageNumber), 1, this.document.numPages);
-    this.pageViewer.update();
-    this.updateControls(); this.markCurrentCanvas();
+    return this.navigate(async () => {
+      this.pageViewer.currentPageNumber = clamp(Math.round(Number(value) || this.pageNumber), 1, this.document.numPages);
+      this.pageViewer.update();
+      await afterNavigationFrame();
+      this.pageViewer.update(); this.updateControls(); this.markCurrentCanvas();
+    });
   }
 
   inverseAt(event) {

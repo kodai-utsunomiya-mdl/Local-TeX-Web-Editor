@@ -1,6 +1,6 @@
 // Positions use JavaScript / CodeMirror's UTF-16 offsets. Blanking comments
 // keeps those offsets unchanged, including for text outside the ASCII range.
-function maskNonCode(text) {
+export function maskNonCode(text) {
   const characters = text.split('');
   const blank = (start, end) => {
     for (let i = start; i < end; i++) if (characters[i] !== '\n' && characters[i] !== '\r') characters[i] = ' ';

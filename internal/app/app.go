@@ -38,6 +38,7 @@ type App struct {
 	mu                    sync.Mutex
 	cacheMu               sync.RWMutex
 	shortcutMu            sync.Mutex
+	templateMu            sync.Mutex
 	shortcutCreator       func(string) (platform.ShortcutResult, error)
 	options               Options
 	packageIdentity       *platform.PackageIdentity
@@ -180,6 +181,13 @@ func (a *App) Handler() http.Handler {
 	mux.HandleFunc("/api/shortcuts", a.shortcutsHandler)
 	mux.HandleFunc("/api/storage", a.storageHandler)
 	mux.HandleFunc("/api/file", a.fileHandler)
+	mux.HandleFunc("/api/project/search", a.projectSearchHandler)
+	mux.HandleFunc("/api/project/replace", a.projectReplaceHandler)
+	mux.HandleFunc("/api/history", a.historyHandler)
+	mux.HandleFunc("/api/history/settings", a.historySettingsHandler)
+	mux.HandleFunc("/api/assets/import", a.assetImportHandler)
+	mux.HandleFunc("/api/templates", a.templatesHandler)
+	mux.HandleFunc("/api/templates/create-project", a.templateProjectHandler)
 	mux.HandleFunc("/api/asset", a.assetHandler)
 	mux.HandleFunc("/api/build", a.buildHandler)
 	mux.HandleFunc("/api/build/stop", a.stopHandler)
@@ -413,7 +421,7 @@ func (a *App) fileHandler(w http.ResponseWriter, r *http.Request) {
 	} else if r.Method == http.MethodGet {
 		document, err = readDocument(a.project.Root, input.Path)
 	} else {
-		document, err = saveDocument(a.project.Root, input)
+		document, err = a.saveDocumentWithHistoryLocked(input, messages.LanguageFromContext(r.Context()))
 		if err == nil {
 			if document.Revision != input.Revision {
 				a.noteSavedSourceLocked(document.Path)

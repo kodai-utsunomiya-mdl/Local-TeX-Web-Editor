@@ -1,5 +1,9 @@
 import { english } from './locales/en.js';
+import { importsEnglish } from './locales/imports-en.js';
+import { writingEnglish } from './locales/writing-en.js';
 import { shortcutModifier } from './platform-keys.js';
+
+Object.assign(english, importsEnglish, writingEnglish);
 
 let language = 'en';
 const listeners = new Set();

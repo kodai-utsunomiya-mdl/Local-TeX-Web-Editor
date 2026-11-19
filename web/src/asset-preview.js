@@ -2,6 +2,7 @@ import { t, getLanguage, onLanguageChange } from './i18n.js';
 import * as pdfjs from 'pdfjs-dist/build/pdf.mjs';
 import { EventBus, PDFViewer, PDFLinkService, LinkTarget } from 'pdfjs-dist/web/pdf_viewer.mjs';
 import { zoomPDFAt } from './pdf-zoom.js';
+import { afterNavigationFrame, connectPDFNavigation } from './navigation-history.js';
 
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
@@ -10,8 +11,9 @@ const bytes = value => value < 1024 ? `${value} B` : value < 1024 ** 2 ? `${(val
 // The selected image or PDF has its own view. Source documents stay in the
 // editor's state map, and decoded assets are released when their tab is left.
 export class AssetPreview {
-  constructor({ token }) {
+  constructor({ token, onNavigate }) {
     this.token = token;
+    this.onNavigate = onNavigate;
     this.root = document.getElementById('asset-preview');
     this.elements = Object.fromEntries(['info', 'page-controls', 'prev', 'next', 'page', 'pages', 'zoom-out', 'zoom-in', 'zoom', 'reload', 'scroll', 'image-stage', 'image', 'pdf-stage', 'message'].map(id => [id, document.getElementById(`asset-${id}`)]));
     this.file = null; this.projectRoot = ''; this.generation = 0;
@@ -49,6 +51,49 @@ export class AssetPreview {
       scrollTop: this.elements.scroll.scrollTop,
       scrollLeft: this.elements.scroll.scrollLeft,
     };
+  }
+
+  getViewState() {
+    if (!this.file || !this.ready) return null;
+    this.savePosition();
+    return { path: this.file.path, kind: this.file.kind, ...this.file.preview };
+  }
+
+  async navigate(action) {
+    try { return await (this.onNavigate ? this.onNavigate(action) : action()); }
+    catch (error) { this.fail(error); return false; }
+  }
+
+  async applyViewState(position) {
+    if (!this.file || !position || position.path !== this.file.path) return false;
+    this.file.preview = { ...position };
+    if (!this.ready) {
+      if (this.file.kind === 'pdf' && this.document) await this.initialisePDF();
+      else return false;
+    }
+    this.zoomSetting = position.zoom || this.zoomSetting;
+    if (this.file.kind === 'pdf') {
+      const document = this.document, generation = this.generation;
+      const number = clamp(Math.round(Number(position.page) || 1), 1, document.numPages);
+      const page = await document.getPage(number);
+      if (generation !== this.generation || document !== this.document) return false;
+      const view = this.pdfViewer.getPageView(number - 1);
+      if (!view?.pdfPage) view?.setPdfPage(page);
+      this.pdfViewer.currentScaleValue = this.zoomSetting;
+      this.pdfViewer.scrollPageIntoView({ pageNumber: number,
+        ...(Number.isFinite(position.left) && Number.isFinite(position.top) ? { destArray: [null, { name: 'XYZ' }, position.left, position.top, null], allowNegativeOffset: true } : {}),
+        ignoreDestinationZoom: true });
+      this.pdfViewer.update();
+      await afterNavigationFrame();
+      if (generation !== this.generation) return false;
+      this.pdfViewer.update();
+    } else {
+      this.applyZoom();
+      this.elements.scroll.scrollTop = position.scrollTop || 0;
+      this.elements.scroll.scrollLeft = position.scrollLeft || 0;
+    }
+    this.updateControls();
+    return true;
   }
 
   hide() {
@@ -124,6 +169,7 @@ export class AssetPreview {
     if (this.pdfViewer) return;
     this.eventBus = new EventBus();
     this.linkService = new PDFLinkService({ eventBus: this.eventBus, externalLinkTarget: LinkTarget.BLANK, externalLinkRel: 'noopener noreferrer', ignoreDestinationZoom: true });
+    connectPDFNavigation(this.linkService, action => this.navigate(action), async () => { await afterNavigationFrame(); this.pdfViewer.update(); });
     this.pdfViewer = new PDFViewer({
       container: this.elements.scroll, viewer: this.elements['pdf-stage'],
       eventBus: this.eventBus, linkService: this.linkService,
@@ -182,8 +228,11 @@ export class AssetPreview {
 
   goToPage(value) {
     if (!this.document || !this.ready) return;
-    this.pdfViewer.currentPageNumber = clamp(Math.round(value) || 1, 1, this.document.numPages);
-    this.updateControls();
+    return this.navigate(async () => {
+      this.pdfViewer.currentPageNumber = clamp(Math.round(value) || 1, 1, this.document.numPages);
+      this.pdfViewer.update(); await afterNavigationFrame();
+      this.pdfViewer.update(); this.updateControls();
+    });
   }
 
   applyZoom(origin = null) {

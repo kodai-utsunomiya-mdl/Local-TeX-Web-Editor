@@ -39,6 +39,7 @@ type FileDocument struct {
 	Content    string `json:"content"`
 	Revision   string `json:"revision"`
 	LineEnding string `json:"lineEnding"`
+	HistoryWarning string `json:"historyWarning,omitempty"`
 }
 
 type projectSettings struct {

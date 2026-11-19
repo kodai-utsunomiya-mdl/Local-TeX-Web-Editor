@@ -51,9 +51,9 @@ export function normalizeAppearance(value, legacyTheme = null) {
   const source = value && typeof value === 'object' ? value : {};
   return {
     mode: ['system', 'light', 'dark'].includes(source.mode) ? source.mode : ['light', 'dark'].includes(legacyTheme) ? legacyTheme : 'system',
-    palette: has(palettes, source.palette) ? source.palette : 'default',
+    palette: has(palettes, source.palette) ? source.palette : 'gray',
     accent: has(accents, source.accent) ? source.accent : 'teal',
-    editorFont: has(fonts, source.editorFont) ? source.editorFont : 'default',
+    editorFont: has(fonts, source.editorFont) ? source.editorFont : 'consolas',
   };
 }
 
