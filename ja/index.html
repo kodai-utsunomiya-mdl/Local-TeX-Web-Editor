@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Local TeX Web Editor — ブラウザで TeX と Markdown を編集</title>
-  <meta name="description" content="Windows と macOS で使える無料・オープンソースの TeX / Markdown エディタ．ブラウザで編集し，PC の TeX Live でコンパイル．SyncTeX で原稿と PDF を行き来できます．">
+  <meta name="description" content="Windows と macOS で使える無料の TeX / Markdown エディタ．プロジェクト全体の検索，PC に記録する編集履歴，原稿を二つ並べる編集，PDF と Markdown のプレビューを利用できます．">
   <meta name="theme-color" content="#f7f8f5">
   <link rel="canonical" href="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/ja/">
   <link rel="alternate" hreflang="en" href="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/">
@@ -13,7 +13,7 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Local TeX Web Editor">
   <meta property="og:title" content="Local TeX Web Editor">
-  <meta property="og:description" content="ブラウザで TeX と Markdown を編集し，PC の TeX Live でコンパイル．原稿と PDF を並べて確認できます．">
+  <meta property="og:description" content="PC の TeX と Markdown を編集．プロジェクト全体を検索し，過去の原稿を見比べ，二つの文書と PDF を並べて執筆できます．">
   <meta property="og:url" content="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/ja/">
   <meta property="og:image" content="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/assets/social-preview.png">
   <meta property="og:image:type" content="image/png">
@@ -24,7 +24,7 @@
   <meta property="og:locale:alternate" content="en_US">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Local TeX Web Editor">
-  <meta name="twitter:description" content="ブラウザで TeX と Markdown を編集し，PC の TeX Live でコンパイル．原稿と PDF を並べて確認できます．">
+  <meta name="twitter:description" content="PC の TeX と Markdown を編集．プロジェクト全体を検索し，過去の原稿を見比べ，二つの文書と PDF を並べて執筆できます．">
   <meta name="twitter:image" content="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/assets/social-preview.png">
   <meta name="twitter:image:alt" content="Local TeX Web Editor のアイコンとアプリ名，TeX の編集画面と PDF のプレビュー">
   <link rel="icon" href="../assets/app-icon.svg" type="image/svg+xml">
@@ -63,17 +63,18 @@
             <span><span class="download-label">Microsoft Store で入手</span><small>Windows x64 · 無料 · Store で更新</small></span>
             <span class="download-arrow" aria-hidden="true">↗</span>
           </a>
-          <a class="download" href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.6/local-tex-web-editor-0.1.6-windows-x64.zip">
+          <a class="download" href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.7/local-tex-web-editor-0.1.7-windows-x64.zip">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 4.4 10.7 3v8.2H2zm9.7-1.6L22 1.2v10H11.7zM2 12.3h8.7v8.2L2 19.1zm9.7 0H22v10l-10.3-1.6z"/></svg>
-            <span><span class="download-label">Windows の ZIP を入手</span><small>x64 · ZIP · 約 8 MB</small></span>
+            <span><span class="download-label">Windows の ZIP を入手</span><small>v0.1.7 · x64 · ZIP</small></span>
             <span class="download-arrow" aria-hidden="true">↓</span>
           </a>
-          <a class="download" href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.6/local-tex-web-editor-0.1.6-macos-universal.zip">
+          <a class="download" href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.7/local-tex-web-editor-0.1.7-macos-universal.zip">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="13" rx="1.4"/><path d="M8 21h8M12 16v5M3 12.5h18"/></svg>
-            <span><span class="download-label">macOS 版をダウンロード</span><small>Apple Silicon + Intel · ZIP · 約 15 MB</small></span>
+            <span><span class="download-label">macOS 版をダウンロード</span><small>v0.1.7 · Apple Silicon + Intel · ZIP</small></span>
             <span class="download-arrow" aria-hidden="true">↓</span>
           </a>
-          <p class="release-note">GitHub Releases: v0.1.6 <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest">最新版と変更内容</a></p>
+          <p class="release-note"><span class="version-badge">v0.1.7</span> <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.7">変更内容とダウンロード</a></p>
+          <p class="store-release-note">ZIP は v0.1.7 を配布します．Microsoft Store 版の更新は，Store の審査と公開の完了後に利用できます．</p>
         </div>
       </div>
 
@@ -92,13 +93,29 @@
       <nav class="contents" aria-label="このページの目次">
         <p>このページの内容</p>
         <ul>
+          <li><a href="#whats-new">v0.1.7 の新機能</a></li>
           <li><a href="#requirements">必要な環境と容量</a></li>
           <li><a href="#get-started">使い始める</a></li>
           <li><a href="#editing">編集とプレビュー</a></li>
+          <li><a href="#writing">検索・比較・素材の再利用</a></li>
           <li><a href="#updates">更新・使い方・問い合わせ</a></li>
         </ul>
       </nav>
       <div class="guide">
+        <section id="whats-new" aria-labelledby="whats-new-title">
+          <h2 id="whats-new-title">v0.1.7 の新機能</h2>
+          <p>章をまたぐ検索，参照先からの移動，過去の文章との比較，二つの原稿の編集を，執筆中の画面から使えるようになりました．</p>
+          <ul class="release-highlights">
+            <li><strong>プロジェクト全体を検索・置換．</strong>未保存の文章も含めて探し，変更内容を確認して置換する箇所を選べます．</li>
+            <li><strong>執筆していた位置へ戻る．</strong>原稿内の移動や PDF 内の参照リンクを開いた後に，「戻る」「進む」で行き来できます．</li>
+            <li><strong>原稿を比較して編集．</strong>過去の文章から一部を戻し，二つの原稿を並べて編集できます．開いていたタブと並び順，配置も再開できます．</li>
+            <li><strong>引用・相互参照を確認．</strong>定義や使用箇所へ移動し，変更内容を見てキーの名前を変更できます．ログのエラー・警告も種類別に表示します．</li>
+            <li><strong>画像・表・テンプレートを活用．</strong>画像の貼り付けやドロップ，表の作成や貼り付け，自作テンプレートからのプロジェクト作成ができます．</li>
+            <li><strong>Markdown を手軽に編集．</strong>装飾，リンク，コードブロックを操作欄から追加し，表のセルを直接編集できます．原稿とプレビューのどちらをスクロールしても同期します．</li>
+          </ul>
+          <p class="small-note">外観の初期値はグレー，原稿のフォントの初期値は Consolas です．保存済みの外観は引き続き使えます．変更の全体は <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.7">v0.1.7 のリリースノート</a> にあります．</p>
+        </section>
+
         <section id="requirements" aria-labelledby="requirements-title">
           <h2 id="requirements-title">必要な環境と容量</h2>
           <p>現在の Chrome または Edge を使います．TeX のコンパイルには，原稿に必要なプログラム・パッケージを含む TeX Live を別途導入します．別のエディタでコンパイルできている場合は，同じ TeX の場所を指定できます．Markdown の編集とプレビューは TeX Live がなくても使えます．</p>
@@ -115,14 +132,14 @@
           <p>コンパイルには <code>latexmk</code>，原稿と PDF の相互移動には <code>synctex</code> を使います．<code>latexmkrc</code> / <code>.latexmkrc</code> を使うプロジェクトでは，その設定ファイルも原稿と一緒に用意します．</p>
           <div class="table-scroll">
             <table class="size-table">
-              <thead><tr><th scope="col">v0.1.6</th><th scope="col">ZIP の容量</th><th scope="col">展開後のアプリ本体</th></tr></thead>
+              <thead><tr><th scope="col">参考: v0.1.6</th><th scope="col">ZIP の容量</th><th scope="col">展開後のアプリ本体</th></tr></thead>
               <tbody>
                 <tr><th scope="row">Windows x64</th><td>約 8 MB</td><td>約 16 MB</td></tr>
                 <tr><th scope="row">macOS，両 CPU 共通</th><td>約 15 MB</td><td>約 32 MB</td></tr>
               </tbody>
             </table>
           </div>
-          <p class="small-note">1 MB = 1,000,000 bytes．TeX Live，原稿，草稿，コンパイル中のファイルにも容量を使います．アプリにはエディタと PDF ビューアーが含まれており，Python，Node.js，Go，VS Code の導入は不要です．</p>
+          <p class="small-note">表は公開済みの v0.1.6 の容量です．現在のダウンロード容量は <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.7">v0.1.7 の配布ファイル</a> で確認できます．1 MB = 1,000,000 bytes．TeX Live，原稿，草稿，編集履歴，テンプレート，コンパイル中のファイルにも容量を使います．アプリにはエディタと PDF ビューアーが含まれており，Python，Node.js，Go，VS Code の導入は不要です．</p>
           <details>
             <summary>小さめの TeX の構成から始める場合</summary>
             <p>Windows の <a href="https://tug.org/texlive/acquire-netinstall.html">TeX Live インストーラー</a> では，少ないパッケージから始める構成を選べます．Mac では <a href="https://tug.org/mactex/morepackages.html">BasicTeX</a> を使えます．<code>latexmk</code>，<code>synctex</code> と，原稿で必要なパッケージを追加します．</p>
@@ -143,6 +160,7 @@
             <li>
               <h3>原稿のフォルダーを開く</h3>
               <p><code>.tex</code>，<code>.bib</code>，画像，設定ファイルを含むフォルダーを選びます．Overleaf のプロジェクトを使う場合は，ソースを ZIP でダウンロードして展開します．</p>
+              <p>新しい原稿は，最初の画面の<strong>「テンプレートから作成」</strong>で始められます．テンプレートを選び，保存先と新しいフォルダー名を指定します．</p>
               <p>TeX Live が自動で見つからない場合は，<strong>設定</strong> から TeX のプログラムがあるフォルダーを指定します．</p>
             </li>
             <li>
@@ -164,7 +182,7 @@
           <p>ファイルはタブで開きます．PDF を表示しているときに独立した TeX 文書をコンパイルすると，その文書の PDF へ切り替わります．TeX のタブ同士を切り替えただけの場合は，直前の PDF を表示し続けます．親ファイルに読み込む章では，既定のメイン文書または <code>% !TeX root = ../main.tex</code> の指定を使います．</p>
           <p><strong>アウトライン</strong>には，選択中の TeX または Markdown のタブの見出しが表示されます．タブを変えると見出しも切り替わり，クリックすると原稿の対応する行へ移動できます．</p>
           <p>ファイル一覧・アウトラインの右端，原稿とプレビューの境界，ログの上端をドラッグして，幅や高さを調整できます．境界にフォーカスして矢印キーで調整する操作や，ダブルクリックで初期位置に戻す操作も使えます．選んだ幅とログの高さは，次回の起動にも反映されます．</p>
-          <p><strong>設定 → 外観</strong>で，システム・ライト・ダークのモード，配色，アクセントの色，原稿のフォントを選べます．変更はその場で表示され，<strong>外観を保存</strong>すると次回も同じ外観で開きます．<strong>キャンセル</strong>すると開く前の外観へ戻ります．システムを選ぶと，PC のライト／ダーク設定に合わせます．</p>
+          <p><strong>設定 → 外観</strong>で，システム・ライト・ダークのモード，配色，アクセントの色，原稿のフォントを選べます．変更はその場で表示され，<strong>外観を保存</strong>すると次回も同じ外観で開きます．<strong>キャンセル</strong>すると開く前の外観へ戻ります．システムを選ぶと，PC のライト／ダーク設定に合わせます．配色の初期値はグレー，原稿のフォントの初期値は Consolas です．Consolas がない環境では，別の等幅フォントを使います．</p>
 
           <div class="usage-block">
             <h3>PDF を読み，原稿へ移動する</h3>
@@ -174,13 +192,15 @@
               <div><dt>原稿 → PDF</dt><dd>Windows では <kbd>Ctrl</kbd> + クリック，Mac では <kbd>Cmd</kbd> + クリックで，原稿の行から PDF へ移動します．</dd></div>
               <div><dt>エディタの文字サイズ</dt><dd>エディタ上の <kbd>Ctrl</kbd> + ホイール，ピンチ，または設定から変更できます．</dd></div>
             </dl>
+            <p>原稿やプレビューの上にある <strong>← / →</strong> で，移動した場所を戻る・進む操作ができます．PDF 内の文献や節へのリンクを開いた後も，<strong>←</strong> で読んでいたページと位置へ戻れます．</p>
           </div>
 
           <div class="usage-block">
             <h3>Markdown のメモを一緒に編集する</h3>
             <p><strong>自動</strong> を選んでいるときに <code>.md</code> を開くと，入力に合わせてプレビューを更新し，表，コード，画像，数式を表示します．プレビューを <strong>PDF</strong> にすると，コンパイルした原稿を読みながらメモを編集できます．<strong>Markdown</strong> ではメモの表示を続けます．</p>
             <p>Markdown の原稿からプレビューへ移動するには，Windows では <kbd>Ctrl</kbd> + クリック，Mac では <kbd>Cmd</kbd> + クリックを使うか，原稿の上にある移動ボタンを押します．対応する箇所が一時的に強調されます．プレビューの段落や見出しをダブルクリックすると，原稿の行へ戻れます．</p>
-            <p>Markdown のツールバーにある<strong>「スクロールを同期」</strong>で，原稿のスクロールにプレビューを追従させるかを切り替えられます．初期状態はオンで，選択は次回の起動にも反映されます．</p>
+            <p>Markdown のプレビューの操作欄にある<strong>「スクロールを同期」</strong>で，連動するスクロールをオン／オフにできます．オンの場合は，原稿とプレビューのどちらをスクロールしても，他方を対応する箇所へ動かします．初期状態はオンで，選択は次回の起動にも反映されます．</p>
+            <p>Markdown の編集欄には，見出し，太字，斜体，取消線，リスト，引用，行内コードの操作があります．リンクは表示文字とリンク先を別々に入力し，コードブロックには言語名を指定できます．表は行数と列数を選んで作成し，セルを直接編集してから挿入できます．</p>
             <figure class="screenshot secondary-shot">
               <a href="../assets/editor-markdown-light.png" aria-label="Markdown の編集画面を元のサイズで開く">
                 <img src="../assets/editor-markdown-light.png" width="1440" height="900" alt="Markdown の原稿とプレビューをライトモードで表示した画面．数式，チェック項目，表が見える．" loading="lazy" decoding="async">
@@ -191,16 +211,46 @@
           <p style="margin-top: 1.5rem;">検索には複数行の文章をそのまま貼り付けられます．自動保存，PC に記録する草稿，ライト／ダークの切り替え，文書ごとの表示位置の記録も使えます．詳しい操作は <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/blob/main/README.ja.md#原稿を編集する">編集のガイド</a> を参照してください．</p>
         </section>
 
+        <section id="writing" aria-labelledby="writing-title">
+          <h2 id="writing-title">検索・比較・素材の再利用</h2>
+          <p>原稿の上にある<strong>「全体を検索」</strong>から検索・置換を開けます．引用・参照，履歴，画像，表，テンプレートは<strong>「編集の操作」</strong>にあります．</p>
+          <div class="usage-block">
+            <h3>プロジェクト全体を検索し，参照先を確認する</h3>
+            <p><strong>全体を検索</strong>では，開いているタブの未保存の文章も含めてプロジェクトの本文を探せます．Windows の <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd>，Mac の <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd> でも開けます．置換する前後の文章を確認し，変更する箇所を選んで適用します．検索結果を押すと，原稿のその位置へ移動できます．</p>
+            <p><strong>編集の操作 → 引用・参照を確認</strong>には，引用のキーやラベルと，その定義・使用箇所が表示されます．キー，題名，著者から探して原稿を開くほか，新しいキーを入力して変更内容を確認し，名前を変更できます．標準的な TeX の引用・参照コマンドを対象とします．</p>
+          </div>
+          <div class="usage-block">
+            <h3>二つの原稿を並べ，過去の文章と見比べる</h3>
+            <p>タブの上にある<strong>「原稿を二つ並べる」</strong>を選び，それぞれの欄で文書を指定します．カーソルとスクロールの位置は各欄で操作でき，同じ文書を開いた場合は編集内容が両方へ反映されます．境界をドラッグすると幅を調整できます．タブもドラッグして並び替えられます．開いていたタブ，並び順，編集欄の配置は，プロジェクトを開き直すと再現されます．</p>
+            <p><strong>編集の操作 → 編集履歴を開く</strong>では，以前の文章と現在の原稿を比較し，戻す箇所を選べます．原稿へ反映した変更は Undo で取り消せます．大きな編集を始める前に，現在の内容へ名前を付けて記録する操作もあります．</p>
+            <p class="small-note">履歴は圧縮して PC に記録します．初期設定は 30 日・全体で 50 MiB，1 ファイルにつき最大 50 版です．自動で記録する間隔は 1 分以上で，2 MiB を超える原稿は対象外です．<strong>履歴の設定</strong>で日数・容量を変更し，新しい記録を停止することもできます．</p>
+          </div>
+          <div class="usage-block">
+            <h3>画像と表を挿入する</h3>
+            <p>画像をエディタへ貼り付け・ドロップするか，<strong>編集の操作 → 画像を挿入</strong>を開き，保存先と説明を確認して取り込みます．PNG・JPEG・PDF を 8 MiB まで使えます．同じ名前のファイルがあるときは番号を付けて保存し，原稿からの相対パスで TeX / Markdown を挿入します．TeX の図にはラベルと幅も指定できます．</p>
+            <p><strong>表を挿入</strong>では，表計算ソフトからコピーしたタブ区切り・カンマ区切りの文章を読み取ります．引用符で囲んだセルやセル内の改行も扱えます．行数と列数から新しい表を作ることもできます．見本のセルを編集し，TeX または Markdown の形式を選んで挿入します．</p>
+          </div>
+          <div class="usage-block">
+            <h3>テンプレートから新しいプロジェクトを始める</h3>
+            <p>最初の画面の<strong>「テンプレートから作成」</strong>，または<strong>「編集の操作 → テンプレートを管理」</strong>を開きます．日本語の LuaLaTeX 文書，英語の article，Beamer のスライド，Markdown のメモを選べます．新しいプロジェクトは新規フォルダーへ作成します．</p>
+            <p>自分の構成を再利用するには，そのプロジェクトを開き，含めたい原稿や画像を選んでテンプレートとして登録します．名前・説明の変更や，登録の削除もできます．生成した PDF，コンパイル中のファイル，編集履歴は含めません．登録は 20 個までで，1 個につき 200 ファイル・合計 32 MiB まで使えます．</p>
+          </div>
+          <div class="usage-block">
+            <h3>ログのエラーと警告を種類別に確認する</h3>
+            <p>ログを開くと，エラー，相互参照，文献，本文のはみ出しなど，その他の警告で一覧を絞れます．原稿の位置が分かる項目を押すと，対応する行を開きます．一覧の下にはログ全文も表示します．</p>
+          </div>
+        </section>
+
         <section id="updates" aria-labelledby="updates-title">
           <h2 id="updates-title">更新・使い方・問い合わせ</h2>
           <p>アプリの <strong>? (ヘルプ)</strong> ボタン，または <kbd>F1</kbd> から，使い方，キーボードショートカット，更新内容，問題が起きたときの手順を確認できます．コンパイルのログや設定，配布形態に応じた更新先もヘルプから開けます．</p>
           <p>Windows の Store 版は Microsoft Store から更新します．新しいバージョンは Store の審査と公開が完了すると配布されます．更新後もスタートメニューから起動できます．</p>
-          <p>Windows ZIP 版と macOS 版の更新は <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest">GitHub Releases</a> から取得します．Windows では ZIP を展開して <code>.exe</code> を起動し，旧版が動いている場合は画面の案内に従います．Mac では原稿を保存して終了し，アプリケーションフォルダーのアプリを置き換えます．</p>
+          <p>Windows ZIP 版と macOS 版の更新は <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.7">GitHub Releases</a> から取得します．Windows では ZIP を展開して <code>.exe</code> を起動し，旧版が動いている場合は画面の案内に従います．Mac では原稿を保存して終了し，アプリケーションフォルダーのアプリを置き換えます．</p>
           <p>更新後も，それぞれの配布方法で使っている設定と草稿を読み込みます．Store 版の初回起動時には，既存の Windows ZIP 版から有効な設定と草稿をコピーします．原稿は元のプロジェクトフォルダーで使えます．</p>
           <p>作業を終えるときは原稿を保存し，このアプリを開いている最後のブラウザタブを閉じると，約 5 秒後にアプリも終了します．</p>
           <p>不具合や要望は，ヘルプの<strong>「GitHub Issues を開く」</strong>から送れます．<strong>「アプリの情報」→「環境情報をコピー」</strong>で，バージョン，OS，アプリのアーキテクチャ，配布形態，TeX の利用状況をコピーできます．不具合が起きるまでの操作を添え，コンパイルに関する問題では，ログの該当部分や小さなサンプル原稿も示すと内容を確認しやすくなります．</p>
           <ul class="reading-links">
-            <li><a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest">ダウンロードと変更内容</a></li>
+            <li><a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.7">ダウンロードと変更内容</a></li>
             <li><a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/issues">不具合・要望を送る</a></li>
             <li><a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/blob/main/README.ja.md">README 全文</a></li>
           </ul>
