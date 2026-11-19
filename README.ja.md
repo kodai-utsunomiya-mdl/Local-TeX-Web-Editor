@@ -2,11 +2,13 @@
 
 [English](README.md) | 日本語 · [紹介ページと使い方](https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/ja/)
 
-[![Windows 版をダウンロード](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.4/local-tex-web-editor-0.1.4-windows-x64.zip)
+[![Microsoft Store から無料の Windows 版をインストール](docs/download-store.svg)](https://apps.microsoft.com/detail/9P6QF32N19HG?hl=ja-jp&gl=JP)
 &nbsp;&nbsp;
-[![macOS 版をダウンロード](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.4/local-tex-web-editor-0.1.4-macos-universal.zip)
+[![Windows 版の ZIP をダウンロード](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.5/local-tex-web-editor-0.1.5-windows-x64.zip)
+&nbsp;&nbsp;
+[![macOS 版をダウンロード](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.5/local-tex-web-editor-0.1.5-macos-universal.zip)
 
-**v0.1.4** · [配布ファイルと更新内容](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [利用前の準備](#利用前の準備) · [アプリの容量](#アプリとデータの保存先) · [起動する](#ダウンロードして起動する)
+**v0.1.5** · [配布ファイルと更新内容](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [利用前の準備](#利用前の準備) · [アプリの容量](#アプリとデータの保存先) · [起動する](#ダウンロードして起動する)
 
 Windows と macOS のブラウザで TeX の原稿を編集し，PC にある TeX Live でコンパイルするアプリ．編集画面と PDF を同じウィンドウで確認できる．アプリを起動すると，既定のブラウザで `localhost` の画面が開く．Markdown の編集とプレビューにも対応する．
 
@@ -26,7 +28,7 @@ PDF の連続スクロール，SyncTeX による原稿と PDF の相互移動，
 
 ## 利用前の準備
 
-コンパイルには，PC に導入済みの TeX Live を使う．すでに別のエディタから原稿をコンパイルできている場合は，その TeX Live の場所を指定すればよい．
+コンパイルには，PC に別途導入した TeX Live を使う．すでに別のエディタから原稿をコンパイルできている場合は，その TeX Live の場所を指定すればよい．Markdown の編集とプレビューは TeX Live がなくても使える．
 
 | 項目 | Windows | macOS |
 | --- | --- | --- |
@@ -35,6 +37,8 @@ PDF の連続スクロール，SyncTeX による原稿と PDF の相互移動，
 | TeX の配布物 | [TeX Live](https://tug.org/texlive/windows.html) | [BasicTeX / MacTeX](https://tug.org/mactex/) または必要なパッケージを導入した TeX Live |
 | TeX の場所の例 | `C:\texlive\2025\bin\windows` | `/Library/TeX/texbin` |
 | 原稿 | PC にあるプロジェクトのフォルダー | PC にあるプロジェクトのフォルダー |
+
+Microsoft Store 版には，Windows 10 version 2004 (build 19041) 以降，または Windows 11 の x64 PC が必要である．
 
 macOS 版の最低 OS は，アプリのビルドに使う [Go 1.25 の対応 OS](https://go.dev/doc/go1.25#darwin) に基づく．MacTeX の GUI アプリ向けの TeX の場所は，公式の [What Is Installed](https://tug.org/mactex/What_Is_Installed.pdf) で案内されている．
 
@@ -106,18 +110,29 @@ Mac のターミナルでは次を実行する．
 
 ### Windows
 
+#### Microsoft Store
+
+1. [Microsoft Store の Local TeX Web Editor](https://apps.microsoft.com/detail/9P6QF32N19HG?hl=ja-jp&gl=JP) を開き，無料のアプリをインストールする．
+2. Windows のスタートメニューから **Local TeX Web Editor** を開く．既定のブラウザに編集画面が開く．
+3. 原稿のフォルダーを選ぶ．TeX Live の場所が自動で見つからない場合は，設定に `C:\texlive\2026\bin\windows` など，`latexmk.exe` があるフォルダーを指定する．
+4. コンパイルしたい `.tex` をエディタで開き，「コンパイル」を押す．
+
+インストールとアプリの更新は Microsoft Store が管理する．TeX Live は「[利用前の準備](#利用前の準備)」に従って別途導入する．Markdown の編集とプレビューは TeX Live がなくても使える．
+
+#### ZIP をダウンロードする
+
 1. [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) を開き，最新のバージョンを選ぶ．
-2. **Assets** の `local-tex-web-editor-0.1.4-windows-x64.zip` をダウンロードする．`Source code` は開発用のソースである．
+2. **Assets** の `local-tex-web-editor-0.1.5-windows-x64.zip` をダウンロードする．`Source code` は開発用のソースである．
 3. ZIP を展開し，`local-tex-web-editor.exe` をダブルクリックする．
 4. 開いたブラウザで原稿のフォルダーを選ぶ．フォルダーのパスを入力して開くこともできる．
 5. TeX Live の場所が自動で見つからない場合は，設定に `C:\texlive\2025\bin\windows` など，`latexmk.exe` があるフォルダーを指定する．
 6. コンパイルしたい `.tex` をエディタで開き，「コンパイル」を押す．
 
-Windows の配布ファイルにはコード署名が付いていない．GitHub のリリースから取得したファイルを開く際に SmartScreen の「Windows によって PC が保護されました」が出た場合は，「詳細情報」でアプリ名を確認し，「実行」を選ぶ．[Microsoft の案内](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/publish-first-app) も参照できる．
+Windows の ZIP に含まれる実行ファイルにはコード署名が付いていない．GitHub のリリースから取得したファイルを開く際に SmartScreen の「Windows によって PC が保護されました」が出た場合は，「詳細情報」でアプリ名を確認し，「実行」を選ぶ．[Microsoft の案内](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/publish-first-app) も参照できる．
 
 ### macOS
 
-1. [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) の **Assets** から `local-tex-web-editor-0.1.4-macos-universal.zip` をダウンロードする．Apple Silicon と Intel で共通の ZIP を使う．
+1. [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) の **Assets** から `local-tex-web-editor-0.1.5-macos-universal.zip` をダウンロードする．Apple Silicon と Intel で共通の ZIP を使う．
 2. ZIP を展開し，`Local TeX Web Editor.app` を「アプリケーション」フォルダーへ移す．
 3. Finder や Spotlight から `Local TeX Web Editor` を開く．ブラウザに編集画面が開く．
 4. 原稿のフォルダーを開く．TeX の場所が自動で見つからない場合は，設定に `/Library/TeX/texbin` を指定する．
@@ -135,7 +150,9 @@ macOS 版には Apple Developer ID による署名と notarization が付いて�
 
 ### 更新する
 
-Windows では，新しい ZIP を展開して `.exe` を起動する．異なるバージョンが動いている場合は，起動中のバージョンと今回開いたバージョンが表示される．原稿を保存して旧版を終了すると，新版の画面が開く．設定画面の「アプリのバージョン」と「起動中の実行ファイル」で，動いているアプリを確認できる．
+**Microsoft Store 版**は，Microsoft Store からアプリを更新し，スタートメニューから開く．
+
+**Windows の ZIP 版**では，新しい ZIP を展開して `.exe` を起動する．異なるバージョンが動いている場合は，起動中のバージョンと今回開いたバージョンが表示される．原稿を保存して旧版を終了すると，新版の画面が開く．設定画面の「アプリのバージョン」と「起動中の実行ファイル」で，動いているアプリを確認できる．
 
 Mac では，原稿を保存してアプリを終了し，展開した新しい `Local TeX Web Editor.app` を「アプリケーション」にある旧版と置き換えてから開く．設定と草稿はユーザーの設定フォルダーから読み込む．
 
@@ -143,11 +160,15 @@ Mac では，原稿を保存してアプリを終了し，展開した新しい 
 
 ### スタートメニューやデスクトップから開く (Windows)
 
+**Microsoft Store 版**は，インストール後にスタートメニューから開ける．
+
+**ZIP 版**では，アプリからショートカットを作成できる．
+
 1. アプリの「設定」を開く．
 2. 「起動用のショートカット」で「スタートメニューに追加」または「デスクトップに作成」を押す．
 3. 次回から，スタートメニューで `Local TeX Web Editor` を探すか，デスクトップのショートカットを開く．ブラウザに編集画面が開く．
 
-この操作で，アプリを `%LOCALAPPDATA%\Programs\LocalTeXEditor\local-tex-web-editor.exe` に配置する．ダウンロード時のフォルダーを移動しても，ショートカットから起動できる．設定と草稿は共通の場所から読み込む．
+この操作で，アプリを `%LOCALAPPDATA%\Programs\LocalTeXEditor\local-tex-web-editor.exe` に配置する．ダウンロード時のフォルダーを移動しても，ショートカットから起動できる．ZIP 版の各コピーは，設定と草稿を共通の場所から読み込む．
 
 実行ファイル，ショートカット，ブラウザのタブには，緑の背景に白い TeX の専用アイコンを使う．
 
@@ -259,20 +280,26 @@ PDF はページをまたいで連続してスクロールできる．表示中�
 
 ## アプリとデータの保存先
 
-**v0.1.4** の配布ファイルの容量．1 MB = 1,000,000 bytes とし，MB 単位に丸めている．
+**v0.1.5** の配布ファイルの容量．1 MB = 1,000,000 bytes とし，MB 単位に丸めている．
 
 | 対応環境 | ダウンロードする ZIP | 展開後のアプリ本体 |
 | --- | ---: | ---: |
 | Windows x64 | 約 **8 MB** | 約 **16 MB** (`.exe`) |
 | macOS，Apple Silicon + Intel | 約 **15 MB** | 約 **32 MB** (`.app`) |
 
-ZIP には README，画像，ライセンスも含む．Mac のアプリは両方の CPU 向けの実行ファイルを収録している．冒頭のボタンから対応する配布ファイルを取得できる．
+ZIP には README，画像，ライセンスも含む．Mac のアプリは両方の CPU 向けの実行ファイルを収録している．冒頭の Windows ZIP と macOS のボタンから，対応する配布ファイルを取得できる．
 
 編集画面に必要な JavaScript，PDF.js の worker，フォントなどはアプリに含む．ブラウザと TeX Live は PC にあるものを使う．配布ファイルには TeX Live，ブラウザのエンジン，Python，Node.js は含まない．
 
-利用中は，原稿，追加した TeX パッケージ，草稿，生成した PDF などの容量も必要になる．コンパイル時のファイルは各プロジェクトの `.local-tex-editor/build` 以下に作られ，容量は原稿や図によって変わる．ダウンロードした ZIP は展開後に削除できる．Windows のスタートメニューやデスクトップにショートカットを作成すると，上で説明したアプリ用フォルダーに実行ファイルをコピーする．一度アプリを終了し，ショートカットから起動できることを確認した後は，ダウンロードを展開したフォルダーも削除できる．
+利用中は，原稿，追加した TeX パッケージ，草稿，生成した PDF などの容量も必要になる．コンパイル時のファイルは各プロジェクトの `.local-tex-editor/build` 以下に作られ，容量は原稿や図によって変わる．ダウンロードした ZIP は展開後に削除できる．Windows の ZIP 版でスタートメニューやデスクトップにショートカットを作成すると，上で説明したアプリ用フォルダーに実行ファイルをコピーする．一度アプリを終了し，ショートカットから起動できることを確認した後は，ダウンロードを展開したフォルダーも削除できる．
 
-設定，草稿，前回の表示位置，表示用の PDF と SyncTeX のコピーは，Windows では `%APPDATA%\LocalTeXEditor`，Mac では `~/Library/Application Support/LocalTeXEditor` に保存する．原稿そのものは，選択したプロジェクトのフォルダーへ保存する．PDF のコピーを使うことで，TeX が書き込み中の PDF と表示中の PDF が競合する状況を防ぐ．
+設定，草稿，前回の表示位置，表示用の PDF と SyncTeX のコピーは，次のフォルダーに保存する．
+
+- **Microsoft Store 版:** アプリのパッケージの `LocalState\LocalTeXEditor` フォルダー．[完全なパスと移行の説明](docs/microsoft-store.md#installation-and-data) を参照できる．
+- **Windows の ZIP 版:** `%APPDATA%\LocalTeXEditor`．
+- **macOS:** `~/Library/Application Support/LocalTeXEditor`．
+
+Store 版の初回起動時には，ZIP 版に有効な設定，草稿，表示位置のデータがあれば，Store 版のデータフォルダーへコピーする．ZIP 版の元のデータは，元のフォルダーに残る．原稿そのものは，選択したプロジェクトのフォルダーへ保存する．PDF のコピーを使うことで，TeX が書き込み中の PDF と表示中の PDF が競合する状況を防ぐ．
 
 接続は `127.0.0.1` などの loopback のアドレスに限定する．起動ごとに生成する token を使い，ファイルの読み書きとコンパイルの API を呼び出す．
 
@@ -296,7 +323,7 @@ go build -o bin/local-tex-web-editor.exe ./cmd/local-tex-editor
 Windows 用の配布ファイルは次のコマンドで作成する．
 
 ```sh
-go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.4" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
+go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.5" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
 ```
 
 `build:windows-resources` は同梱の ICO から Windows x64 用の resource を生成する．実行ファイルのビルド時に，16〜256 px の 9 サイズのアイコンが組み込まれる．
@@ -312,7 +339,7 @@ npx playwright install chromium
 node scripts/build-macos.mjs
 ```
 
-`dist/local-tex-web-editor-0.1.4-macos-universal.zip` に，Apple Silicon と Intel で動く `.app`，日英の README，ライセンスを収録する．
+`dist/local-tex-web-editor-0.1.5-macos-universal.zip` に，Apple Silicon と Intel で動く `.app`，日英の README，ライセンスを収録する．
 
 起動時のオプション:
 

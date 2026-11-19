@@ -1,12 +1,12 @@
 # Microsoft Store distribution
 
-The Windows application is packaged as MSIX for Microsoft Store. It opens the same browser editor and runs the TeX installation already on the computer. Store installation requires Windows 10 version 2004 (build 19041) or later, or Windows 11, on an x64 PC.
+Local TeX Web Editor is available for free in [Microsoft Store](https://apps.microsoft.com/detail/9P6QF32N19HG) (Store ID: `9P6QF32N19HG`). The Windows application is packaged as MSIX for Store distribution. It opens the same browser editor and runs the TeX installation already on the computer. Store installation requires Windows 10 version 2004 (build 19041) or later, or Windows 11, on an x64 PC.
 
 ## Product identity
 
-Start the free individual registration flow at [storedeveloper.microsoft.com](https://storedeveloper.microsoft.com/). The account owner completes Microsoft's identity verification and reserves the app name **Local TeX Web Editor** in Partner Center. [Microsoft's registration instructions](https://learn.microsoft.com/en-us/windows/apps/publish/whats-new-individual-developer)
+For initial developer registration, start the free individual registration flow at [storedeveloper.microsoft.com](https://storedeveloper.microsoft.com/). The account owner completes Microsoft's identity verification and reserves the app name **Local TeX Web Editor** in Partner Center. [Microsoft's registration instructions](https://learn.microsoft.com/en-us/windows/apps/publish/whats-new-individual-developer)
 
-Open the product's **Product identity** page and copy these values into [store-identity.json](../packaging/windows/store-identity.json):
+The published app uses the identity configured in [store-identity.json](../packaging/windows/store-identity.json). When preparing a new product, copy these values from its **Product identity** page in Partner Center:
 
 | Partner Center value | JSON key |
 | --- | --- |
@@ -62,7 +62,7 @@ Microsoft requires a nonzero first part and reserves the last part for Store use
 Windows creates the Start menu entry and manages Store updates. The Store edition does not create an extra copy of the executable for desktop shortcuts. It stores its settings and drafts at:
 
 ```text
-%LOCALAPPDATA%\Packages\<package-family-name>\LocalState\LocalTeXEditor
+%LOCALAPPDATA%\Packages\KodaiUtsunomiya.LocalTeXWebEditor_q701qfpryzpqc\LocalState\LocalTeXEditor
 ```
 
 On the first launch, existing ZIP-edition settings, drafts and view preferences are copied from `%APPDATA%\LocalTeXEditor` when those files are available and valid. The original data remains in place. Store updates use the same package family and user-data folder. Project documents stay in their existing folders.
@@ -80,4 +80,4 @@ In Partner Center, set the price to Free, complete the product properties and ag
 - [English](https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/privacy/)
 - [日本語](https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/ja/privacy/)
 
-After the product is published, use its assigned Microsoft Store product URL for the website's Store download link. [Microsoft's submission instructions](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/create-app-submission)
+The public download page is [Local TeX Web Editor in Microsoft Store](https://apps.microsoft.com/detail/9P6QF32N19HG). Use this product URL in the website and README when directing users to the Store edition. [Microsoft's submission instructions](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/create-app-submission)

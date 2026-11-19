@@ -2,11 +2,13 @@
 
 English | [日本語](README.ja.md) · [Website and guide](https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/)
 
-[![Download for Windows](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.4/local-tex-web-editor-0.1.4-windows-x64.zip)
+[![Get the free Windows app from Microsoft Store](docs/download-store.svg)](https://apps.microsoft.com/detail/9P6QF32N19HG)
 &nbsp;&nbsp;
-[![Download for macOS](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.4/local-tex-web-editor-0.1.4-macos-universal.zip)
+[![Download Windows ZIP](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.5/local-tex-web-editor-0.1.5-windows-x64.zip)
+&nbsp;&nbsp;
+[![Download for macOS](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.5/local-tex-web-editor-0.1.5-macos-universal.zip)
 
-**v0.1.4** · [All downloads and release notes](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [Requirements](#requirements) · [App size](#app-files-and-storage) · [Get started](#download-and-launch)
+**v0.1.5** · [All downloads and release notes](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [Requirements](#requirements) · [App size](#app-files-and-storage) · [Get started](#download-and-launch)
 
 Edit TeX documents in your browser on Windows or macOS, and compile them with TeX Live on your computer. The editor and PDF preview appear in the same window. Launching the app opens a `localhost` page in your default browser. Markdown editing and preview are also supported.
 
@@ -26,7 +28,7 @@ Continuous PDF scrolling, SyncTeX, and Markdown preview support writing and revi
 
 ## Requirements
 
-Compilation uses TeX Live installed on your computer. If you can already compile your project in another editor, select that same TeX Live installation in Settings.
+Compilation uses TeX Live installed separately on your computer. If you can already compile your project in another editor, select that same TeX Live installation in Settings. Markdown editing and preview work without TeX Live.
 
 | Requirement | Windows | macOS |
 | --- | --- | --- |
@@ -35,6 +37,8 @@ Compilation uses TeX Live installed on your computer. If you can already compile
 | TeX distribution | [TeX Live](https://tug.org/texlive/windows.html) | [BasicTeX / MacTeX](https://tug.org/mactex/), or TeX Live with the packages your project needs |
 | Example TeX folder | `C:\texlive\2025\bin\windows` | `/Library/TeX/texbin` |
 | Documents | A project folder on your computer | A project folder on your computer |
+
+The Microsoft Store edition requires Windows 10 version 2004 (build 19041) or later, or Windows 11, on an x64 PC.
 
 The macOS requirement follows the [operating systems supported by Go 1.25](https://go.dev/doc/go1.25#darwin), which is used to build the app. MacTeX documents `/Library/TeX/texbin` as the TeX location for GUI applications in [What Is Installed](https://tug.org/mactex/What_Is_Installed.pdf).
 
@@ -106,18 +110,29 @@ When these commands display their version or usage information, select the same 
 
 ### Windows
 
+#### Microsoft Store
+
+1. Open [Local TeX Web Editor in Microsoft Store](https://apps.microsoft.com/detail/9P6QF32N19HG) and install the free app.
+2. Launch **Local TeX Web Editor** from the Windows Start menu. The editor opens in your default browser.
+3. Choose your project folder. If TeX Live is not found automatically, open Settings and select the folder containing `latexmk.exe`, for example `C:\texlive\2026\bin\windows`.
+4. Open the `.tex` document you want to compile and click **Compile**.
+
+Microsoft Store manages installation and app updates. TeX Live is installed separately as described under [Requirements](#requirements). Markdown editing and preview work without TeX Live.
+
+#### ZIP download
+
 1. Open [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) and select the latest version.
-2. Under **Assets**, download `local-tex-web-editor-0.1.4-windows-x64.zip`. The **Source code** archives contain the files for development.
+2. Under **Assets**, download `local-tex-web-editor-0.1.5-windows-x64.zip`. The **Source code** archives contain the files for development.
 3. Extract the ZIP and double-click `local-tex-web-editor.exe`.
 4. In the browser window, choose your project folder. You can also enter its path.
 5. If TeX Live is not found automatically, open Settings and select the folder containing `latexmk.exe`, for example `C:\texlive\2025\bin\windows`.
 6. Open the `.tex` document you want to compile and click **Compile**.
 
-The Windows executable does not have a code signature. If SmartScreen displays **Windows protected your PC** when opening the file downloaded from this repository's release, select **More info**, check the app name, and choose **Run anyway**. See [Microsoft's guidance](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/publish-first-app).
+The Windows executable in the ZIP download does not have a code signature. If SmartScreen displays **Windows protected your PC** when opening the file downloaded from this repository's release, select **More info**, check the app name, and choose **Run anyway**. See [Microsoft's guidance](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/publish-first-app).
 
 ### macOS
 
-1. Under **Assets** in [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases), download `local-tex-web-editor-0.1.4-macos-universal.zip`. The same ZIP supports Apple Silicon and Intel.
+1. Under **Assets** in [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases), download `local-tex-web-editor-0.1.5-macos-universal.zip`. The same ZIP supports Apple Silicon and Intel.
 2. Extract the ZIP and move `Local TeX Web Editor.app` to **Applications**.
 3. Open **Local TeX Web Editor** from Finder or Spotlight. The editor opens in your browser.
 4. Open your project folder. If TeX is not found automatically, select `/Library/TeX/texbin` in Settings.
@@ -135,7 +150,9 @@ You can also use the exit button at the top right. If there are unsaved edits, c
 
 ### Update the app
 
-On Windows, extract the new ZIP and launch its `.exe`. If another version is running, the app shows both the running version and the version you just launched. Save your documents and exit the old version to open the new one. Settings shows the app version and the path of the running executable.
+For the **Microsoft Store edition**, use Microsoft Store to install app updates, then open the app from the Start menu.
+
+For the **Windows ZIP edition**, extract the new ZIP and launch its `.exe`. If another version is running, the app shows both the running version and the version you just launched. Save your documents and exit the old version to open the new one. Settings shows the app version and the path of the running executable.
 
 On Mac, save your documents and exit the app, replace the old copy in **Applications** with the new `Local TeX Web Editor.app`, then open it. Settings and drafts are loaded from your user configuration folder.
 
@@ -143,11 +160,15 @@ Launching the same version again connects to the existing editor. A project lock
 
 ### Launch from the Start menu or desktop (Windows)
 
+The **Microsoft Store edition** appears in the Start menu after installation.
+
+For the **ZIP edition**, create a shortcut from the app:
+
 1. Open **Settings**.
 2. Under **App shortcuts**, click **Add to Start menu** or **Create on desktop**.
 3. Next time, find **Local TeX Web Editor** in the Start menu or open the desktop shortcut. The app and browser will open.
 
-This places the app at `%LOCALAPPDATA%\Programs\LocalTeXEditor\local-tex-web-editor.exe`. The shortcut continues to work if you move the original download folder. All copies use the same settings and drafts.
+This places the app at `%LOCALAPPDATA%\Programs\LocalTeXEditor\local-tex-web-editor.exe`. The shortcut continues to work if you move the original download folder. Copies of the ZIP edition use the same settings and drafts.
 
 The executable, shortcuts, and browser tab use a white TeX icon on a green background.
 
@@ -259,20 +280,26 @@ The app does not impose a compilation time limit. Use the stop button to stop a 
 
 ## App files and storage
 
-Sizes for **v0.1.4**, rounded to the nearest MB (1 MB = 1,000,000 bytes):
+Sizes for **v0.1.5**, rounded to the nearest MB (1 MB = 1,000,000 bytes):
 
 | Platform | ZIP download | App after extraction |
 | --- | ---: | ---: |
 | Windows x64 | About **8 MB** | About **16 MB** (`.exe`) |
 | macOS, Apple Silicon + Intel | About **15 MB** | About **32 MB** (`.app`) |
 
-The ZIP also includes the README files, screenshots, and licenses. The macOS app contains both CPU versions. The download buttons above link to these release files.
+The ZIP also includes the README files, screenshots, and licenses. The macOS app contains both CPU versions. The Windows ZIP and macOS download buttons above link to these release files.
 
 The app includes the JavaScript, PDF.js worker, fonts, and other files needed by the editor. It uses the browser and TeX Live installed on your computer. TeX Live, a browser engine, Python, and Node.js are not included in the download.
 
-Disk usage also grows with your project files, TeX packages, drafts, and generated PDFs. Compilation files are written under `.local-tex-editor/build` in each project; their size depends on the document and its figures. The ZIP can be deleted after extraction. Creating a Windows Start menu or desktop shortcut copies the executable to the application folder described above. After closing the app and checking that the shortcut opens it, the extracted download folder can be deleted as well.
+Disk usage also grows with your project files, TeX packages, drafts, and generated PDFs. Compilation files are written under `.local-tex-editor/build` in each project; their size depends on the document and its figures. The ZIP can be deleted after extraction. Creating a Start menu or desktop shortcut in the Windows ZIP edition copies the executable to the application folder described above. After closing the app and checking that the shortcut opens it, the extracted download folder can be deleted as well.
 
-Settings, drafts, previous view positions, and copies of the PDF and SyncTeX data are stored in `%APPDATA%\LocalTeXEditor` on Windows or `~/Library/Application Support/LocalTeXEditor` on Mac. Source files are saved in the project folder you selected. Using a copy of the PDF lets you keep reading while TeX writes the next version.
+Settings, drafts, previous view positions, and copies of the PDF and SyncTeX data use these folders:
+
+- **Microsoft Store edition:** the app package's `LocalState\LocalTeXEditor` folder. See [the full path and migration details](docs/microsoft-store.md#installation-and-data).
+- **Windows ZIP edition:** `%APPDATA%\LocalTeXEditor`.
+- **macOS:** `~/Library/Application Support/LocalTeXEditor`.
+
+On the first launch, the Store edition imports valid settings, drafts, and view preferences from the ZIP edition when available. The ZIP edition's original data stays in its folder. Source files are saved in the project folder you selected. Using a copy of the PDF lets you keep reading while TeX writes the next version.
 
 The server listens only on a loopback address such as `127.0.0.1`. File and compilation APIs use a token generated when the app starts.
 
@@ -296,7 +323,7 @@ go build -o bin/local-tex-web-editor.exe ./cmd/local-tex-editor
 Build a Windows distribution executable:
 
 ```sh
-go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.4" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
+go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.5" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
 ```
 
 `build:windows-resources` generates Windows x64 resources from the bundled ICO. The executable embeds nine icon sizes from 16 to 256 px.
@@ -312,7 +339,7 @@ npx playwright install chromium
 node scripts/build-macos.mjs
 ```
 
-This creates `dist/local-tex-web-editor-0.1.4-macos-universal.zip` with an app supporting Apple Silicon and Intel, the English and Japanese READMEs, and license files.
+This creates `dist/local-tex-web-editor-0.1.5-macos-universal.zip` with an app supporting Apple Silicon and Intel, the English and Japanese READMEs, and license files.
 
 Command-line options:
 
