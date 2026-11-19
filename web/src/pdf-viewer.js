@@ -2,6 +2,7 @@ import { t, getLanguage, onLanguageChange } from './i18n.js';
 import * as pdfjs from 'pdfjs-dist/build/pdf.mjs';
 import { EventBus, PDFViewer as DocumentViewer, PDFLinkService, LinkTarget, RenderingStates } from 'pdfjs-dist/web/pdf_viewer.mjs';
 import { PDFSearch } from './pdf-search.js';
+import { zoomPDFAt } from './pdf-zoom.js';
 
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 const cancelled = error => /RenderingCancelledException|AbortException/.test(error?.name || '') || /destroyed|cancelled/i.test(error?.message || '');
@@ -288,42 +289,7 @@ export class PDFViewer {
   }
 
   zoomAt(origin, changeScale) {
-    const container = this.elements.scroll;
-    if (!this.ready || !container.clientWidth || !container.clientHeight) return;
-    const bounds = container.getBoundingClientRect();
-    const left = bounds.left + container.clientLeft;
-    const top = bounds.top + container.clientTop;
-    const x = origin?.[0] ?? left + container.clientWidth / 2;
-    const y = origin?.[1] ?? top + container.clientHeight / 2;
-    let element = document.elementFromPoint(x, y)?.closest('.page[data-page-number]');
-    if (!element || !this.elements.stage.contains(element)) {
-      // In a gap or margin, use the nearest page as the reference.
-      element = null;
-      let distance = Infinity;
-      for (const candidate of this.elements.stage.querySelectorAll('.page[data-page-number]')) {
-        const rect = candidate.getBoundingClientRect();
-        const next = Math.hypot(Math.max(rect.left - x, 0, x - rect.right), Math.max(rect.top - y, 0, y - rect.bottom));
-        if (next < distance) { element = candidate; distance = next; }
-      }
-    }
-    const view = element && this.pageViewer.getPageView(Number(element.dataset.pageNumber) - 1);
-    const surface = element?.querySelector('.canvasWrapper') || element;
-    const before = surface?.getBoundingClientRect();
-    const point = view && before?.width && before?.height
-      ? view.viewport.convertToPdfPoint((x - before.left) * view.viewport.width / before.width, (y - before.top) * view.viewport.height / before.height)
-      : null;
-    changeScale();
-    if (point) {
-      // Page margins change when a page grows wider than the preview. Measure
-      // the same PDF point after scaling so it stays under the viewing origin.
-      const after = surface.getBoundingClientRect();
-      const [nextX, nextY] = view.viewport.convertToViewportPoint(...point);
-      const targetX = origin ? x : left + container.clientWidth / 2;
-      const targetY = origin ? y : top + container.clientHeight / 2;
-      container.scrollLeft += after.left + nextX * after.width / view.viewport.width - targetX;
-      container.scrollTop += after.top + nextY * after.height / view.viewport.height - targetY;
-    }
-    this.pageViewer.update();
+    if (this.ready) zoomPDFAt(this.pageViewer, changeScale, origin);
   }
 
   refreshLayout() {

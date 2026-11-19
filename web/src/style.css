@@ -452,3 +452,87 @@ body.resizing * { cursor: inherit !important; user-select: none !important; }
 [data-theme="dark"] .mobile-view-switch .selected { background: var(--hover); color: var(--accent); }
 [data-theme="dark"] #draft-status[data-status="saved"] { color: #71c9ab; }
 @media (max-width: 640px) { .recovery-banner { padding-inline: 10px; } }
+
+/* Appearance settings use the same colors across the workbench and dialogs. */
+:root[data-palette] { color: var(--text); background: var(--background); }
+:root[data-palette] :is(.button, .pane-title, .editor-pane, .status-bar, .dialog) { background: var(--surface); color: var(--text); }
+:root[data-palette] :is(.file-pane, .file-title, .sidebar-heading, .editor-toolbar, .editor-tabs, .editor-tab, .pdf-toolbar, .mobile-view-switch) { background: var(--subtle); }
+:root[data-palette] :is(input[type="text"], input[type="search"], input[type="number"], select, textarea) { color: var(--text); background: var(--input-surface); border-color: var(--border-strong); }
+:root[data-palette] input::placeholder { color: var(--muted); }
+:root[data-palette] :is(button, input, select, textarea, [tabindex]):focus-visible { outline-color: var(--accent); }
+:root[data-palette] .button:not(:disabled):hover { background: var(--hover); border-color: var(--border-strong); }
+:root[data-palette] .button-subtle { background: transparent; border-color: transparent; color: var(--secondary); }
+:root[data-palette] .button-subtle:not(:disabled):hover { background: var(--hover); border-color: transparent; color: var(--text); }
+:root[data-palette] :is(.button-primary, .brand-mark) { color: #fff; background: var(--accent-button); border-color: var(--accent-button); }
+:root[data-palette] .button-primary:not(:disabled):hover { color: #fff; background: var(--accent-dark); border-color: var(--accent-dark); }
+:root[data-palette] .button-primary kbd { color: #fff; opacity: .85; }
+:root[data-palette] .button-stop { color: var(--danger); background: var(--danger-bg); border-color: var(--danger-border); }
+:root[data-palette] .icon-button { color: var(--muted); }
+:root[data-palette] .icon-button:not(:disabled):hover { background: var(--hover); color: var(--text); }
+:root[data-palette] :is(.file-button, .tree-directory > summary, .recent-project, .pane-title h2, .editor-heading h2, .main-document, .field-label, .conflict-columns label) { color: var(--secondary); }
+:root[data-palette] :is(.file-button:not(:disabled):hover, .tree-directory > summary:hover, .recent-project:hover) { background: var(--hover); color: var(--text); }
+:root[data-palette] .file-button.active { color: var(--accent); background: var(--accent-soft); }
+:root[data-palette] .file-button.active .file-type { color: var(--accent); }
+:root[data-palette] .editor-tab.active { background: var(--surface); border-top-color: var(--accent); }
+:root[data-palette] .editor-tab.active .tab-select { color: var(--accent); }
+:root[data-palette] :is(.editor-tabs, .editor-tab, .pdf-toolbar, .dialog, .count-badge) { border-color: var(--border); }
+:root[data-palette] .count-badge { color: var(--muted); background: var(--hover); }
+:root[data-palette] :is(.welcome-description, .welcome-note, .field-help, .dialog-description, .tab-select, .file-footer, .recent-project span, .tree-empty, .editor-empty, .pdf-empty, .pdf-empty h3, .page-control, kbd) { color: var(--muted); }
+:root[data-palette] .welcome-mark { border-color: var(--border-strong); }
+:root[data-palette] .editor-host .cm-editor { background: var(--surface); color: var(--text); }
+:root[data-palette] .editor-host .cm-scroller { font-family: var(--editor-font-family); scrollbar-color: var(--border-strong) transparent; }
+:root[data-palette] .editor-host .cm-content { caret-color: var(--accent); }
+:root[data-palette] .editor-host .cm-cursor { border-left-color: var(--accent); }
+:root[data-palette] .editor-host .cm-gutters { background: var(--surface); color: var(--gutter); }
+:root[data-palette] .editor-host :is(.cm-activeLine:not(.synctex-line), .cm-activeLineGutter) { background: var(--line-highlight); }
+:root[data-palette] .editor-host .cm-activeLineGutter { color: var(--secondary); }
+:root[data-palette] .editor-host .cm-panels { background: var(--subtle); color: var(--secondary); }
+:root[data-palette] .editor-host .source-search textarea.source-search-field { background: var(--input-surface); color: var(--text); font-family: var(--editor-font-family); }
+:root[data-palette] .editor-host .source-search textarea[aria-invalid="true"] { border-color: var(--danger); }
+:root[data-palette] .editor-host .source-search button { background: var(--surface); color: var(--text); }
+:root[data-palette] .editor-host .source-search button[name="close"] { background: transparent; }
+:root[data-palette] .editor-host .source-search button:hover { background: var(--hover); }
+:root[data-palette] .editor-host .cm-tooltip { color: var(--text); background: var(--surface); border-color: var(--border-strong); }
+:root[data-palette] .editor-host .cm-tooltip-autocomplete ul li[aria-selected] { color: var(--accent); background: var(--accent-soft); }
+:root[data-palette] .panel-splitter { background: var(--hover); }
+:root[data-palette] :is(.panel-splitter:hover, .panel-splitter.dragging, .panel-splitter:focus-visible) { background: var(--selection); }
+:root[data-palette] .panel-splitter::after { border-color: var(--border-strong); }
+:root[data-palette] .pdf-pane { background: var(--preview-surface); }
+:root[data-palette] .pdf-loading { color: var(--secondary); background: var(--surface); border-color: var(--border); }
+:root[data-palette] .paper-placeholder { background: var(--subtle); border-color: var(--border-strong); box-shadow: 3px 4px 0 var(--border); }
+:root[data-palette] .paper-placeholder i { background: var(--border-strong); }
+:root[data-palette] .log-panel { background: var(--input-surface); }
+:root[data-palette] .build-log { color: var(--secondary); scrollbar-color: var(--border-strong) transparent; }
+:root[data-palette] :is(.file-tree, .outline-tree, .pdf-scroll, .markdown-preview) { scrollbar-color: var(--border-strong) transparent; }
+:root[data-palette] .conflict-columns textarea { background: var(--input-surface); color: var(--text); }
+:root[data-palette] .mobile-view-switch .selected { background: var(--surface); color: var(--accent); }
+:root[data-palette] .markdown-body :is(pre, code) { background: var(--code-surface); }
+:root[data-palette] .markdown-body pre code { background: transparent; }
+:root[data-palette] .markdown-body ::selection { background: var(--selection); color: inherit; }
+:root[data-palette] .markdown-body .markdown-source-highlight { background-color: var(--line-highlight); }
+:root[data-palette] :is(input, textarea)::selection { background: var(--selection); color: var(--text); }
+
+.appearance-entry { display: flex; align-items: center; gap: 16px; padding-top: 18px; border-top: 1px solid var(--border); }
+.appearance-entry > div { flex: 1 1 auto; }
+.appearance-entry .field-label { margin-bottom: 0; }
+.appearance-entry > button { flex: 0 0 auto; }
+.appearance-dialog { width: min(580px, calc(100vw - 32px)); }
+.appearance-help { margin-top: -8px; font-size: 11px; }
+.appearance-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 20px; }
+.appearance-options .field-group { min-width: 0; margin-top: 20px; }
+.appearance-options select { min-height: 40px; }
+.appearance-colors { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 20px; margin: 22px 0 0; }
+.appearance-colors dt { color: var(--secondary); font-size: 11px; }
+.appearance-colors dd { display: flex; align-items: center; gap: 9px; margin: 8px 0 0; font: 12px/1.5 ui-monospace, monospace; }
+.appearance-swatch { display: inline-block; width: 28px; height: 28px; border: 1px solid var(--border-strong); border-radius: 5px; }
+.appearance-preview { margin: 20px 0 12px; overflow: hidden; border: 1px solid var(--border-strong); border-radius: 7px; background: var(--surface); }
+.appearance-preview-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 13px; color: var(--secondary); background: var(--subtle); border-bottom: 1px solid var(--border); font-size: 11px; }
+.appearance-preview-accent { color: #fff; background: var(--accent-button); border-radius: 4px; padding: 4px 8px; }
+.appearance-sample { color: var(--text); padding: 15px; margin: 0; font: var(--editor-font-size)/1.75 var(--editor-font-family); white-space: pre-wrap; overflow-wrap: anywhere; }
+.appearance-dialog .dialog-actions { margin-top: 20px; }
+@media (max-width: 460px) {
+  .appearance-entry { align-items: flex-start; flex-direction: column; gap: 10px; }
+  .appearance-options { gap: 0 12px; }
+  .appearance-options select { padding-inline: 8px; }
+  .appearance-dialog { padding: 23px 20px 18px; }
+}

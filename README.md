@@ -178,7 +178,7 @@ Launching the `.exe` from a new ZIP updates the installed copy and the Start men
 
 The interface starts in **English**. Use **Settings → Language → 日本語** to switch to Japanese. Your language choice is saved for future sessions. This setting changes the app's controls and messages; documents, PDFs, and Markdown content are displayed as written.
 
-Open `.tex`, `.bib`, and other files from the file list on the left. Each file opens in a tab. Use the theme button at the top right to switch between light and dark mode. Settings lets you choose an editor font size from 8 to 40 px; the default is 14 px. The theme and font size are saved for future sessions.
+Open `.tex`, `.bib`, and other files from the file list on the left. Each file opens in a tab. Settings lets you choose an editor font size from 8 to 40 px; the default is 14 px. The font size is saved for future sessions.
 
 Drag the right edge of the file list or outline to change its width, the divider between the editor and preview to change their widths, or the top edge of the log to change its height. You can also focus a divider with `Tab` and use the left/right or up/down arrow keys. Double-click a divider to restore its default position. Your chosen sizes are saved for future sessions and adjusted to fit smaller windows.
 
@@ -203,6 +203,14 @@ On Mac, use `Cmd` in place of `Ctrl` for saving, searching, compiling, and the S
 The search and replacement fields accept newlines and TeX backslashes as entered. Press `Enter` for the next match, `Shift + Enter` for the previous match, and `Ctrl + Enter` to insert a newline in a field. A checkbox enables regular expressions. Close the search panel with its **×** button or press `Esc` while a search field has focus.
 
 Changing the font size or theme leaves the document content and compiled PDF unchanged. The notice to recompile appears when source files or compilation settings have changed.
+
+### Choose the appearance
+
+Open **Settings → Appearance** to choose **System**, **Light**, or **Dark** mode, a **Default**, **Gray**, or **Warm** color scheme, an accent color, and the editor font. **System** follows your computer's light/dark preference. The dialog shows the editor's background and text colors with a sample of the selected appearance.
+
+Changes appear immediately. Choose **Save appearance** to use them in future sessions. **Cancel**, `Esc`, or **×** restores the appearance you had when opening the dialog. **Reset appearance** previews the defaults; choose **Save appearance** to apply them.
+
+The theme button at the top right switches directly between light and dark mode and continues to use your selected color scheme, accent, and font. If the selected font is unavailable on your computer, the editor uses the default monospace font.
 
 ### Autosave and returning to your work
 

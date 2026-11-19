@@ -262,6 +262,28 @@ async function setAutoSave(page, enabled) {
   await expect(page.getByTestId('autosave-setting')).not.toBeVisible();
 }
 
+async function openAppearance(page) {
+  await page.getByTestId('settings-button').click();
+  await page.locator('#open-appearance').click();
+  await expect(page.locator('#appearance-dialog')).toBeVisible();
+}
+
+async function closeSettings(page) {
+  await page.locator('#settings-dialog [data-close-dialog="settings-dialog"]').last().click();
+  await expect(page.locator('#settings-dialog')).not.toBeVisible();
+}
+
+async function readEditorAppearance(page) {
+  return page.evaluate(() => {
+    const root = document.documentElement;
+    const editor = getComputedStyle(document.querySelector('#editor .cm-content'));
+    return { theme: root.dataset.theme, palette: root.dataset.palette, accent: root.dataset.accent,
+      accentColor: getComputedStyle(root).getPropertyValue('--accent').trim(),
+      headerBackground: getComputedStyle(document.querySelector('.app-header')).backgroundColor,
+      editorColor: editor.color, editorFont: editor.fontFamily };
+  });
+}
+
 function redactOutput(text, token) {
   return token ? text.replaceAll(token, '[local session token]') : text;
 }
@@ -991,7 +1013,7 @@ test('フォルダーから画像と PDF を開き，編集中の原稿へ戻る
   await mkdir(path.join(figures, 'empty'), { recursive: true });
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNQaXjwHwAE1AKEf31AsgAAAABJRU5ErkJggg==', 'base64');
   await writeFile(path.join(figures, '図.png'), png);
-  await writeFile(path.join(figures, 'plot.pdf'), exampleFigurePDF());
+  await writeFile(path.join(figures, 'plot.pdf'), pdfWithTallPage());
   await writeFile(path.join(figures, 'shape.svg'), '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="160"><rect width="320" height="160" fill="#137b72"/><text x="30" y="85" fill="white" font-size="28">Figure</text></svg>');
   const metadata = await openProject(session);
   expect(metadata.project.directories).toEqual(expect.arrayContaining(['figures', 'figures/empty']));
@@ -1019,6 +1041,26 @@ test('フォルダーから画像と PDF を開き，編集中の原稿へ戻る
   await page.getByTestId('file-figures/plot.pdf').click();
   await expect(page.locator('#asset-preview canvas').first()).toBeVisible();
   await expect.poll(() => page.locator('#asset-preview canvas').first().evaluate(canvas => canvas.width)).toBeGreaterThan(100);
+  await page.locator('#asset-zoom').selectOption('1');
+  const assetPage = page.locator('#asset-pdf-stage .page[data-page-number="1"] .canvasWrapper');
+  await assetPage.evaluate(element => {
+    const page = element.getBoundingClientRect();
+    const scroll = document.getElementById('asset-scroll');
+    const viewport = scroll.getBoundingClientRect();
+    scroll.scrollLeft += page.left + page.width / 2 - viewport.left - scroll.clientLeft - scroll.clientWidth / 2;
+    scroll.scrollTop += page.top + page.height / 2 - viewport.top - scroll.clientTop - scroll.clientHeight / 2;
+  });
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  const assetWidth = await assetPage.evaluate(element => element.getBoundingClientRect().width);
+  await page.locator('#asset-zoom-in').click();
+  await expect.poll(() => assetPage.evaluate(element => element.getBoundingClientRect().width)).toBeGreaterThan(assetWidth);
+  await expect.poll(() => assetPage.evaluate(element => {
+    const page = element.getBoundingClientRect();
+    const scroll = document.getElementById('asset-scroll');
+    const viewport = scroll.getBoundingClientRect();
+    return Math.max(Math.abs(page.left + page.width / 2 - viewport.left - scroll.clientLeft - scroll.clientWidth / 2),
+      Math.abs(page.top + page.height / 2 - viewport.top - scroll.clientTop - scroll.clientHeight / 2));
+  })).toBeLessThan(4);
   await page.locator('#editor-tabs [data-path="main.tex"]').click();
   await expect(page.getByTestId('editor')).toBeVisible();
   await expect(page.getByTestId('editor')).toHaveAttribute('data-line', line);
@@ -1506,6 +1548,160 @@ test('ウィンドウを小さくしても，原稿とログを操作できる�
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.locator('#sidebar-toggle').click();
   await expect.poll(async () => Math.abs((await readPanelLayout(page)).sidebar.width - wide.sidebar.width)).toBeLessThan(2);
+  expect(errors).toEqual([]);
+});
+
+test('外観の配色，アクセント，原稿フォントを保存し，再起動後も編集と PDF を使える', async ({ page, context, session }, testInfo) => {
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await openProject(session);
+  await openEditor(page, session);
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  const original = (await readFile(path.join(session.project, 'main.tex'), 'utf8')).replaceAll('\r\n', '\n');
+  await openAppearance(page);
+  await page.locator('#appearance-mode').selectOption('light');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  const defaultLight = await readEditorAppearance(page);
+  await page.locator('#appearance-palette').selectOption('warm');
+  await page.locator('#appearance-accent').selectOption('purple');
+  await page.locator('#appearance-font').selectOption('monospace');
+  const saved = await readEditorAppearance(page);
+  expect(saved).toMatchObject({ theme: 'light', palette: 'warm', accent: 'purple' });
+  expect(saved.headerBackground).not.toBe(defaultLight.headerBackground);
+  expect(saved.accentColor).not.toBe(defaultLight.accentColor);
+  expect(saved.editorFont).not.toBe(defaultLight.editorFont);
+  await page.locator('#save-appearance').click();
+  await expect(page.locator('#appearance-dialog')).not.toBeVisible();
+  await expect(page.locator('#settings-dialog')).toBeVisible();
+  const appearance = { mode: 'light', palette: 'warm', accent: 'purple', editorFont: 'monospace' };
+  await expect.poll(async () => (await json(session, '/api/storage?key=preferences')).value?.appearance).toEqual(appearance);
+  await closeSettings(page);
+
+  const comment = '% 配色と原稿フォントを選んだ後に編集した本文\n';
+  const editor = page.getByTestId('editor').locator('.cm-content');
+  await editor.click();
+  await page.keyboard.press('Control+Home');
+  await page.keyboard.insertText(comment);
+  await page.keyboard.press('Control+S');
+  await expect.poll(() => readFile(path.join(session.project, 'main.tex'), 'utf8')).toBe(expectedMainContent(session, comment + original));
+  const compiled = await compileFromUI(page, session);
+  expect(compiled.finished.status, compiled.finished.log + '\n' + compiled.finished.error).toBe('success');
+  await expect(page.getByTestId('pdf-canvas')).toHaveAttribute('data-build-id', compiled.finished.pdfBuildId);
+  await expect(page.getByTestId('pdf-canvas')).toHaveAttribute('data-ready', 'true');
+  await expect(page.locator('#toast')).not.toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath('appearance-light-editor.png') });
+
+  await closeEditorTab(page);
+  await session.waitForExit();
+  await session.restart();
+  const reopened = await context.newPage();
+  reopened.on('pageerror', error => errors.push(error.message));
+  await reopened.setViewportSize({ width: 1440, height: 900 });
+  await reopened.emulateMedia({ colorScheme: 'dark' });
+  await openEditor(reopened, session);
+  await expect.poll(() => readEditorAppearance(reopened)).toEqual(saved);
+  await expect(reopened.getByTestId('editor').locator('.cm-content')).toContainText(comment.trim());
+  await expect(reopened.getByTestId('pdf-canvas')).toHaveAttribute('data-build-id', compiled.finished.pdfBuildId);
+  await expect(reopened.getByTestId('pdf-canvas')).toHaveAttribute('data-ready', 'true');
+  await reopened.getByTestId('pdf-next').click();
+  await expect(reopened.getByTestId('pdf-page')).toHaveValue('2');
+  await openAppearance(reopened);
+  await expect(reopened.locator('#appearance-mode')).toHaveValue('light');
+  await expect(reopened.locator('#appearance-palette')).toHaveValue('warm');
+  await expect(reopened.locator('#appearance-accent')).toHaveValue('purple');
+  await expect(reopened.locator('#appearance-font')).toHaveValue('monospace');
+  await reopened.locator('#appearance-cancel').click();
+  await closeSettings(reopened);
+  await reopened.getByTestId('theme-toggle').click();
+  await expect(reopened.locator('html')).toHaveAttribute('data-theme', 'dark');
+  const dark = await readEditorAppearance(reopened);
+  expect(dark).toMatchObject({ palette: 'warm', accent: 'purple', editorFont: saved.editorFont });
+  expect(dark.headerBackground).not.toBe(saved.headerBackground);
+  await expect.poll(async () => (await json(session, '/api/storage?key=preferences')).value?.appearance).toEqual({ ...appearance, mode: 'dark' });
+  await openAppearance(reopened);
+  await expect(reopened.locator('#appearance-mode')).toHaveValue('dark');
+  await reopened.locator('#appearance-cancel').click();
+  await closeSettings(reopened);
+  await expect(reopened.getByTestId('pdf-page')).toHaveValue('2');
+  expect(errors).toEqual([]);
+});
+
+test('外観の変更をキャンセルや Escape で戻し，OS とテーマボタンで表示モードを選べる', async ({ page, session }, testInfo) => {
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.emulateMedia({ colorScheme: 'light' });
+  await openProject(session);
+  await openEditor(page, session);
+  await setAutoSave(page, false);
+  await expect.poll(async () => (await json(session, '/api/storage?key=preferences')).value?.autoSave).toBe(false);
+  const original = await readFile(path.join(session.project, 'main.tex'), 'utf8');
+  const draft = '% 外観を試している間も編集中の本文を残す\n' + original.replaceAll('\r\n', '\n');
+  await replaceEditor(page, draft);
+  await page.keyboard.press('Control+Home');
+  const initial = await readEditorAppearance(page);
+  const initialPreferences = (await json(session, '/api/storage?key=preferences')).value;
+  await page.getByTestId('settings-button').click();
+  await page.getByTestId('compile-mode').selectOption('xelatex');
+  await page.locator('#open-appearance').click();
+  await page.locator('#appearance-mode').selectOption('dark');
+  await page.locator('#appearance-palette').selectOption('gray');
+  await page.locator('#appearance-accent').selectOption('orange');
+  await page.locator('#appearance-font').selectOption('consolas');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect.poll(() => readEditorAppearance(page).then(value => value.editorFont)).not.toBe(initial.editorFont);
+  await page.setViewportSize({ width: 480, height: 900 });
+  const dialog = page.locator('#appearance-dialog');
+  await expect(dialog).toBeVisible();
+  for (const id of ['appearance-mode', 'appearance-palette', 'appearance-accent', 'appearance-font', 'save-appearance']) {
+    await expect(page.locator(`#${id}`)).toBeVisible();
+  }
+  expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+  const bounds = await dialog.boundingBox();
+  expect(bounds.x).toBeGreaterThanOrEqual(0);
+  expect(bounds.x + bounds.width).toBeLessThanOrEqual(481);
+  await page.screenshot({ path: testInfo.outputPath('appearance-dark-narrow.png') });
+  await page.locator('#appearance-cancel').click();
+  await expect(dialog).not.toBeVisible();
+  await expect.poll(() => readEditorAppearance(page)).toEqual(initial);
+  await expect(page.getByTestId('compile-mode')).toHaveValue('xelatex');
+  expect((await json(session, '/api/storage?key=preferences')).value.appearance).toEqual(initialPreferences.appearance);
+
+  await page.locator('#open-appearance').click();
+  await page.locator('#appearance-mode').selectOption('dark');
+  await page.locator('#appearance-palette').selectOption('warm');
+  await page.locator('#appearance-accent').selectOption('blue');
+  await page.locator('#appearance-font').selectOption('menlo');
+  await page.keyboard.press('Escape');
+  await expect(dialog).not.toBeVisible();
+  await expect.poll(() => readEditorAppearance(page)).toEqual(initial);
+  await expect(page.getByTestId('compile-mode')).toHaveValue('xelatex');
+  expect((await json(session, '/api/storage?key=preferences')).value.appearance).toEqual(initialPreferences.appearance);
+  await closeSettings(page);
+  await expect(page.getByTestId('editor').locator('.cm-content')).toContainText('外観を試している間も編集中の本文を残す');
+  expect(await readFile(path.join(session.project, 'main.tex'), 'utf8')).toBe(original);
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openAppearance(page);
+  await page.locator('#appearance-mode').selectOption('system');
+  await page.locator('#save-appearance').click();
+  await closeSettings(page);
+  await expect.poll(async () => (await json(session, '/api/storage?key=preferences')).value?.appearance?.mode).toBe('system');
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page.emulateMedia({ colorScheme: 'light' });
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await page.getByTestId('theme-toggle').click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect.poll(async () => (await json(session, '/api/storage?key=preferences')).value?.appearance?.mode).toBe('dark');
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.emulateMedia({ colorScheme: 'light' });
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await openAppearance(page);
+  await expect(page.locator('#appearance-mode')).toHaveValue('dark');
+  await page.locator('#appearance-cancel').click();
+  await closeSettings(page);
   expect(errors).toEqual([]);
 });
 

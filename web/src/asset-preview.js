@@ -1,6 +1,7 @@
 import { t, getLanguage, onLanguageChange } from './i18n.js';
 import * as pdfjs from 'pdfjs-dist/build/pdf.mjs';
 import { EventBus, PDFViewer, PDFLinkService, LinkTarget } from 'pdfjs-dist/web/pdf_viewer.mjs';
+import { zoomPDFAt } from './pdf-zoom.js';
 
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
@@ -188,8 +189,8 @@ export class AssetPreview {
   applyZoom(origin = null) {
     if (!this.ready || this.elements.scroll.clientWidth < 50) return;
     if (this.file.kind === 'pdf') {
-      this.pdfViewer.currentScaleValue = this.zoomSetting;
-      this.pdfViewer.update();
+      const value = this.zoomSetting;
+      zoomPDFAt(this.pdfViewer, () => { this.pdfViewer.currentScaleValue = value; }, origin);
     } else {
       const image = this.elements.image; const scroll = this.elements.scroll;
       const rectangle = image.getBoundingClientRect();
@@ -205,10 +206,13 @@ export class AssetPreview {
 
   changeZoom(factor, origin = null) {
     if (!this.ready) return;
+    if (this.file.kind === 'pdf') {
+      zoomPDFAt(this.pdfViewer, () => this.pdfViewer.updateScale({ scaleFactor: factor, drawingDelay: 150 }), origin);
+      return;
+    }
     const bounds = this.elements.scroll.getBoundingClientRect();
     origin ||= [bounds.left + bounds.width / 2, bounds.top + bounds.height / 2];
-    if (this.file.kind === 'pdf') this.pdfViewer.updateScale({ scaleFactor: factor, origin, drawingDelay: 150 });
-    else { this.zoomSetting = String(clamp(this.scale * factor, .05, 8)); this.applyZoom(origin); }
+    this.zoomSetting = String(clamp(this.scale * factor, .05, 8)); this.applyZoom(origin);
   }
 
   updateControls() {

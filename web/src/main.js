@@ -13,6 +13,7 @@ import { AssetPreview } from './asset-preview.js';
 import { sourceSearch, openSourceSearchPanel } from './source-search.js';
 import { attachEditorZoom, prepareEditorResize } from './editor-zoom.js';
 import { createPanelLayout, normalizePanelLayout } from './panel-layout.js';
+import { normalizeAppearance, resolveAppearance } from './appearance.js';
 import { tags } from '@lezer/highlight';
 import { SessionStore } from './session-store.js';
 import { BrowserSession } from './browser-session.js';
@@ -58,7 +59,7 @@ const state = {
   connected: false,
   externalProjectChanged: false,
   reportedBuild: '',
-  preferences: { autoSave: true, theme: null, editorFontSize: 14, language: getLanguage(), panelLayout: normalizePanelLayout(), markdownScrollSync: true },
+  preferences: { autoSave: true, theme: null, appearance: normalizeAppearance(), editorFontSize: 14, language: getLanguage(), panelLayout: normalizePanelLayout(), markdownScrollSync: true },
   theme: 'light',
   saveQueue: Promise.resolve(),
   autoSaveTimer: null,
@@ -80,6 +81,8 @@ const state = {
   lastMarkdownPath: '',
 };
 const readOnly = new Compartment();
+const systemColorScheme = matchMedia('(prefers-color-scheme: dark)');
+let appearanceDraft = null;
 const editorTheme = new Compartment();
 const editorLanguage = new Compartment();
 const modeLabels = { project: 'latexmkrc', pdflatex: 'pdfLaTeX', uplatex: 'upLaTeX', xelatex: 'XeLaTeX', lualatex: 'LuaLaTeX' };
@@ -1230,19 +1233,76 @@ function themeExtension() {
   const dark = state.theme === 'dark';
   return [EditorView.theme({}, { dark }), syntaxHighlighting(dark ? darkHighlight : defaultHighlightStyle)];
 }
-function applyTheme(theme, persist = false) {
+function applyTheme(theme) {
+  const previous = state.theme;
   state.theme = theme === 'dark' ? 'dark' : 'light';
   document.documentElement.dataset.theme = state.theme;
   $('theme-toggle').setAttribute('aria-pressed', String(state.theme === 'dark'));
   $('theme-toggle').setAttribute('aria-label', state.theme === 'dark' ? t("ライトテーマに切り替える") : t("ダークテーマに切り替える"));
   $('theme-label').textContent = state.theme === 'dark' ? t("ダーク") : t("ライト");
-  try { localStorage.setItem('local-tex-editor-theme', state.theme); } catch { /* The PC copy is written through the storage API. */ }
-  for (const doc of state.documents.values()) {
-    const transaction = doc.state.update({ effects: editorTheme.reconfigure(themeExtension()) });
-    if (doc.path === state.activePath && state.editor) state.editor.update([transaction]); else doc.state = transaction.state;
+  if (previous !== state.theme) {
+    for (const doc of state.documents.values()) {
+      const transaction = doc.state.update({ effects: editorTheme.reconfigure(themeExtension()) });
+      if (doc.path === state.activePath && state.editor) state.editor.update([transaction]); else doc.state = transaction.state;
+    }
   }
-  if (persist) { state.preferences.theme = state.theme; savePreferences(); }
 }
+
+function applyAppearance(value, cache = false) {
+  const appearance = resolveAppearance(value, systemColorScheme.matches);
+  const root = document.documentElement;
+  const restore = root.style.getPropertyValue('--editor-font-family') !== appearance.fontFamily ? prepareEditorResize(activeDocument() ? state.editor : null) : () => {};
+  root.dataset.palette = appearance.palette;
+  root.dataset.accent = appearance.accent;
+  for (const [name, color] of Object.entries(appearance.colors)) root.style.setProperty(`--${name}`, color);
+  root.style.setProperty('--editor-font-family', appearance.fontFamily);
+  applyTheme(appearance.theme);
+  restore();
+  if (cache) {
+    try {
+      localStorage.setItem('local-tex-editor-appearance', JSON.stringify(normalizeAppearance(value)));
+      localStorage.setItem('local-tex-editor-theme', appearance.theme);
+    } catch { /* The PC copy is written through the storage API. */ }
+  }
+  for (const [id, color] of [['background', appearance.colors.surface], ['foreground', appearance.colors.text]]) {
+    $(`appearance-${id}`).textContent = color.toUpperCase();
+    $(`appearance-${id}-swatch`).style.backgroundColor = color;
+  }
+}
+
+function renderAppearanceForm() {
+  for (const [id, key] of [['mode', 'mode'], ['palette', 'palette'], ['accent', 'accent'], ['font', 'editorFont']]) $(`appearance-${id}`).value = appearanceDraft[key];
+  applyAppearance(appearanceDraft);
+}
+
+function showAppearance() {
+  appearanceDraft = normalizeAppearance(state.preferences.appearance, state.preferences.theme);
+  $('appearance-error').hidden = true;
+  renderAppearanceForm();
+  $('appearance-dialog').showModal();
+}
+
+async function saveAppearance(event) {
+  event.preventDefault();
+  if (!appearanceDraft || $('appearance-dialog').dataset.busy === 'true') return;
+  const previous = state.preferences.appearance, previousTheme = state.preferences.theme;
+  const appearance = normalizeAppearance(appearanceDraft);
+  setDialogBusy($('appearance-dialog'), true); $('appearance-error').hidden = true;
+  state.preferences.appearance = appearance;
+  state.preferences.theme = appearance.mode === 'system' ? null : appearance.mode;
+  try {
+    savePreferences(); await sessionStore.flush();
+    appearanceDraft = null;
+    applyAppearance(appearance, true);
+    $('appearance-dialog').close();
+    toast(t('外観を保存しました．'));
+  } catch (error) {
+    state.preferences.appearance = previous; state.preferences.theme = previousTheme;
+    savePreferences();
+    $('appearance-error').textContent = error.message || String(error); $('appearance-error').hidden = false;
+  } finally { setDialogBusy($('appearance-dialog'), false); }
+}
+
 function savePreferences(delay = 0) { sessionStore.write('preferences', { ...state.preferences, updatedAt: Date.now() }, delay); }
 function applyEditorFontSize(value, origin = null) {
   const size = Number.isFinite(value) ? Math.min(40, Math.max(8, Math.round(value * 10) / 10)) : 14;
@@ -1260,13 +1320,15 @@ async function loadPreferences() {
   if (preferences && typeof preferences === 'object') {
     state.preferences.autoSave = preferences.autoSave !== false;
     state.preferences.theme = ['light', 'dark'].includes(preferences.theme) ? preferences.theme : null;
+    state.preferences.appearance = normalizeAppearance(preferences.appearance, preferences.theme);
+    state.preferences.theme = state.preferences.appearance.mode === 'system' ? null : state.preferences.appearance.mode;
     state.preferences.editorFontSize = preferences.editorFontSize;
     state.preferences.panelLayout = normalizePanelLayout(preferences.panelLayout);
     state.preferences.markdownScrollSync = preferences.markdownScrollSync !== false;
     if (['ja', 'en'].includes(preferences.language)) state.preferences.language = preferences.language;
   }
   applyLanguage(state.preferences.language);
-  if (state.preferences.theme) applyTheme(state.preferences.theme);
+  applyAppearance(state.preferences.appearance, true);
   applyEditorFontSize(state.preferences.editorFontSize);
   applyMarkdownScrollSync(state.preferences.markdownScrollSync);
   updateAutoSaveStatus();
@@ -1645,7 +1707,6 @@ const markdownPreview = new MarkdownPreview({
   }),
 });
 
-let cachedTheme = null;
 applyLanguage(state.preferences.language);
 $('find-button').title = t("検索・置換 ({value0}+F)", { value0: shortcutModifier });
 $('save-button').title = t("現在のファイルを保存 ({value0}+S)", { value0: shortcutModifier });
@@ -1653,13 +1714,34 @@ if (isMac) {
   $('project-path').placeholder = '/Users/…/Documents/paper';
   $('project-tex-help').textContent = t("例: /Library/TeX/texbin");
 }
-try { cachedTheme = localStorage.getItem('local-tex-editor-theme'); } catch { /* Use the system preference on the first visit. */ }
-applyTheme(['light', 'dark'].includes(cachedTheme) ? cachedTheme : matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-onClick('theme-toggle', () => applyTheme(state.theme === 'dark' ? 'light' : 'dark', true));
-matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => { if (!state.preferences.theme) applyTheme(event.matches ? 'dark' : 'light'); });
+let cachedAppearance = state.preferences.appearance;
+try { cachedAppearance = normalizeAppearance(JSON.parse(localStorage.getItem('local-tex-editor-appearance') || 'null'), localStorage.getItem('local-tex-editor-theme')); } catch { /* Use the system preference on the first visit. */ }
+applyAppearance(cachedAppearance);
+onClick('theme-toggle', () => {
+  state.preferences.appearance = { ...state.preferences.appearance, mode: state.theme === 'dark' ? 'light' : 'dark' };
+  state.preferences.theme = state.preferences.appearance.mode;
+  applyAppearance(state.preferences.appearance, true); savePreferences();
+});
+systemColorScheme.addEventListener('change', () => {
+  const appearance = appearanceDraft || state.preferences.appearance;
+  if (appearance.mode === 'system') applyAppearance(appearance, !appearanceDraft);
+});
 
 onClick('show-project', showProjectDialog); onClick('welcome-open', showProjectDialog);
 onClick('settings-button', showSettings); onClick('main-document', showSettings);
+onClick('open-appearance', showAppearance);
+onClick('appearance-reset', () => { appearanceDraft = normalizeAppearance(); renderAppearanceForm(); });
+for (const [id, key] of [['mode', 'mode'], ['palette', 'palette'], ['accent', 'accent'], ['font', 'editorFont']]) $(`appearance-${id}`).addEventListener('change', event => {
+  if (!appearanceDraft) return;
+  appearanceDraft[key] = event.target.value;
+  applyAppearance(appearanceDraft);
+});
+$('appearance-form').addEventListener('submit', event => { runTask(() => saveAppearance(event)); event.preventDefault(); });
+$('appearance-dialog').addEventListener('close', () => {
+  if (!appearanceDraft) return;
+  appearanceDraft = null;
+  applyAppearance(state.preferences.appearance);
+});
 onClick('shortcut-start-menu', () => createShortcut('start-menu')); onClick('shortcut-desktop', () => createShortcut('desktop'));
 onClick('copy-synctex-setup', async () => { await navigator.clipboard.writeText($('synctex-install-commands').textContent); toast(t("コマンドをコピーしました．")); });
 onClick('pick-project', pickProject); onClick('cancel-picker', cancelPicker); onClick('shutdown-button', shutdown);
