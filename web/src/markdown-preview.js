@@ -198,7 +198,7 @@ export class MarkdownPreview {
         this.userScrollFrame = null;
         if (!this.userScrolling || !this.scrollSync || !this.matchesSource() || this.rendered !== this.current) return;
         const position = this.sourceAtScroll();
-        this.sourcePosition = { path: position.path, projectRoot: position.projectRoot, line: position.sourceLine };
+        this.sourcePosition = { path: position.path, projectRoot: position.projectRoot, line: position.sourceLine, atStart: position.atStart, atEnd: position.atEnd };
         this.onUserScroll(position);
       });
     };
@@ -258,7 +258,7 @@ export class MarkdownPreview {
     const sourceLine = Math.max(1, Math.min(lineCount, lower.line + between * (upper.line - lower.line)));
     const line = Math.floor(sourceLine);
     return { path: this.current.path, projectRoot: this.current.projectRoot, sourceLine, line, fraction: sourceLine - line,
-      atStart: this.container.scrollTop < 1, atEnd: this.container.scrollTop + this.container.clientHeight >= this.container.scrollHeight - 1 };
+      atStart: this.container.scrollTop <= 2, atEnd: this.container.scrollTop + this.container.clientHeight >= this.container.scrollHeight - 2 };
   }
 
   show() {
@@ -452,25 +452,26 @@ export class MarkdownPreview {
     return this.scrollSourceLine(line, { align, highlight });
   }
 
-  syncSourceLine(line, { path, projectRoot } = {}) {
+  syncSourceLine(line, { path, projectRoot, atStart = false, atEnd = false } = {}) {
     if (!this.scrollSync || !this.matchesSource({ path, projectRoot }) || !Number.isFinite(Number(line))) {
       this.sourceTarget = null;
       this.sourcePosition = null;
       return false;
     }
-    const target = { line: Number(line), path: this.current.path, projectRoot: this.current.projectRoot };
+    const target = { line: Number(line), path: this.current.path, projectRoot: this.current.projectRoot, atStart: !!atStart, atEnd: !!atEnd };
     // Editing can report the same editor position after the user has scrolled
     // the preview. Follow again when the editor actually moves.
     if (!this.sourceTarget && this.sourcePosition?.path === target.path
       && this.sourcePosition.projectRoot === target.projectRoot
+      && !!this.sourcePosition.atStart === target.atStart && !!this.sourcePosition.atEnd === target.atEnd
       && Math.abs(this.sourcePosition.line - target.line) < 0.0001) return false;
     this.sourceTarget = target;
     this.sourcePosition = target;
     if (this.rendered !== this.current) return true;
-    return this.scrollSourceLine(line, { align: 'start', highlight: false });
+    return this.scrollSourceLine(line, { align: 'start', highlight: false, atStart, atEnd });
   }
 
-  scrollSourceLine(line, { align, highlight }) {
+  scrollSourceLine(line, { align, highlight, atStart = false, atEnd = false }) {
     if (this.rendered !== this.current) {
       clearTimeout(this.timer);
       this.timer = null;
@@ -480,7 +481,8 @@ export class MarkdownPreview {
     const location = this.locateLine(line);
     const padding = parseFloat(this.window.getComputedStyle(this.container).paddingTop) || 0;
     const offset = align === 'center' ? this.container.clientHeight / 2 : padding;
-    const top = Math.max(0, Math.min(this.container.scrollHeight - this.container.clientHeight, location.top - offset));
+    const bottom = Math.max(0, this.container.scrollHeight - this.container.clientHeight);
+    const top = atStart ? 0 : atEnd ? bottom : Math.max(0, Math.min(bottom, location.top - offset));
     this.userScrolling = false;
     this.container.scrollTo({ top, behavior: 'instant' });
     if (highlight) {
@@ -499,7 +501,7 @@ export class MarkdownPreview {
     this.sourceFrame = this.window.requestAnimationFrame(() => {
       this.sourceFrame = null;
       const target = this.sourceTarget;
-      if (this.scrollSync && target && this.rendered === this.current && this.matchesSource(target)) this.scrollSourceLine(target.line, { align: 'start', highlight: false });
+      if (this.scrollSync && target && this.rendered === this.current && this.matchesSource(target)) this.scrollSourceLine(target.line, { align: 'start', highlight: false, atStart: target.atStart, atEnd: target.atEnd });
     });
   }
 

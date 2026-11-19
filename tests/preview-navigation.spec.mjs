@@ -7,18 +7,18 @@ const repository = path.resolve(import.meta.dirname, '..');
 const origin = 'http://127.0.0.1:41539';
 const scripts = new Map();
 
-function linkedPDF() {
+function linkedPDF(pageCount = 3) {
   const stream = text => { const value = `BT /F1 20 Tf 160 615 Td (${text}) Tj ET\n`; return `<< /Length ${Buffer.byteLength(value)} >>\nstream\n${value}endstream`; };
   const objects = [
     '<< /Type /Catalog /Pages 2 0 R >>',
-    '<< /Type /Pages /Kids [3 0 R 5 0 R 7 0 R] /Count 3 >>',
+    `<< /Type /Pages /Kids [${[3, 5, 7].slice(0, pageCount).map(number => `${number} 0 R`).join(' ')}] /Count ${pageCount} >>`,
     '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 10 0 R >> >> /Contents 4 0 R /Annots [9 0 R] >>',
     stream('Open the reference'),
     '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 10 0 R >> >> /Contents 6 0 R >>',
     stream('Middle page'),
     '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 10 0 R >> >> /Contents 8 0 R >>',
     stream('Reference destination'),
-    '<< /Type /Annot /Subtype /Link /Rect [160 600 400 640] /Border [0 0 0] /A << /S /GoTo /D [7 0 R /XYZ 36 720 null] >> >>',
+    `<< /Type /Annot /Subtype /Link /Rect [160 600 400 640] /Border [0 0 0] /A << /S /GoTo /D [${[3, 5, 7][pageCount - 1]} 0 R /XYZ 36 720 null] >> >>`,
     '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
   ];
   let pdf = '%PDF-1.7\n'; const offsets = [0];
@@ -108,7 +108,67 @@ for (const kind of ['pdf', 'asset']) {
     expect(await page.evaluate(() => window.errors)).toEqual([]);
     await testInfo.attach(`${kind}-navigation.json`, { body: JSON.stringify({ before, after }), contentType: 'application/json' });
   });
+
+  test(`${kind}: 別の PDF から戻る際に読み込みを待ち，非表示中の位置を表示時に適用する`, async ({ page }) => {
+    await openHarness(page, kind);
+    await expect.poll(() => page.evaluate(() => window.preview.ready)).toBe(true);
+    const position = await page.evaluate(() => {
+      const viewer = window.preview.pageViewer || window.preview.pdfViewer;
+      viewer.currentScaleValue = '2'; viewer.update();
+      window.preview.elements.scroll.scrollTop = 150; window.preview.elements.scroll.scrollLeft = 110;
+      viewer.update();
+      return window.preview.getViewState();
+    });
+    await page.evaluate(async kind => {
+      if (kind === 'pdf') await window.preview.load('other-build', 'project', 'other.tex');
+      else await window.preview.show({ path: 'other.pdf', kind: 'pdf' }, 'project');
+    }, kind);
+    await expect.poll(() => page.evaluate(() => window.preview.ready)).toBe(true);
+    let requested, release;
+    const requestStarted = new Promise(resolve => { requested = resolve; });
+    const responseReady = new Promise(resolve => { release = resolve; });
+    await page.route(`${origin}/api/${kind === 'pdf' ? 'pdf' : 'asset'}?**`, async route => {
+      requested(); await responseReady;
+      await route.fulfill({ contentType: 'application/pdf', body: linkedPDF() });
+    });
+    const restored = page.evaluate(async ({ kind, position }) => {
+      const pane = document.getElementById(kind === 'pdf' ? 'pdf-pane' : 'asset-preview');
+      pane.style.display = 'none'; window.restoreDone = false;
+      const loading = kind === 'pdf' ? window.preview.load('build-one', 'project', 'main.tex')
+        : window.preview.show({ path: position.path, kind: 'pdf' }, 'project');
+      const applying = window.preview.applyViewState(position);
+      const result = await applying; await loading;
+      window.restoreDone = true;
+      return result;
+    }, { kind, position });
+    await requestStarted;
+    expect(await page.evaluate(() => window.restoreDone)).toBe(false);
+    release();
+    expect(await restored).toBe(true);
+    await page.evaluate(kind => {
+      document.getElementById(kind === 'pdf' ? 'pdf-pane' : 'asset-preview').style.display = '';
+      window.preview.refreshLayout?.();
+    }, kind);
+    await expect.poll(() => page.evaluate(() => window.preview.ready)).toBe(true);
+    await expect.poll(() => page.evaluate(() => window.preview.elements.scroll.scrollTop).then(value => Math.abs(value - 150))).toBeLessThan(3);
+    await expect.poll(() => page.evaluate(() => window.preview.elements.scroll.scrollLeft).then(value => Math.abs(value - 110))).toBeLessThan(3);
+    expect(await page.evaluate(() => window.errors)).toEqual([]);
+  });
 }
+
+test('再コンパイル後にページが減った PDF へ以前の位置を戻すと，最後のページが開く', async ({ page }) => {
+  await openHarness(page, 'pdf');
+  await expect.poll(() => page.evaluate(() => window.preview.ready)).toBe(true);
+  const position = await page.evaluate(async () => { await window.preview.goToPage(3); return window.preview.getViewState(); });
+  await page.route(`${origin}/api/pdf?build=recompiled`, route => route.fulfill({ contentType: 'application/pdf', body: linkedPDF(1) }));
+  const restored = await page.evaluate(async position => {
+    await window.preview.load('recompiled', 'project', 'main.tex');
+    return window.preview.applyViewState(position);
+  }, position);
+  expect(restored).toBe(true);
+  expect(await page.evaluate(() => window.preview.getViewState())).toMatchObject({ main: 'main.tex', buildId: 'recompiled', pageNumber: 1 });
+  expect(await page.evaluate(() => window.errors)).toEqual([]);
+});
 
 test('Markdown のユーザースクロールを原稿の行へ対応させ，同期によるスクロールは通知しない', async ({ page }) => {
   await openHarness(page, 'markdown');
@@ -137,5 +197,33 @@ test('Markdown のユーザースクロールを原稿の行へ対応させ，�
   await container.hover(); await page.mouse.wheel(0, 160);
   await expect.poll(() => container.evaluate(element => element.scrollTop)).toBeGreaterThan(initial.top + 100);
   expect(await page.evaluate(() => window.notified.length)).toBe(count);
+  expect(await page.evaluate(() => window.errors)).toEqual([]);
+});
+
+test('Markdown は先頭と末尾を両方向に揃え，幅が変わった後も末尾へ追従する', async ({ page }) => {
+  await openHarness(page, 'markdown');
+  const content = ['# Long notes', '', ...Array.from({ length: 30 }, (_, i) => `Paragraph ${i}.\n`), 'A final paragraph that wraps many times. '.repeat(300)].join('\n');
+  await page.evaluate(content => { window.preview.update(content, { path: 'notes.md', projectRoot: 'project', immediate: true }); window.preview.show(); }, content);
+  const container = page.locator('#preview');
+  await expect(container).toHaveAttribute('data-state', 'ready');
+  await page.evaluate(() => window.preview.syncSourceLine(40, { atEnd: true }));
+  const bottomGap = () => container.evaluate(element => element.scrollHeight - element.clientHeight - element.scrollTop);
+  await expect.poll(bottomGap).toBeLessThan(2);
+  expect(await page.evaluate(() => window.notified)).toEqual([]);
+  await container.evaluate(element => { element.style.width = '520px'; });
+  await expect.poll(bottomGap).toBeLessThan(2);
+  expect(await page.evaluate(() => window.notified)).toEqual([]);
+  await page.evaluate(() => window.preview.syncSourceLine(20, { atStart: true }));
+  await expect.poll(() => container.evaluate(element => element.scrollTop)).toBe(0);
+  expect(await page.evaluate(() => window.notified)).toEqual([]);
+  await container.hover(); await page.mouse.wheel(0, 100000);
+  await expect.poll(() => page.evaluate(() => window.notified.at(-1)?.atEnd)).toBe(true);
+  expect(await page.evaluate(() => window.feedback)).toBe(false);
+  const countAtEnd = await page.evaluate(() => window.notified.length);
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  expect(await page.evaluate(() => window.notified.length)).toBe(countAtEnd);
+  await page.mouse.wheel(0, -100000);
+  await expect.poll(() => page.evaluate(() => window.notified.at(-1)?.atStart)).toBe(true);
+  expect(await page.evaluate(() => window.feedback)).toBe(false);
   expect(await page.evaluate(() => window.errors)).toEqual([]);
 });

@@ -16,6 +16,7 @@ test('image insertion uses the relative path from a chapter and quotes text sepa
 test('Markdown images and PDF links escape brackets, spaces, and parentheses', () => {
   assert.equal(assetInsertion({ documentPath: 'notes/chapter.md', assetPath: 'figures/chart (1).png', caption: 'A [figure]' }), '![A \\[figure\\]](../figures/chart%20%281%29.png)\n');
   assert.equal(assetInsertion({ documentPath: 'notes.md', assetPath: 'figures/result.pdf', caption: 'Result' }), '[Result](figures/result.pdf)\n');
+  assert.equal(assetInsertion({ documentPath: 'notes.md', assetPath: 'figures/result[1].pdf' }), '[figures/result\\[1\\].pdf](figures/result%5B1%5D.pdf)\n');
   const long = suggestedAssetName('x'.repeat(220) + '.jpeg', 'image/jpeg');
   assert.ok(long.length <= 155); assert.ok(long.endsWith('.jpeg'));
   assert.equal(suggestedAssetName('plot%test.png'), 'plot_test.png');
@@ -48,6 +49,7 @@ test('TeX tables escape literal content and support line breaks inside a cell', 
 test('Markdown tables escape literal punctuation and can add an empty header', () => {
   const source = tableInsertion([['a|b', '<tag>'], ['x\ny', '*value*']], { format: 'markdown', header: false });
   assert.equal(source, '|  |  |\n| --- | --- |\n| a\\|b | &lt;tag&gt; |\n| x y | \\*value\\* |\n');
+  assert.equal(tableInsertion([['Literal values'], ['&copy; ~~old~~ $x$']]), '| Literal values |\n| --- |\n| &amp;copy; \\~\\~old\\~\\~ \\$x\\$ |\n');
 });
 
 test('editing the table preview round trips newlines, quotes, and tabs through TSV', () => {

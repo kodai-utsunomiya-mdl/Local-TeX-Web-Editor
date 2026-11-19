@@ -19,7 +19,7 @@ export class AssetPreview {
     this.file = null; this.projectRoot = ''; this.generation = 0;
     this.controller = null; this.objectURL = null; this.loadingTask = null; this.document = null;
     this.loadCompletion = Promise.resolve(false); this.cancelLoadWait = null; this.pdfInitialisation = null;
-    this.ready = false; this.scale = 1; this.zoomSetting = 'page-fit'; this.location = null;
+    this.ready = false; this.scale = 1; this.zoomSetting = 'page-fit'; this.location = null; this.pendingViewState = null;
     this.elements['pdf-stage'].dataset.testid = 'asset-pdf';
     this.elements['zoom-in'].addEventListener('click', () => this.changeZoom(1.2));
     this.elements['zoom-out'].addEventListener('click', () => this.changeZoom(1 / 1.2));
@@ -35,6 +35,11 @@ export class AssetPreview {
       this.changeZoom(clamp(Math.exp(-delta * .002), .6, 1.5), [event.clientX, event.clientY]);
     }, { passive: false });
     this.resizeObserver = new ResizeObserver(() => {
+      if (this.ready && this.pendingViewState && this.elements.scroll.clientWidth >= 50 && this.elements.scroll.clientHeight >= 50) {
+        const position = this.pendingViewState; this.pendingViewState = null;
+        this.applyViewState(position).catch(error => this.fail(error));
+        return;
+      }
       if (this.ready && !this.root.hidden && ['page-fit', 'page-width'].includes(this.zoomSetting)) this.applyZoom();
     });
     this.resizeObserver.observe(this.elements.scroll);
@@ -43,7 +48,7 @@ export class AssetPreview {
   }
 
   savePosition() {
-    if (!this.file || !this.ready) return;
+    if (!this.file || !this.ready || this.pendingViewState || this.elements.scroll.clientWidth < 50 || this.elements.scroll.clientHeight < 50) return;
     this.file.preview = {
       zoom: this.zoomSetting,
       page: this.pdfViewer?.currentPageNumber || 1,
@@ -76,6 +81,11 @@ export class AssetPreview {
       if (!this.ready) return false;
     }
     this.zoomSetting = position.zoom || this.zoomSetting;
+    if (this.elements.scroll.clientWidth < 50 || this.elements.scroll.clientHeight < 50) {
+      this.pendingViewState = { ...position };
+      return true;
+    }
+    this.pendingViewState = null;
     if (this.file.kind === 'pdf') {
       const document = this.document, generation = this.generation;
       const number = clamp(Math.round(Number(position.page) || 1), 1, document.numPages);
@@ -110,7 +120,7 @@ export class AssetPreview {
     task?.destroy().catch(() => {});
     this.elements.image.removeAttribute('src'); this.elements.image.dataset.ready = 'false';
     if (this.objectURL) URL.revokeObjectURL(this.objectURL);
-    this.objectURL = null; this.file = null; this.location = null;
+    this.objectURL = null; this.file = null; this.location = null; this.pendingViewState = null;
     this.elements['pdf-stage'].dataset.ready = 'false';
   }
 
@@ -156,6 +166,7 @@ export class AssetPreview {
         this.elements['image-stage'].hidden = false; this.ready = true;
         this.applyZoom();
         this.elements.scroll.scrollLeft = file.preview?.scrollLeft || 0; this.elements.scroll.scrollTop = file.preview?.scrollTop || 0;
+        if (this.elements.scroll.clientWidth < 50 || this.elements.scroll.clientHeight < 50) this.pendingViewState = { path: file.path, kind: file.kind, ...file.preview };
         this.elements.info.textContent = `${image.naturalWidth} × ${image.naturalHeight} px · ${bytes(blob.size)}`;
         image.dataset.ready = 'true'; this.root.dataset.state = 'ready'; this.message('');
         this.updateControls();
@@ -223,7 +234,13 @@ export class AssetPreview {
       const view = this.pdfViewer.getPageView(number - 1);
       if (!view) return;
       if (!view.pdfPage) view.setPdfPage(page);
-      this.pdfViewer.currentPageNumber = number; this.ready = true; this.applyZoom();
+      this.pdfViewer.currentPageNumber = number; this.ready = true;
+      if (this.elements.scroll.clientWidth < 50 || this.elements.scroll.clientHeight < 50) {
+        this.pendingViewState = { path: this.file.path, kind: this.file.kind, ...position };
+        this.updateControls();
+        return;
+      }
+      this.applyZoom();
       if (Number.isFinite(position?.left) && Number.isFinite(position?.top)) this.pdfViewer.scrollPageIntoView({ pageNumber: number, destArray: [null, { name: 'XYZ' }, position.left, position.top, null], allowNegativeOffset: true, ignoreDestinationZoom: true });
       this.pdfViewer.update(); this.updateControls();
     })().finally(() => { if (this.pdfInitialisation === task) this.pdfInitialisation = null; });

@@ -61,9 +61,10 @@ const referenceCommands = new Set(['ref', 'eqref', 'autoref', 'Autoref', 'cref',
 const validExistingKey = key => !!key && key !== '*' && !/[\s{}\\#%]/.test(key);
 export const validReferenceKey = key => /^[\p{L}\p{N}:._/+@-]+$/u.test(key || '');
 
-function addKeys(result, source, group, properties, starts) {
+function addKeys(result, source, group, properties, starts, multiple = true) {
   let at = group.from;
-  for (const part of source.slice(group.from, group.to).split(',')) {
+  const value = source.slice(group.from, group.to);
+  for (const part of multiple ? value.split(',') : [value]) {
     const key = part.trim(), from = at + part.indexOf(key);
     if (validExistingKey(key)) result.push({ ...properties, key, from, to: from + key.length, ...position(starts, from) });
     at += part.length + 1;
@@ -82,7 +83,7 @@ function texTokens(content, path) {
     let at = spaces(text, pattern.lastIndex);
     if (name === 'hyperref') {
       const value = balanced(text, at, '[', ']');
-      if (value) addKeys(result, content, value, { path, kind: 'label', role: 'use', command: name }, starts);
+      if (value) addKeys(result, content, value, { path, kind: 'label', role: 'use', command: name }, starts, false);
       continue;
     }
     let groups = 0;
@@ -92,7 +93,7 @@ function texTokens(content, path) {
       }
       const value = balanced(text, at);
       if (!value) break;
-      addKeys(result, content, value, { path, kind: citation ? 'citation' : 'label', role: definition ? 'definition' : 'use', command: name }, starts);
+      addKeys(result, content, value, { path, kind: citation ? 'citation' : 'label', role: definition ? 'definition' : 'use', command: name }, starts, citation || /^(?:[cC]ref|[cC]pageref)$/.test(name));
       at = spaces(text, value.end); groups++;
     } while ((citation && /cites$/.test(name)) || (/range$/.test(name) && groups < 2));
     pattern.lastIndex = Math.max(pattern.lastIndex, at);
@@ -114,6 +115,22 @@ function bibEntry(text, start) {
   return null;
 }
 
+function bibComponent(text, at, limit) {
+  if (text[at] === '{') return balanced(text, at);
+  if (text[at] === '"') {
+    let braces = 0;
+    for (let end = at + 1; end < limit; end++) {
+      if (text[end] === '\\') { end++; continue; }
+      if (text[end] === '{') braces++;
+      else if (text[end] === '}') braces--;
+      else if (text[end] === '"' && braces === 0) return { from: at + 1, to: end, end: end + 1 };
+    }
+    return null;
+  }
+  const raw = /^[^,\s}#)]+/.exec(text.slice(at, limit));
+  return raw ? { from: at, to: at + raw[0].length, end: at + raw[0].length } : null;
+}
+
 function bibTokens(content, path) {
   const text = content.replace(/^[\t ]*%[^\n\r]*/gm, value => ' '.repeat(value.length));
   const starts = lineStarts(content), metadata = new Map(extractCitations(text, path).map(item => [`${item.key}:${item.line}`, item])), result = [];
@@ -132,22 +149,18 @@ function bibTokens(content, path) {
     const bodyFrom = entry.from + keyMatch[0].length, body = text.slice(bodyFrom, entry.to);
     for (let found; (found = field.exec(body));) {
       const at = bodyFrom + field.lastIndex;
-      let value = text[at] === '{' ? balanced(text, at) : null;
-      if (text[at] === '"') {
-        for (let end = at + 1; end < entry.to; end++) {
-          if (text[end] === '\\') { end++; continue; }
-          if (text[end] === '"') { value = { from: at + 1, to: end, end: end + 1 }; break; }
-        }
-      }
-      if (!value) {
-        const raw = /^[^,\s}#)]+/.exec(text.slice(at, entry.to));
-        if (raw) value = { from: at, to: at + raw[0].length, end: at + raw[0].length };
-      }
+      const value = bibComponent(text, at, entry.to);
       if (!value) continue;
       if (/^(crossref|xref|xdata|entryset)$/i.test(found[1]) && ['{', '"'].includes(text[at]) && text[spaces(text, value.end)] !== '#') {
-        addKeys(result, content, value, { path, kind: 'citation', role: 'use', command: found[1] }, starts);
+        addKeys(result, content, value, { path, kind: 'citation', role: 'use', command: found[1] }, starts, /^(xdata|entryset)$/i.test(found[1]));
       }
-      field.lastIndex = value.end - bodyFrom;
+      let end = spaces(text, value.end);
+      while (text[end] === '#') {
+        const next = bibComponent(text, spaces(text, end + 1), entry.to);
+        if (!next) { end = entry.to; break; }
+        end = spaces(text, next.end);
+      }
+      field.lastIndex = end - bodyFrom;
     }
   }
   return result;

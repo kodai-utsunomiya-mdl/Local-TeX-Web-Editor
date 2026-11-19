@@ -13,7 +13,12 @@ test.beforeAll(async () => {
       contents: `import { createInsertTools } from './insert-tools.js';
         import { createMarkdownEditing } from './markdown-editing.js';
         import { setLanguage } from './i18n.js';
+        import { resolveAppearance } from './appearance.js';
         setLanguage(document.documentElement.lang);
+        const appearance = resolveAppearance({ mode: 'light', palette: 'gray' });
+        document.documentElement.dataset.theme = appearance.theme;
+        document.documentElement.dataset.palette = appearance.palette;
+        for (const [name, color] of Object.entries(appearance.colors)) document.documentElement.style.setProperty('--' + name, color);
         window.writingDocument = { path: 'notes/chapter.md', projectRoot: '/writing-project', pane: 'secondary', content: '', anchor: 0, head: 0 };
         window.writingRequests = []; window.writingInsertions = []; window.writingEdits = []; window.writingErrors = [];
         const getDocument = () => ({ ...window.writingDocument });
@@ -103,7 +108,7 @@ test('Markdown のリンクは表示文字と URL を入力でき，編集中の
 });
 
 test('狭い幅でも Markdown の各操作を選べて，コードブロック内の backtick をそのまま使える', async ({ page }, testInfo) => {
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 320, height: 640 });
   await openTools(page);
   const bounds = await page.locator('#markdown-tools button, #markdown-tools select').evaluateAll(nodes => nodes.map(node => {
     const rect = node.getBoundingClientRect(); return { left: rect.left, right: rect.right, width: rect.width, height: rect.height };
@@ -111,7 +116,7 @@ test('狭い幅でも Markdown の各操作を選べて，コードブロック�
   expect(bounds.length).toBe(12);
   for (const bound of bounds) {
     expect(bound.left).toBeGreaterThanOrEqual(0);
-    expect(bound.right).toBeLessThanOrEqual(390);
+    expect(bound.right).toBeLessThanOrEqual(320);
     expect(bound.width).toBeGreaterThanOrEqual(30);
     expect(bound.height).toBeGreaterThanOrEqual(30);
   }
@@ -129,7 +134,7 @@ test('狭い幅でも Markdown の各操作を選べて，コードブロック�
 });
 
 test('表の行数と列数を指定し，見本のセルを編集して Markdown に挿入する', async ({ page }, testInfo) => {
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 390, height: 600 });
   await openTools(page);
   await page.evaluate(() => window.setWritingDocument({ content: '# Notes\n\n', anchor: 9, head: 9 }));
   await page.locator('#markdown-tools').getByRole('button', { name: '表を挿入', exact: true }).click();
@@ -147,13 +152,20 @@ test('表の行数と列数を指定し，見本のセルを編集して Markdow
   });
   expect(dialog.left).toBeGreaterThanOrEqual(0); expect(dialog.right).toBeLessThanOrEqual(390);
   expect(dialog.scrollWidth).toBeLessThanOrEqual(dialog.width + 1);
+  await expect(page.locator('#insert-table-confirm')).toBeInViewport();
+  await expect(page.locator('#insert-table-dialog').getByRole('button', { name: '閉じる', exact: true })).toBeInViewport();
   await page.screenshot({ path: testInfo.outputPath('editable-table-narrow.png') });
+  await page.evaluate(() => window.setWritingDocument({ content: '# Changed elsewhere\n\n' }));
+  await page.locator('#insert-table-confirm').click();
+  await expect(page.locator('#insert-table-dialog .form-error')).toContainText('原稿や選択範囲が変わりました');
+  expect(await page.evaluate(() => window.writingInsertions)).toHaveLength(0);
+  await page.evaluate(() => window.setWritingDocument({ content: '# Notes\n\n' }));
   await page.locator('#insert-table-confirm').click();
   await expect(page.locator('#insert-table-dialog')).not.toBeVisible();
   await expect(page.locator('#rendered-source')).toContainText('| a\\|b |');
   const insertions = await page.evaluate(() => window.writingInsertions);
   expect(insertions).toHaveLength(1);
-  expect(insertions[0].snapshot).toEqual({ path: 'notes/chapter.md', projectRoot: '/writing-project', pane: 'secondary', anchor: 9, head: 9 });
+  expect(insertions[0].snapshot).toEqual({ path: 'notes/chapter.md', content: '# Notes\n\n', projectRoot: '/writing-project', pane: 'secondary', anchor: 9, head: 9 });
 });
 
 test('画像をドロップすると取り込み前に内容を確認でき，採番されたパスを元のペインへ挿入する', async ({ page }) => {

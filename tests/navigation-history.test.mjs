@@ -59,3 +59,18 @@ test('PDF navigation waits for a named destination before recording its result',
   await history.back();
   assert.equal(page, 1);
 });
+
+test('source edits move the saved offsets in both navigation directions', async () => {
+  let location = { source: { path: 'main.tex', anchor: 10, head: 12 } };
+  const history = new NavigationHistory({ capture: () => location, restore: value => { location = value; } });
+  await history.navigate(() => { location = { source: { path: 'appendix.tex', anchor: 80, head: 80 } }; });
+  await history.navigate(() => { location = { source: { path: 'main.tex', anchor: 200, head: 210 } }; });
+  await history.back();
+  history.mapEntries(entry => entry.source.path === 'main.tex' ? {
+    ...entry, source: { ...entry.source, anchor: entry.source.anchor + 6, head: entry.source.head + 6 },
+  } : entry);
+  await history.back();
+  assert.deepEqual(location.source, { path: 'main.tex', anchor: 16, head: 18 });
+  await history.forward(); await history.forward();
+  assert.deepEqual(location.source, { path: 'main.tex', anchor: 206, head: 216 });
+});

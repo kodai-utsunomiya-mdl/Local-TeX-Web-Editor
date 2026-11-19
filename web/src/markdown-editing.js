@@ -4,7 +4,16 @@ import { markdownEdit, sameMarkdownSelection } from './markdown-editing-commands
 
 const isMarkdown = path => /\.(md|markdown)$/i.test(path || '');
 
-export function createMarkdownEditing({ container, getDocument, applyEdit, onTable = () => {}, onError = () => {} }) {
+function tableIcon() {
+  const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  for (const [name, value] of Object.entries({ viewBox: '0 0 20 20', width: '16', height: '16', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5', 'aria-hidden': 'true', focusable: 'false' })) icon.setAttribute(name, value);
+  const grid = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  grid.setAttribute('d', 'M3 3.5h14v13H3Z M3 8h14 M3 12.5h14 M7.5 3.5v13 M12.5 3.5v13');
+  icon.append(grid);
+  return icon;
+}
+
+export function createMarkdownEditing({ container, getDocument, applyEdit, focusDocument = () => {}, onTable = () => {}, onError = () => {} }) {
   container.classList.add('markdown-editing');
   container.setAttribute('role', 'toolbar');
   container.setAttribute('aria-label', t('Markdown の編集'));
@@ -32,7 +41,7 @@ export function createMarkdownEditing({ container, getDocument, applyEdit, onTab
   }
   function button(key, caption, action, className = '') {
     const button = element('button', { type: 'button', class: `markdown-edit-button ${className}`.trim(), title: t(key), 'aria-label': t(key), 'data-i18n-title': key, 'data-i18n-aria-label': key });
-    button.append(element('span', { 'aria-hidden': 'true' }, caption));
+    button.append(typeof caption === 'string' ? element('span', { 'aria-hidden': 'true' }, caption) : caption);
     button.addEventListener('click', action);
     return button;
   }
@@ -48,7 +57,7 @@ export function createMarkdownEditing({ container, getDocument, applyEdit, onTab
   const blocks = element('div', { class: 'markdown-edit-group' });
   blocks.append(button('箇条書き', '•', () => run('bullet')), button('番号付きリスト', '1.', () => run('ordered')), button('チェックリスト', '☑', () => run('task')), button('引用', '❝', () => run('quote')));
   const insertions = element('div', { class: 'markdown-edit-group' });
-  insertions.append(button('行内コード', '<>', () => run('inlineCode', { placeholder: t('コード') })), button('コードブロック', '{ }', () => openCode()), button('リンクを挿入', '↗', () => openLink()), button('表を挿入', '▦', onTable));
+  insertions.append(button('行内コード', '<>', () => run('inlineCode', { placeholder: t('コード') })), button('コードブロック', '{ }', () => openCode()), button('リンクを挿入', '↗', () => openLink()), button('表を挿入', tableIcon(), onTable));
   container.replaceChildren(formatting, blocks, insertions);
 
   const link = createImportDialog('markdown-link-dialog', 'リンクを挿入');
@@ -60,6 +69,7 @@ export function createMarkdownEditing({ container, getDocument, applyEdit, onTab
   const linkCancel = translated('button', 'キャンセル', { class: 'button', type: 'button' });
   link.body.append(linkLabel.group, linkURL.group, linkHelp, linkPreview.group); link.footer.append(linkCancel, linkInsert);
   linkCancel.onclick = () => link.close();
+  link.dialog.addEventListener('close', () => { if (linkDocument) focusDocument(linkDocument); });
   function updateLink() {
     try { linkPreview.input.value = markdownEdit(linkDocument || {}, 'link', { label: linkLabel.input.value, url: linkURL.input.value, placeholder: t('リンクの文字') }).changes[0].insert; }
     catch { linkPreview.input.value = ''; }
@@ -86,6 +96,7 @@ export function createMarkdownEditing({ container, getDocument, applyEdit, onTab
   const codeCancel = translated('button', 'キャンセル', { class: 'button', type: 'button' });
   code.body.append(codeLanguage.group, codeInput.group); code.footer.append(codeCancel, codeInsert);
   codeCancel.onclick = () => code.close();
+  code.dialog.addEventListener('close', () => { if (codeDocument) focusDocument(codeDocument); });
   codeInsert.onclick = () => code.run(async () => {
     await apply('codeBlock', { language: codeLanguage.input.value, code: codeInput.input.value, placeholder: t('コード') }, codeDocument);
     return true;

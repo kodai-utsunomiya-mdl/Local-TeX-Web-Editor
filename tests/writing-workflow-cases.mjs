@@ -22,30 +22,46 @@ export function registerWritingWorkflowTests({ test, openProject, openEditor, se
     await writeFile(path.join(session.project, 'format.md'), 'Draft phrase\n');
     await openProject(session); await openEditor(page, session); await setAutoSave(page, false);
     await page.getByTestId('file-format.md').click();
+    await page.locator('#split-editors').click();
+    await page.locator('#primary-document').selectOption('main.tex');
+    await page.locator('#secondary-document').selectOption('format.md');
+    const editor = source(page, true);
     const toolbar = page.locator('#markdown-editing');
     await expect(toolbar).toBeVisible();
-    await source(page).click(); await page.keyboard.press(`${modifier}+Home`); await page.keyboard.press('Shift+End');
+    await editor.click(); await page.keyboard.press(`${modifier}+Home`); await page.keyboard.press('Shift+End');
     await toolbar.getByRole('button', { name: '太字', exact: true }).click();
     await expect(page.getByTestId('markdown-document').locator('strong')).toHaveText('Draft phrase');
+    await expect(editor).toBeFocused();
     await page.keyboard.press(`${modifier}+z`);
     await expect(page.getByTestId('markdown-document').locator('strong')).toHaveCount(0);
-    await source(page).click(); await page.keyboard.press(`${modifier}+Home`); await page.keyboard.press('Shift+End');
+    await editor.click(); await page.keyboard.press(`${modifier}+Home`); await page.keyboard.press('Shift+End');
+    await toolbar.getByRole('button', { name: 'リンクを挿入', exact: true }).click();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#markdown-link-dialog')).not.toBeVisible();
+    await expect(editor).toBeFocused();
     await toolbar.getByRole('button', { name: 'リンクを挿入', exact: true }).click();
     await expect(page.locator('#markdown-link-label')).toHaveValue('Draft phrase');
     await page.locator('#markdown-link-label').fill('Paper to read');
     await page.locator('#markdown-link-url').fill('https://example.com/paper');
     await page.locator('#markdown-link-confirm').click();
     await expect(page.getByTestId('markdown-document').getByRole('link', { name: 'Paper to read' })).toHaveAttribute('href', 'https://example.com/paper');
-    await source(page).click(); await page.keyboard.press(`${modifier}+End`); await page.keyboard.press('Enter');
+    await expect(editor).toBeFocused();
+    await page.keyboard.press(`${modifier}+End`); await page.keyboard.press('Enter');
+    await toolbar.getByRole('button', { name: 'コードブロック', exact: true }).click();
+    await page.locator('#markdown-code-dialog').getByRole('button', { name: 'キャンセル', exact: true }).click();
+    await expect(editor).toBeFocused();
     await toolbar.getByRole('button', { name: 'コードブロック', exact: true }).click();
     await page.locator('#markdown-code-language').fill('python');
     await page.locator('#markdown-code-input').fill('print("Hello")');
     await page.locator('#markdown-code-confirm').click();
     await expect(page.getByTestId('markdown-document').locator('pre code')).toHaveText('print("Hello")\n');
+    await expect(editor).toBeFocused();
     await page.screenshot({ path: testInfo.outputPath('markdown-editing-controls.png') });
     await page.keyboard.press(`${modifier}+z`);
     await expect(page.getByTestId('markdown-document').locator('pre code')).toHaveCount(0);
     await expect(page.getByTestId('markdown-document').getByRole('link', { name: 'Paper to read' })).toBeVisible();
+    await expect(source(page)).toContainText('\\documentclass');
+    await expect(source(page)).not.toContainText('Paper to read');
     expect(errors).toEqual([]);
   });
 
@@ -76,7 +92,8 @@ export function registerWritingWorkflowTests({ test, openProject, openEditor, se
     const second = '\\section{Second}\nSecond document.\n';
     await writeFile(path.join(session.project, 'first.tex'), first);
     await writeFile(path.join(session.project, 'second.tex'), second);
-    await openProject(session); await openEditor(page, session); await setAutoSave(page, false);
+    const project = (await openProject(session)).project;
+    await openEditor(page, session); await setAutoSave(page, false);
     await expect(page.locator('html')).toHaveAttribute('data-palette', 'gray');
     expect(await page.locator('#editor .cm-scroller').evaluate(element => getComputedStyle(element).fontFamily)).toMatch(/^Consolas/);
     await page.getByTestId('file-first.tex').click();
@@ -88,7 +105,7 @@ export function registerWritingWorkflowTests({ test, openProject, openEditor, se
     await expect(source(page, true)).toContainText('Second document.');
     await source(page).click(); await page.keyboard.press(`${modifier}+Home`); await page.keyboard.insertText('% left\n');
     await source(page, true).click(); await page.keyboard.press(`${modifier}+Home`); await page.keyboard.insertText('% right\n');
-    await page.keyboard.press(`${modifier}+Shift+s`);
+    await page.keyboard.press(`${modifier}+Shift+S`);
     await expect.poll(async () => clean(await readFile(path.join(session.project, 'first.tex'), 'utf8'))).toBe('% left\n' + first);
     await expect.poll(async () => clean(await readFile(path.join(session.project, 'second.tex'), 'utf8'))).toBe('% right\n' + second);
 
@@ -98,7 +115,7 @@ export function registerWritingWorkflowTests({ test, openProject, openEditor, se
     await source(page).click(); await page.keyboard.press(`${modifier}+z`);
     await expect(source(page)).not.toContainText('% shared');
     await expect(source(page, true)).not.toContainText('% shared');
-    await page.keyboard.press(modifier === 'Meta' ? 'Meta+Shift+z' : 'Control+y');
+    await page.keyboard.press(modifier === 'Meta' ? 'Meta+Shift+Z' : 'Control+y');
     await expect(source(page)).toContainText('% shared');
     await expect(source(page, true)).toContainText('% shared');
     await page.keyboard.press(`${modifier}+s`);
@@ -109,7 +126,7 @@ export function registerWritingWorkflowTests({ test, openProject, openEditor, se
     const ratio = await page.locator('#source-splitter').getAttribute('aria-valuenow');
     expect(Number(ratio)).toBeGreaterThan(50);
     await page.screenshot({ path: testInfo.outputPath('two-source-editors.png') });
-    await expect.poll(async () => (await json(session, `/api/storage?key=${encodeURIComponent('session:' + session.project)}`)).value?.tabs).toEqual(['first.tex', 'main.tex', 'second.tex']);
+    await expect.poll(async () => (await json(session, `/api/storage?key=${encodeURIComponent('session:' + project.root)}`)).value?.tabs).toEqual(['first.tex', 'main.tex', 'second.tex']);
     await page.reload();
     await expect(page.locator('#primary-document')).toHaveValue('first.tex');
     await expect(page.locator('#secondary-document')).toHaveValue('second.tex');
@@ -133,7 +150,7 @@ export function registerWritingWorkflowTests({ test, openProject, openEditor, se
     await page.getByTestId('file-alpha.tex').click();
     const current = 'needle alpha edited\n\nKeep Alpha\n\nOriginal final\n';
     await replaceSource(page, current);
-    await page.keyboard.press(`${modifier}+Shift+f`);
+    await page.keyboard.press(`${modifier}+Shift+F`);
     await page.getByTestId('project-search-query').fill('needle');
     await page.getByTestId('project-search-replacement').fill('found');
     await page.getByTestId('run-project-search').click();
@@ -150,6 +167,7 @@ export function registerWritingWorkflowTests({ test, openProject, openEditor, se
     await source(page).click(); await page.keyboard.press(`${modifier}+z`);
     await expect(source(page)).toContainText('needle alpha edited');
     await page.keyboard.press(`${modifier}+s`);
+    await page.keyboard.press(`${modifier}+f`);
     await tool(page, 'document-history');
     await page.getByTestId('history-label').fill('Before revising the paragraphs');
     await page.getByTestId('record-history').click();
@@ -190,8 +208,13 @@ export function registerWritingWorkflowTests({ test, openProject, openEditor, se
     await page.locator('[data-reference-key="sec:workflow"]').click();
     await page.getByTestId('reference-new-key').fill('sec:revised');
     await page.getByTestId('reference-preview-rename').click();
+    await expect(page.getByTestId('reference-change-heading')).toBeFocused();
+    await expect(page.getByTestId('reference-change-heading')).toBeInViewport();
+    await expect(page.locator('.reference-rename-form .form-error')).toBeHidden();
     await expect(page.getByTestId('reference-change-list')).toContainText('definitions.tex');
     await expect(page.getByTestId('reference-change-list')).toContainText('uses.tex');
+    await page.keyboard.press('Tab');
+    await expect(page.getByTestId('reference-apply-rename')).toBeFocused();
     await page.screenshot({ path: testInfo.outputPath('rename-a-reference.png') });
     await page.getByTestId('reference-apply-rename').click();
     await expect(page.locator('.reference-status')).toContainText('名前を変更しました');
@@ -215,12 +238,17 @@ export function registerWritingWorkflowTests({ test, openProject, openEditor, se
     await expect(page.locator('#insert-image-dialog')).not.toBeVisible();
     await expect(source(page)).toContainText('figures/pasted.png');
     expect((await stat(path.join(session.project, 'figures', 'pasted.png'))).size).toBeGreaterThan(0);
+    await expect(source(page)).toBeFocused();
+    await tool(page, 'insert-table');
+    await page.locator('#insert-table-dialog').getByRole('button', { name: 'キャンセル', exact: true }).click();
+    await expect(source(page)).toBeFocused();
     await tool(page, 'insert-table');
     await page.locator('#insert-table-input').fill('Name\tValue\nA&B\t2');
     await expect(page.locator('#insert-table-source')).toHaveValue(/\| Name \| Value \|/);
     await page.locator('#insert-table-confirm').click();
     await expect(source(page)).toContainText('| Name | Value |');
-    await source(page).click(); await page.keyboard.press(`${modifier}+s`);
+    await expect(source(page)).toBeFocused();
+    await page.keyboard.press(`${modifier}+s`);
     const notes = clean(await readFile(path.join(session.project, 'notes.md'), 'utf8'));
     await tool(page, 'project-templates');
     await expect(page.locator('#template-list .template-card')).toHaveCount(4);
@@ -232,10 +260,24 @@ export function registerWritingWorkflowTests({ test, openProject, openEditor, se
     await page.locator('#template-parent').fill(session.temp);
     await page.locator('#template-project-name').fill('created-from-template');
     await page.screenshot({ path: testInfo.outputPath('user-project-template.png') });
+    const creation = page.waitForResponse(response => new URL(response.url()).pathname === '/api/templates/create-project' && response.request().method() === 'POST');
     await page.locator('#template-create-project').click();
+    const response = await creation;
+    expect(response.status()).toBe(201);
+    const { path: created } = await response.json();
+    expect(typeof created).toBe('string');
+    expect(path.isAbsolute(created)).toBe(true);
     await expect(page.locator('#template-dialog')).not.toBeVisible();
-    const created = path.join(session.temp, 'created-from-template');
     await expect(page.locator('#project-root')).toHaveText(created);
+    // The API resolves Windows 8.3 names and macOS /var aliases. Both spellings
+    // must identify the new folder selected in the dialog.
+    const [requestedFolder, actualFolder] = await Promise.all([
+      stat(path.join(session.temp, 'created-from-template'), { bigint: true }),
+      stat(created, { bigint: true }),
+    ]);
+    expect(actualFolder.isDirectory()).toBe(true);
+    expect(actualFolder.dev).toBe(requestedFolder.dev);
+    expect(actualFolder.ino).toBe(requestedFolder.ino);
     await page.getByTestId('file-notes.md').click();
     expect(clean(await readFile(path.join(created, 'notes.md'), 'utf8'))).toBe(notes);
     expect((await stat(path.join(created, 'figures', 'pasted.png'))).size).toBeGreaterThan(0);
@@ -265,7 +307,7 @@ export function registerWritingWorkflowTests({ test, openProject, openEditor, se
       await checkPosition(line);
     }
     await page.route('**/api/synctex/inverse', route => route.fulfill({ json: { path: 'positions.tex', line: 171, column: 1 } }));
-    await page.getByTestId('pdf-canvas').dblclick({ position: { x: 100, y: 100 } });
+    await page.locator('#pdf-stage .textLayer').first().dblclick({ position: { x: 100, y: 100 } });
     await checkPosition(171);
     await page.screenshot({ path: testInfo.outputPath('source-destination-spacing.png') });
     await page.locator('#editor-pane [data-navigation-back]').click();

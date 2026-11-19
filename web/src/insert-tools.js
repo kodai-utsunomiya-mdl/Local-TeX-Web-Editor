@@ -17,7 +17,7 @@ async function fileBase64(file) {
   return btoa(binary);
 }
 
-export function createInsertTools({ api, getDocument, getProject = () => null, insertText, refreshProject = async () => {}, onError = () => {} }) {
+export function createInsertTools({ api, getDocument, getProject = () => null, insertText, refreshProject = async () => {}, focusDocument = () => {}, onError = () => {} }) {
   const imageDialog = createImportDialog('insert-image-dialog', '画像を挿入');
   const tableDialog = createImportDialog('insert-table-dialog', '表を挿入');
   let imageDocument = null, tableDocument = null, chosenFile = null, previewURL = '';
@@ -69,7 +69,10 @@ export function createInsertTools({ api, getDocument, getProject = () => null, i
   imageFileInput.input.addEventListener('change', () => chooseImage(imageFileInput.input.files[0]));
   for (const field of [destination, caption, label, width]) field.input.addEventListener('input', updateImageSource);
   imageDialog.dialog.addEventListener('close', clearPreview);
+  imageDialog.dialog.addEventListener('close', () => { if (imageDocument) focusDocument(imageDocument); });
+  tableDialog.dialog.addEventListener('close', () => { if (tableDocument) focusDocument(tableDocument); });
   imageInsert.onclick = () => imageDialog.run(async () => {
+    checkDocument(imageDocument);
     if (!chosenFile) throw new Error(t('取り込む画像を選んでください．'));
     if (!destination.input.value.trim()) throw new Error(t('画像の保存先を入力してください．'));
     if (!width.input.checkValidity()) throw new Error(t('図の幅は 0 より大きく，1 以下にしてください．'));
@@ -78,6 +81,7 @@ export function createInsertTools({ api, getDocument, getProject = () => null, i
     imageText();
     const imported = await api('/api/assets/import', { method: 'POST', body: { path: destination.input.value.trim(), data: await fileBase64(chosenFile) }, timeout: 30000, projectRoot: imageDocument.projectRoot });
     await refreshProject();
+    checkDocument(imageDocument);
     await insertText(imageText(imported.path), { ...imageDocument });
     return true;
   }).then(done => { if (done) imageDialog.dialog.close(); });
@@ -151,6 +155,7 @@ export function createInsertTools({ api, getDocument, getProject = () => null, i
   tableInsert.onclick = () => tableDialog.run(async () => {
     updateTable();
     if (!rows.length) return false;
+    checkDocument(tableDocument);
     await insertText(tableInsertion(rows, { format: format.input.value, header: header.checked }), { ...tableDocument });
     return true;
   }).then(done => { if (done) tableDialog.dialog.close(); });
@@ -158,7 +163,13 @@ export function createInsertTools({ api, getDocument, getProject = () => null, i
   function currentDocument() {
     const doc = getDocument();
     if (!canInsert(doc)) { onError(new Error(t('画像や表を挿入する TeX または Markdown の原稿を開いてください．'))); return null; }
-    return { path: doc.path, projectRoot: getProject()?.root, pane: doc.pane, anchor: doc.anchor, head: doc.head };
+    return { path: doc.path, content: String(doc.content || ''), projectRoot: getProject()?.root, pane: doc.pane, anchor: doc.anchor, head: doc.head };
+  }
+  function checkDocument(snapshot) {
+    const current = getDocument();
+    if (!current || !snapshot || getProject()?.root !== snapshot.projectRoot || current.path !== snapshot.path || current.pane !== snapshot.pane || String(current.content || '') !== snapshot.content || current.anchor !== snapshot.anchor || current.head !== snapshot.head) {
+      throw new Error(t('原稿や選択範囲が変わりました．挿入先を選び直して，もう一度開いてください．'));
+    }
   }
   function openImage(file) {
     imageDocument = currentDocument();

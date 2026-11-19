@@ -1,5 +1,8 @@
 .import-dialog { width: min(720px, calc(100vw - 32px)); }
-.import-dialog .dialog-heading { align-items: center; }
+.import-dialog[open] { display: flex; flex-direction: column; overflow: hidden; }
+.import-dialog .dialog-heading { align-items: center; flex: 0 0 auto; }
+.import-body { min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 3px; margin: -3px; }
+.import-dialog > .form-error { flex: 0 0 auto; margin-top: 12px; overflow-wrap: anywhere; }
 .import-dialog .dialog-heading > .icon-button { width: 36px; height: 36px; margin: -4px -5px -4px 0; }
 .import-dialog :is(input, select, textarea) { max-width: 100%; }
 .import-dialog textarea { display: block; width: 100%; resize: vertical; font: 12px/1.65 var(--editor-font, ui-monospace, monospace); min-height: 60px; }
@@ -37,7 +40,7 @@
 .template-files { border: 1px solid var(--border); border-radius: 6px; max-height: 210px; overflow: auto; margin: 10px 0 14px; padding: 8px; }
 .template-files .checkbox-field { padding: 6px 2px; align-items: flex-start; font-size: 11px; line-height: 1.7; overflow-wrap: anywhere; }
 .template-files input { flex: 0 0 auto; margin-top: 3px; }
-.import-dialog .dialog-actions { flex-wrap: wrap; }
+.import-dialog .dialog-actions { flex: 0 0 auto; flex-wrap: wrap; margin-top: 20px; }
 @media (max-width: 480px) {
   .import-dialog { padding: 20px 17px; }
   .import-columns, .template-list { grid-template-columns: minmax(0, 1fr); }

@@ -11,6 +11,7 @@ const labels = {
   unused: ['標準的な引用・参照コマンドでの使用は見つかりません．', 'No uses in standard citation or reference commands were found.'],
   rename: ['キーの名前を変更', 'Rename the key'], newKey: ['新しいキー', 'New key'], preview: ['変更内容を確認', 'Preview changes'], apply: ['確認した変更を適用', 'Apply these changes'],
   current: ['変更前', 'Before'], changed: ['変更後', 'After'],
+  changes: ['変更内容', 'Changes'],
   invalid: ['新しいキーには文字，数字，: . _ / + @ - を使えます．現在と異なる名前を入力してください．', 'Use letters, digits, or : . _ / + @ - and choose a different key.'],
   duplicate: ['このキーの定義が複数あります．定義を開いて名前を確認してください．', 'This key has multiple definitions. Open them to check their names.'],
   collision: ['入力したキーは，すでに別の定義で使われています．', 'Another definition already uses this key.'],
@@ -19,6 +20,7 @@ const labels = {
   done: ['キーの名前を変更しました．', 'The key was renamed.'], refresh: ['一覧を更新', 'Refresh'],
   more: ['表示は先頭の 500 件です．検索する語を追加して絞り込めます．', 'Showing the first 500 keys. Add search terms to narrow the list.'],
   moreUses: ['先頭の 500 箇所を表示しています．', 'Showing the first 500 locations.'],
+  moreChanges: ['次の 200 行を表示', 'Show the next 200 lines'],
 };
 const text = key => labels[key]?.[getLanguage() === 'ja' ? 0 : 1] || key;
 const make = (tag, className, value) => { const node = document.createElement(tag); if (className) node.className = className; if (value != null) node.textContent = value; return node; };
@@ -35,7 +37,7 @@ export function createReferenceTools({ getFiles, readFile, getCurrent, onOpen, o
   searchRow.append(search, refresh);
   const status = make('p', 'field-help reference-status'); status.setAttribute('role', 'status');
   const columns = make('div', 'reference-columns'), list = make('div', 'reference-key-list'), detail = make('section', 'reference-details');
-  list.setAttribute('role', 'list'); columns.append(list, detail);
+  columns.append(list, detail);
   dialog.append(heading, searchRow, status, columns); document.body.append(dialog);
   let files = [], tokens = [], selected = null, busy = false, complete = true, generation = 0, plan = null;
   const perform = action => Promise.resolve().then(action).catch(error => { if (dialog.open) { status.textContent = error.message || String(error); status.classList.add('error'); } onError?.(error); });
@@ -60,7 +62,7 @@ export function createReferenceTools({ getFiles, readFile, getCurrent, onOpen, o
     for (const item of [...groups.values()].sort((a, b) => a.key.localeCompare(b.key))) {
       if (query && ![item.key, item.title, item.author, item.year, item.context].join(' ').toLocaleLowerCase().includes(query)) continue;
       if (count++ >= 500) { list.append(make('p', 'field-help', text('more'))); break; }
-      const button = make('button', 'reference-key'); button.type = 'button'; button.setAttribute('role', 'listitem');
+      const button = make('button', 'reference-key'); button.type = 'button';
       button.dataset.referenceKey = item.key; button.dataset.kind = item.kind;
       button.classList.toggle('selected', selected?.key === item.key && selected?.kind === item.kind);
       button.append(make('strong', '', item.key), make('span', 'field-help', [text(item.kind), item.title || item.context].filter(Boolean).join(' · ')));
@@ -73,7 +75,7 @@ export function createReferenceTools({ getFiles, readFile, getCurrent, onOpen, o
   function sourcePreview(item) {
     const file = files.find(file => file.path === item.path);
     if (!file) return '';
-    const lines = file.content.split('\n');
+    const lines = file.lines ||= file.content.split('\n');
     return lines.slice(Math.max(0, item.line - 3), item.line + 3).join('\n').slice(0, 1400);
   }
 
@@ -88,14 +90,15 @@ export function createReferenceTools({ getFiles, readFile, getCurrent, onOpen, o
     return block;
   }
 
-  function renderDetails() {
+  function renderDetails({ focusChanges = false } = {}) {
     detail.replaceChildren();
     if (!selected) { detail.append(make('p', 'field-help', text('select'))); return; }
     const matches = tokens.filter(item => item.kind === selected.kind && item.key === selected.key);
     const definitions = matches.filter(item => item.role === 'definition'), uses = matches.filter(item => item.role === 'use');
     detail.append(make('h3', 'reference-selected-key', selected.key), make('h4', '', `${text('definition')} (${definitions.length})`));
     if (!definitions.length) detail.append(make('p', 'field-help', text('missing')));
-    for (const item of definitions) detail.append(location(item));
+    for (const item of definitions.slice(0, 500)) detail.append(location(item));
+    if (definitions.length > 500) detail.append(make('p', 'field-help', text('moreUses')));
     detail.append(make('h4', '', `${text('uses')} (${uses.length})`));
     if (!uses.length) detail.append(make('p', 'field-help', text('unused')));
     for (const item of uses.slice(0, 500)) detail.append(location(item));
@@ -115,20 +118,34 @@ export function createReferenceTools({ getFiles, readFile, getCurrent, onOpen, o
       const nextKey = input.value.trim();
       if (!validReferenceKey(nextKey) || nextKey === selected.key) { error.textContent = text('invalid'); return; }
       if (tokens.some(item => item.kind === selected.kind && item.key === nextKey && item.role === 'definition')) { error.textContent = text('collision'); return; }
-      try { plan = planReferenceRename(files, selected.kind, selected.key, nextKey); renderDetails(); }
+      try { plan = planReferenceRename(files, selected.kind, selected.key, nextKey); renderDetails({ focusChanges: true }); }
       catch (caught) { error.textContent = caught.message; }
     });
     if (plan) {
-      const previewList = make('div', 'reference-change-list'); previewList.dataset.testid = 'reference-change-list';
-      for (const file of plan) {
-        previewList.append(make('h4', '', `${file.path} (${file.changes.length})`));
-        const before = file.before.split('\n'), after = file.content.split('\n');
-        for (const line of [...new Set(file.changes.map(change => change.line))]) {
+      const previewList = make('section', 'reference-change-list'); previewList.dataset.testid = 'reference-change-list';
+      const changesTitle = make('h4', 'reference-change-title', text('changes'));
+      changesTitle.id = 'reference-change-title'; changesTitle.tabIndex = -1; changesTitle.dataset.testid = 'reference-change-heading';
+      previewList.setAttribute('aria-labelledby', changesTitle.id); previewList.append(changesTitle);
+      const more = make('button', 'button button-small', text('moreChanges')); more.type = 'button';
+      const changes = (function* () {
+        for (const file of plan) {
+          const before = file.before.split('\n'), after = file.content.split('\n');
+          for (const line of new Set(file.changes.map(change => change.line))) yield { file, line, before: before[line - 1], after: after[line - 1] };
+        }
+      })();
+      let shownFile = null;
+      const showChanges = () => {
+        for (let count = 0; count < 200; count++) {
+          const next = changes.next();
+          if (next.done) { more.hidden = true; break; }
+          const { file, line, before, after } = next.value;
+          if (shownFile !== file) { previewList.append(make('h4', '', `${file.path} (${file.changes.length})`)); shownFile = file; }
           const row = make('div', 'reference-change-row');
-          row.append(make('span', 'field-help', String(line)), make('del', '', before[line - 1]), make('ins', '', after[line - 1]));
+          row.append(make('span', 'field-help', String(line)), make('del', '', before), make('ins', '', after));
           previewList.append(row);
         }
-      }
+      };
+      more.addEventListener('click', showChanges); showChanges();
       const apply = make('button', 'button button-primary', text('apply')); apply.type = 'button'; apply.dataset.testid = 'reference-apply-rename';
       apply.addEventListener('click', () => perform(async () => {
         if (busy || !plan) return;
@@ -142,7 +159,13 @@ export function createReferenceTools({ getFiles, readFile, getCurrent, onOpen, o
           status.textContent = text('done');
         } finally { busy = false; apply.disabled = false; refresh.disabled = false; }
       }));
-      rename.append(previewList, apply);
+      rename.append(previewList, more, apply);
+      if (focusChanges) requestAnimationFrame(() => {
+        if (!dialog.open || !changesTitle.isConnected) return;
+        changesTitle.focus({ preventScroll: true });
+        const top = detail.scrollTop + changesTitle.getBoundingClientRect().top - detail.getBoundingClientRect().top - 8;
+        detail.scrollTo({ top: Math.max(0, top), behavior: 'instant' });
+      });
     }
   }
 

@@ -59,7 +59,7 @@ Microsoft requires a nonzero first part and reserves the last part for Store use
 
 ## Installation and data
 
-Windows creates the Start menu entry and manages Store updates. The Store edition does not create an extra copy of the executable for desktop shortcuts. It stores its settings and drafts at:
+Windows creates the Start menu entry and manages Store updates. The Store edition does not create an extra copy of the executable for desktop shortcuts. It stores its settings, drafts, edit history, and custom templates at:
 
 ```text
 %LOCALAPPDATA%\Packages\KodaiUtsunomiya.LocalTeXWebEditor_q701qfpryzpqc\LocalState\LocalTeXEditor

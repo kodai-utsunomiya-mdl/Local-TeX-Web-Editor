@@ -10,7 +10,7 @@
 .writing-menu-items button { font: inherit; text-align: left; background: transparent; border: 0; border-radius: 4px; padding: 9px 11px; color: var(--text); cursor: pointer; }
 .writing-menu-items button:hover, .writing-menu-items button:focus-visible { background: var(--accent-soft); color: var(--accent); }
 .writing-menu-items button:disabled { color: var(--muted); cursor: default; }
-.source-workspace { display: flex; flex: 1 1 auto; min-height: 0; min-width: 0; overflow: hidden; }
+.source-workspace { position: relative; z-index: 0; display: flex; flex: 1 1 auto; min-height: 0; min-width: 0; overflow: hidden; }
 .source-pane { display: flex; flex-direction: column; min-height: 0; min-width: 0; flex: 1 1 0; overflow: hidden; }
 .source-workspace.split .source-pane:first-child { flex: var(--source-ratio, 1) 1 0; }
 .source-workspace.split .source-pane-heading { display: flex; }

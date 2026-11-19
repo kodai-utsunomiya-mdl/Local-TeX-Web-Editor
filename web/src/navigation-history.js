@@ -30,8 +30,7 @@ export class NavigationHistory {
   }
 
   mapEntries(mapper) {
-    this.previous = this.previous.map(entry => mapper(copy(entry))).filter(Boolean);
-    this.next = this.next.map(entry => mapper(copy(entry))).filter(Boolean);
+    for (const entries of [this.previous, this.next]) entries.splice(0, entries.length, ...entries.map(entry => mapper(copy(entry))).filter(Boolean));
     if (this.origin) this.origin = mapper(copy(this.origin));
     this.changed();
   }

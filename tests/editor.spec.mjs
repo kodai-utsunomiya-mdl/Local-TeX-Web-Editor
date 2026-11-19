@@ -868,6 +868,8 @@ test('長い原稿の中央への最後の入力をタブが閉じた後に草�
   await reopened.getByTestId('review-drafts').click();
   await expect(reopened.locator('#recovery-draft')).toHaveValue(expected);
   await reopened.getByTestId('restore-draft').click();
+  await expect(reopened.getByTestId('editor')).toHaveAttribute('data-line', '6001');
+  await expect(reopened.getByTestId('editor')).toHaveAttribute('data-column', String(marker.length + finalInput.length + 1));
   await expect(reopened.getByTestId('editor').locator('.cm-content')).toContainText(marker + finalInput);
   expect(await readFile(path.join(session.project, 'main.tex'), 'utf8')).toBe(original);
 });
@@ -921,8 +923,12 @@ test('終了確認中に別のファイルが読み込まれても，取消後�
     await requestStarted;
     await page.locator('#shutdown-button').click();
     await expect(page.locator('#decision-dialog')).toBeVisible();
+    const responseFinished = page.waitForResponse(response => fileURL(new URL(response.url())));
     release();
-    await expect(page.getByTestId('editor')).toHaveAttribute('data-path', 'notes.txt');
+    await (await responseFinished).finished();
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    // A completed read must not change the selected document during shutdown.
+    await expect(page.getByTestId('editor')).toHaveAttribute('data-path', 'main.tex');
     await expect(page.getByTestId('editor').locator('.cm-content')).toHaveAttribute('contenteditable', 'false');
     await page.locator('#decision-cancel').click();
     await expect(page.locator('#decision-dialog')).not.toBeVisible();
@@ -938,6 +944,10 @@ test('終了確認中に別のファイルが読み込まれても，取消後�
     await expect(editor).toContainText('続けて入力できた');
     await page.keyboard.press('Control+S');
     await expect.poll(() => readFile(path.join(session.project, 'main.tex'), 'utf8')).toBe(expectedMainContent(session, content + '% 続けて入力できた\n'));
+    await page.getByTestId('file-notes.txt').click();
+    await expect(page.getByTestId('editor')).toHaveAttribute('data-path', 'notes.txt');
+    await expect(editor).toContainText('読み込みを待つファイル');
+    await expect(editor).toHaveAttribute('contenteditable', 'true');
   } finally {
     release();
     await page.unroute(fileURL);
@@ -1095,11 +1105,14 @@ test('フォルダーから画像と PDF を開き，編集中の原稿へ戻る
   await page.setViewportSize({ width: 1440, height: 900 });
   const dimensions = await page.evaluate(() => ({
     toolbar: document.querySelector('.app-header').getBoundingClientRect().height,
+    writingToolbar: document.querySelector('.writing-toolbar').getBoundingClientRect().height,
     editorTop: document.querySelector('#editor').getBoundingClientRect().top,
     pdfTop: document.querySelector('#pdf-scroll').getBoundingClientRect().top,
   }));
   expect(dimensions.toolbar).toBeLessThanOrEqual(48);
-  expect(dimensions.editorTop).toBeLessThanOrEqual(100);
+  expect(dimensions.writingToolbar).toBeGreaterThan(0);
+  expect(dimensions.writingToolbar).toBeLessThanOrEqual(40);
+  expect(dimensions.editorTop - dimensions.writingToolbar).toBeLessThanOrEqual(100);
   expect(dimensions.pdfTop).toBeLessThanOrEqual(100);
   await page.screenshot({ path: testInfo.outputPath('compact-editor.png') });
   expect(errors).toEqual([]);
@@ -1814,10 +1827,11 @@ test('外観の変更をキャンセルや Escape で戻し，OS とテーマボ
   await page.getByTestId('compile-mode').selectOption('xelatex');
   await page.locator('#open-appearance').click();
   await page.locator('#appearance-mode').selectOption('dark');
-  await page.locator('#appearance-palette').selectOption('gray');
+  await page.locator('#appearance-palette').selectOption('default');
   await page.locator('#appearance-accent').selectOption('orange');
-  await page.locator('#appearance-font').selectOption('consolas');
+  await page.locator('#appearance-font').selectOption('monospace');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(page.locator('html')).toHaveAttribute('data-palette', 'default');
   await expect.poll(() => readEditorAppearance(page).then(value => value.editorFont)).not.toBe(initial.editorFont);
   await page.setViewportSize({ width: 480, height: 900 });
   const dialog = page.locator('#appearance-dialog');

@@ -11,12 +11,17 @@ export function escapeTeXText(value) {
   return String(value).replace(/[\\{}%&#$_^~]/g, character => replacements[character]);
 }
 
+function markdownText(value) {
+  return String(value).replaceAll('&', '&amp;').replaceAll('\\', '\\\\').replace(/[|`*_~$\[\]]/g, character => `\\${character}`).replaceAll('<', '&lt;').replaceAll('>', '&gt;').replace(/\r?\n/g, ' ');
+}
+
 export function assetInsertion({ documentPath, assetPath, caption = '', label = '', width = '0.8' }) {
   const relative = relativeAssetPath(documentPath, assetPath);
   if (/\.(md|markdown)$/i.test(documentPath)) {
-    const alt = String(caption).replaceAll('\\', '\\\\').replaceAll('[', '\\[').replaceAll(']', '\\]').replace(/\r?\n/g, ' ');
+    const pdf = /\.pdf$/i.test(assetPath);
+    const alt = markdownText(caption || (pdf ? relative : ''));
     const url = relative.split('/').map(part => encodeURIComponent(part).replace(/[!'()*]/g, character => `%${character.charCodeAt(0).toString(16).toUpperCase()}`)).join('/');
-    return `${/\.pdf$/i.test(assetPath) ? '' : '!'}[${alt || (/\.pdf$/i.test(assetPath) ? relative : '')}](${url})\n`;
+    return `${pdf ? '' : '!'}[${alt}](${url})\n`;
   }
   if (/[{}%\r\n]/.test(relative)) throw new Error('The image path contains characters that TeX cannot read here.');
   const fraction = Number(width);
@@ -90,7 +95,7 @@ export function parseTable(text, delimiter = 'auto') {
 }
 
 function markdownCell(text) {
-  return String(text).replaceAll('\\', '\\\\').replaceAll('|', '\\|').replaceAll('`', '\\`').replaceAll('*', '\\*').replaceAll('_', '\\_').replaceAll('[', '\\[').replaceAll(']', '\\]').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replace(/\n/g, ' ');
+  return markdownText(text);
 }
 
 function texCell(text) {

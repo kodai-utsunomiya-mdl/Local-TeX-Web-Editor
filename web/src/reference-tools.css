@@ -22,7 +22,9 @@
 .reference-rename { border-top: 1px solid var(--border); margin-top: 18px; padding-top: 5px; }
 .reference-rename-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: end; }
 .reference-rename-form label, .reference-rename-form .form-error { grid-column: 1 / -1; }
+.reference-rename-form .form-error:empty { display: none; }
 .reference-change-list { margin: 16px 0; }
+.reference-change-title:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 2px; }
 .reference-change-row { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 5px 8px; margin-bottom: 10px; padding: 9px; border: 1px solid var(--border); border-radius: 6px; font: 11px/1.65 var(--editor-font-family, monospace); overflow-wrap: anywhere; }
 .reference-change-row span { grid-row: 1 / 3; }
 .reference-change-row del, .reference-change-row ins { text-decoration: none; white-space: pre-wrap; }

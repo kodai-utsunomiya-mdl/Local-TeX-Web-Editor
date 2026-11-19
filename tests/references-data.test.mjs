@@ -39,11 +39,20 @@ title = {A title with crossref={not-a-reference}},
 author = {A. Author}, year = 2026)
 @incollection{chapter2026, title={Chapter}, crossref={alpha2026}}
 @incollection{other2026, title={Other}, crossref=stringmacro}
+@incollection{joined2026, title={Part one} # {Part two, crossref={not-a-reference}}, crossref={alpha2026}}
 `;
   const tokens = extractReferenceTokens(content, 'references.bib');
-  assert.deepEqual(tokens.map(item => [item.role, item.key]), [['definition', 'alpha2026'], ['definition', 'chapter2026'], ['use', 'alpha2026'], ['definition', 'other2026']]);
+  assert.deepEqual(tokens.map(item => [item.role, item.key]), [['definition', 'alpha2026'], ['definition', 'chapter2026'], ['use', 'alpha2026'], ['definition', 'other2026'], ['definition', 'joined2026'], ['use', 'alpha2026']]);
   assert.equal(tokens[0].author, 'A. Author');
   for (const token of tokens) assert.equal(content.slice(token.from, token.to), token.key);
+});
+
+test('a literal comma in a label is one key while cleveref accepts a list', () => {
+  const content = String.raw`\label{sec:one,two} \ref{sec:one,two} \hyperref[sec:one,two]{Section} \cref{sec:one,sec:two}`;
+  const tokens = extractReferenceTokens(content, 'main.tex');
+  assert.deepEqual(tokens.map(item => item.key), ['sec:one,two', 'sec:one,two', 'sec:one,two', 'sec:one', 'sec:two']);
+  const plan = planReferenceRename([{ path: 'main.tex', content }], 'label', 'sec:one,two', 'sec:combined');
+  assert.equal(plan[0].content, String.raw`\label{sec:combined} \ref{sec:combined} \hyperref[sec:combined]{Section} \cref{sec:one,sec:two}`);
 });
 
 test('renaming a key changes its definition and real uses while preserving unrelated text', () => {
