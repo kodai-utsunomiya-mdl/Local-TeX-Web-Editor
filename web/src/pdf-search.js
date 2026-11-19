@@ -21,7 +21,9 @@ export class PDFSearch {
     this.toggle.title = t("PDF 内を検索 (PDF にフォーカスして {value0}+F)", { value0: shortcutModifier });
     this.toggle.setAttribute('aria-expanded', 'false');
     this.toggle.setAttribute('aria-controls', 'pdf-search-bar');
-    toolbar.insertBefore(this.toggle, toolbar.querySelector('#download-pdf'));
+    const download = toolbar.querySelector('#download-pdf');
+    if (download) download.before(this.toggle);
+    else toolbar.append(this.toggle);
 
     this.bar = document.createElement('div');
     this.bar.id = 'pdf-search-bar';

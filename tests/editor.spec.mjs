@@ -284,6 +284,24 @@ async function readEditorAppearance(page) {
   });
 }
 
+async function checkHelpLinks(page, language, store = false) {
+  const repositoryURL = 'https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor';
+  const releaseURL = `${repositoryURL}/releases/latest`;
+  const links = {
+    'help-guide': `https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/${language === 'ja' ? 'ja/' : ''}`,
+    'help-releases': releaseURL,
+    'help-issues': `${repositoryURL}/issues`,
+    'help-update': store ? `https://apps.microsoft.com/detail/9P6QF32N19HG?hl=${language === 'ja' ? 'ja-jp' : 'en-us'}` : releaseURL,
+  };
+  for (const [id, href] of Object.entries(links)) {
+    const link = page.locator(`#${id}`);
+    await expect(link).toHaveAttribute('href', href);
+    await expect(link).toHaveAttribute('target', '_blank');
+    await expect(link).toHaveAttribute('rel', /\bnoopener\b/);
+    await expect(link).toHaveAttribute('rel', /\bnoreferrer\b/);
+  }
+}
+
 function redactOutput(text, token) {
   return token ? text.replaceAll(token, '[local session token]') : text;
 }
@@ -1521,9 +1539,23 @@ test('ウィンドウを小さくしても，原稿とログを操作できる�
   const smaller = await readPanelLayout(page);
   expect(smaller.editor.width).toBeGreaterThanOrEqual(259);
   expect(smaller.preview.width).toBeGreaterThanOrEqual(259);
+  expect(smaller.preview.width).toBeLessThan(262);
   expect(smaller.editor.height).toBeGreaterThanOrEqual(159);
   expect(smaller.preview.right).toBeLessThanOrEqual(smaller.workbench.right + 1);
   expect(smaller.log.bottom).toBeLessThanOrEqual(smaller.workbench.bottom + 1);
+  await expect(page.getByTestId('pdf-search-toggle')).toBeVisible();
+  await expect(page.locator('#download-pdf')).toBeVisible();
+  const outsidePreview = await page.locator('.pdf-toolbar').evaluate(toolbar => {
+    const pane = document.getElementById('pdf-pane').getBoundingClientRect();
+    return [...toolbar.querySelectorAll('button, input, select')].filter(control => {
+      const bounds = control.getBoundingClientRect();
+      return bounds.left < pane.left - 1 || bounds.right > pane.right + 1 ||
+        bounds.top < pane.top - 1 || bounds.bottom > pane.bottom + 1;
+    }).map(control => control.id || control.dataset.testid);
+  });
+  expect(outsidePreview).toEqual([]);
+  expect(await page.locator('.pdf-toolbar').evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath('pdf-controls-narrow.png') });
 
   await page.setViewportSize({ width: 800, height: 480 });
   await expect(page.locator('#splitter')).not.toBeVisible();
@@ -1552,6 +1584,124 @@ test('ウィンドウを小さくしても，原稿とログを操作できる�
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.locator('#sidebar-toggle').click();
   await expect.poll(async () => Math.abs((await readPanelLayout(page)).sidebar.width - wide.sidebar.width)).toBeLessThan(2);
+  expect(errors).toEqual([]);
+});
+
+test('ヘルプに表示言語のリンクと操作方法を示し，環境情報をコピーしてログや設定を開ける', async ({ page, context, session }, testInfo) => {
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await openProject(session);
+  await openEditor(page, session);
+  const metadata = await json(session, '/api/state');
+  const dialog = page.locator('#help-dialog');
+  await page.locator('#help-button').click();
+  await expect(dialog).toBeVisible();
+  await checkHelpLinks(page, 'ja', Boolean(metadata.packageIdentity));
+  await page.screenshot({ path: testInfo.outputPath('help-desktop.png') });
+  const shortcuts = page.locator('#help-shortcuts');
+  if (!await shortcuts.evaluate(element => element.open)) await shortcuts.locator('summary').click();
+  const keys = (await page.locator('#help-shortcut-list kbd').allTextContents()).map(text => text.replaceAll(/\s/g, ''));
+  const modifier = process.platform === 'darwin' ? 'Cmd' : 'Ctrl';
+  expect(keys).toEqual(expect.arrayContaining([`${modifier}+S`, `${modifier}+Enter`, `${modifier}+F`, 'Ctrl+Space', 'F1']));
+  await expect(page.locator('#help-shortcut-list')).toContainText('現在のファイルを保存');
+  await page.locator('#help-about > summary').click();
+  await expect(page.locator('#help-environment')).toBeVisible();
+  const environment = await page.locator('#help-environment').inputValue();
+  expect(environment).toContain(applicationVersion);
+  const architecture = { amd64: 'x64 (amd64)', arm64: 'Arm64', 386: 'x86' }[metadata.architecture];
+  expect(architecture).toBeTruthy();
+  expect(environment).toContain(architecture);
+  expect(environment).toMatch(/Windows|macOS|Linux/);
+  for (const value of [session.project, session.temp, executable, session.url, session.token]) {
+    expect(environment).not.toContain(value);
+  }
+  expect(environment).not.toMatch(/(?:127\.0\.0\.1|localhost):\d+/);
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.locator('#help-copy-environment').click();
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(environment);
+
+  await page.locator('#help-open-log').click();
+  await expect(dialog).not.toBeVisible();
+  await expect(page.locator('#log-panel')).toBeVisible();
+  await page.locator('#help-button').click();
+  await page.locator('#help-open-settings').click();
+  await expect(dialog).not.toBeVisible();
+  await expect(page.locator('#settings-dialog')).toBeVisible();
+  await page.getByTestId('language-setting').selectOption('en');
+  await page.locator('#save-settings').click();
+  await expect(page.locator('#settings-dialog')).not.toBeVisible();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  await page.keyboard.press('F1');
+  await expect(dialog).toBeVisible();
+  await checkHelpLinks(page, 'en', Boolean(metadata.packageIdentity));
+  await expect(dialog).toHaveAccessibleName('Help');
+  await expect(page.locator('#help-shortcut-list')).toContainText('Save current file');
+  await page.keyboard.press('Escape');
+  await expect(dialog).not.toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('編集中の原稿と設定を残して F1 のヘルプを開き，小さい幅でも元の画面へ戻れる', async ({ page, session }, testInfo) => {
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await openProject(session);
+  await openEditor(page, session);
+  await setAutoSave(page, false);
+  const original = await readFile(path.join(session.project, 'main.tex'), 'utf8');
+  const marker = '% ヘルプを開いた後も編集を続ける';
+  const draft = `${marker}\n${original.replaceAll('\r\n', '\n')}`;
+  await replaceEditor(page, draft);
+  await page.keyboard.press('Control+Home');
+  const editor = page.getByTestId('editor').locator('.cm-content');
+  const dialog = page.locator('#help-dialog');
+  await page.keyboard.press('F1');
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(dialog).not.toBeVisible();
+  await expect(editor).toBeFocused();
+  await expect(editor).toContainText(marker);
+  expect(await readFile(path.join(session.project, 'main.tex'), 'utf8')).toBe(original);
+
+  await page.getByTestId('settings-button').click();
+  await page.getByTestId('compile-mode').selectOption('xelatex');
+  await page.getByTestId('editor-font-size').fill('17');
+  await page.keyboard.press('F1');
+  await expect(dialog).toBeVisible();
+  await page.mouse.click(8, 8);
+  await expect(dialog).not.toBeVisible();
+  await expect(page.locator('#settings-dialog')).toBeVisible();
+  await expect(page.getByTestId('compile-mode')).toHaveValue('xelatex');
+  await expect(page.getByTestId('editor-font-size')).toHaveValue('17');
+
+  await page.locator('#open-appearance').click();
+  await page.locator('#appearance-mode').selectOption('dark');
+  await page.locator('#appearance-palette').selectOption('warm');
+  await page.keyboard.press('F1');
+  await expect(dialog).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  const header = page.locator('.app-header');
+  expect(await header.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+  const buttonBounds = await page.locator('#help-button').boundingBox();
+  expect(buttonBounds.x).toBeGreaterThanOrEqual(0);
+  expect(buttonBounds.x + buttonBounds.width).toBeLessThanOrEqual(391);
+  expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+  const dialogBounds = await dialog.boundingBox();
+  expect(dialogBounds.x).toBeGreaterThanOrEqual(0);
+  expect(dialogBounds.x + dialogBounds.width).toBeLessThanOrEqual(391);
+  await dialog.evaluate(element => { element.scrollTop = 0; });
+  await page.screenshot({ path: testInfo.outputPath('help-narrow.png') });
+  await page.keyboard.press('Escape');
+  await expect(dialog).not.toBeVisible();
+  await expect(page.locator('#appearance-dialog')).toBeVisible();
+  await expect(page.locator('#appearance-mode')).toHaveValue('dark');
+  await expect(page.locator('#appearance-palette')).toHaveValue('warm');
+  await page.locator('#appearance-cancel').click();
+  await expect(page.getByTestId('compile-mode')).toHaveValue('xelatex');
+  await expect(page.getByTestId('editor-font-size')).toHaveValue('17');
+  await closeSettings(page);
+  await expect(editor).toContainText(marker);
+  expect(await readFile(path.join(session.project, 'main.tex'), 'utf8')).toBe(original);
   expect(errors).toEqual([]);
 });
 

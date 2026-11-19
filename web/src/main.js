@@ -14,6 +14,7 @@ import { sourceSearch, openSourceSearchPanel } from './source-search.js';
 import { attachEditorZoom, prepareEditorResize } from './editor-zoom.js';
 import { createPanelLayout, normalizePanelLayout } from './panel-layout.js';
 import { normalizeAppearance, resolveAppearance } from './appearance.js';
+import { createHelp } from './help.js';
 import { tags } from '@lezer/highlight';
 import { SessionStore } from './session-store.js';
 import { BrowserSession } from './browser-session.js';
@@ -83,6 +84,7 @@ const state = {
 const readOnly = new Compartment();
 const systemColorScheme = matchMedia('(prefers-color-scheme: dark)');
 let appearanceDraft = null;
+let help = null;
 const editorTheme = new Compartment();
 const editorLanguage = new Compartment();
 const modeLabels = { project: 'latexmkrc', pdflatex: 'pdfLaTeX', uplatex: 'upLaTeX', xelatex: 'XeLaTeX', lualatex: 'LuaLaTeX' };
@@ -1103,6 +1105,8 @@ function renderControls() {
   $('download-pdf').disabled = !state.build?.pdfReady || state.closed;
   $('copy-log').disabled = !state.fullLog;
   $('theme-toggle').disabled = state.closed;
+  $('help-button').disabled = state.closed;
+  help?.refresh();
   for (const button of state.treeButtons.values()) button.disabled = busy;
   for (const tab of state.tabElements.values()) { tab.button.disabled = busy; tab.close.disabled = busy; }
 }
@@ -1707,6 +1711,20 @@ const markdownPreview = new MarkdownPreview({
   }),
 });
 
+help = createHelp({
+  button: $('help-button'), dialog: $('help-dialog'), getMeta: () => state.meta, isClosed: () => state.closed,
+  getActions: () => {
+    const otherDialogs = [...document.querySelectorAll('dialog[open]')].filter(dialog => dialog.id !== 'help-dialog');
+    const returnToSettings = otherDialogs.length === 1 && otherDialogs[0].id === 'settings-dialog';
+    return {
+      log: !otherDialogs.length && !!state.meta?.project && !state.closed,
+      settings: returnToSettings || (!otherDialogs.length && !state.operation && !isRunning() && !state.closed),
+      returnToSettings, blockedByDialog: otherDialogs.length > 0,
+    };
+  },
+  onOpenLog: () => { setLogVisible(true); $('build-log').focus(); },
+  onOpenSettings: () => { if (!$('settings-dialog').open) runTask(showSettings); },
+});
 applyLanguage(state.preferences.language);
 $('find-button').title = t("検索・置換 ({value0}+F)", { value0: shortcutModifier });
 $('save-button').title = t("現在のファイルを保存 ({value0}+S)", { value0: shortcutModifier });

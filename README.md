@@ -212,6 +212,14 @@ Changes appear immediately. Choose **Save appearance** to use them in future ses
 
 The theme button at the top right switches directly between light and dark mode and continues to use your selected color scheme, accent, and font. If the selected font is unavailable on your computer, the editor uses the default monospace font.
 
+### Help and feedback
+
+Click the **? (Help)** button at the top right, or press `F1`, to open the help window. It includes the user guide, keyboard shortcuts, release notes, troubleshooting steps, and a link to the update page for your edition. The troubleshooting section also opens the compilation log or Settings.
+
+Under **About the app**, review the version, operating system, app architecture, edition, and available TeX programs. Use **Copy environment information** to copy these details, and **Open GitHub Issues** to report a problem or suggest a change. For a problem, include the steps that led to it and the relevant part of the compilation log.
+
+Close help with `Esc`, **×**, or a click outside the window.
+
 ### Autosave and returning to your work
 
 Autosave is enabled initially. The app saves the source file when typing pauses. You can continue editing while compilation runs; autosave waits until compilation finishes. Turn autosave off in Settings if you prefer to save manually.
