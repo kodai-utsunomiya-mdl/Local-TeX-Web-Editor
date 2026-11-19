@@ -54,6 +54,12 @@ func StopProcess(process *os.Process) error {
 }
 
 func ReplaceFile(src, dst string) error {
+	return ReplaceFileChecked(src, dst, nil)
+}
+
+// ReplaceFileChecked checks the destination before each attempt to replace it.
+// A reader or a virus scanner can briefly prevent a Windows file rename.
+func ReplaceFileChecked(src, dst string, check func() error) error {
 	s, err := syscall.UTF16PtrFromString(src)
 	if err != nil {
 		return err
@@ -62,11 +68,30 @@ func ReplaceFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	ok, _, callErr := kernel32.NewProc("MoveFileExW").Call(uintptr(unsafe.Pointer(s)), uintptr(unsafe.Pointer(d)), 0x1|0x8)
-	if ok == 0 {
-		return fmt.Errorf("replace file: %w", callErr)
+	deadline := time.Now().Add(2 * time.Second)
+	delay := 5 * time.Millisecond
+	var lastErr error
+	for {
+		if lastErr != nil && !time.Now().Before(deadline) {
+			return lastErr
+		}
+		if check != nil {
+			if err := check(); err != nil {
+				return err
+			}
+		}
+		ok, _, callErr := kernel32.NewProc("MoveFileExW").Call(uintptr(unsafe.Pointer(s)), uintptr(unsafe.Pointer(d)), 0x1|0x8)
+		if ok != 0 {
+			return nil
+		}
+		lastErr = fmt.Errorf("replace file: %w", callErr)
+		const sharingViolation = syscall.Errno(32)
+		if !errors.Is(callErr, syscall.ERROR_ACCESS_DENIED) && !errors.Is(callErr, sharingViolation) {
+			return lastErr
+		}
+		time.Sleep(min(delay, time.Until(deadline)))
+		delay = min(2*delay, 100*time.Millisecond)
 	}
-	return nil
 }
 
 func OpenBrowser(url string) error {

@@ -38,6 +38,16 @@ func IsRegularFile(_ string, info os.FileInfo) (bool, error) {
 
 func ReplaceFile(src, dst string) error { return os.Rename(src, dst) }
 
+// ReplaceFileChecked checks the destination immediately before replacing it.
+func ReplaceFileChecked(src, dst string, check func() error) error {
+	if check != nil {
+		if err := check(); err != nil {
+			return err
+		}
+	}
+	return ReplaceFile(src, dst)
+}
+
 func DecodeOutput(data []byte) string { return strings.ToValidUTF8(string(data), "\uFFFD") }
 
 func EncodeFileName(name string) []byte { return []byte(name) }

@@ -1,6 +1,8 @@
 .markdown-preview-panel { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; min-width: 0; }
-.markdown-toolbar { display: flex; align-items: center; gap: 10px; height: 36px; flex: 0 0 36px; padding: 2px 6px; background: var(--surface); border-bottom: 1px solid var(--border); }
-.markdown-document-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--muted); }
+.markdown-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 3px 8px; min-height: 36px; flex: 0 0 auto; padding: 4px 6px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.markdown-scroll-sync { display: inline-flex; align-items: center; flex: 0 0 auto; gap: 5px; min-height: 26px; white-space: nowrap; font-size: 11px; color: var(--secondary, #586e7b); cursor: pointer; }
+.markdown-scroll-sync input { width: 13px; height: 13px; margin: 0; accent-color: var(--accent, #0d7b70); }
+.markdown-document-name { flex: 1 1 120px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; line-height: 20px; color: var(--muted); }
 .markdown-preview-container { display: flex; flex: 1 1 auto; min-height: 0; min-width: 0; flex-direction: column; }
 .markdown-preview { flex: 1 1 auto; min-height: 0; min-width: 0; overflow: auto; padding: 26px clamp(20px, 4vw, 48px) 64px; background: var(--surface, #fff); color: var(--text, #243341); scrollbar-width: thin; scrollbar-color: #b4c2ce transparent; overscroll-behavior: contain; }
 .markdown-preview:focus-visible { outline: 2px solid var(--accent, #0d7b70); outline-offset: -2px; }
@@ -45,5 +47,7 @@
 .markdown-body .eqno > div { min-width: 0; flex: 1; }
 .markdown-body .eqno > span { flex: 0 0 auto; }
 .markdown-body ::selection { background: #90c8f580; color: inherit; }
+.markdown-body .markdown-source-highlight { outline: 2px solid var(--accent, #0d7b70); outline-offset: 4px; border-radius: 2px; background-color: #0d7b7014; }
 [data-theme="dark"] .markdown-preview { scrollbar-color: #506b7d transparent; }
 [data-theme="dark"] .markdown-body ::selection { background: #437eaeaa; }
+[data-theme="dark"] .markdown-body .markdown-source-highlight { background-color: #76cbb21a; }

@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="/source-search.css">
   <link rel="stylesheet" href="/markdown-preview.css">
   <link rel="stylesheet" href="/tex-packages.css">
+  <link rel="stylesheet" href="/help.css">
   <link rel="stylesheet" href="/katex/katex.min.css">
   <script type="module" src="/app.js"></script>
 </head>
@@ -38,6 +39,7 @@
         <button type="button" id="show-project" class="button button-subtle" title="Open project folder" aria-label="Open project folder" data-i18n-title="プロジェクトフォルダーを開く" data-i18n-aria-label="プロジェクトフォルダーを開く"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5h6l2 2h10v3M3 7h7l2 3h10l-3 10H2V7Z"/></svg><span class="header-button-label"><span data-i18n="開く">Open</span></span></button>
         <button type="button" id="settings-button" data-testid="settings-button" class="button button-subtle" title="Editing and compilation settings" aria-label="Settings" data-i18n-title="編集とコンパイルの設定" data-i18n-aria-label="設定"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 3-1 3-3 1-2 4 2 3v4l4 2 3-1 3 1 4-2v-4l2-3-2-4-3-1-1-3Z"/><circle cx="12" cy="12" r="3"/></svg><span class="header-button-label"><span data-i18n="設定">Settings</span></span></button>
         <button type="button" id="theme-toggle" data-testid="theme-toggle" class="icon-button theme-toggle" aria-pressed="false" aria-label="Switch to dark theme" title="Toggle light and dark theme" data-i18n-aria-label="ダークテーマに切り替える" data-i18n-title="ライト／ダークを切り替える"><span id="theme-icon" aria-hidden="true">◐</span><span id="theme-label" class="sr-only"><span data-i18n="ライト">Light</span></span></button>
+        <button type="button" id="help-button" data-testid="help-button" class="icon-button" title="Help (F1)" aria-label="Help" aria-haspopup="dialog" aria-controls="help-dialog" aria-expanded="false" data-i18n-title="ヘルプ (F1)" data-i18n-aria-label="ヘルプ"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 8.5a2.5 2.5 0 0 1 5 .5c0 2-2.5 2-2.5 4M12 16.5v.1"/></svg></button>
         <button type="button" id="shutdown-button" class="icon-button" title="Quit the app" aria-label="Quit the app" data-i18n-title="アプリを終了する" data-i18n-aria-label="アプリを終了する"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v10M6 5a9 9 0 1 0 12 0"/></svg></button>
       </div>
     </header>
@@ -80,6 +82,8 @@
         <div class="file-footer"><span class="local-dot" aria-hidden="true"></span><span id="project-root" title=""></span></div>
       </aside>
 
+      <div id="sidebar-splitter" class="sidebar-splitter panel-splitter" role="separator" aria-orientation="vertical" aria-controls="file-pane" aria-label="Resize the files and outline" title="Drag or use the left and right arrow keys to resize" tabindex="0" data-i18n-aria-label="ファイル一覧とアウトラインの幅を変更" data-i18n-title="ドラッグまたは左右矢印キーで幅を変更"></div>
+
       <section class="editor-pane" id="editor-pane" aria-label="Edit source" data-i18n-aria-label="原稿を編集">
         <div class="editor-toolbar">
           <h2 id="active-filename" class="sr-only"><span data-i18n="原稿">Source</span></h2>
@@ -107,23 +111,26 @@
         </section>
       </section>
 
-      <div id="splitter" class="splitter" role="separator" aria-orientation="vertical" aria-label="Resize the editor and PDF" tabindex="0" data-i18n-aria-label="編集画面と PDF の幅を変更"></div>
+      <div id="splitter" class="splitter panel-splitter" role="separator" aria-orientation="vertical" aria-controls="editor-pane" aria-label="Resize the editor and preview" title="Drag or use the left and right arrow keys to resize" tabindex="0" data-i18n-aria-label="編集画面とプレビューの幅を変更" data-i18n-title="ドラッグまたは左右矢印キーで幅を変更"></div>
 
       <section class="pdf-pane" id="pdf-pane" aria-label="PDF preview" data-i18n-aria-label="PDF のプレビュー">
         <div id="pdf-preview" class="pdf-preview">
         <div class="pdf-toolbar">
           <label class="preview-choice"><span class="sr-only"><span data-i18n="プレビューの種類">Preview type</span></span><select id="preview-mode" data-preview-choice aria-label="Preview type" title="Auto follows the file you are editing. PDF or Markdown keeps that preview open." data-i18n-aria-label="プレビューの種類" data-i18n-title="自動: 編集中のファイルに合わせる／PDF・Markdown: 選んだ表示を続ける"><option value="auto" data-i18n="自動">Auto</option><option value="pdf">PDF</option><option value="markdown">Markdown</option></select></label>
-          <button type="button" id="pdf-prev" data-testid="pdf-prev" class="icon-button" aria-label="Previous page" disabled data-i18n-aria-label="前のページ">‹</button>
-          <label class="page-control"><input id="pdf-page" data-testid="pdf-page" type="number" min="1" value="1" aria-label="PDF page number" disabled data-i18n-aria-label="PDF のページ番号"><span aria-hidden="true">/</span><span id="pdf-pages">—</span></label>
-          <button type="button" id="pdf-next" data-testid="pdf-next" class="icon-button" aria-label="Next page" disabled data-i18n-aria-label="次のページ">›</button>
+          <div class="pdf-page-controls">
+            <button type="button" id="pdf-prev" data-testid="pdf-prev" class="icon-button" aria-label="Previous page" disabled data-i18n-aria-label="前のページ">‹</button>
+            <label class="page-control"><input id="pdf-page" data-testid="pdf-page" type="number" min="1" value="1" aria-label="PDF page number" disabled data-i18n-aria-label="PDF のページ番号"><span aria-hidden="true">/</span><span id="pdf-pages">—</span></label>
+            <button type="button" id="pdf-next" data-testid="pdf-next" class="icon-button" aria-label="Next page" disabled data-i18n-aria-label="次のページ">›</button>
+          </div>
           <span id="pdf-state" class="pdf-state"></span>
           <span id="pdf-document" data-testid="pdf-document" class="pdf-document"></span>
-          <span class="toolbar-spacer"></span>
-          <button type="button" id="pdf-zoom-out" data-testid="pdf-zoom-out" class="icon-button zoom-button" aria-label="Zoom out of the PDF" title="Zoom out (also Ctrl + wheel or pinch)" disabled data-i18n-aria-label="PDF を縮小" data-i18n-title="縮小 (Ctrl + ホイールやピンチでも操作できます)">−</button>
-          <label class="zoom-control"><span class="sr-only"><span data-i18n="PDF の倍率">PDF zoom</span></span><select id="pdf-zoom" data-testid="pdf-zoom" aria-label="PDF zoom" disabled data-i18n-aria-label="PDF の倍率"><option value="page-width" data-i18n="幅に合わせる">Fit width</option><option value="page-fit" data-i18n="ページに合わせる">Fit page</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100%</option><option value="1.25">125%</option><option value="1.5">150%</option><option value="2">200%</option><option value="3">300%</option><option data-custom-zoom value="custom" hidden></option></select></label>
-          <button type="button" id="pdf-zoom-in" data-testid="pdf-zoom-in" class="icon-button zoom-button" aria-label="Zoom into the PDF" title="Zoom in (also Ctrl + wheel or pinch)" disabled data-i18n-aria-label="PDF を拡大" data-i18n-title="拡大 (Ctrl + ホイールやピンチでも操作できます)">＋</button>
-          <span class="toolbar-divider" aria-hidden="true"></span>
-          <button type="button" id="download-pdf" class="icon-button" title="Save the compiled PDF" aria-label="Save PDF" disabled data-i18n-title="コンパイルした PDF を保存" data-i18n-aria-label="PDF を保存"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/></svg></button>
+          <div class="pdf-view-controls">
+            <button type="button" id="pdf-zoom-out" data-testid="pdf-zoom-out" class="icon-button zoom-button" aria-label="Zoom out of the PDF" title="Zoom out (also Ctrl + wheel or pinch)" disabled data-i18n-aria-label="PDF を縮小" data-i18n-title="縮小 (Ctrl + ホイールやピンチでも操作できます)">−</button>
+            <label class="zoom-control"><span class="sr-only"><span data-i18n="PDF の倍率">PDF zoom</span></span><select id="pdf-zoom" data-testid="pdf-zoom" aria-label="PDF zoom" disabled data-i18n-aria-label="PDF の倍率"><option value="page-width" data-i18n="幅に合わせる">Fit width</option><option value="page-fit" data-i18n="ページに合わせる">Fit page</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100%</option><option value="1.25">125%</option><option value="1.5">150%</option><option value="2">200%</option><option value="3">300%</option><option data-custom-zoom value="custom" hidden></option></select></label>
+            <button type="button" id="pdf-zoom-in" data-testid="pdf-zoom-in" class="icon-button zoom-button" aria-label="Zoom into the PDF" title="Zoom in (also Ctrl + wheel or pinch)" disabled data-i18n-aria-label="PDF を拡大" data-i18n-title="拡大 (Ctrl + ホイールやピンチでも操作できます)">＋</button>
+            <span class="toolbar-divider" aria-hidden="true"></span>
+            <button type="button" id="download-pdf" class="icon-button" title="Save the compiled PDF" aria-label="Save PDF" disabled data-i18n-title="コンパイルした PDF を保存" data-i18n-aria-label="PDF を保存"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/></svg></button>
+          </div>
         </div>
         <div id="pdf-note" class="pdf-note" hidden></div>
         <div class="pdf-frame">
@@ -135,6 +142,7 @@
         <div id="markdown-preview-panel" class="markdown-preview-panel" hidden>
           <div class="markdown-toolbar">
             <label class="preview-choice"><span class="sr-only"><span data-i18n="プレビューの種類">Preview type</span></span><select id="markdown-preview-mode" data-preview-choice aria-label="Preview type" title="Auto follows the file you are editing. PDF or Markdown keeps that preview open." data-i18n-aria-label="プレビューの種類" data-i18n-title="自動: 編集中のファイルに合わせる／PDF・Markdown: 選んだ表示を続ける"><option value="auto" data-i18n="自動">Auto</option><option value="pdf">PDF</option><option value="markdown">Markdown</option></select></label>
+            <label class="markdown-scroll-sync" title="Scroll the Markdown preview with the source editor" data-i18n-title="原稿のスクロールに Markdown のプレビューを合わせる"><input type="checkbox" id="markdown-scroll-sync" checked><span data-i18n="スクロールを同期">Sync scrolling</span></label>
             <span id="markdown-document-name" class="markdown-document-name"></span>
           </div>
           <div id="markdown-preview-container" class="markdown-preview-container" hidden></div>
@@ -142,6 +150,7 @@
       </section>
 
       <section id="log-panel" class="log-panel" aria-label="Compilation log" hidden data-i18n-aria-label="コンパイルのログ">
+        <div id="log-splitter" class="log-splitter panel-splitter" role="separator" aria-orientation="horizontal" aria-controls="log-panel" aria-label="Resize the log" title="Drag or use the up and down arrow keys to resize" tabindex="0" data-i18n-aria-label="ログの高さを変更" data-i18n-title="ドラッグまたは上下矢印キーで高さを変更"></div>
         <div class="pane-title log-title"><h2><span data-i18n="コンパイルのログ">Compilation log</span></h2><span id="log-meta" class="muted"></span><span class="toolbar-spacer"></span><button type="button" id="copy-log" class="button button-subtle button-small" disabled><span data-i18n="コピー">Copy</span></button><button type="button" id="close-log" class="icon-button" aria-label="Close the log" data-i18n-aria-label="ログを閉じる">×</button></div>
         <div id="log-locations" data-testid="log-locations" class="log-locations" aria-label="Errors in the source" hidden data-i18n-aria-label="原稿のエラー箇所"></div>
         <pre id="build-log" data-testid="build-log" class="build-log" tabindex="0"><span data-i18n="コンパイルすると，ここにコマンドとログが表示されます．">The command and log will appear here when you compile.</span></pre>
@@ -165,12 +174,27 @@
     </form>
   </dialog>
 
+  <dialog id="help-dialog" data-testid="help-dialog" class="dialog help-dialog" aria-labelledby="help-title">
+    <div class="dialog-heading"><div><h2 id="help-title" data-i18n="ヘルプ">Help</h2><p class="help-app-name">Local TeX Web Editor</p></div><button type="button" id="help-close" class="icon-button" aria-label="Close" data-i18n-aria-label="閉じる">×</button></div>
+    <nav class="help-links" aria-label="Guides and updates" data-i18n-aria-label="使い方と更新情報">
+      <a id="help-guide" class="help-link" target="_blank" rel="noopener noreferrer" data-i18n="使い方のサイトを開く">Open the user guide</a>
+      <a id="help-releases" class="help-link" target="_blank" rel="noopener noreferrer" data-i18n="GitHub で更新内容を見る">Read release notes on GitHub</a>
+      <a id="help-issues" class="help-link" target="_blank" rel="noopener noreferrer" data-i18n="GitHub Issues を開く">Open GitHub Issues</a>
+      <a id="help-update" class="help-link" target="_blank" rel="noopener noreferrer">Check the latest version on GitHub Releases</a>
+    </nav>
+    <p class="field-help" data-i18n="リンクを選ぶと，外部サイトを別のタブで開きます．">Links open an external website in a new tab.</p>
+    <details id="help-shortcuts" class="help-section"><summary data-i18n="キーボードショートカット">Keyboard shortcuts</summary><table class="help-shortcuts"><thead><tr><th scope="col" data-i18n="操作">Action</th><th scope="col" data-i18n="キー">Keys</th></tr></thead><tbody id="help-shortcut-list"></tbody></table></details>
+    <details id="help-troubleshooting" class="help-section" open><summary data-i18n="問題が起きたとき">Troubleshooting</summary><ul class="help-advice"><li data-i18n="コンパイルに失敗したときは，ログの末尾と原稿のエラー箇所を確認してください．">If compilation fails, check the end of the log and the error locations in the source.</li><li data-i18n="TeX や SyncTeX が見つからないときは，設定で TeX Live の場所と導入の手順を確認してください．">If TeX or SyncTeX is missing, open Settings to check the TeX Live location and installation instructions.</li><li data-i18n="PDF と原稿の対応がずれたときは，原稿を保存して再コンパイルしてください．">If PDF navigation points to an old source position, save and compile the source again.</li></ul><div class="help-actions"><button type="button" id="help-open-log" class="button button-small"><span data-i18n="コンパイルのログを開く">Open the compilation log</span></button><button type="button" id="help-open-settings" class="button button-small"><span data-i18n="設定を開く">Open Settings</span></button></div><p id="help-action-note" class="field-help" hidden data-i18n="別の画面で入力中です．ログなどを開くには，先にその画面で保存またはキャンセルしてください．">Another dialog is open. Save or cancel its changes before opening the log or other settings.</p></details>
+    <details id="help-about" class="help-section"><summary data-i18n="アプリの情報">About the app</summary><p class="field-help" data-i18n="バージョン，OS，アプリのアーキテクチャ，TeX の利用状況を表示します．コピーする内容は以下のとおりです．">The app version, OS, app architecture, and TeX availability are shown below. Copy uses exactly this information.</p><label class="sr-only" for="help-environment" data-i18n="環境情報">Environment information</label><textarea id="help-environment" readonly rows="10" spellcheck="false"></textarea><div class="help-actions"><button type="button" id="help-copy-environment" class="button button-small"><span data-i18n="環境情報をコピー">Copy environment information</span></button><p id="help-copy-status" class="field-help" role="status"></p></div></details>
+  </dialog>
+
   <dialog id="settings-dialog" class="dialog" aria-labelledby="settings-title">
     <form id="settings-form">
       <div class="dialog-heading"><h2 id="settings-title"><span data-i18n="編集とコンパイルの設定">Editing and compilation settings</span></h2><button type="button" class="icon-button" data-close-dialog="settings-dialog" aria-label="Close" data-i18n-aria-label="閉じる">×</button></div>
       <div class="field-group"><label class="field-label" for="language-setting"><span data-i18n="表示言語">Language</span></label><select id="language-setting" data-testid="language-setting"><option value="en" lang="en">English</option><option value="ja" lang="ja">日本語</option></select></div>
       <div class="field-group"><label class="checkbox-field"><input type="checkbox" id="autosave-setting" data-testid="autosave-setting"><span><span data-i18n="編集が落ち着いたら自動で保存する">Save automatically after a pause in editing</span></span></label><p class="field-help"><span data-i18n="コンパイル中の自動保存は，終了するまで待ちます．自動保存を切っても，編集中の草稿は PC に記録されます．">Autosave waits for compilation to finish. Drafts are recorded on this computer even when autosave is off.</span></p></div>
       <div class="field-group"><label class="field-label" for="editor-font-size"><span data-i18n="エディタの文字サイズ">Editor font size</span></label><div class="font-size-field"><input id="editor-font-size" data-testid="editor-font-size" type="number" min="8" max="40" step="0.1" value="14" required><span>px</span></div><p class="field-help"><span data-i18n="8〜40 px で指定できます．既定は 14 px です．原稿上の Ctrl + ホイールやピンチ操作でも変更できます．">Choose 8–40 px. The default is 14 px. You can also use Ctrl + wheel or pinch in the editor.</span></p></div>
+      <div class="field-group appearance-entry"><div><span class="field-label" data-i18n="外観">Appearance</span><p class="field-help" data-i18n="モード，配色，アクセント，原稿のフォントを選びます．">Choose the mode, color scheme, accent, and editor font.</p></div><button type="button" id="open-appearance" data-testid="open-appearance" class="button"><span data-i18n="外観を開く">Open appearance</span></button></div>
       <div class="field-group"><label class="field-label" for="tex-bin"><span data-i18n="TeX Live の bin フォルダー">TeX Live bin folder</span></label><input id="tex-bin" data-testid="tex-bin" type="text" placeholder="Leave blank to detect automatically" autocomplete="off" spellcheck="false" data-i18n-placeholder="空欄で自動検索"><p id="tex-tool-status" class="field-help"></p></div>
       <div id="tex-packages-help"></div>
       <div class="field-group"><span class="field-label"><span data-i18n="原稿と PDF の移動 (SyncTeX)">Source–PDF navigation (SyncTeX)</span></span><p id="synctex-tool-status" class="field-help"></p><div id="synctex-setup" class="synctex-setup" hidden><p id="synctex-setup-help" class="field-help"><span data-i18n="PowerShell で次のコマンドを実行し，設定を開き直して SyncTeX のパスを確認してください．">Run these commands in PowerShell, then reopen Settings to check the SyncTeX path.</span></p><pre id="synctex-install-commands" tabindex="0"></pre><button type="button" id="copy-synctex-setup" class="button button-small"><span data-i18n="コマンドをコピー">Copy commands</span></button></div></div>
@@ -181,6 +205,28 @@
       <section class="application-details" aria-label="About the app" data-i18n-aria-label="アプリの情報"><dl><div><dt><span data-i18n="アプリのバージョン">App version</span></dt><dd id="application-version"></dd></div><div><dt><span data-i18n="起動中の実行ファイル">Running executable</span></dt><dd id="application-executable"></dd></div></dl></section>
       <p id="settings-error" class="form-error" role="alert" hidden></p>
       <div class="dialog-actions"><button type="button" class="button" data-close-dialog="settings-dialog"><span data-i18n="キャンセル">Cancel</span></button><button type="submit" id="save-settings" class="button button-primary"><span data-i18n="設定を保存">Save settings</span></button></div>
+    </form>
+  </dialog>
+
+  <dialog id="appearance-dialog" data-testid="appearance-dialog" class="dialog appearance-dialog" aria-labelledby="appearance-title">
+    <form id="appearance-form">
+      <div class="dialog-heading"><h2 id="appearance-title" data-i18n="外観">Appearance</h2><button type="button" id="appearance-close" class="icon-button" data-close-dialog="appearance-dialog" aria-label="Close" data-i18n-aria-label="閉じる">×</button></div>
+      <p class="field-help appearance-help" data-i18n="変更はその場で確認できます．保存すると，次回も同じ外観で開きます．">Preview changes immediately. Save to use the same appearance next time.</p>
+      <div class="appearance-options">
+        <div class="field-group"><label class="field-label" for="appearance-mode" data-i18n="モード">Mode</label><select id="appearance-mode" data-testid="appearance-mode"><option value="system" data-i18n="システム">System</option><option value="light" data-i18n="ライト">Light</option><option value="dark" data-i18n="ダーク">Dark</option></select></div>
+        <div class="field-group"><label class="field-label" for="appearance-palette" data-i18n="配色">Color scheme</label><select id="appearance-palette" data-testid="appearance-palette"><option value="default" data-i18n="標準">Default</option><option value="gray" data-i18n="グレー">Gray</option><option value="warm" data-i18n="暖色">Warm</option></select></div>
+        <div class="field-group"><label class="field-label" for="appearance-accent" data-i18n="アクセント">Accent</label><select id="appearance-accent" data-testid="appearance-accent"><option value="teal" data-i18n="緑">Green</option><option value="blue" data-i18n="青">Blue</option><option value="purple" data-i18n="紫">Purple</option><option value="orange" data-i18n="橙">Orange</option><option value="gray" data-i18n="グレー">Gray</option></select></div>
+        <div class="field-group"><label class="field-label" for="appearance-font" data-i18n="原稿のフォント">Editor font</label><select id="appearance-font" data-testid="appearance-font"><option value="default" data-i18n="標準">Default</option><option value="cascadia">Cascadia Code</option><option value="consolas">Consolas</option><option value="menlo">Menlo</option><option value="monospace" data-i18n="等幅">Monospace</option></select></div>
+      </div>
+      <p class="field-help" data-i18n="PC にないフォントは，利用できる等幅フォントで表示します．文字サイズは元の設定画面で変更できます．">If a font is unavailable on this computer, an available monospace font is used. Change the font size in the settings behind this dialog.</p>
+      <dl class="appearance-colors"><div><dt data-i18n="背景色">Background</dt><dd><span id="appearance-background-swatch" class="appearance-swatch" aria-hidden="true"></span><output id="appearance-background"></output></dd></div><div><dt data-i18n="文字色">Foreground</dt><dd><span id="appearance-foreground-swatch" class="appearance-swatch" aria-hidden="true"></span><output id="appearance-foreground"></output></dd></div></dl>
+      <p class="field-help" data-i18n="原稿の背景色と文字色は，モードと配色に合わせて変わります．">Editor background and foreground colors follow the mode and color scheme.</p>
+      <section class="appearance-preview" aria-label="Appearance preview" data-i18n-aria-label="外観のプレビュー"><div class="appearance-preview-title"><span data-i18n="プレビュー">Preview</span><span class="appearance-preview-accent" data-i18n="アクセント">Accent</span></div><pre class="appearance-sample">\section{Introduction}
+E = mc^2
+<span data-i18n="日本語の原稿と English 123">日本語の原稿と English 123</span></pre></section>
+      <button type="button" id="appearance-reset" class="button button-subtle button-small"><span data-i18n="外観を初期値に戻す">Reset appearance</span></button>
+      <p id="appearance-error" class="form-error" role="alert" hidden></p>
+      <div class="dialog-actions"><button type="button" id="appearance-cancel" class="button" data-close-dialog="appearance-dialog"><span data-i18n="キャンセル">Cancel</span></button><button type="submit" id="save-appearance" class="button button-primary"><span data-i18n="外観を保存">Save appearance</span></button></div>
     </form>
   </dialog>
 

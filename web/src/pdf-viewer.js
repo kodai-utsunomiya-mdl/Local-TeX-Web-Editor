@@ -2,6 +2,7 @@ import { t, getLanguage, onLanguageChange } from './i18n.js';
 import * as pdfjs from 'pdfjs-dist/build/pdf.mjs';
 import { EventBus, PDFViewer as DocumentViewer, PDFLinkService, LinkTarget, RenderingStates } from 'pdfjs-dist/web/pdf_viewer.mjs';
 import { PDFSearch } from './pdf-search.js';
+import { zoomPDFAt } from './pdf-zoom.js';
 
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 const cancelled = error => /RenderingCancelledException|AbortException/.test(error?.name || '') || /destroyed|cancelled/i.test(error?.message || '');
@@ -79,8 +80,9 @@ export class PDFViewer {
     this.elements.page.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); this.elements.page.blur(); } });
     this.elements.zoom.addEventListener('change', () => {
       if (!this.ready) return;
-      this.zoomSetting = this.elements.zoom.value;
-      this.pageViewer.currentScaleValue = this.zoomSetting;
+      const value = this.elements.zoom.value;
+      this.zoomSetting = value;
+      this.zoomAt(null, () => { this.pageViewer.currentScaleValue = value; });
     });
     this.elements['zoom-in'].addEventListener('click', () => this.changeZoom(1));
     this.elements['zoom-out'].addEventListener('click', () => this.changeZoom(-1));
@@ -88,7 +90,7 @@ export class PDFViewer {
       if (!this.ready || !event.ctrlKey) return;
       event.preventDefault();
       const delta = event.deltaY * (event.deltaMode === 1 ? 30 : event.deltaMode === 2 ? this.elements.scroll.clientHeight : 1);
-      this.pageViewer.updateScale({ scaleFactor: clamp(Math.exp(-delta * 0.002), 0.6, 1.5), origin: [event.clientX, event.clientY], drawingDelay: 150 });
+      this.zoomAt([event.clientX, event.clientY], () => this.pageViewer.updateScale({ scaleFactor: clamp(Math.exp(-delta * 0.002), 0.6, 1.5), drawingDelay: 150 }));
     }, { passive: false });
     let pinch = null;
     const touchPair = touches => ({ distance: Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY), origin: [(touches[0].clientX + touches[1].clientX) / 2, (touches[0].clientY + touches[1].clientY) / 2] });
@@ -96,7 +98,7 @@ export class PDFViewer {
     this.elements.scroll.addEventListener('touchmove', event => {
       if (!this.ready || event.touches.length !== 2) return;
       event.preventDefault(); const next = touchPair(event.touches);
-      if (pinch?.distance > 0) this.pageViewer.updateScale({ scaleFactor: next.distance / pinch.distance, origin: next.origin, drawingDelay: 150 });
+      if (pinch?.distance > 0) this.zoomAt(next.origin, () => this.pageViewer.updateScale({ scaleFactor: next.distance / pinch.distance, drawingDelay: 150 }));
       pinch = next;
     }, { passive: false });
     this.elements.scroll.addEventListener('touchend', () => { pinch = null; });
@@ -283,8 +285,11 @@ export class PDFViewer {
 
   changeZoom(direction) {
     if (!this.ready) return;
-    const rect = this.elements.scroll.getBoundingClientRect();
-    this.pageViewer.updateScale({ steps: direction, origin: [rect.left + rect.width / 2, rect.top + rect.height / 2], drawingDelay: 150 });
+    this.zoomAt(null, () => this.pageViewer.updateScale({ steps: direction, drawingDelay: 150 }));
+  }
+
+  zoomAt(origin, changeScale) {
+    if (this.ready) zoomPDFAt(this.pageViewer, changeScale, origin);
   }
 
   refreshLayout() {

@@ -8,10 +8,13 @@ import { autocompletion } from '@codemirror/autocomplete';
 import { stex } from '@codemirror/legacy-modes/mode/stex';
 import { markdown } from '@codemirror/lang-markdown';
 import { PDFViewer } from './pdf-viewer.js';
-import { MarkdownPreview } from './markdown-preview.js';
+import { MarkdownPreview, extractMarkdownOutline } from './markdown-preview.js';
 import { AssetPreview } from './asset-preview.js';
 import { sourceSearch, openSourceSearchPanel } from './source-search.js';
 import { attachEditorZoom, prepareEditorResize } from './editor-zoom.js';
+import { createPanelLayout, normalizePanelLayout } from './panel-layout.js';
+import { normalizeAppearance, resolveAppearance } from './appearance.js';
+import { createHelp } from './help.js';
 import { tags } from '@lezer/highlight';
 import { SessionStore } from './session-store.js';
 import { BrowserSession } from './browser-session.js';
@@ -57,7 +60,7 @@ const state = {
   connected: false,
   externalProjectChanged: false,
   reportedBuild: '',
-  preferences: { autoSave: true, theme: null, editorFontSize: 14, language: getLanguage() },
+  preferences: { autoSave: true, theme: null, appearance: normalizeAppearance(), editorFontSize: 14, language: getLanguage(), panelLayout: normalizePanelLayout(), markdownScrollSync: true },
   theme: 'light',
   saveQueue: Promise.resolve(),
   autoSaveTimer: null,
@@ -79,11 +82,17 @@ const state = {
   lastMarkdownPath: '',
 };
 const readOnly = new Compartment();
+const systemColorScheme = matchMedia('(prefers-color-scheme: dark)');
+let appearanceDraft = null;
+let help = null;
 const editorTheme = new Compartment();
 const editorLanguage = new Compartment();
 const modeLabels = { project: 'latexmkrc', pdflatex: 'pdfLaTeX', uplatex: 'upLaTeX', xelatex: 'XeLaTeX', lualatex: 'LuaLaTeX' };
 let toastTimer = null;
 let lineFlashTimer = null;
+let markdownScrollFrame = 0;
+let markdownScrollPauseSequence = 0;
+let markdownScrollPaused = false;
 const lineFlash = StateEffect.define();
 const lineFlashField = StateField.define({
   create: () => Decoration.none,
@@ -228,6 +237,41 @@ function setPreviewChoice(value) {
   updateDocumentPreview({ immediate: true });
   renderControls(); scheduleSession();
 }
+function pauseMarkdownScrollSync() {
+  markdownScrollPaused = true;
+  const sequence = ++markdownScrollPauseSequence;
+  cancelAnimationFrame(markdownScrollFrame); markdownScrollFrame = 0;
+  // Let CodeMirror finish restoring the document or moving its cursor before
+  // following later scrolls made by the user.
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (sequence === markdownScrollPauseSequence) markdownScrollPaused = false;
+  }));
+}
+function scheduleMarkdownScrollSync() {
+  if (markdownScrollFrame || markdownScrollPaused || !state.preferences.markdownScrollSync) return;
+  markdownScrollFrame = requestAnimationFrame(() => {
+    markdownScrollFrame = 0;
+    const view = state.editor;
+    const doc = activeDocument();
+    if (markdownScrollPaused || state.closed || !view || !doc || !isMarkdown(doc.path) ||
+        !state.preferences.markdownScrollSync || state.previewMode !== 'markdown' ||
+        !view.scrollDOM.clientHeight || $('editor').hidden) return;
+    const height = Math.max(0, view.scrollDOM.getBoundingClientRect().top + view.scrollDOM.clientTop - view.documentTop);
+    const block = view.lineBlockAtHeight(height);
+    const first = view.state.doc.lineAt(block.from).number;
+    const last = view.state.doc.lineAt(block.to).number;
+    const fraction = block.height > 0 ? Math.min(1, Math.max(0, (height - block.top) / block.height)) : 0;
+    markdownPreview.syncSourceLine(first + fraction * (last - first + 1), {
+      path: doc.path, projectRoot: state.meta?.project?.root,
+    });
+  });
+}
+function applyMarkdownScrollSync(enabled) {
+  state.preferences.markdownScrollSync = enabled;
+  $('markdown-scroll-sync').checked = enabled;
+  markdownPreview.setScrollSync(enabled);
+  if (!enabled) { cancelAnimationFrame(markdownScrollFrame); markdownScrollFrame = 0; }
+}
 function fileKind(file) { return file?.kind || 'text'; }
 function rememberTab(path) { if (!state.tabOrder.includes(path)) state.tabOrder.push(path); }
 function rememberEditorPosition() {
@@ -310,7 +354,6 @@ function makeEditorState(path, content) {
     editorLanguage.of(editorLanguageExtension()),
     autocompletion({ override: /^(tex|sty|cls|ltx)$/.test(extension) ? [texCompletionSource(() => state.completionItems), latexCompletion] : [] }),
     EditorView.domEventHandlers({ mousedown(event, view) {
-      if (isMarkdown(state.activePath)) return false;
       if (!(event.ctrlKey || event.metaKey) || event.button !== 0 || view.composing) return false;
       const position = view.posAtCoords({ x: event.clientX, y: event.clientY });
       if (position == null) return false;
@@ -327,6 +370,7 @@ function makeEditorState(path, content) {
       if (doc) doc.state = update.state;
       if (update.docChanged && doc) { updateDocumentIndicators(doc); updatePreviewNote(); updateDocumentPreview(); queueDrafts(); scheduleAutoSave(); scheduleIndex(doc); }
       if (update.selectionSet || update.docChanged) updateCursor();
+      if (update.docChanged || update.geometryChanged) scheduleMarkdownScrollSync();
     }),
   ] });
 }
@@ -337,6 +381,7 @@ function makeDocument(file) {
 }
 
 function selectDocument(doc) {
+  pauseMarkdownScrollSync();
   rememberEditorPosition(); assetPreview.hide(); rememberTab(doc.path);
   doc.state = doc.state.update({ effects: readOnly.reconfigure([EditorState.readOnly.of(!!state.operation), EditorView.editable.of(!state.operation)]) }).state;
   const position = (!doc.visited ? state.session?.positions?.[doc.path] : { scrollTop: doc.scrollTop || 0 }) || { scrollTop: 0 };
@@ -349,6 +394,7 @@ function selectDocument(doc) {
   else {
     state.editor = new EditorView({ state: doc.state, parent: $('editor') });
     state.editor.scrollDOM.addEventListener('scroll', scheduleSession, { passive: true });
+    state.editor.scrollDOM.addEventListener('scroll', scheduleMarkdownScrollSync, { passive: true });
     const view = state.editor;
     state.editorZoomCleanup = attachEditorZoom(view, {
       getSize: () => state.preferences.editorFontSize,
@@ -364,7 +410,8 @@ function selectDocument(doc) {
   updateCursor();
   state.editor.focus();
   if (position) { const view = state.editor; requestAnimationFrame(() => { if (state.editor === view && state.activePath === doc.path) { view.scrollDOM.scrollTop = Math.max(0, Number(position.scrollTop) || 0); view.dispatch({ effects: EditorView.scrollIntoView(view.state.selection.main.head, { y: 'nearest' }) }); } }); }
-  if (/\.(tex|bib)$/i.test(doc.path) && doc.indexedDoc !== doc.state.doc) updateIndex(doc.path, doc.state.doc.toString());
+  if ((/\.(tex|bib)$/i.test(doc.path) || isMarkdown(doc.path)) && doc.indexedDoc !== doc.state.doc) updateIndex(doc.path, doc.state.doc.toString());
+  else renderOutline();
   renderRecovery(); scheduleSession();
   updateDocumentPreview({ immediate: true });
   document.title = `${isDirty(doc) ? '● ' : ''}${basename(doc.path)} — Local TeX Web Editor`;
@@ -402,7 +449,7 @@ function selectAsset(file) {
   $('editor').hidden = true; $('editor-empty').hidden = true; $('conflict-banner').hidden = true;
   $('active-filename').textContent = file.path; $('active-filename').title = file.path;
   $('save-status').textContent = ''; $('save-status').classList.remove('dirty', 'error');
-  renderTabs(); updateTreeSelection(); renderControls(); updateCursor(); scheduleSession();
+  renderTabs(); updateTreeSelection(); renderControls(); updateCursor(); renderOutline(); scheduleSession();
   document.title = `${basename(file.path)} — Local TeX Web Editor`;
   assetPreview.show(asset, state.meta.project.root);
   updateDocumentPreview();
@@ -634,7 +681,7 @@ function removeOpenFile(path) {
       $('save-status').textContent = ''; $('conflict-banner').hidden = true; updateCursor(); document.title = 'Local TeX Web Editor';
     }
   }
-  renderTabs(); renderTree(); renderControls(); updatePreviewNote(); updateDocumentPreview(); persistSession();
+  renderTabs(); renderTree(); renderOutline(); renderControls(); updatePreviewNote(); updateDocumentPreview(); persistSession();
 }
 
 async function resolveConflict(doc) {
@@ -913,7 +960,11 @@ async function createFile(event) {
   if (created) selectDocument(created);
 }
 
-function setLogVisible(visible) { $('log-panel').hidden = !visible; $('log-toggle').setAttribute('aria-expanded', String(visible)); }
+function setLogVisible(visible) {
+  $('log-panel').hidden = !visible;
+  $('log-toggle').setAttribute('aria-expanded', String(visible));
+  panelLayout.refresh();
+}
 function formatElapsed(ms) { const seconds = Math.max(0, Math.round(ms / 1000)); return seconds < 60 ? t("{value0} 秒", { value0: seconds }) : t("{value0} 分 {value1} 秒", { value0: Math.floor(seconds / 60), value1: seconds % 60 }); }
 function updateElapsed() {
   const build = state.build;
@@ -1040,8 +1091,10 @@ function renderControls() {
   $('save-button').disabled = busy || !doc || !!doc.saving || !isDirty(doc) || state.externalProjectChanged;
   $('find-button').disabled = !doc || state.closed;
   const missingSynctex = state.meta && typeof state.meta.synctex === 'string' && !state.meta.synctex;
-  $('synctex-forward').disabled = busy || state.syncing || !doc || useMarkdown || !(viewer.ready || (state.previewMode === 'markdown' && viewer.document)) || !state.build?.synctexReady || missingSynctex || state.externalProjectChanged;
-  $('synctex-forward').title = missingSynctex ? t("SyncTeX が見つかりません．設定に導入の手順があります．") : state.build?.synctexReady ? t("カーソル位置を PDF で表示 ({value0}+クリックでも移動)", { value0: shortcutModifier }) : t("SyncTeX を使うには，このアプリで PDF をコンパイルしてください．");
+  $('synctex-forward').disabled = busy || state.syncing || !doc || !project || state.externalProjectChanged ||
+    (!useMarkdown && (!(viewer.ready || (state.previewMode === 'markdown' && viewer.document)) || !state.build?.synctexReady || missingSynctex));
+  $('synctex-forward').title = useMarkdown ? t("カーソル位置を Markdown で表示 ({value0}+クリックでも移動)", { value0: shortcutModifier }) : missingSynctex ? t("SyncTeX が見つかりません．設定に導入の手順があります．") : state.build?.synctexReady ? t("カーソル位置を PDF で表示 ({value0}+クリックでも移動)", { value0: shortcutModifier }) : t("SyncTeX を使うには，このアプリで PDF をコンパイルしてください．");
+  $('synctex-forward').setAttribute('aria-label', t(useMarkdown ? 'Markdown のプレビューの位置へ移動' : 'PDF の位置へ移動'));
   $('main-document').disabled = busy || !project || running;
   $('settings-button').disabled = busy || running;
   $('show-project').disabled = busy || running;
@@ -1052,6 +1105,8 @@ function renderControls() {
   $('download-pdf').disabled = !state.build?.pdfReady || state.closed;
   $('copy-log').disabled = !state.fullLog;
   $('theme-toggle').disabled = state.closed;
+  $('help-button').disabled = state.closed;
+  help?.refresh();
   for (const button of state.treeButtons.values()) button.disabled = busy;
   for (const tab of state.tabElements.values()) { tab.button.disabled = busy; tab.close.disabled = busy; }
 }
@@ -1142,6 +1197,12 @@ const sessionStore = new SessionStore(api, (status, key, error) => {
   }
 });
 const browserSession = new BrowserSession({ token, onConnectionChange: connected => { if (!state.closed) setConnected(connected); } });
+const panelLayout = createPanelLayout({
+  workbench: $('workbench'), shell: $('app-shell'),
+  handles: { sidebar: $('sidebar-splitter'), editor: $('splitter'), log: $('log-splitter') },
+  getPreferences: () => state.preferences.panelLayout,
+  onChange: (value, persist) => { state.preferences.panelLayout = value; if (persist) savePreferences(150); },
+});
 
 function editorLanguageExtension() {
   return [
@@ -1165,6 +1226,7 @@ function applyLanguage(language) {
   setSidebar(state.sidebar); renderTabs(); renderRecovery(); renderPickerState(); renderToolStatus();
   for (const doc of state.documents.values()) updateDocumentIndicators(doc);
   updateCursor(); updateAutoSaveStatus(); updateDocumentPreview();
+  panelLayout.refresh();
   if (state.meta) applyBuild(state.build);
   else renderControls();
   const draftStatus = $('draft-status').dataset.status;
@@ -1175,19 +1237,76 @@ function themeExtension() {
   const dark = state.theme === 'dark';
   return [EditorView.theme({}, { dark }), syntaxHighlighting(dark ? darkHighlight : defaultHighlightStyle)];
 }
-function applyTheme(theme, persist = false) {
+function applyTheme(theme) {
+  const previous = state.theme;
   state.theme = theme === 'dark' ? 'dark' : 'light';
   document.documentElement.dataset.theme = state.theme;
   $('theme-toggle').setAttribute('aria-pressed', String(state.theme === 'dark'));
   $('theme-toggle').setAttribute('aria-label', state.theme === 'dark' ? t("ライトテーマに切り替える") : t("ダークテーマに切り替える"));
   $('theme-label').textContent = state.theme === 'dark' ? t("ダーク") : t("ライト");
-  try { localStorage.setItem('local-tex-editor-theme', state.theme); } catch { /* The PC copy is written through the storage API. */ }
-  for (const doc of state.documents.values()) {
-    const transaction = doc.state.update({ effects: editorTheme.reconfigure(themeExtension()) });
-    if (doc.path === state.activePath && state.editor) state.editor.update([transaction]); else doc.state = transaction.state;
+  if (previous !== state.theme) {
+    for (const doc of state.documents.values()) {
+      const transaction = doc.state.update({ effects: editorTheme.reconfigure(themeExtension()) });
+      if (doc.path === state.activePath && state.editor) state.editor.update([transaction]); else doc.state = transaction.state;
+    }
   }
-  if (persist) { state.preferences.theme = state.theme; savePreferences(); }
 }
+
+function applyAppearance(value, cache = false) {
+  const appearance = resolveAppearance(value, systemColorScheme.matches);
+  const root = document.documentElement;
+  const restore = root.style.getPropertyValue('--editor-font-family') !== appearance.fontFamily ? prepareEditorResize(activeDocument() ? state.editor : null) : () => {};
+  root.dataset.palette = appearance.palette;
+  root.dataset.accent = appearance.accent;
+  for (const [name, color] of Object.entries(appearance.colors)) root.style.setProperty(`--${name}`, color);
+  root.style.setProperty('--editor-font-family', appearance.fontFamily);
+  applyTheme(appearance.theme);
+  restore();
+  if (cache) {
+    try {
+      localStorage.setItem('local-tex-editor-appearance', JSON.stringify(normalizeAppearance(value)));
+      localStorage.setItem('local-tex-editor-theme', appearance.theme);
+    } catch { /* The PC copy is written through the storage API. */ }
+  }
+  for (const [id, color] of [['background', appearance.colors.surface], ['foreground', appearance.colors.text]]) {
+    $(`appearance-${id}`).textContent = color.toUpperCase();
+    $(`appearance-${id}-swatch`).style.backgroundColor = color;
+  }
+}
+
+function renderAppearanceForm() {
+  for (const [id, key] of [['mode', 'mode'], ['palette', 'palette'], ['accent', 'accent'], ['font', 'editorFont']]) $(`appearance-${id}`).value = appearanceDraft[key];
+  applyAppearance(appearanceDraft);
+}
+
+function showAppearance() {
+  appearanceDraft = normalizeAppearance(state.preferences.appearance, state.preferences.theme);
+  $('appearance-error').hidden = true;
+  renderAppearanceForm();
+  $('appearance-dialog').showModal();
+}
+
+async function saveAppearance(event) {
+  event.preventDefault();
+  if (!appearanceDraft || $('appearance-dialog').dataset.busy === 'true') return;
+  const previous = state.preferences.appearance, previousTheme = state.preferences.theme;
+  const appearance = normalizeAppearance(appearanceDraft);
+  setDialogBusy($('appearance-dialog'), true); $('appearance-error').hidden = true;
+  state.preferences.appearance = appearance;
+  state.preferences.theme = appearance.mode === 'system' ? null : appearance.mode;
+  try {
+    savePreferences(); await sessionStore.flush();
+    appearanceDraft = null;
+    applyAppearance(appearance, true);
+    $('appearance-dialog').close();
+    toast(t('外観を保存しました．'));
+  } catch (error) {
+    state.preferences.appearance = previous; state.preferences.theme = previousTheme;
+    savePreferences();
+    $('appearance-error').textContent = error.message || String(error); $('appearance-error').hidden = false;
+  } finally { setDialogBusy($('appearance-dialog'), false); }
+}
+
 function savePreferences(delay = 0) { sessionStore.write('preferences', { ...state.preferences, updatedAt: Date.now() }, delay); }
 function applyEditorFontSize(value, origin = null) {
   const size = Number.isFinite(value) ? Math.min(40, Math.max(8, Math.round(value * 10) / 10)) : 14;
@@ -1205,12 +1324,17 @@ async function loadPreferences() {
   if (preferences && typeof preferences === 'object') {
     state.preferences.autoSave = preferences.autoSave !== false;
     state.preferences.theme = ['light', 'dark'].includes(preferences.theme) ? preferences.theme : null;
+    state.preferences.appearance = normalizeAppearance(preferences.appearance, preferences.theme);
+    state.preferences.theme = state.preferences.appearance.mode === 'system' ? null : state.preferences.appearance.mode;
     state.preferences.editorFontSize = preferences.editorFontSize;
+    state.preferences.panelLayout = normalizePanelLayout(preferences.panelLayout);
+    state.preferences.markdownScrollSync = preferences.markdownScrollSync !== false;
     if (['ja', 'en'].includes(preferences.language)) state.preferences.language = preferences.language;
   }
   applyLanguage(state.preferences.language);
-  if (state.preferences.theme) applyTheme(state.preferences.theme);
+  applyAppearance(state.preferences.appearance, true);
   applyEditorFontSize(state.preferences.editorFontSize);
+  applyMarkdownScrollSync(state.preferences.markdownScrollSync);
   updateAutoSaveStatus();
 }
 function updateAutoSaveStatus() { $('autosave-status').textContent = state.preferences.autoSave ? (isRunning() ? t("自動保存はコンパイル後") : t("自動保存オン")) : t("手動で保存"); }
@@ -1378,8 +1502,8 @@ async function openInitialFile() {
 }
 
 function updateIndex(path, content, rebuild = true) {
-  const tex = /\.tex$/i.test(path) ? extractTexMetadata(content, path) : { outline: [], labels: [] };
-  state.texIndex.set(path, { path, ...tex, citations: /\.bib$/i.test(path) ? extractCitations(content, path) : [] });
+  const metadata = /\.tex$/i.test(path) ? extractTexMetadata(content, path) : { outline: isMarkdown(path) ? extractMarkdownOutline(content) : [], labels: [] };
+  state.texIndex.set(path, { path, ...metadata, citations: /\.bib$/i.test(path) ? extractCitations(content, path) : [] });
   const doc = state.documents.get(path);
   if (doc && doc.state.doc.toString() === content) doc.indexedDoc = doc.state.doc;
   if (rebuild) rebuildIndex();
@@ -1433,23 +1557,29 @@ function setSidebar(mode) {
 function renderOutline() {
   const container = $('outline-tree'); container.replaceChildren();
   const query = $('file-filter').value.trim().toLowerCase();
-  const entries = [...state.texIndex.values()].filter(item => item.outline.length).sort((a, b) => a.path === state.meta?.project?.main ? -1 : b.path === state.meta?.project?.main ? 1 : a.path.localeCompare(b.path));
-  let count = 0;
-  for (const file of entries) {
-    const items = file.outline.filter(item => !query || `${item.title} ${file.path}`.toLowerCase().includes(query));
-    if (!items.length) continue;
-    const baseLevel = Math.min(...file.outline.map(item => item.level));
-    const heading = document.createElement('p'); heading.className = 'outline-file'; heading.textContent = file.path; container.append(heading);
-    for (const item of items) {
-      const button = document.createElement('button'); button.type = 'button'; button.className = 'outline-link';
-      button.dataset.path = file.path; button.dataset.line = String(item.line); button.style.setProperty('--outline-depth', String(Math.max(0, Math.min(4, item.level - baseLevel))));
-      const title = document.createElement('span'); title.textContent = item.title || t("(無題の見出し)");
-      const line = document.createElement('span'); line.className = 'outline-line'; line.textContent = String(item.line);
-      button.append(title, line); button.addEventListener('click', () => runTask(() => goToSource(file.path, item.line)));
-      container.append(button); count++;
-    }
+  const doc = activeDocument();
+  const supported = !!doc && (/\.tex$/i.test(doc.path) || isMarkdown(doc.path));
+  if (supported && !state.texIndex.has(doc.path)) updateIndex(doc.path, doc.state.doc.toString(), false);
+  const file = supported ? state.texIndex.get(doc.path) : null;
+  const outline = file?.outline || [];
+  const items = outline.filter(item => !query || `${item.title} ${doc.path}`.toLowerCase().includes(query));
+  if (state.activePath) {
+    const heading = document.createElement('p'); heading.className = 'outline-file'; heading.textContent = state.activePath; container.append(heading);
   }
-  if (!count) { const text = document.createElement('p'); text.className = 'tree-empty'; text.textContent = state.indexing ? t("見出しを読み込んでいます…") : state.indexError ? t("原稿を読み込めませんでした．{value0}", { value0: state.indexError }) : query ? t("一致する見出しがありません．") : t("section や chapter の見出しがここに表示されます．"); container.append(text); }
+  const baseLevel = outline.length ? Math.min(...outline.map(item => item.level)) : 0;
+  for (const item of items) {
+    const button = document.createElement('button'); button.type = 'button'; button.className = 'outline-link';
+    button.dataset.path = doc.path; button.dataset.line = String(item.line); button.style.setProperty('--outline-depth', String(Math.max(0, Math.min(4, item.level - baseLevel))));
+    const title = document.createElement('span'); title.textContent = item.title || t("(無題の見出し)");
+    const line = document.createElement('span'); line.className = 'outline-line'; line.textContent = String(item.line);
+    button.append(title, line); button.addEventListener('click', () => runTask(() => goToSource(doc.path, item.line)));
+    container.append(button);
+  }
+  if (!items.length) {
+    const text = document.createElement('p'); text.className = 'tree-empty';
+    text.textContent = !state.activePath ? t("TeX または Markdown ファイルを開くと，その見出しが表示されます．") : !supported ? t("このファイルにはアウトラインがありません．") : query ? t("一致する見出しがありません．") : t("この文書には見出しがありません．");
+    container.append(text);
+  }
   updateOutlinePosition();
 }
 function updateOutlinePosition() {
@@ -1499,8 +1629,22 @@ function noteSourceChanged(result) {
   if (result.sourceChanged || dirtyDocuments().some(doc => sourceAffectsPDF(doc.path))) toast(t("この PDF を作成した後に原稿が変更されています．行の位置がずれる場合があります．"));
 }
 async function syncForward(position = null) {
-  if (isMarkdown(state.activePath)) return;
-  if (state.syncing || state.operation || !state.editor || !activeDocument() || !state.meta?.project) return;
+  if (state.syncing || state.operation || state.closed || state.externalProjectChanged || !state.editor || !activeDocument() || !state.meta?.project) return;
+  if (isMarkdown(state.activePath)) {
+    const doc = activeDocument();
+    const generation = state.projectGeneration;
+    const offset = position == null ? state.editor.state.selection.main.head : Math.max(0, Math.min(state.editor.state.doc.length, position));
+    const line = state.editor.state.doc.lineAt(offset).number;
+    pauseMarkdownScrollSync();
+    if (state.previewMode !== 'markdown') setPreviewChoice('markdown');
+    else updateDocumentPreview({ immediate: true });
+    switchView(true);
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    if (state.closed || generation !== state.projectGeneration || doc !== activeDocument()) return;
+    pauseMarkdownScrollSync();
+    markdownPreview.revealSourceLine(line, { path: doc.path, projectRoot: state.meta.project.root });
+    return;
+  }
   if (!viewer.document || !viewer.buildId) throw new Error(t("PDF をコンパイルしてから，原稿と PDF の位置を対応させてください．"));
   const generation = state.projectGeneration;
   const path = state.activePath;
@@ -1560,10 +1704,27 @@ const markdownPreview = new MarkdownPreview({
     const doc = activeDocument();
     if (doc?.path === path && isMarkdown(path) && fragment) markdownPreview.update(doc.state.doc.toString(), { path, projectRoot: state.meta.project.root, immediate: true, fragment });
   }),
-  onSourceLine: (line, path) => runTask(() => goToSource(path, line)),
+  onSourceLine: (line, path) => runTask(async () => {
+    pauseMarkdownScrollSync();
+    await goToSource(path, line);
+    pauseMarkdownScrollSync();
+  }),
 });
 
-let cachedTheme = null;
+help = createHelp({
+  button: $('help-button'), dialog: $('help-dialog'), getMeta: () => state.meta, isClosed: () => state.closed,
+  getActions: () => {
+    const otherDialogs = [...document.querySelectorAll('dialog[open]')].filter(dialog => dialog.id !== 'help-dialog');
+    const returnToSettings = otherDialogs.length === 1 && otherDialogs[0].id === 'settings-dialog';
+    return {
+      log: !otherDialogs.length && !!state.meta?.project && !state.closed,
+      settings: returnToSettings || (!otherDialogs.length && !state.operation && !isRunning() && !state.closed),
+      returnToSettings, blockedByDialog: otherDialogs.length > 0,
+    };
+  },
+  onOpenLog: () => { setLogVisible(true); $('build-log').focus(); },
+  onOpenSettings: () => { if (!$('settings-dialog').open) runTask(showSettings); },
+});
 applyLanguage(state.preferences.language);
 $('find-button').title = t("検索・置換 ({value0}+F)", { value0: shortcutModifier });
 $('save-button').title = t("現在のファイルを保存 ({value0}+S)", { value0: shortcutModifier });
@@ -1571,18 +1732,44 @@ if (isMac) {
   $('project-path').placeholder = '/Users/…/Documents/paper';
   $('project-tex-help').textContent = t("例: /Library/TeX/texbin");
 }
-try { cachedTheme = localStorage.getItem('local-tex-editor-theme'); } catch { /* Use the system preference on the first visit. */ }
-applyTheme(['light', 'dark'].includes(cachedTheme) ? cachedTheme : matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-onClick('theme-toggle', () => applyTheme(state.theme === 'dark' ? 'light' : 'dark', true));
-matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => { if (!state.preferences.theme) applyTheme(event.matches ? 'dark' : 'light'); });
+let cachedAppearance = state.preferences.appearance;
+try { cachedAppearance = normalizeAppearance(JSON.parse(localStorage.getItem('local-tex-editor-appearance') || 'null'), localStorage.getItem('local-tex-editor-theme')); } catch { /* Use the system preference on the first visit. */ }
+applyAppearance(cachedAppearance);
+onClick('theme-toggle', () => {
+  state.preferences.appearance = { ...state.preferences.appearance, mode: state.theme === 'dark' ? 'light' : 'dark' };
+  state.preferences.theme = state.preferences.appearance.mode;
+  applyAppearance(state.preferences.appearance, true); savePreferences();
+});
+systemColorScheme.addEventListener('change', () => {
+  const appearance = appearanceDraft || state.preferences.appearance;
+  if (appearance.mode === 'system') applyAppearance(appearance, !appearanceDraft);
+});
 
 onClick('show-project', showProjectDialog); onClick('welcome-open', showProjectDialog);
 onClick('settings-button', showSettings); onClick('main-document', showSettings);
+onClick('open-appearance', showAppearance);
+onClick('appearance-reset', () => { appearanceDraft = normalizeAppearance(); renderAppearanceForm(); });
+for (const [id, key] of [['mode', 'mode'], ['palette', 'palette'], ['accent', 'accent'], ['font', 'editorFont']]) $(`appearance-${id}`).addEventListener('change', event => {
+  if (!appearanceDraft) return;
+  appearanceDraft[key] = event.target.value;
+  applyAppearance(appearanceDraft);
+});
+$('appearance-form').addEventListener('submit', event => { runTask(() => saveAppearance(event)); event.preventDefault(); });
+$('appearance-dialog').addEventListener('close', () => {
+  if (!appearanceDraft) return;
+  appearanceDraft = null;
+  applyAppearance(state.preferences.appearance);
+});
 onClick('shortcut-start-menu', () => createShortcut('start-menu')); onClick('shortcut-desktop', () => createShortcut('desktop'));
 onClick('copy-synctex-setup', async () => { await navigator.clipboard.writeText($('synctex-install-commands').textContent); toast(t("コマンドをコピーしました．")); });
 onClick('pick-project', pickProject); onClick('cancel-picker', cancelPicker); onClick('shutdown-button', shutdown);
 onClick('save-button', saveCurrent); onClick('compile-button', startBuild); onClick('stop-button', stopBuild);
 for (const select of document.querySelectorAll('[data-preview-choice]')) select.addEventListener('change', () => setPreviewChoice(select.value));
+$('markdown-scroll-sync').addEventListener('change', () => {
+  applyMarkdownScrollSync($('markdown-scroll-sync').checked);
+  savePreferences();
+  if (state.preferences.markdownScrollSync) scheduleMarkdownScrollSync();
+});
 onClick('refresh-files', refreshFiles); onClick('download-pdf', downloadPDF); onClick('copy-log', copyLog);
 onClick('synctex-forward', () => syncForward());
 onClick('files-tab', () => { $('file-filter').value = ''; setSidebar('files'); });
@@ -1610,36 +1797,17 @@ $('project-dialog').addEventListener('close', cancelPicker);
 onClick('sidebar-toggle', () => {
   const collapsed = $('app-shell').classList.toggle('sidebar-collapsed');
   $('sidebar-toggle').setAttribute('aria-expanded', String(!collapsed));
+  panelLayout.refresh();
 });
 if (matchMedia('(max-width: 640px)').matches) { $('app-shell').classList.add('sidebar-collapsed'); $('sidebar-toggle').setAttribute('aria-expanded', 'false'); }
 function switchView(preview) {
   $('app-shell').classList.toggle('preview-mode', preview);
   $('show-preview').classList.toggle('selected', preview); $('show-editor').classList.toggle('selected', !preview);
   $('show-preview').setAttribute('aria-pressed', String(preview)); $('show-editor').setAttribute('aria-pressed', String(!preview));
+  panelLayout.refresh();
   if (preview) requestAnimationFrame(() => viewer.refreshLayout());
 }
 onClick('show-editor', () => switchView(false)); onClick('show-preview', () => switchView(true));
-
-function setSplit(clientX) {
-  const editor = $('editor-pane').getBoundingClientRect();
-  const pdf = $('pdf-pane').getBoundingClientRect();
-  const total = pdf.right - editor.left - 5;
-  if (total <= 520) return;
-  const left = Math.min(total - 260, Math.max(260, clientX - editor.left));
-  $('workbench').style.setProperty('--editor-size', `${left / total}fr`);
-  $('workbench').style.setProperty('--preview-size', `${1 - left / total}fr`);
-}
-$('splitter').addEventListener('pointerdown', event => {
-  if (event.button !== 0) return;
-  event.preventDefault(); const splitter = $('splitter'); splitter.setPointerCapture(event.pointerId);
-  document.body.classList.add('resizing'); splitter.classList.add('dragging');
-  const move = moveEvent => setSplit(moveEvent.clientX);
-  const finish = () => { document.body.classList.remove('resizing'); splitter.classList.remove('dragging'); splitter.removeEventListener('pointermove', move); splitter.removeEventListener('pointerup', finish); splitter.removeEventListener('pointercancel', finish); };
-  splitter.addEventListener('pointermove', move); splitter.addEventListener('pointerup', finish); splitter.addEventListener('pointercancel', finish);
-});
-$('splitter').addEventListener('keydown', event => {
-  if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); setSplit($('splitter').getBoundingClientRect().left + (event.key === 'ArrowLeft' ? -25 : 25)); }
-});
 
 document.addEventListener('keydown', event => {
   if (!event.ctrlKey && !event.metaKey) return;

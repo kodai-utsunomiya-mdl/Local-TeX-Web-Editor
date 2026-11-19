@@ -568,7 +568,15 @@ func writeAtomicChecked(path string, data []byte, mode os.FileMode, check func()
 		return err
 	}
 	name := temp.Name()
-	defer os.Remove(name)
+	defer func() {
+		if err := os.Remove(name); errors.Is(err, os.ErrPermission) {
+			// A failed save can leave this temporary file with the original's
+			// read-only mode. Make only the temporary file removable.
+			if err := os.Chmod(name, 0600); err == nil {
+				_ = os.Remove(name)
+			}
+		}
+	}()
 	if err = temp.Chmod(mode); err == nil {
 		_, err = temp.Write(data)
 	}
@@ -582,10 +590,5 @@ func writeAtomicChecked(path string, data []byte, mode os.FileMode, check func()
 	if closeErr != nil {
 		return closeErr
 	}
-	if check != nil {
-		if err := check(); err != nil {
-			return err
-		}
-	}
-	return platform.ReplaceFile(name, path)
+	return platform.ReplaceFileChecked(name, path, check)
 }

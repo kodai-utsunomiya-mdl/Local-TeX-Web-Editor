@@ -109,7 +109,18 @@ Document-specific TeX packages, fonts and bibliography tools
 
 ### What's new
 
-Leave this field empty for the first Store submission. Later submissions should describe changes since the previous Store version.
+```text
+Version 0.1.6
+
+- Resize the file list and outline, the editor/preview split, and the compilation log. Your layout is saved for the next launch.
+- The outline now follows the selected TeX or Markdown tab.
+- Jump from Markdown source to the preview with Ctrl+click or the navigation button. Turn Sync scrolling on or off to make the preview follow the editor.
+- Choose system, light, or dark mode, a color scheme, an accent, and the editor font in Settings > Appearance.
+- Open Help with the ? button or F1 for guides, shortcuts, updates, troubleshooting, and environment information you can copy for feedback.
+- Fixed sideways drift when zooming the PDF. Page, zoom, search, and save controls remain visible in narrow previews.
+- Enlarged the search close buttons and improved spacing in the source and PDF search panels.
+- Improved saving on Windows by briefly retrying when file replacement is temporarily blocked. If the source file changes on disk during that wait, the app asks you to review the changes.
+```
 
 ## 日本語の掲載内容
 
@@ -180,7 +191,18 @@ TeX のコンパイルには latexmk を含む TeX Live
 
 ### このバージョンの新機能
 
-Store への初回提出では空欄にする．以降は，前回の Store 版から変更した内容を書く．
+```text
+バージョン 0.1.6
+
+・ファイル一覧・アウトライン，原稿とプレビュー，コンパイルログの幅や高さを調整し，次回の起動でも同じ配置を使えるようにした．
+・アウトラインが，選択中の TeX または Markdown のタブに合わせて切り替わるようにした．
+・Markdown の原稿から Ctrl+クリックや移動ボタンでプレビューへ進めるようにした．「スクロールを同期」で，原稿にプレビューを追従させるかを選べる．
+・「設定 → 外観」で，システム・ライト・ダークのモード，配色，アクセント，原稿のフォントを選べるようにした．
+・? ボタンまたは F1 から，使い方，ショートカット，更新内容，問題が起きたときの手順を確認できる．フィードバック用の環境情報もコピーできる．
+・PDF の拡大・縮小で本文が横へずれる動きを修正した．狭いプレビューでも，ページ移動・倍率・検索・保存の操作が収まるようにした．
+・原稿と PDF の検索欄で，閉じるボタンを大きくし，余白を広げた．
+・Windows で原稿の置き換えが一時的に拒否された場合，短時間だけ保存を再試行するようにした．待機中にディスク上の原稿が変わった場合は，変更の確認へ進む．
+```
 
 ## Images and captions
 
@@ -222,6 +244,8 @@ Sample project: https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/down
 8. Open notes.md and choose PDF in the preview toolbar. Editing and saving the Markdown keeps the PDF visible. Select Auto to return to the Markdown preview.
 9. Save the files and close the last browser tab showing this app. The local app stops after about five seconds. Reopen it to continue with the previous project.
 
+For version 0.1.6, also check F1 for Help, Settings > Appearance for the color scheme and editor font, Ctrl+click in notes.md for navigation to its Markdown preview, and dragging the sidebar's right edge, the editor/preview divider, and the top edge of the open log for panel sizing.
+
 TeX Live is an external prerequisite for TeX compilation. Markdown editing and preview work without it. The app prepares package-install commands for the user to run; it does not install TeX or packages automatically.
 
 The Store edition uses Windows to manage installation and app updates. Source files remain in the selected project folder. Settings, drafts and PDF preview copies are stored in the app's local user data.
@@ -248,6 +272,8 @@ Local TeX Web Editor は，ブラウザを画面として使う Windows のデ�
 7. PDF の文章をダブルクリックして原稿の行へ移動し，その行を Ctrl + クリックして PDF へ移動します．
 8. notes.md を開いてプレビューを PDF にすると，Markdown の編集・保存中も PDF を表示します．Auto に戻すと Markdown を表示します．
 9. 原稿を保存し，このアプリを開いている最後のブラウザタブを閉じると，約 5 秒後にアプリが終了します．起動し直すと前回のプロジェクトを開きます．
+
+v0.1.6 の追加機能として，F1 からヘルプを開く操作，Settings → Appearance で配色と原稿のフォントを変更する操作，notes.md の原稿を Ctrl+クリックして Markdown のプレビューへ移動する操作，ファイル一覧・アウトラインの右端，原稿とプレビューの境界，開いたログの上端をドラッグして大きさを変える操作を確認できます．
 
 TeX Live はコンパイルに使う外部のソフトウェアです．Markdown の編集とプレビューは TeX Live がなくても使えます．アプリはパッケージ追加用のコマンドを用意し，ユーザーが必要に応じて実行します．TeX やパッケージの自動導入は行いません．
 

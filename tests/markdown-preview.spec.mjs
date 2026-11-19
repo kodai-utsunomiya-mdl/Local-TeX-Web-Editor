@@ -16,9 +16,11 @@ test.beforeAll(async () => {
         setLanguage('ja');
         window.openedMarkdownFiles = [];
         window.markdownErrors = [];
+        window.markdownSourceLines = [];
         window.preview = new MarkdownPreview({
           container: document.getElementById('preview'), token: 'test-markdown-token',
           onOpenFile: (path, options) => window.openedMarkdownFiles.push({ path, ...options }),
+          onSourceLine: (line, path) => window.markdownSourceLines.push({ line, path }),
           onError: error => window.markdownErrors.push(error.message),
         });`,
       resolveDir: path.join(repository, 'web/src'),
@@ -177,5 +179,168 @@ test('Markdown に戻った時に，画像の取得で本文とスクロール�
     expect(initial.scrollTop).toBe(600);
     expect(loading).toEqual(initial);
     expect(loaded).toEqual(initial);
+  } finally { releaseAsset(); }
+});
+
+test('原稿の行から本文，コード，項目，表，数式へ移動し，プレビューから原稿へ戻る', async ({ page }) => {
+  await page.setViewportSize({ width: 1000, height: 520 });
+  await openPreview(page);
+  const lines = ['# 長い文書', '', ...Array.from({ length: 20 }, (_, index) => `前の段落 ${index}．\n`)];
+  // Each source line remains separate so the expected locations come from the document.
+  const source = lines.join('\n').split('\n');
+  const targets = [];
+  const add = (content, lineOffset, selector, text) => {
+    targets.push({ line: source.length + 1 + lineOffset, start: source.length + 1, selector, text });
+    source.push(...content, '');
+  };
+  add(['本文の最初の行．', '本文の二行目．', '本文の最後の行．'], 1, 'p', '本文の最初の行．');
+  add(['```tex', '\\section{確認}', '\\textbf{コードの内容}', '```'], 2, 'pre', 'コードの内容');
+  add(['- 親の項目', '  - 子の項目', '- 次の項目'], 1, 'li', '子の項目');
+  add(['| 名前 | 値 |', '| --- | --- |', '| 表の行 | 3 |'], 2, 'tr', '表の行');
+  add(['$$', 'a^2+b^2=c^2', '$$'], 1, '.markdown-equation', '');
+  source.push(...Array.from({ length: 30 }, (_, index) => `後の段落 ${index}．\n`));
+  await render(page, source.join('\n'));
+  const container = page.getByTestId('markdown-preview');
+
+  for (const target of targets) {
+    expect(await page.evaluate(line => window.preview.revealSourceLine(line, {
+      path: 'notes/intro.md', projectRoot: 'C:\\原稿\\Markdown',
+    }), target.line)).toBe(true);
+    const marked = container.locator(`${target.selector}.markdown-source-highlight`);
+    await expect(marked).toHaveCount(1);
+    if (target.text) await expect(marked).toContainText(target.text);
+    const position = await marked.evaluate(element => {
+      const box = element.getBoundingClientRect();
+      const viewport = element.closest('.markdown-preview').getBoundingClientRect();
+      return { top: box.top - viewport.top, bottom: box.bottom - viewport.top, height: viewport.height };
+    });
+    expect(position.top).toBeLessThan(position.height);
+    expect(position.bottom).toBeGreaterThan(0);
+  }
+
+  await container.locator('.markdown-equation').dblclick();
+  expect(await page.evaluate(() => window.markdownSourceLines)).toEqual([
+    { line: targets.at(-1).start, path: 'notes/intro.md' },
+  ]);
+  const top = await container.evaluate(element => element.scrollTop);
+  expect(await page.evaluate(() => window.preview.revealSourceLine(1, { path: 'notes/other.md' }))).toBe(false);
+  expect(await page.evaluate(() => window.preview.revealSourceLine(1, { projectRoot: 'C:\\別のプロジェクト' }))).toBe(false);
+  expect(await container.evaluate(element => element.scrollTop)).toBe(top);
+  await page.evaluate(() => window.preview.hide());
+  expect(await page.evaluate(() => window.preview.revealSourceLine(1))).toBe(false);
+  expect(await page.evaluate(() => window.markdownErrors)).toEqual([]);
+});
+
+test('原稿の行内の位置に追従し，同期の解除やプレビューでのスクロールを尊重する', async ({ page }) => {
+  await page.setViewportSize({ width: 1000, height: 500 });
+  await openPreview(page);
+  const lines = ['# 原稿', '', ...Array.from({ length: 20 }, (_, index) => `前の段落 ${index}．\n`)].join('\n').split('\n');
+  const paragraphLine = lines.length + 1;
+  lines.push('一つの長い段落を，画面内で複数行に折り返して表示する．'.repeat(70), '',
+    ...Array.from({ length: 40 }, (_, index) => `後の段落 ${index}．\n`));
+  const content = lines.join('\n');
+  await render(page, content);
+  const container = page.getByTestId('markdown-preview');
+  const paragraph = container.locator(`p[data-source-line="${paragraphLine}"]`);
+
+  await page.evaluate(() => window.preview.setScrollSync(false));
+  expect(await page.evaluate(line => window.preview.syncSourceLine(line), paragraphLine)).toBe(false);
+  expect(await container.evaluate(element => element.scrollTop)).toBe(0);
+  await page.evaluate(() => window.preview.setScrollSync(true));
+  const positions = [];
+  for (const fraction of [0, 0.25, 0.5, 0.75]) {
+    expect(await page.evaluate(line => window.preview.syncSourceLine(line, {
+      path: 'notes/intro.md', projectRoot: 'C:\\原稿\\Markdown',
+    }), paragraphLine + fraction)).toBe(true);
+    positions.push(await container.evaluate(element => element.scrollTop));
+  }
+  const height = await paragraph.evaluate(element => element.getBoundingClientRect().height);
+  expect(height).toBeGreaterThan(500);
+  for (let index = 1; index < positions.length; ++index) {
+    expect(Math.abs(positions[index] - positions[index - 1] - height / 4)).toBeLessThan(2);
+  }
+
+  const pendingText = '入力中の末尾．';
+  const deferred = await page.evaluate(({ content, line, pendingText }) => {
+    window.preview.update(content + '\n' + pendingText, { path: 'notes/intro.md', projectRoot: 'C:\\原稿\\Markdown' });
+    const accepted = window.preview.syncSourceLine(line + 0.5);
+    return { accepted, state: document.getElementById('preview').dataset.state,
+      hasNewText: document.getElementById('preview').textContent.includes(pendingText) };
+  }, { content, line: paragraphLine, pendingText });
+  expect(deferred).toEqual({ accepted: true, state: 'updating', hasNewText: false });
+  await expect(container).toContainText(pendingText);
+  await expect(container).toHaveAttribute('data-state', 'ready');
+
+  // An explicit navigation uses the edited document even while its render is pending.
+  await page.evaluate(({ content, line }) => {
+    window.preview.update(content.replace('一つの長い段落', '編集された長い段落'), {
+      path: 'notes/intro.md', projectRoot: 'C:\\原稿\\Markdown',
+    });
+    window.preview.revealSourceLine(line);
+  }, { content, line: paragraphLine });
+  await expect(paragraph).toContainText('編集された長い段落');
+  await expect(paragraph).toHaveClass(/markdown-source-highlight/);
+
+  await page.evaluate(line => window.preview.syncSourceLine(line + 0.5), paragraphLine);
+  await container.hover();
+  const following = await container.evaluate(element => element.scrollTop);
+  await page.mouse.wheel(0, 180);
+  await expect.poll(() => container.evaluate(element => element.scrollTop)).toBeGreaterThan(following + 100);
+  const manuallyScrolled = await container.evaluate(element => element.scrollTop);
+  expect(await page.evaluate(line => window.preview.syncSourceLine(line + 0.5), paragraphLine)).toBe(false);
+  expect(await container.evaluate(element => element.scrollTop)).toBe(manuallyScrolled);
+  await page.evaluate(content => window.preview.update(content.replace('一つの長い段落', '編集された長い段落') + '\n手動スクロール後の追記．', {
+    path: 'notes/intro.md', projectRoot: 'C:\\原稿\\Markdown', immediate: true,
+  }), content);
+  await expect(container).toContainText('手動スクロール後の追記．');
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  const afterRender = await container.evaluate(element => element.scrollTop);
+  expect(Math.abs(afterRender - manuallyScrolled)).toBeLessThan(2);
+
+  await page.evaluate(() => window.preview.setScrollSync(false));
+  expect(await page.evaluate(() => window.preview.syncSourceLine(1))).toBe(false);
+  expect(await container.evaluate(element => element.scrollTop)).toBe(afterRender);
+  await page.evaluate(() => window.preview.setScrollSync(true));
+  expect(await page.evaluate(() => window.preview.syncSourceLine(1, { path: 'notes/different.md' }))).toBe(false);
+  expect(await container.evaluate(element => element.scrollTop)).toBe(afterRender);
+  expect(await page.evaluate(() => window.markdownErrors)).toEqual([]);
+});
+
+test('画像が読み込まれた後も，同期中の原稿に対応する本文を上端に合わせる', async ({ page }) => {
+  await page.setViewportSize({ width: 1000, height: 500 });
+  await openPreview(page);
+  const imageData = await page.evaluate(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 320;
+    canvas.height = 360;
+    canvas.getContext('2d').fillRect(0, 0, 320, 360);
+    return canvas.toDataURL('image/png').split(',')[1];
+  });
+  let releaseAsset;
+  const pending = new Promise(resolve => { releaseAsset = resolve; });
+  let requested = false;
+  await page.route(`${origin}/api/asset?*`, async route => {
+    requested = true;
+    await pending;
+    await route.fulfill({ contentType: 'image/png', body: Buffer.from(imageData, 'base64') });
+  });
+  const lines = ['# 原稿', '', '![図](../figures/図%201.png)', '',
+    ...Array.from({ length: 50 }, (_, index) => `段落 ${index} の本文．\n`)].join('\n').split('\n');
+  const targetLine = lines.indexOf('段落 8 の本文．') + 1;
+  try {
+    await render(page, lines.join('\n'));
+    await expect.poll(() => requested).toBe(true);
+    await page.evaluate(line => window.preview.syncSourceLine(line), targetLine);
+    const target = page.getByText('段落 8 の本文．', { exact: true });
+    const topOffset = () => target.evaluate(element => {
+      const container = element.closest('.markdown-preview');
+      return element.getBoundingClientRect().top - container.getBoundingClientRect().top
+        - parseFloat(getComputedStyle(container).paddingTop);
+    });
+    expect(Math.abs(await topOffset())).toBeLessThan(2);
+    releaseAsset();
+    await expect(page.getByRole('img', { name: '図', exact: true })).toHaveAttribute('data-state', 'ready');
+    await expect.poll(async () => Math.abs(await topOffset())).toBeLessThan(2);
+    expect(await page.evaluate(() => window.markdownErrors)).toEqual([]);
   } finally { releaseAsset(); }
 });

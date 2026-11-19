@@ -46,6 +46,11 @@ function headingSlug(text) {
   return text.toLowerCase().trim().replace(/[^\p{L}\p{N}\p{M}_\-\s]/gu, '').replace(/\s/g, '-') || 'section';
 }
 
+function sourceAttributes(token) {
+  if (!token.map) return '';
+  return ` data-source-line="${token.map[0] + 1}" data-source-end-line="${token.map[1] + 1}"`;
+}
+
 function makeParser() {
   const parser = new MarkdownIt({ html: false, linkify: true, typographer: false, breaks: false });
   const mathOptions = { trust: false, throwOnError: false, strict: 'ignore', maxExpand: 1000, maxSize: 20, macros: {} };
@@ -63,13 +68,21 @@ function makeParser() {
   for (const type of ['math_block', 'math_block_eqno']) parser.renderer.rules[type] = (tokens, index) => {
     const token = tokens[index];
     const number = type === 'math_block_eqno' ? `<span>(${escapeHTML(token.info)})</span>` : '';
-    return `<div class="markdown-equation${number ? ' eqno' : ''}" data-source-line="${(token.map?.[0] || 0) + 1}"><div>${renderMath(token.content, true)}</div>${number}</div>\n`;
+    return `<div class="markdown-equation${number ? ' eqno' : ''}"${sourceAttributes(token)}><div>${renderMath(token.content, true)}</div>${number}</div>\n`;
   };
+  for (const type of ['fence', 'code_block']) {
+    const renderCode = parser.renderer.rules[type];
+    parser.renderer.rules[type] = (tokens, index, ...args) => renderCode(tokens, index, ...args)
+      .replace('<pre>', `<pre${sourceAttributes(tokens[index])}>`);
+  }
   parser.core.ruler.push('preview-headings', state => {
     const headings = new Map();
     for (let index = 0; index < state.tokens.length; ++index) {
       const token = state.tokens[index];
-      if (token.map && token.nesting >= 0) token.attrSet('data-source-line', String(token.map[0] + 1));
+      if (token.map && token.nesting >= 0) {
+        token.attrSet('data-source-line', String(token.map[0] + 1));
+        token.attrSet('data-source-end-line', String(token.map[1] + 1));
+      }
       if (token.type !== 'heading_open') continue;
       const inline = state.tokens[index + 1];
       const text = (inline?.children || []).filter(child => !['html_inline', 'image'].includes(child.type)).map(child => child.content).join('');
@@ -108,6 +121,19 @@ function makeParser() {
   return parser;
 }
 
+export function extractMarkdownOutline(content) {
+  const tokens = makeParser().parse(String(content || '').replace(/\r\n?/g, '\n'), {});
+  const outline = [];
+  for (let index = 0; index < tokens.length; ++index) {
+    const token = tokens[index];
+    if (token.type !== 'heading_open' || !token.map) continue;
+    const title = (tokens[index + 1]?.children || []).map(child =>
+      ['softbreak', 'hardbreak'].includes(child.type) ? ' ' : child.content).join('').replace(/\s+/g, ' ').trim();
+    outline.push({ level: Number(token.tag.slice(1)), title, line: token.map[0] + 1 });
+  }
+  return outline;
+}
+
 // HTML input is escaped by the parser. The view additionally sanitizes this
 // output before adding it to the page, including the math renderer's output.
 export function renderMarkdownHTML(content) {
@@ -142,6 +168,24 @@ export class MarkdownPreview {
     this.positions = new Map();
     this.observer = null;
     this.controllers = new Set();
+    this.linePositions = null;
+    this.scrollSync = true;
+    this.sourceTarget = null;
+    this.sourcePosition = null;
+    this.sourceFrame = null;
+    this.highlighted = null;
+    this.highlightTimer = null;
+    this.layoutObserver = this.window.ResizeObserver ? new this.window.ResizeObserver(() => {
+      this.linePositions = null;
+      this.queueSourceScroll();
+    }) : null;
+    this.layoutObserver?.observe(this.container);
+    this.layoutObserver?.observe(this.article);
+    this.manualScroll = event => {
+      if (event.type === 'keydown' && !['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) return;
+      this.sourceTarget = null;
+    };
+    for (const type of ['wheel', 'touchstart', 'pointerdown', 'keydown']) this.container.addEventListener(type, this.manualScroll, { passive: true });
     this.linkClick = event => this.openLink(event);
     this.doubleClick = event => {
       if (!this.onSourceLine || event.target.closest('a, input, button')) return;
@@ -178,6 +222,9 @@ export class MarkdownPreview {
   hide() {
     if (this.container.hidden) return;
     this.rememberPosition();
+    this.sourceTarget = null;
+    this.sourcePosition = null;
+    this.clearHighlight();
     this.container.hidden = true;
     clearTimeout(this.timer);
     this.timer = null;
@@ -192,6 +239,7 @@ export class MarkdownPreview {
     this.rendered = null;
     this.positions.clear();
     this.imageSizes.clear();
+    this.linePositions = null;
     this.article.replaceChildren();
     delete this.container.dataset.path;
     this.container.dataset.state = 'idle';
@@ -201,7 +249,12 @@ export class MarkdownPreview {
     const next = { content: String(content || ''), path: path || '', projectRoot: projectRoot || '', fragment };
     const changedDocument = this.key(next) !== this.key();
     if (!changedDocument && this.current?.content === next.content && !fragment && this.rendered === this.current) return;
-    if (changedDocument) this.rememberPosition();
+    if (changedDocument) {
+      this.rememberPosition();
+      this.sourceTarget = null;
+      this.sourcePosition = null;
+      this.clearHighlight();
+    }
     this.current = next;
     clearTimeout(this.timer);
     this.timer = null;
@@ -257,6 +310,8 @@ export class MarkdownPreview {
         this.images.delete(path);
       }
       this.article.replaceChildren(fragment);
+      this.linePositions = null;
+      this.clearHighlight();
       this.article.classList.toggle('is-empty', !current.content.trim());
       if (!current.content.trim()) this.article.textContent = t("Markdown を入力すると，ここに表示されます．");
       this.rendered = current;
@@ -265,12 +320,143 @@ export class MarkdownPreview {
       this.container.dataset.state = 'ready';
       this.observeImages(current);
       if (current.fragment) this.scrollToHeading(current.fragment);
+      else this.queueSourceScroll();
     } catch (error) {
       this.releaseImages();
       this.container.dataset.state = 'error';
       this.article.textContent = t("Markdown を表示できませんでした．{value0}", { value0: error.message || error });
       this.onError?.(error);
     }
+  }
+
+  setScrollSync(enabled) {
+    this.scrollSync = Boolean(enabled);
+    if (!this.scrollSync) {
+      this.sourceTarget = null;
+      this.sourcePosition = null;
+    }
+  }
+
+  matchesSource({ path = this.current?.path, projectRoot = this.current?.projectRoot } = {}) {
+    return Boolean(this.current && this.current.path === path && this.current.projectRoot === projectRoot
+      && !this.container.hidden && this.container.clientHeight && this.container.getClientRects().length);
+  }
+
+  measureLines() {
+    if (this.linePositions) return this.linePositions;
+    const containerTop = this.container.getBoundingClientRect().top;
+    const topOf = rectangle => rectangle.top - containerTop + this.container.scrollTop - this.container.clientTop;
+    const lineCount = this.current.content.replace(/\r\n?/g, '\n').split('\n').length;
+    const blocks = [];
+    const nodes = new Set();
+    for (const element of this.article.querySelectorAll('[data-source-line]')) {
+      const node = element.tagName === 'CODE' && element.parentElement?.tagName === 'PRE' ? element.parentElement : element;
+      if (nodes.has(node)) continue;
+      const start = Number(element.dataset.sourceLine);
+      const end = Number(element.dataset.sourceEndLine);
+      const rectangle = node.getBoundingClientRect();
+      if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || !rectangle.height) continue;
+      nodes.add(node);
+      blocks.push({ node, start, end, top: topOf(rectangle), bottom: topOf(rectangle) + rectangle.height });
+    }
+    const article = this.article.getBoundingClientRect();
+    const positions = new Map([
+      [1, { line: 1, top: topOf(article), priority: 0 }],
+      [lineCount + 1, { line: lineCount + 1, top: topOf(article) + article.height, priority: 0 }],
+    ]);
+    for (const block of blocks) {
+      // A nested block starts closer to its text than its list or table wrapper.
+      // Start positions also account for the margin after the preceding block.
+      for (const [line, top, priority] of [[block.start, block.top, 2], [block.end, block.bottom, 1]]) {
+        const previous = positions.get(line);
+        if (!previous || previous.priority <= priority) positions.set(line, { line, top, priority });
+      }
+    }
+    const anchors = [...positions.values()].sort((a, b) => a.line - b.line);
+    for (let index = 1; index < anchors.length; ++index) anchors[index].top = Math.max(anchors[index - 1].top, anchors[index].top);
+    this.linePositions = { blocks, anchors, lineCount };
+    return this.linePositions;
+  }
+
+  locateLine(value) {
+    const { blocks, anchors, lineCount } = this.measureLines();
+    const line = Math.min(lineCount + 1, Math.max(1, Number(value) || 1));
+    let lower = anchors[0], upper = anchors.at(-1);
+    for (const anchor of anchors) {
+      if (anchor.line <= line) lower = anchor;
+      if (anchor.line >= line) { upper = anchor; break; }
+    }
+    const fraction = upper.line > lower.line ? (line - lower.line) / (upper.line - lower.line) : 0;
+    const top = lower.top + fraction * (upper.top - lower.top);
+    let block = null;
+    for (const candidate of blocks) {
+      if (candidate.start <= line && line < candidate.end && (!block || candidate.end - candidate.start <= block.end - block.start)) block = candidate;
+    }
+    if (!block) block = blocks.find(candidate => candidate.start >= line) || blocks.at(-1);
+    return { top, node: block?.node };
+  }
+
+  revealSourceLine(line, { path, projectRoot, align = 'center', highlight = true } = {}) {
+    if (!this.matchesSource({ path, projectRoot }) || !Number.isFinite(Number(line))) return false;
+    this.sourceTarget = null;
+    return this.scrollSourceLine(line, { align, highlight });
+  }
+
+  syncSourceLine(line, { path, projectRoot } = {}) {
+    if (!this.scrollSync || !this.matchesSource({ path, projectRoot }) || !Number.isFinite(Number(line))) {
+      this.sourceTarget = null;
+      this.sourcePosition = null;
+      return false;
+    }
+    const target = { line: Number(line), path: this.current.path, projectRoot: this.current.projectRoot };
+    // Editing can report the same editor position after the user has scrolled
+    // the preview. Follow again when the editor actually moves.
+    if (!this.sourceTarget && this.sourcePosition?.path === target.path
+      && this.sourcePosition.projectRoot === target.projectRoot
+      && Math.abs(this.sourcePosition.line - target.line) < 0.0001) return false;
+    this.sourceTarget = target;
+    this.sourcePosition = target;
+    if (this.rendered !== this.current) return true;
+    return this.scrollSourceLine(line, { align: 'start', highlight: false });
+  }
+
+  scrollSourceLine(line, { align, highlight }) {
+    if (this.rendered !== this.current) {
+      clearTimeout(this.timer);
+      this.timer = null;
+      this.render();
+    }
+    if (this.container.dataset.state !== 'ready') return false;
+    const location = this.locateLine(line);
+    const padding = parseFloat(this.window.getComputedStyle(this.container).paddingTop) || 0;
+    const offset = align === 'center' ? this.container.clientHeight / 2 : padding;
+    const top = Math.max(0, Math.min(this.container.scrollHeight - this.container.clientHeight, location.top - offset));
+    this.container.scrollTo({ top, behavior: 'instant' });
+    if (highlight) {
+      this.clearHighlight();
+      if (location.node) {
+        this.highlighted = location.node;
+        this.highlighted.classList.add('markdown-source-highlight');
+        this.highlightTimer = this.window.setTimeout(() => this.clearHighlight(), 2600);
+      }
+    }
+    return true;
+  }
+
+  queueSourceScroll() {
+    if (!this.scrollSync || !this.sourceTarget || this.sourceFrame !== null) return;
+    this.sourceFrame = this.window.requestAnimationFrame(() => {
+      this.sourceFrame = null;
+      const target = this.sourceTarget;
+      if (this.scrollSync && target && this.rendered === this.current && this.matchesSource(target)) this.scrollSourceLine(target.line, { align: 'start', highlight: false });
+    });
+  }
+
+  clearHighlight() {
+    this.window.clearTimeout(this.highlightTimer);
+    this.highlightTimer = null;
+    this.highlighted?.classList.remove('markdown-source-highlight');
+    this.highlighted = null;
   }
 
   prepareLinks(fragment, path) {
@@ -386,6 +572,8 @@ export class MarkdownPreview {
       asset.width = image.naturalWidth;
       asset.height = image.naturalHeight;
       this.setImageSize(image, asset);
+      this.linePositions = null;
+      this.queueSourceScroll();
       this.imageSizes.set(`${current.projectRoot}\n${path}`, { width: asset.width, height: asset.height });
       while (this.imageSizes.size > 200) this.imageSizes.delete(this.imageSizes.keys().next().value);
       image.dataset.state = 'ready';
@@ -398,6 +586,7 @@ export class MarkdownPreview {
   }
 
   scrollToHeading(fragment) {
+    this.sourceTarget = null;
     const value = fragment.replace(/^user-content-/, '');
     const heading = [...this.article.querySelectorAll('[data-markdown-heading]')].find(node => node.dataset.markdownHeading === value);
     if (heading) heading.scrollIntoView({ block: 'start', behavior: 'smooth' });
@@ -418,6 +607,9 @@ export class MarkdownPreview {
   destroy() {
     this.unsubscribeLanguage?.();
     this.reset();
+    this.layoutObserver?.disconnect();
+    if (this.sourceFrame !== null) this.window.cancelAnimationFrame(this.sourceFrame);
+    for (const type of ['wheel', 'touchstart', 'pointerdown', 'keydown']) this.container.removeEventListener(type, this.manualScroll);
     this.container.removeEventListener('click', this.linkClick);
     this.container.removeEventListener('dblclick', this.doubleClick);
     this.article.remove();
