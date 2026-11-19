@@ -1619,7 +1619,7 @@ test('ヘルプに表示言語のリンクと操作方法を示し，環境情�
   expect(environment).not.toMatch(/(?:127\.0\.0\.1|localhost):\d+/);
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.locator('#help-copy-environment').click();
-  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(environment);
+  await expect.poll(async () => (await page.evaluate(() => navigator.clipboard.readText())).replaceAll('\r\n', '\n')).toBe(environment.replaceAll('\r\n', '\n'));
 
   await page.locator('#help-open-log').click();
   await expect(dialog).not.toBeVisible();
