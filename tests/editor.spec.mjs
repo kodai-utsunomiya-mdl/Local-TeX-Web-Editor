@@ -755,8 +755,12 @@ test('配布済みの古い版から保存を確認して更新し，新しい�
     expect(previous.child.exitCode).toBeNull();
     await expect(page.getByTestId('editor').locator('.cm-content')).toContainText(saved.trim());
 
+    const saving = page.waitForResponse(response =>
+      new URL(response.url()).pathname === '/api/file' && response.request().method() === 'PUT');
     await page.getByTestId('save-button').click();
-    await expect.poll(() => readFile(path.join(project, 'main.tex'), 'utf8').then(text => text.replaceAll('\r\n', '\n'))).toBe(saved);
+    const savedResponse = await saving;
+    expect(savedResponse.ok(), await savedResponse.text()).toBe(true);
+    expect((await readFile(path.join(project, 'main.tex'), 'utf8')).replaceAll('\r\n', '\n')).toBe(saved);
     await updating.getByTestId('update-saved').check();
     await updating.getByTestId('update-stop-current').click();
     await expect.poll(() => previous.child.exitCode).toBe(0);

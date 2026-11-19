@@ -71,6 +71,7 @@ type State struct {
 	ExecutablePath         string                    `json:"executablePath"`
 	InstallationError      string                    `json:"installationError,omitempty"`
 	Platform               string                    `json:"platform"`
+	Architecture           string                    `json:"architecture"`
 	PackageIdentity        *platform.PackageIdentity `json:"packageIdentity,omitempty"`
 	TexBin                 string                    `json:"texBin"`
 	TexPackages            TeXPackageStatus          `json:"texPackages"`
@@ -293,7 +294,7 @@ func (a *App) stateLocked(refresh bool, language ...string) State {
 		executable, _ = filepath.Abs(executable)
 	}
 	result := State{
-		Version: a.options.Version, Platform: runtime.GOOS,
+		Version: a.options.Version, Platform: runtime.GOOS, Architecture: runtime.GOARCH,
 		PackageIdentity: a.packageIdentity,
 		ExecutablePath:  executable, InstallationError: messages.ErrorText(selected, a.options.InstallationError),
 		ShortcutsSupported: runtime.GOOS == "windows" && a.packageIdentity == nil,
