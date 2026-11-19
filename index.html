@@ -112,6 +112,8 @@
             <li><strong>Follow citations and references.</strong> Find definitions and uses, and preview changes before renaming a key. Filter compilation errors and warnings by type.</li>
             <li><strong>Reuse material.</strong> Paste or drop images, create or paste tables, and start a project from a built-in template or one you register yourself.</li>
             <li><strong>Write Markdown with fewer steps.</strong> Use formatting, link and code-block controls, edit table cells directly, and sync scrolling from either the source or preview.</li>
+            <li><strong>Complete TeX and fold long documents.</strong> Insert commands and environments with editable fields, read citation details beside the candidates, and collapse sections in the source or outline.</li>
+            <li><strong>Read PDFs in dark colors.</strong> Switch the display without changing saved PDF colors. The toolbar stays on one row, with more controls in <strong>PDF actions</strong> when space is limited.</li>
           </ul>
           <p class="small-note">New installations start with the gray color scheme and Consolas as the editor font. Saved appearance choices continue to apply. See the <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.7">v0.1.7 release notes</a> for the complete changes.</p>
         </section>
@@ -120,7 +122,7 @@
           <h2 id="requirements-title">Requirements and app size</h2>
           <p>Use a current version of Chrome or Edge. For TeX compilation, install TeX Live separately with the programs and packages your documents need. If your project already compiles in another editor, choose that same TeX installation. Markdown editing and preview work without TeX Live.</p>
           <div class="table-scroll">
-            <table>
+            <table class="requirements-table">
               <thead><tr><th scope="col">Platform</th><th scope="col">Operating system</th><th scope="col">Example TeX folder</th></tr></thead>
               <tbody>
                 <tr><th scope="row">Windows</th><td>Windows 10 / 11, x64</td><td><code>C:\texlive\2025\bin\windows</code></td></tr>
@@ -180,9 +182,16 @@
         <section id="editing" aria-labelledby="editing-title">
           <h2 id="editing-title">Editing and preview</h2>
           <p>Files open in tabs. When the preview is showing a PDF, compiling an independent TeX document switches it to that document's PDF. Switching between TeX tabs alone leaves the last compiled PDF visible. For a chapter included by another file, use the default main document or a <code>% !TeX root = ../main.tex</code> comment.</p>
-          <p><strong>Outline</strong> shows the headings from the selected TeX or Markdown tab and updates when you switch tabs. Click a heading to move to its source line.</p>
+          <p><strong>Outline</strong> shows the headings from the selected TeX or Markdown tab and updates when you switch tabs. Vertical guides show the hierarchy; the arrows expand or collapse child headings. Click a heading to open its source line with space above it. Folded source content opens at the destination.</p>
           <p>Drag the right edge of the files and outline sidebar, the divider between the editor and preview, or the top edge of the log to adjust the space you use. You can also focus a divider and use the arrow keys, or double-click it to restore its default position. Your chosen widths and log height are saved for the next launch.</p>
           <p>In <strong>Settings → Appearance</strong>, choose system, light, or dark mode, a color scheme, an accent color, and the editor font. Changes appear immediately: choose <strong>Save appearance</strong> to use them next time, or <strong>Cancel</strong> to return to the previous appearance. System mode follows your computer's light/dark preference. The default color scheme is gray; the default editor font is Consolas, with another monospace font used when it is unavailable.</p>
+
+          <div class="usage-block">
+            <h3>Complete TeX and fold sections</h3>
+            <p>Type <code>\b</code> and accept <code>\begin</code>, then type <code>i</code> inside its braces to choose an <code>itemize</code> block. Completion inserts the item and its matching ending. Press <kbd>Enter</kbd> to accept a candidate and <kbd>Tab</kbd> / <kbd>Shift</kbd> + <kbd>Tab</kbd> to move between inserted fields. Citation keys and labels also appear in the list; read the title, authors and file location beside or below it.</p>
+            <p>In <strong>Settings</strong>, use <strong>Enable TeX completion</strong> and <strong>Show suggestions while typing</strong> to choose when suggestions appear. With automatic suggestions off, <kbd>Ctrl</kbd> + <kbd>Space</kbd> still opens the list.</p>
+            <p>Click an arrow beside the line numbers to fold a section or environment. Markdown headings and code blocks can also be folded. Use <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>[</kbd> / <kbd>]</kbd> on Windows, or <kbd>Cmd</kbd> + <kbd>Alt</kbd> + <kbd>[</kbd> / <kbd>]</kbd> on Mac, to fold or unfold at the cursor.</p>
+          </div>
 
           <div class="usage-block">
             <h3>Read the PDF and move to the source</h3>
@@ -193,6 +202,7 @@
               <div><dt>Source text size</dt><dd>Use <kbd>Ctrl</kbd> + wheel over the editor, pinch, or change the font size in Settings.</dd></div>
             </dl>
             <p>Use the <strong>← / →</strong> buttons above the editor or preview to go back and forward through visited locations. After following a citation or section link within the PDF, <strong>←</strong> returns to the page and position you were reading.</p>
+            <p>Choose <strong>Dark PDF view</strong> to change the PDF colors on screen, including figures and photographs. Saved PDFs keep their original colors. In a narrow preview, open <strong>PDF actions</strong> for zoom and dark view; the compiled PDF's search and <strong>Save PDF</strong> controls are also available there.</p>
           </div>
 
           <div class="usage-block">

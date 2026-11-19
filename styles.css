@@ -93,6 +93,7 @@ thead th { color: var(--muted); font-size: .79rem; font-weight: 550; }
 tbody th { font-weight: 600; }
 tbody tr:last-child > * { border-bottom: 0; }
 th:first-child { width: 24%; }
+.requirements-table code { white-space: nowrap; overflow-wrap: normal; }
 .size-table th:first-child { width: 44%; }
 .small-note { font-size: .85rem; color: var(--muted); }
 details { margin-top: 1.4rem; padding: 14px 18px; border: 1px solid var(--line); border-radius: 5px; background: #f0f3ee; }
