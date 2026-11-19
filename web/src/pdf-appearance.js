@@ -96,6 +96,8 @@ export class PDFToolbar {
     const compact = width < this.compactWidth;
     if (!compact && this.panel.matches(':popover-open')) this.panel.hidePopover();
     this.toolbar.dataset.pdfCompact = String(compact);
+    // Leave enough space for readable status and document labels after the controls.
+    this.toolbar.dataset.pdfDetails = String(width >= 760);
     this.button.hidden = !compact;
     if (compact) this.panel.setAttribute('popover', 'auto');
     else {

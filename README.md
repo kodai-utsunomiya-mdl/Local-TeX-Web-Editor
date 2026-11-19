@@ -315,6 +315,8 @@ Relative links in the preview can open other project documents. Returning to the
 
 The PDF scrolls continuously across pages. The app prioritizes rendering the visible page and nearby pages, so a long document does not require rendering every page into an image at once. You can select and copy PDF text and follow links inside the PDF. After following an internal reference link, use **←** above the PDF to return to the position you were reading; **→** moves forward again. `Alt + Left` and `Alt + Right` provide the same navigation from the source or preview. Source links, search results, outline entries, and SyncTeX jumps also participate in this navigation.
 
+The PDF toolbar uses one row. In a narrow preview, open **… (PDF actions)** at the right to find zoom, dark display, search, and save controls. Page navigation stays in the toolbar; very narrow panes also move Back, Forward, and the preview selector into the menu.
+
 | Action | How to use it |
 | --- | --- |
 | Zoom | **＋** / **−** and the zoom selector use the PDF position at the center of the preview. `Ctrl + wheel` and pinch zoom around the pointer or gesture position |

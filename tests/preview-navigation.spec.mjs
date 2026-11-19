@@ -101,13 +101,24 @@ for (const kind of ['pdf', 'asset']) {
     await expect(page.locator(`#${kind}-pages`)).toHaveText('108');
     const toolbar = page.locator(kind === 'pdf' ? '.pdf-toolbar' : '.asset-toolbar');
     const pageInput = page.locator(`#${kind}-page`);
-    for (const width of [820, 620, 600, 500, 320, 240, 820]) {
+    if (kind === 'pdf') await page.evaluate(() => {
+      document.getElementById('pdf-state').textContent = 'Up to date';
+      document.getElementById('pdf-document').textContent = 'thesis2027_utsunomiya.tex';
+    });
+    for (const width of [820, 760, 620, 600, 500, 320, 240, 820]) {
       await page.setViewportSize({ width: Math.max(360, width + 32), height: 760 });
       await page.evaluate(({ kind, width }) => {
         document.body.classList.add('preview-mode');
         document.getElementById(kind === 'pdf' ? 'pdf-pane' : 'asset-preview').style.width = `${width}px`;
       }, { kind, width });
       await expect(toolbar).toHaveAttribute('data-pdf-compact', String(width < (kind === 'pdf' ? 600 : 420)));
+      if (kind === 'pdf') {
+        await expect(toolbar).toHaveAttribute('data-pdf-details', String(width >= 760));
+        for (const label of ['#pdf-state', '#pdf-document']) {
+          if (width >= 760) await expect(page.locator(label)).toBeVisible();
+          else await expect(page.locator(label)).toBeHidden();
+        }
+      }
       const layout = await toolbar.evaluate(element => {
         const area = element.getBoundingClientRect();
         const outside = [...element.querySelectorAll('button, input, select')].filter(control => {
@@ -127,6 +138,12 @@ for (const kind of ['pdf', 'asset']) {
       await showPDFControls(page, kind);
       const zoom = page.locator(`#${kind}-zoom`), toggle = page.getByTestId(`${kind}-dark-mode`);
       await expect(zoom).toBeVisible(); await expect(toggle).toBeVisible();
+      const zoomRows = await page.locator(`#${kind}-view-controls .pdf-zoom-controls`).evaluate(element =>
+        [...element.querySelectorAll('button, select')].map(control => {
+          const box = control.getBoundingClientRect();
+          return box.top + box.height / 2;
+        }));
+      expect(Math.max(...zoomRows) - Math.min(...zoomRows)).toBeLessThan(2);
       await zoom.selectOption('1');
       const initial = await toggle.getAttribute('aria-pressed');
       await toggle.click(); await expect(toggle).toHaveAttribute('aria-pressed', String(initial !== 'true'));

@@ -8,7 +8,8 @@ const source = (page, second = false) => page.getByTestId(second ? 'editor-secon
 async function replaceSource(page, text, second = false) {
   await source(page, second).click();
   await page.keyboard.press(`${modifier}+a`);
-  await page.keyboard.insertText(text);
+  if (text) await page.keyboard.insertText(text);
+  else await page.keyboard.press('Backspace');
 }
 async function tool(page, id) {
   await page.locator('#writing-menu > summary').click();
@@ -128,11 +129,13 @@ export function registerWritingWorkflowTests({ test, openProject, openEditor, se
     await expect(page.locator('#settings-dialog')).not.toBeVisible();
     await expect.poll(async () => (await json(session, '/api/storage?key=preferences')).value).toMatchObject({ texCompletion: false, automaticCompletion: false });
     await replaceSource(page, '');
+    await expect(source(page).locator('.cm-line')).toHaveText(['']);
     await source(page).pressSequentially('\\b');
+    await expect(source(page).locator('.cm-line')).toHaveText(['\\b']);
     await expectNoCompletion(page);
     await page.keyboard.press('Control+Space');
     await expectNoCompletion(page);
-    await expect(source(page)).toHaveText('\\b');
+    await expect(source(page).locator('.cm-line')).toHaveText(['\\b']);
     await page.keyboard.press(`${modifier}+s`);
     await expect.poll(async () => clean(await readFile(path.join(session.project, 'completion.tex'), 'utf8'))).toBe('\\b');
     await page.reload();

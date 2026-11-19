@@ -154,8 +154,10 @@ test('アウトラインの開閉と検索を文書ごとに使い，行の追�
 test('Markdown の見出しとコードブロックを標準のキー操作で折りたたんで戻せる', async ({ page }) => {
   await openFixture(page);
   await page.evaluate(() => window.showFoldingDocument('notes.md'));
-  const fold = process.platform === 'darwin' ? 'Meta+Alt+[' : 'Control+Shift+[';
-  const unfold = process.platform === 'darwin' ? 'Meta+Alt+]' : 'Control+Shift+]';
+  // Physical key names let Playwright apply Shift to the bracket character.
+  // A literal '[' still sends key='[' with Shift held and matches Ctrl+[ first.
+  const fold = process.platform === 'darwin' ? 'Meta+Alt+BracketLeft' : 'Control+Shift+BracketLeft';
+  const unfold = process.platform === 'darwin' ? 'Meta+Alt+BracketRight' : 'Control+Shift+BracketRight';
   await page.evaluate(() => { const view = window.foldingView; view.dispatch({ selection: { anchor: 0 } }); view.focus(); });
   await page.keyboard.press(fold);
   await expect.poll(() => page.evaluate(() => window.foldingCount())).toBe(1);

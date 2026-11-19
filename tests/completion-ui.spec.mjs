@@ -47,8 +47,8 @@ test.beforeAll(async () => {
           for (const view of window.completionViews) closeCompletion(view);
           const view = window.completionViews[index];
           const text = (bottom ? 'An earlier paragraph.\\n'.repeat(80) : '') + (citation ? '\\\\cite{paper' : '\\\\ref{sec:');
-          view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text }, selection: { anchor: text.length },
-            effects: EditorView.scrollIntoView(text.length, { y: bottom ? 'end' : 'start', yMargin: 16 }) });
+          view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text }, selection: { anchor: text.length } });
+          view.dispatch({ effects: EditorView.scrollIntoView(text.length, { y: bottom ? 'end' : 'start', yMargin: 16 }) });
           view.focus(); startCompletion(view);
         };
         window.completionReady = true;`,
