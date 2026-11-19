@@ -60,6 +60,16 @@ function pdfWithRotatedPages() {
   return pdfFromObjects(objects);
 }
 
+function pdfWithTallPage() {
+  const content = '0.85 G 0.5 w 306 0 m 306 1400 l S 0 700 m 612 700 l S\n0 g 300 694 12 12 re f\n';
+  return pdfFromObjects([
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 1400] /Resources << >> /Contents 4 0 R >>',
+    `<< /Length ${Buffer.byteLength(content)} >>\nstream\n${content}endstream`,
+  ]);
+}
+
 async function openPDFViewer(page, pdf) {
   const source = await readFile(path.join(repository, 'web/src/index.html'), 'utf8');
   const pane = source.match(/<section class="pdf-pane"[\s\S]*?<\/section>/)?.[0];
@@ -99,6 +109,48 @@ async function openPDFViewer(page, pdf) {
   });
   await page.goto(origin);
   await expect(page.getByTestId('pdf-canvas')).toHaveAttribute('data-ready', 'true');
+}
+
+async function readPDFZoomPosition(page, point = { x: 0.5, y: 0.5 }) {
+  return page.evaluate(point => {
+    const view = window.testViewer.pageViewer.getPageView(0);
+    const canvas = view.canvas;
+    const rectangle = canvas?.getBoundingClientRect() || view.div.getBoundingClientRect();
+    const scroll = document.getElementById('pdf-scroll');
+    const viewport = scroll.getBoundingClientRect();
+    return {
+      point: { x: rectangle.left + rectangle.width * point.x, y: rectangle.top + rectangle.height * point.y },
+      center: { x: viewport.left + scroll.clientLeft + scroll.clientWidth / 2,
+        y: viewport.top + scroll.clientTop + scroll.clientHeight / 2 },
+      canvas: { x: rectangle.left, y: rectangle.top, width: rectangle.width, height: rectangle.height },
+      scale: window.testViewer.pageViewer.currentScale,
+      ready: Boolean(canvas?.isConnected && canvas.dataset.ready === 'true' && rectangle.width && rectangle.height),
+      scrollLeft: scroll.scrollLeft, scrollTop: scroll.scrollTop,
+    };
+  }, point);
+}
+
+async function openPDFForZoom(page) {
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await openPDFViewer(page, pdfWithTallPage());
+  // The real preview follows the editor, so its screen position differs from
+  // the scroll container's offset inside its frame.
+  await page.locator('#pdf-pane').evaluate(element => {
+    element.style.marginLeft = '240px';
+    element.style.marginTop = '35px';
+  });
+  await page.getByTestId('pdf-zoom').selectOption('1');
+  await expect.poll(() => readPDFZoomPosition(page).then(position => position.scale)).toBe(1);
+  await expect.poll(() => readPDFZoomPosition(page).then(position => position.ready)).toBe(true);
+  await page.evaluate(() => {
+    const canvas = window.testViewer.pageViewer.getPageView(0).canvas.getBoundingClientRect();
+    const scroll = document.getElementById('pdf-scroll');
+    const viewport = scroll.getBoundingClientRect();
+    scroll.scrollLeft += canvas.left + canvas.width / 2 - viewport.left - scroll.clientLeft - scroll.clientWidth / 2;
+    scroll.scrollTop += canvas.top + canvas.height / 2 - viewport.top - scroll.clientTop - scroll.clientHeight / 2;
+    window.testViewer.pageViewer.update();
+  });
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 }
 
 async function waitUntil(read, predicate, timeout, description) {
@@ -1661,6 +1713,82 @@ test('日本語の原稿を編集し，参考文献と PDF を更新する', asy
   await expect(canvas).toHaveAttribute('data-page', '2');
   await expect(page.getByTestId('pdf-page')).toHaveValue('2');
   await page.screenshot({ path: testInfo.outputPath('editor-with-pdf.png') });
+  expect(errors).toEqual([]);
+});
+
+test('PDF をボタンや倍率メニューで拡大・縮小しても，中央の本文が同じ位置に見える', async ({ page }, testInfo) => {
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await openPDFForZoom(page);
+  const measurements = [];
+  const checkCenter = async label => {
+    await expect.poll(() => readPDFZoomPosition(page).then(position => position.ready)).toBe(true);
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await expect.poll(async () => {
+      const position = await readPDFZoomPosition(page);
+      return Math.max(Math.abs(position.point.x - position.center.x), Math.abs(position.point.y - position.center.y));
+    }, { message: `${label}: the point in the PDF should stay at the center of the preview` }).toBeLessThan(4);
+    measurements.push({ label, ...await readPDFZoomPosition(page) });
+  };
+  await checkCenter('100% at the start');
+
+  for (let cycle = 0; cycle < 2; ++cycle) {
+    for (const direction of ['in', 'in', 'in', 'out', 'out', 'out']) {
+      const before = await readPDFZoomPosition(page);
+      await page.getByTestId(`pdf-zoom-${direction}`).click();
+      await expect.poll(async () => {
+        const position = await readPDFZoomPosition(page);
+        return direction === 'in' ? position.scale > before.scale : position.scale < before.scale;
+      }).toBe(true);
+      await checkCenter(`cycle ${cycle + 1}, zoom ${direction}`);
+    }
+  }
+
+  for (const zoom of ['1.5', '2', '1', '0.75', '1.25', '1']) {
+    await page.getByTestId('pdf-zoom').selectOption(zoom);
+    await expect.poll(() => readPDFZoomPosition(page).then(position => position.scale)).toBe(Number(zoom));
+    await checkCenter(`${Number(zoom) * 100}% from the menu`);
+  }
+  await testInfo.attach('pdf-zoom-position.json', { body: JSON.stringify(measurements, null, 2), contentType: 'application/json' });
+  expect(await page.evaluate(() => window.viewerErrors)).toEqual([]);
+  expect(errors).toEqual([]);
+});
+
+test('PDF の Ctrl とホイールによる拡大・縮小では，マウスの下の本文が同じ位置に見える', async ({ page }, testInfo) => {
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await openPDFForZoom(page);
+  await page.getByTestId('pdf-zoom').selectOption('1.5');
+  await expect.poll(() => readPDFZoomPosition(page).then(position => position.scale)).toBe(1.5);
+  await expect.poll(() => readPDFZoomPosition(page).then(position => position.ready)).toBe(true);
+  const browser = await page.evaluate(() => ({ ratio: devicePixelRatio, scale: visualViewport.scale, width: innerWidth }));
+  const before = await readPDFZoomPosition(page);
+  const pointer = { x: before.center.x + 110, y: before.center.y - 120 };
+  const point = { x: (pointer.x - before.canvas.x) / before.canvas.width,
+    y: (pointer.y - before.canvas.y) / before.canvas.height };
+  const measurements = [];
+
+  for (const delta of [-120, 120, -120, 120]) {
+    const previous = await readPDFZoomPosition(page, point);
+    await page.mouse.move(pointer.x, pointer.y);
+    await page.keyboard.down('Control');
+    try { await page.mouse.wheel(0, delta); }
+    finally { await page.keyboard.up('Control'); }
+    await expect.poll(async () => {
+      const position = await readPDFZoomPosition(page, point);
+      return delta < 0 ? position.scale > previous.scale : position.scale < previous.scale;
+    }).toBe(true);
+    await expect.poll(() => readPDFZoomPosition(page, point).then(position => position.ready)).toBe(true);
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await expect.poll(async () => {
+      const position = await readPDFZoomPosition(page, point);
+      return Math.max(Math.abs(position.point.x - pointer.x), Math.abs(position.point.y - pointer.y));
+    }, { message: 'The same point in the PDF should stay below the mouse pointer' }).toBeLessThan(4);
+    measurements.push({ delta, pointer, ...await readPDFZoomPosition(page, point) });
+  }
+  await testInfo.attach('pdf-wheel-position.json', { body: JSON.stringify(measurements, null, 2), contentType: 'application/json' });
+  expect(await page.evaluate(() => ({ ratio: devicePixelRatio, scale: visualViewport.scale, width: innerWidth }))).toEqual(browser);
+  expect(await page.evaluate(() => window.viewerErrors)).toEqual([]);
   expect(errors).toEqual([]);
 });
 

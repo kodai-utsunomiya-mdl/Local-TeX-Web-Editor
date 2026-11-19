@@ -234,7 +234,7 @@ The PDF scrolls continuously across pages. The app prioritizes rendering the vis
 
 | Action | How to use it |
 | --- | --- |
-| Zoom | Use **＋** / **−**, choose a zoom level, or use `Ctrl + wheel`. Touchpad pinch is also supported |
+| Zoom | **＋** / **−** and the zoom selector use the PDF position at the center of the preview. `Ctrl + wheel` and pinch zoom around the pointer or gesture position |
 | Fit the view | Choose **Fit width** or **Fit page** from the zoom menu |
 | Go to a page | Enter a page number or use the left and right arrows |
 | Search PDF text | Click **Find in PDF** or press `Ctrl + F` while the PDF has focus. Use `Enter` / `Shift + Enter` for the next / previous result |
