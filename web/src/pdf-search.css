@@ -1,9 +1,10 @@
 .pdf-search-toggle { margin-left: 0; }
-.pdf-search-bar { padding: 7px 11px 6px; border-bottom: 1px solid var(--border); background: var(--surface); flex: 0 0 auto; }
-.pdf-search-row { display: flex; align-items: center; gap: 4px; }
-.pdf-search-row input[type="search"] { min-width: 0; width: 100%; padding: 6px 9px; font-size: 12px; }
+.pdf-search-bar { padding: 9px 11px 8px; border-bottom: 1px solid var(--border); background: var(--surface); flex: 0 0 auto; }
+.pdf-search-row { display: flex; align-items: center; gap: 6px; }
+.pdf-search-row input[type="search"] { min-width: 0; min-height: 36px; width: 100%; padding: 6px 9px; font-size: 12px; }
+.pdf-search-row [data-search-close] { width: 36px; height: 36px; margin-inline-start: 6px; font-size: 22px; }
 .pdf-search-row .search-not-found { border-color: var(--danger); }
-.pdf-search-options { display: flex; align-items: center; flex-wrap: wrap; gap: 5px 12px; padding-top: 5px; font-size: 10px; color: var(--muted); }
-.pdf-search-options label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.pdf-search-options { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding: 8px 0 4px; font-size: 11px; line-height: 1.5; color: var(--muted); }
+.pdf-search-options label { display: inline-flex; align-items: center; min-height: 24px; gap: 6px; cursor: pointer; }
 .pdf-search-options input { margin: 0; accent-color: var(--accent); }
 .pdf-search-count { margin-left: auto; }

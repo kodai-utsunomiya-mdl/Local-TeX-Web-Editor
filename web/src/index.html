@@ -80,6 +80,8 @@
         <div class="file-footer"><span class="local-dot" aria-hidden="true"></span><span id="project-root" title=""></span></div>
       </aside>
 
+      <div id="sidebar-splitter" class="sidebar-splitter panel-splitter" role="separator" aria-orientation="vertical" aria-controls="file-pane" aria-label="Resize the files and outline" title="Drag or use the left and right arrow keys to resize" tabindex="0" data-i18n-aria-label="ファイル一覧とアウトラインの幅を変更" data-i18n-title="ドラッグまたは左右矢印キーで幅を変更"></div>
+
       <section class="editor-pane" id="editor-pane" aria-label="Edit source" data-i18n-aria-label="原稿を編集">
         <div class="editor-toolbar">
           <h2 id="active-filename" class="sr-only"><span data-i18n="原稿">Source</span></h2>
@@ -107,7 +109,7 @@
         </section>
       </section>
 
-      <div id="splitter" class="splitter" role="separator" aria-orientation="vertical" aria-label="Resize the editor and PDF" tabindex="0" data-i18n-aria-label="編集画面と PDF の幅を変更"></div>
+      <div id="splitter" class="splitter panel-splitter" role="separator" aria-orientation="vertical" aria-controls="editor-pane" aria-label="Resize the editor and preview" title="Drag or use the left and right arrow keys to resize" tabindex="0" data-i18n-aria-label="編集画面とプレビューの幅を変更" data-i18n-title="ドラッグまたは左右矢印キーで幅を変更"></div>
 
       <section class="pdf-pane" id="pdf-pane" aria-label="PDF preview" data-i18n-aria-label="PDF のプレビュー">
         <div id="pdf-preview" class="pdf-preview">
@@ -135,6 +137,7 @@
         <div id="markdown-preview-panel" class="markdown-preview-panel" hidden>
           <div class="markdown-toolbar">
             <label class="preview-choice"><span class="sr-only"><span data-i18n="プレビューの種類">Preview type</span></span><select id="markdown-preview-mode" data-preview-choice aria-label="Preview type" title="Auto follows the file you are editing. PDF or Markdown keeps that preview open." data-i18n-aria-label="プレビューの種類" data-i18n-title="自動: 編集中のファイルに合わせる／PDF・Markdown: 選んだ表示を続ける"><option value="auto" data-i18n="自動">Auto</option><option value="pdf">PDF</option><option value="markdown">Markdown</option></select></label>
+            <label class="markdown-scroll-sync" title="Scroll the Markdown preview with the source editor" data-i18n-title="原稿のスクロールに Markdown のプレビューを合わせる"><input type="checkbox" id="markdown-scroll-sync" checked><span data-i18n="スクロールを同期">Sync scrolling</span></label>
             <span id="markdown-document-name" class="markdown-document-name"></span>
           </div>
           <div id="markdown-preview-container" class="markdown-preview-container" hidden></div>
@@ -142,6 +145,7 @@
       </section>
 
       <section id="log-panel" class="log-panel" aria-label="Compilation log" hidden data-i18n-aria-label="コンパイルのログ">
+        <div id="log-splitter" class="log-splitter panel-splitter" role="separator" aria-orientation="horizontal" aria-controls="log-panel" aria-label="Resize the log" title="Drag or use the up and down arrow keys to resize" tabindex="0" data-i18n-aria-label="ログの高さを変更" data-i18n-title="ドラッグまたは上下矢印キーで高さを変更"></div>
         <div class="pane-title log-title"><h2><span data-i18n="コンパイルのログ">Compilation log</span></h2><span id="log-meta" class="muted"></span><span class="toolbar-spacer"></span><button type="button" id="copy-log" class="button button-subtle button-small" disabled><span data-i18n="コピー">Copy</span></button><button type="button" id="close-log" class="icon-button" aria-label="Close the log" data-i18n-aria-label="ログを閉じる">×</button></div>
         <div id="log-locations" data-testid="log-locations" class="log-locations" aria-label="Errors in the source" hidden data-i18n-aria-label="原稿のエラー箇所"></div>
         <pre id="build-log" data-testid="build-log" class="build-log" tabindex="0"><span data-i18n="コンパイルすると，ここにコマンドとログが表示されます．">The command and log will appear here when you compile.</span></pre>

@@ -4,11 +4,11 @@
 
 [![Microsoft Store から無料の Windows 版をインストール](docs/download-store.svg)](https://apps.microsoft.com/detail/9P6QF32N19HG?hl=ja-jp&gl=JP)
 &nbsp;&nbsp;
-[![Windows 版の ZIP をダウンロード](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.5/local-tex-web-editor-0.1.5-windows-x64.zip)
+[![Windows 版の ZIP をダウンロード](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.6/local-tex-web-editor-0.1.6-windows-x64.zip)
 &nbsp;&nbsp;
-[![macOS 版をダウンロード](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.5/local-tex-web-editor-0.1.5-macos-universal.zip)
+[![macOS 版をダウンロード](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.6/local-tex-web-editor-0.1.6-macos-universal.zip)
 
-**v0.1.5** · [配布ファイルと更新内容](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [利用前の準備](#利用前の準備) · [アプリの容量](#アプリとデータの保存先) · [起動する](#ダウンロードして起動する)
+**v0.1.6** · [配布ファイルと更新内容](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [利用前の準備](#利用前の準備) · [アプリの容量](#アプリとデータの保存先) · [起動する](#ダウンロードして起動する)
 
 Windows と macOS のブラウザで TeX の原稿を編集し，PC にある TeX Live でコンパイルするアプリ．編集画面と PDF を同じウィンドウで確認できる．アプリを起動すると，既定のブラウザで `localhost` の画面が開く．Markdown の編集とプレビューにも対応する．
 
@@ -122,7 +122,7 @@ Mac のターミナルでは次を実行する．
 #### ZIP をダウンロードする
 
 1. [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) を開き，最新のバージョンを選ぶ．
-2. **Assets** の `local-tex-web-editor-0.1.5-windows-x64.zip` をダウンロードする．`Source code` は開発用のソースである．
+2. **Assets** の `local-tex-web-editor-0.1.6-windows-x64.zip` をダウンロードする．`Source code` は開発用のソースである．
 3. ZIP を展開し，`local-tex-web-editor.exe` をダブルクリックする．
 4. 開いたブラウザで原稿のフォルダーを選ぶ．フォルダーのパスを入力して開くこともできる．
 5. TeX Live の場所が自動で見つからない場合は，設定に `C:\texlive\2025\bin\windows` など，`latexmk.exe` があるフォルダーを指定する．
@@ -132,7 +132,7 @@ Windows の ZIP に含まれる実行ファイルにはコード署名が付い�
 
 ### macOS
 
-1. [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) の **Assets** から `local-tex-web-editor-0.1.5-macos-universal.zip` をダウンロードする．Apple Silicon と Intel で共通の ZIP を使う．
+1. [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) の **Assets** から `local-tex-web-editor-0.1.6-macos-universal.zip` をダウンロードする．Apple Silicon と Intel で共通の ZIP を使う．
 2. ZIP を展開し，`Local TeX Web Editor.app` を「アプリケーション」フォルダーへ移す．
 3. Finder や Spotlight から `Local TeX Web Editor` を開く．ブラウザに編集画面が開く．
 4. 原稿のフォルダーを開く．TeX の場所が自動で見つからない場合は，設定に `/Library/TeX/texbin` を指定する．
@@ -178,7 +178,9 @@ Mac では，原稿を保存してアプリを終了し，展開した新しい 
 
 初回の表示言語は English である．**Settings → Language → 日本語** で切り替えられ，保存した言語は次回の起動にも反映する．切り替える対象はアプリの画面と案内であり，原稿，PDF，Markdown の本文は入力した内容を表示する．
 
-左側のファイル一覧から `.tex`，`.bib` などを開く．複数のファイルはタブで切り替えられる．編集画面と PDF の間にある境界をドラッグすると，それぞれの幅を変更できる．右上のボタンでライト／ダークを切り替えられる．設定ではエディタの文字サイズを 8〜40 px に変更できる (既定は 14 px)．テーマと文字サイズの選択は，次回の起動でも同じになる．
+左側のファイル一覧から `.tex`，`.bib` などを開く．複数のファイルはタブで切り替えられる．右上のボタンでライト／ダークを切り替えられる．設定ではエディタの文字サイズを 8〜40 px に変更できる (既定は 14 px)．テーマと文字サイズの選択は，次回の起動でも同じになる．
+
+ファイル一覧・アウトラインの右端，原稿とプレビューの境界，ログの上端をドラッグして，幅や高さを変えられる．`Tab` キーで境界へフォーカスを移した後は，左右または上下の矢印キーでも調整できる．境界をダブルクリックすると，その境界が初期位置に戻る．変更した大きさは次回の起動にも反映され，ウィンドウを小さくすると画面に収まる範囲へ調整される．
 
 フォルダーは左側の一覧で展開できる．画像や PDF を選ぶと，原稿と同じタブ欄でプレビューを開く．原稿のタブへ戻ると，編集中の内容とカーソルの位置から作業を続けられる．
 
@@ -186,7 +188,7 @@ Mac では，原稿を保存してアプリを終了し，展開した新しい 
 
 | 操作 | 使い方 |
 | --- | --- |
-| ファイルや見出しを探す | 左側の検索欄を使う．「アウトライン」タブでは，原稿の節・小節をクリックしてその行へ移動できる |
+| ファイルや見出しを探す | 左側の検索欄を使う．「アウトライン」は選択中の TeX または Markdown のタブに合わせて見出しを表示する．見出しをクリックすると，原稿の行へ移動できる |
 | 引用を入力する | `\citep{` や `\cite{` の中で，プロジェクト内の `.bib` にあるキーが候補になる．著者・年・題名も確認できる |
 | 相互参照を入力する | `\ref{`，`\eqref{`，`\cref{` などの中で，原稿の `\label` が候補になる |
 | 補完を呼び出す | `Ctrl + Space` を押す．TeX のコマンドも補完できる |
@@ -198,7 +200,7 @@ Mac では，原稿を保存してアプリを終了し，展開した新しい 
 
 Mac では，保存・検索・コンパイル・SyncTeX のクリック操作に使う `Ctrl` を `Cmd` に読み替える．ホイールでの拡大・縮小は `Ctrl + ホイール` を使い，トラックパッドではピンチ操作を使える．
 
-検索欄と置換欄では，改行と TeX の `\` を入力どおりに扱う．`Enter` で次の一致箇所へ，`Shift + Enter` で前へ移動する．欄の中で改行を入力するには `Ctrl + Enter` を使う．正規表現は検索欄のチェックボックスから有効にできる．
+検索欄と置換欄では，改行と TeX の `\` を入力どおりに扱う．`Enter` で次の一致箇所へ，`Shift + Enter` で前へ移動する．欄の中で改行を入力するには `Ctrl + Enter` を使う．正規表現は検索欄のチェックボックスから有効にできる．検索欄は **×** ボタンで閉じられ，欄にフォーカスがある状態では `Esc` でも閉じられる．
 
 文字サイズやテーマの変更は，原稿の内容とコンパイル済みの PDF に影響しない．PDF の更新案内は，原稿またはコンパイルの設定に変更がある場合に表示される．
 
@@ -220,7 +222,11 @@ Mac では，保存・検索・コンパイル・SyncTeX のクリック操作�
 
 数式には `$...$`，GitHub のドル記号とバッククォートで囲む形式，`$$...$$`，`math` のコードブロック，`\(...\)` を使える．プロジェクト内の画像は，Markdown のファイルからの相対パスで指定する．外部の画像は，その URL をブラウザで開くリンクとして表示する．
 
-プレビュー内の相対リンクから別の文書を開ける．本文の段落や見出しをダブルクリックすると，エディタの対応する行へ移動する．Markdown の各文書でスクロール位置を記録する．PDF の表示へ戻ると，最後にコンパイルした PDF を表示する．
+Markdown の原稿で `Ctrl + クリック` (Mac では `Cmd + クリック`) するか，カーソルを置いて原稿の上にある移動ボタンを押すと，プレビューの対応する箇所へ移動し，一時的に強調する．プレビューの段落や見出しをダブルクリックすると，エディタの対応する行へ移動する．
+
+Markdown のツールバーにある「スクロールを同期」で，原稿のスクロールにプレビューを追従させるかを切り替えられる．初期状態はオンで，選択は次回の起動にも反映される．Markdown の各文書でプレビューのスクロール位置も記録する．
+
+プレビュー内の相対リンクから別の文書を開ける．PDF の表示へ戻ると，最後にコンパイルした PDF を表示する．
 
 ## PDF を読み，原稿と行き来する
 
@@ -323,7 +329,7 @@ go build -o bin/local-tex-web-editor.exe ./cmd/local-tex-editor
 Windows 用の配布ファイルは次のコマンドで作成する．
 
 ```sh
-go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.5" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
+go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.6" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
 ```
 
 `build:windows-resources` は同梱の ICO から Windows x64 用の resource を生成する．実行ファイルのビルド時に，16〜256 px の 9 サイズのアイコンが組み込まれる．
@@ -339,7 +345,7 @@ npx playwright install chromium
 node scripts/build-macos.mjs
 ```
 
-`dist/local-tex-web-editor-0.1.5-macos-universal.zip` に，Apple Silicon と Intel で動く `.app`，日英の README，ライセンスを収録する．
+`dist/local-tex-web-editor-0.1.6-macos-universal.zip` に，Apple Silicon と Intel で動く `.app`，日英の README，ライセンスを収録する．
 
 起動時のオプション:
 

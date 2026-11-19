@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isMarkdownPath, renderMarkdownHTML, resolveMarkdownReference } from '../web/src/markdown-preview.js';
+import { extractMarkdownOutline, isMarkdownPath, renderMarkdownHTML, resolveMarkdownReference } from '../web/src/markdown-preview.js';
 import { setLanguage } from '../web/src/i18n.js';
 
 test.beforeEach(() => setLanguage('ja'));
@@ -71,4 +71,39 @@ test('同じ見出しが続いても，リンクで移動する先をそれぞ�
   assert.match(html, /data-markdown-heading="実験の結果"/);
   assert.match(html, /data-markdown-heading="実験の結果-1"/);
   assert.match(html, /data-markdown-heading="new-result"/);
+});
+
+test('Markdown の見出しと行番号を取り出し，コード内の例を含めない', () => {
+  const content = [
+    '# **研究ノート** と [参考資料](https://example.org)', '', '複数行の', '見出し', '-------', '',
+    '```markdown', '# 例の見出し', '```', '', '> ### 引用内の `コード`', '',
+    '#### 結果 $x^2$ と ![図](figure.png)',
+  ].join('\r\n');
+  assert.deepEqual(extractMarkdownOutline(content), [
+    { level: 1, title: '研究ノート と 参考資料', line: 1 },
+    { level: 2, title: '複数行の 見出し', line: 3 },
+    { level: 3, title: '引用内の コード', line: 11 },
+    { level: 4, title: '結果 x^2 と 図', line: 13 },
+  ]);
+  assert.deepEqual(extractMarkdownOutline(''), []);
+  assert.deepEqual(extractMarkdownOutline('本文だけの文書．'), []);
+});
+
+test('本文，入れ子の項目，表，コード，数式から原稿の行範囲を参照できる', () => {
+  const html = renderMarkdownHTML([
+    '# 見出し', '', '複数行の本文．', '次の行から本文が続く．', '',
+    '- 一つ目', '  - 子の項目', '- 二つ目', '',
+    '| 名前 | 値 |', '| --- | --- |', '| 結果 | 3 |', '',
+    '```tex', '\\section{本文}', '\\textbf{次の行}', '```', '',
+    '$$', 'a^2+b^2=c^2', '$$', '',
+    '    first line', '    second line', '', '最後．',
+  ].join('\r\n'));
+  assert.match(html, /<h1 data-source-line="1" data-source-end-line="2"/);
+  assert.match(html, /<p data-source-line="3" data-source-end-line="5">複数行の本文/);
+  assert.match(html, /<li data-source-line="7" data-source-end-line="8">子の項目/);
+  assert.match(html, /<tr data-source-line="12" data-source-end-line="13">/);
+  assert.match(html, /<pre data-source-line="14" data-source-end-line="18">/);
+  assert.match(html, /class="markdown-equation" data-source-line="19" data-source-end-line="22"/);
+  assert.match(html, /<pre data-source-line="23" data-source-end-line="25">/);
+  assert.match(html, /<p data-source-line="26" data-source-end-line="27">最後．/);
 });

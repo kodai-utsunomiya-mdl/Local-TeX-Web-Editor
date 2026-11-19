@@ -146,6 +146,30 @@ async function openEditor(page, session) {
   await expect(page.getByTestId('editor').locator('.cm-content')).toBeVisible();
 }
 
+async function dragPanelSeparator(page, selector, { dx = 0, dy = 0, x, y } = {}) {
+  const separator = page.locator(selector);
+  await expect(separator).toBeVisible();
+  const bounds = await separator.boundingBox();
+  const start = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  try {
+    await page.mouse.move(x ?? start.x + dx, y ?? start.y + dy, { steps: 8 });
+  } finally { await page.mouse.up(); }
+}
+
+async function readPanelLayout(page) {
+  return page.evaluate(() => {
+    const bounds = id => {
+      const rectangle = document.getElementById(id).getBoundingClientRect();
+      return { x: rectangle.x, y: rectangle.y, width: rectangle.width, height: rectangle.height,
+        right: rectangle.right, bottom: rectangle.bottom };
+    };
+    return { sidebar: bounds('file-pane'), editor: bounds('editor-pane'), preview: bounds('pdf-pane'),
+      log: bounds('log-panel'), workbench: bounds('workbench') };
+  });
+}
+
 async function closeEditorTab(page, acceptUnsaved = false) {
   if (acceptUnsaved) page.once('dialog', dialog => dialog.accept());
   const closed = page.waitForEvent('close');
@@ -1193,6 +1217,245 @@ test('Markdown を編集し，表示するプレビューを選んで文書を�
   expect(errors).toEqual([]);
 });
 
+test('Markdown の原稿からプレビューへ移動し，スクロールの同期を選べる', async ({ page, session }, testInfo) => {
+  const content = Array.from({ length: 60 }, (_, index) => [
+    `## Section ${index + 1}`,
+    '',
+    `本文 ${index + 1}．原稿とプレビューの対応する位置を確認する．`.repeat(4),
+    '',
+    `別の段落 ${index + 1}．数式 $x^2$ と **強調** を表示する．`,
+    '',
+  ].join('\n')).join('\n');
+  await writeFile(path.join(session.project, 'navigation.md'), content);
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await openProject(session);
+  await openEditor(page, session);
+  await page.getByTestId('file-navigation.md').click();
+  const preview = page.getByTestId('markdown-preview');
+  const article = page.getByTestId('markdown-document');
+  const sourceScroll = page.getByTestId('editor').locator('.cm-scroller');
+  const follow = page.locator('#markdown-scroll-sync');
+  const forward = page.locator('#synctex-forward');
+  const heading = number => article.getByRole('heading', { name: `Section ${number}`, exact: true });
+  const settleLayout = () => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve)))));
+  async function findSection(number) {
+    await page.locator('#find-button').click();
+    const search = page.getByTestId('source-search-input');
+    await search.fill(`## Section ${number}`);
+    await search.press('Enter');
+    await page.getByTestId('source-search-close').click();
+    await expect(search).not.toBeVisible();
+    await settleLayout();
+  }
+  await expect(preview).toBeVisible();
+  await expect(follow).toBeChecked();
+  await follow.uncheck();
+  await expect(forward).toBeEnabled();
+  await expect(forward).toHaveAttribute('aria-label', 'Markdown のプレビューの位置へ移動');
+  await findSection(18);
+  await forward.click();
+  await expect(heading(18)).toHaveClass(/markdown-source-highlight/);
+  await expect(heading(18)).toBeInViewport();
+
+  const nextSource = page.getByTestId('editor').locator('.cm-line').filter({ hasText: /^## Section 19$/ });
+  await nextSource.click({ modifiers: ['Control'] });
+  await expect(heading(19)).toHaveClass(/markdown-source-highlight/);
+  await expect(heading(19)).toBeInViewport();
+  const beforeInverse = await preview.evaluate(element => element.scrollTop);
+  await heading(19).dblclick();
+  await expect(page.getByTestId('editor').locator('.synctex-line')).toHaveText('## Section 19');
+  await settleLayout();
+  expect(await preview.evaluate(element => element.scrollTop)).toBeCloseTo(beforeInverse, 0);
+
+  const editorTop = await sourceScroll.evaluate(element => element.scrollTop);
+  const previewTop = await preview.evaluate(element => element.scrollTop);
+  await sourceScroll.hover();
+  await page.mouse.wheel(0, 600);
+  await expect.poll(() => sourceScroll.evaluate(element => element.scrollTop)).toBeGreaterThan(editorTop + 300);
+  await settleLayout();
+  expect(await preview.evaluate(element => element.scrollTop)).toBeCloseTo(previewTop, 0);
+
+  await follow.check();
+  await expect.poll(() => preview.evaluate(element => element.scrollTop)).toBeGreaterThan(previewTop + 100);
+  const followedTop = await preview.evaluate(element => element.scrollTop);
+  await sourceScroll.hover();
+  await page.mouse.wheel(0, 600);
+  await expect.poll(() => preview.evaluate(element => element.scrollTop)).toBeGreaterThan(followedTop + 100);
+  await page.screenshot({ path: testInfo.outputPath('markdown-scroll-sync.png') });
+
+  await dragPanelSeparator(page, '#splitter', { dx: 2000 });
+  await expect.poll(async () => (await readPanelLayout(page)).preview.width).toBeLessThan(262);
+  await expect(follow).toBeVisible();
+  expect(await page.locator('.markdown-toolbar').evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+  const labelBounds = await page.locator('.markdown-scroll-sync').boundingBox();
+  const paneBounds = await page.locator('#pdf-pane').boundingBox();
+  expect(labelBounds.x).toBeGreaterThanOrEqual(paneBounds.x);
+  expect(labelBounds.x + labelBounds.width).toBeLessThanOrEqual(paneBounds.x + paneBounds.width);
+  await page.screenshot({ path: testInfo.outputPath('markdown-preview-narrow.png') });
+  await page.locator('#splitter').dblclick();
+  await follow.uncheck();
+  await expect.poll(async () => (await json(session, '/api/storage?key=preferences')).value?.markdownScrollSync).toBe(false);
+  await page.reload();
+  await expect(page.getByTestId('file-navigation.md')).toBeVisible();
+  await page.getByTestId('file-navigation.md').click();
+  await expect(follow).not.toBeChecked();
+
+  await page.locator('#markdown-preview-mode').selectOption('pdf');
+  await page.setViewportSize({ width: 800, height: 900 });
+  await page.locator('#show-editor').click();
+  await findSection(35);
+  await forward.click();
+  await expect(preview).toBeVisible();
+  await expect(page.locator('#markdown-preview-mode')).toHaveValue('markdown');
+  await expect(heading(35)).toHaveClass(/markdown-source-highlight/);
+  await expect(heading(35)).toBeInViewport();
+  await page.screenshot({ path: testInfo.outputPath('markdown-forward-narrow.png') });
+  expect(errors).toEqual([]);
+});
+
+test('ファイル一覧とログの大きさを調整し，再起動後も同じ配置で開く', async ({ page, context, session }, testInfo) => {
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openProject(session);
+  await openEditor(page, session);
+  const sidebarSeparator = page.locator('#sidebar-splitter');
+  const logSeparator = page.locator('#log-splitter');
+  await expect(sidebarSeparator).toHaveAttribute('role', 'separator');
+  await expect(sidebarSeparator).toHaveAttribute('aria-orientation', 'vertical');
+  const original = await readPanelLayout(page);
+
+  await dragPanelSeparator(page, '#sidebar-splitter', { dx: 120 });
+  await expect.poll(async () => (await readPanelLayout(page)).sidebar.width).toBeGreaterThan(original.sidebar.width + 100);
+  const afterSidebarDrag = await readPanelLayout(page);
+  await sidebarSeparator.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect.poll(async () => (await readPanelLayout(page)).sidebar.width).toBeGreaterThan(afterSidebarDrag.sidebar.width + 10);
+  await page.keyboard.press('ArrowLeft');
+  await expect.poll(async () => Math.abs((await readPanelLayout(page)).sidebar.width - afterSidebarDrag.sidebar.width)).toBeLessThan(2);
+  await page.getByTestId('outline-tab').click();
+  await expect(page.getByTestId('outline-tree')).toBeVisible();
+  expect((await readPanelLayout(page)).sidebar.width).toBeCloseTo(afterSidebarDrag.sidebar.width, 0);
+
+  await dragPanelSeparator(page, '#splitter', { dx: 80 });
+  await expect.poll(async () => (await readPanelLayout(page)).editor.width).toBeGreaterThan(afterSidebarDrag.editor.width + 60);
+  expect((await readPanelLayout(page)).sidebar.width).toBeCloseTo(afterSidebarDrag.sidebar.width, 0);
+  await page.locator('#log-toggle').click();
+  await expect(logSeparator).toBeVisible();
+  await expect(logSeparator).toHaveAttribute('role', 'separator');
+  await expect(logSeparator).toHaveAttribute('aria-orientation', 'horizontal');
+  const originalLog = await readPanelLayout(page);
+  await dragPanelSeparator(page, '#log-splitter', { dy: -100 });
+  await expect.poll(async () => (await readPanelLayout(page)).log.height).toBeGreaterThan(originalLog.log.height + 80);
+  const afterLogDrag = await readPanelLayout(page);
+  await logSeparator.focus();
+  await page.keyboard.press('ArrowUp');
+  await expect.poll(async () => (await readPanelLayout(page)).log.height).toBeGreaterThan(afterLogDrag.log.height + 10);
+  await page.keyboard.press('ArrowDown');
+  await expect.poll(async () => Math.abs((await readPanelLayout(page)).log.height - afterLogDrag.log.height)).toBeLessThan(2);
+  const chosen = await readPanelLayout(page);
+  expect(chosen.log.x).toBeCloseTo(chosen.editor.x, 0);
+  expect(chosen.log.right).toBeCloseTo(chosen.preview.right, 0);
+
+  await page.locator('#sidebar-toggle').click();
+  await expect(page.locator('#file-pane')).not.toBeVisible();
+  await expect(sidebarSeparator).not.toBeVisible();
+  await expect.poll(async () => Math.abs((await readPanelLayout(page)).editor.x - chosen.workbench.x)).toBeLessThan(2);
+  await page.locator('#sidebar-toggle').click();
+  await expect.poll(async () => Math.abs((await readPanelLayout(page)).sidebar.width - chosen.sidebar.width)).toBeLessThan(2);
+  await page.locator('#close-log').click();
+  await expect(logSeparator).not.toBeVisible();
+  await page.locator('#log-toggle').click();
+  await expect.poll(async () => Math.abs((await readPanelLayout(page)).log.height - chosen.log.height)).toBeLessThan(2);
+
+  await expect.poll(async () => {
+    const saved = (await json(session, '/api/storage?key=preferences')).value?.panelLayout;
+    return Boolean(saved && Math.abs(saved.sidebarWidth - chosen.sidebar.width) < 2 &&
+      Math.abs(saved.logHeight - chosen.log.height) < 2 && saved.editorRatio > 0.5);
+  }).toBe(true);
+  if (await page.locator('html').getAttribute('data-theme') !== 'dark') await page.getByTestId('theme-toggle').click();
+  await page.screenshot({ path: testInfo.outputPath('panels-resized.png') });
+  await closeEditorTab(page);
+  await session.waitForExit();
+  await session.restart();
+  const reopened = await context.newPage();
+  reopened.on('pageerror', error => errors.push(error.message));
+  await reopened.setViewportSize({ width: 1440, height: 900 });
+  await openEditor(reopened, session);
+  await reopened.locator('#log-toggle').click();
+  await expect.poll(async () => Math.abs((await readPanelLayout(reopened)).sidebar.width - chosen.sidebar.width)).toBeLessThan(2);
+  await expect.poll(async () => Math.abs((await readPanelLayout(reopened)).editor.width - chosen.editor.width)).toBeLessThan(2);
+  await expect.poll(async () => Math.abs((await readPanelLayout(reopened)).log.height - chosen.log.height)).toBeLessThan(2);
+  expect(errors).toEqual([]);
+});
+
+test('ウィンドウを小さくしても，原稿とログを操作できる大きさに収める', async ({ page, session }, testInfo) => {
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openProject(session);
+  await openEditor(page, session);
+  await page.locator('#log-toggle').click();
+  const workbench = (await readPanelLayout(page)).workbench;
+
+  await dragPanelSeparator(page, '#sidebar-splitter', { x: workbench.x + 1 });
+  await expect.poll(async () => (await readPanelLayout(page)).sidebar.width).toBeCloseTo(180, 0);
+  await dragPanelSeparator(page, '#sidebar-splitter', { x: workbench.right - 1 });
+  const wide = await readPanelLayout(page);
+  expect(wide.sidebar.width).toBeGreaterThan(600);
+  expect(wide.editor.width).toBeGreaterThanOrEqual(259);
+  expect(wide.preview.width).toBeGreaterThanOrEqual(259);
+  expect(wide.preview.right).toBeLessThanOrEqual(workbench.right + 1);
+
+  await dragPanelSeparator(page, '#log-splitter', { y: workbench.bottom - 1 });
+  await expect.poll(async () => (await readPanelLayout(page)).log.height).toBeCloseTo(100, 0);
+  await dragPanelSeparator(page, '#log-splitter', { y: workbench.y + 1 });
+  const tall = await readPanelLayout(page);
+  expect(tall.log.height).toBeGreaterThan(500);
+  expect(tall.editor.height).toBeGreaterThanOrEqual(159);
+  expect(tall.log.bottom).toBeLessThanOrEqual(workbench.bottom + 1);
+
+  await page.setViewportSize({ width: 1000, height: 480 });
+  await expect.poll(async () => (await readPanelLayout(page)).sidebar.width).toBeLessThan(wide.sidebar.width);
+  await expect.poll(async () => (await readPanelLayout(page)).log.height).toBeLessThan(tall.log.height);
+  const smaller = await readPanelLayout(page);
+  expect(smaller.editor.width).toBeGreaterThanOrEqual(259);
+  expect(smaller.preview.width).toBeGreaterThanOrEqual(259);
+  expect(smaller.editor.height).toBeGreaterThanOrEqual(159);
+  expect(smaller.preview.right).toBeLessThanOrEqual(smaller.workbench.right + 1);
+  expect(smaller.log.bottom).toBeLessThanOrEqual(smaller.workbench.bottom + 1);
+
+  await page.setViewportSize({ width: 800, height: 480 });
+  await expect(page.locator('#splitter')).not.toBeVisible();
+  await expect(page.locator('#sidebar-splitter')).toBeVisible();
+  await expect.poll(async () => (await readPanelLayout(page)).editor.width).toBeGreaterThanOrEqual(259);
+  await page.locator('#sidebar-toggle').click();
+  await expect(page.locator('#file-pane')).not.toBeVisible();
+  await expect(page.locator('#sidebar-splitter')).not.toBeVisible();
+  await expect.poll(async () => {
+    const layout = await readPanelLayout(page);
+    return Math.abs(layout.editor.width - layout.workbench.width);
+  }).toBeLessThan(2);
+
+  await page.setViewportSize({ width: 390, height: 600 });
+  await page.locator('#sidebar-toggle').click();
+  await expect(page.locator('#file-pane')).toBeVisible();
+  await expect(page.locator('#sidebar-splitter')).not.toBeVisible();
+  await expect.poll(async () => (await readPanelLayout(page)).sidebar.right).toBeLessThanOrEqual(351);
+  await page.locator('#sidebar-toggle').click();
+  await expect(page.locator('#log-splitter')).toBeVisible();
+  const beforeMobileDrag = await readPanelLayout(page);
+  await dragPanelSeparator(page, '#log-splitter', { dy: 40 });
+  await expect.poll(async () => (await readPanelLayout(page)).log.height).toBeLessThan(beforeMobileDrag.log.height - 25);
+  await page.screenshot({ path: testInfo.outputPath('panels-narrow.png') });
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.locator('#sidebar-toggle').click();
+  await expect.poll(async () => Math.abs((await readPanelLayout(page)).sidebar.width - wide.sidebar.width)).toBeLessThan(2);
+  expect(errors).toEqual([]);
+});
+
 test('日本語の原稿を編集し，参考文献と PDF を更新する', async ({ page, session }, testInfo) => {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -1638,6 +1901,95 @@ test('自動保存，補完，アウトラインを使い，草稿を再起動�
   expect(await readFile(path.join(session.project, 'main.tex'), 'utf8')).not.toContain(draftComment.trim());
   await setAutoSave(page, true);
   await expect.poll(() => readFile(path.join(session.project, 'main.tex'), 'utf8')).toContain(draftComment.trim());
+});
+
+test('選択した TeX と Markdown のタブに合わせてアウトラインを更新する', async ({ page, session }) => {
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await writeFile(path.join(session.project, 'outline.tex'), '\\section{別の原稿}\n本文．\n\n\\subsection{小見出し}\n');
+  await writeFile(path.join(session.project, 'outline.md'), '# Markdown の原稿\n\n本文．\n\n詳細\n----\n\n```markdown\n# コード内の見出し\n```\n');
+  await writeFile(path.join(session.project, 'empty.tex'), '');
+  await writeFile(path.join(session.project, 'outline.png'), Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNQaXjwHwAE1AKEf31AsgAAAABJRU5ErkJggg==', 'base64'));
+  await openProject(session);
+  await openEditor(page, session);
+  await setAutoSave(page, false);
+  const outline = page.getByTestId('outline-tree');
+  const links = outline.locator('.outline-link');
+  const selectTab = file => page.locator(`#editor-tabs .tab-select[data-path="${file}"]`).click();
+  const openOutline = async file => {
+    await page.getByTestId('files-tab').click();
+    await page.getByTestId(`file-${file}`).click();
+    await page.getByTestId('outline-tab').click();
+    await expect(outline.locator('.outline-file')).toHaveText(file);
+  };
+  await page.getByTestId('outline-tab').click();
+  await expect(links).toHaveCount(1);
+  await expect(links.first()).toContainText('二ページ目');
+  await expect(links.first()).toHaveAttribute('data-path', 'main.tex');
+
+  await openOutline('outline.tex');
+  await expect(links).toHaveCount(2);
+  await expect(links.first()).toContainText('別の原稿');
+  await selectTab('main.tex');
+  await expect(links).toHaveCount(1);
+  await expect(links.first()).toHaveAttribute('data-path', 'main.tex');
+  await selectTab('outline.tex');
+  await expect(links).toHaveCount(2);
+  await page.getByTestId('editor').locator('.cm-content').click();
+  await page.keyboard.press('Control+End');
+  await page.keyboard.insertText('\n\\subsubsection{編集中の見出し}\n');
+  await expect(links).toHaveCount(3);
+  await expect(links.last()).toContainText('編集中の見出し');
+  expect(await readFile(path.join(session.project, 'outline.tex'), 'utf8')).not.toContain('編集中の見出し');
+  await page.keyboard.press('Control+S');
+  await expect.poll(() => readFile(path.join(session.project, 'outline.tex'), 'utf8')).toContain('編集中の見出し');
+
+  await openOutline('outline.md');
+  await expect(links).toHaveCount(2);
+  await expect(links.first()).toContainText('Markdown の原稿');
+  await expect(links.last()).toContainText('詳細');
+  await expect(links.last()).toHaveAttribute('data-line', '5');
+  await links.last().click();
+  await expect(page.getByTestId('editor')).toHaveAttribute('data-line', '5');
+  await page.keyboard.press('Control+End');
+  await page.keyboard.insertText('\n## 追記した見出し\n');
+  await expect(links).toHaveCount(3);
+  await expect(links.last()).toContainText('追記した見出し');
+  expect(await readFile(path.join(session.project, 'outline.md'), 'utf8')).not.toContain('追記した見出し');
+  await page.keyboard.press('Control+S');
+  await expect.poll(() => readFile(path.join(session.project, 'outline.md'), 'utf8')).toContain('追記した見出し');
+  await selectTab('main.tex');
+  await expect(links).toHaveCount(1);
+  await selectTab('outline.md');
+  await expect(links).toHaveCount(3);
+  await page.locator('#refresh-files').click();
+  await expect(page.locator('#toast')).toHaveText('ファイル一覧を更新しました．');
+  await expect(links).toHaveCount(3);
+  await expect(links.last()).toContainText('追記した見出し');
+  await page.locator('#file-filter').fill('詳細');
+  await expect(links).toHaveCount(1);
+  await expect(links.first()).toHaveAttribute('data-line', '5');
+  await page.locator('#file-filter').fill('');
+
+  await openOutline('empty.tex');
+  await expect(links).toHaveCount(0);
+  await expect(outline).toContainText('この文書には見出しがありません．');
+  await openOutline('outline.png');
+  await expect(links).toHaveCount(0);
+  await expect(outline).toContainText('このファイルにはアウトラインがありません．');
+  await openOutline('references.bib');
+  await expect(links).toHaveCount(0);
+  await expect(outline).toContainText('このファイルにはアウトラインがありません．');
+  await selectTab('outline.md');
+  await expect(links).toHaveCount(3);
+  const closeButtons = page.locator('#editor-tabs .tab-close');
+  for (let count = await closeButtons.count(); count > 0; --count) {
+    await closeButtons.last().click();
+    await expect(closeButtons).toHaveCount(count - 1);
+  }
+  await expect(links).toHaveCount(0);
+  await expect(outline).toContainText('TeX または Markdown ファイルを開くと，その見出しが表示されます．');
+  expect(errors).toEqual([]);
 });
 
 test('150 ページの PDF の末尾へ移動し，必要なページを描画する', async ({ page, session }, testInfo) => {
