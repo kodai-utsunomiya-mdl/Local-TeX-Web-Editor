@@ -57,23 +57,23 @@
           <p>Edit TeX and Markdown in your browser. Compile with TeX Live on your computer, with the source and PDF side by side.</p>
           <p class="local-note">Launching the app opens a <code>localhost</code> page. Documents stay in the project folder on your computer.</p>
         </div>
-        <div class="download-options" aria-label="Install or download version 0.1.5">
+        <div class="download-options" aria-label="Install or download the app">
           <a class="download download-store" href="https://apps.microsoft.com/detail/9P6QF32N19HG">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 4.4 10.7 3v8.2H2zm9.7-1.6L22 1.2v10H11.7zM2 12.3h8.7v8.2L2 19.1zm9.7 0H22v10l-10.3-1.6z"/></svg>
             <span><span class="download-label">Get it from Microsoft Store</span><small>Windows x64 · Free · Store updates</small></span>
             <span class="download-arrow" aria-hidden="true">↗</span>
           </a>
-          <a class="download" href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.5/local-tex-web-editor-0.1.5-windows-x64.zip">
+          <a class="download" href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.6/local-tex-web-editor-0.1.6-windows-x64.zip">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 4.4 10.7 3v8.2H2zm9.7-1.6L22 1.2v10H11.7zM2 12.3h8.7v8.2L2 19.1zm9.7 0H22v10l-10.3-1.6z"/></svg>
             <span><span class="download-label">Download the Windows ZIP</span><small>x64 · ZIP · about 8 MB</small></span>
             <span class="download-arrow" aria-hidden="true">↓</span>
           </a>
-          <a class="download" href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.5/local-tex-web-editor-0.1.5-macos-universal.zip">
+          <a class="download" href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.6/local-tex-web-editor-0.1.6-macos-universal.zip">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="13" rx="1.4"/><path d="M8 21h8M12 16v5M3 12.5h18"/></svg>
             <span><span class="download-label">Download for macOS</span><small>Apple Silicon + Intel · ZIP · about 15 MB</small></span>
             <span class="download-arrow" aria-hidden="true">↓</span>
           </a>
-          <p class="release-note">v0.1.5 <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest">Latest release &amp; notes</a></p>
+          <p class="release-note">GitHub Releases: v0.1.6 <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest">Latest release &amp; notes</a></p>
         </div>
       </div>
 
@@ -115,7 +115,7 @@
           <p>The app uses <code>latexmk</code> to compile and <code>synctex</code> to move between source and PDF. If your project uses a <code>latexmkrc</code> or <code>.latexmkrc</code> file, keep it with the source files.</p>
           <div class="table-scroll">
             <table class="size-table">
-              <thead><tr><th scope="col">v0.1.5</th><th scope="col">ZIP download</th><th scope="col">App after extraction</th></tr></thead>
+              <thead><tr><th scope="col">v0.1.6</th><th scope="col">ZIP download</th><th scope="col">App after extraction</th></tr></thead>
               <tbody>
                 <tr><th scope="row">Windows x64</th><td>About 8 MB</td><td>About 16 MB</td></tr>
                 <tr><th scope="row">macOS, both CPUs</th><td>About 15 MB</td><td>About 32 MB</td></tr>
@@ -162,10 +162,13 @@
         <section id="editing" aria-labelledby="editing-title">
           <h2 id="editing-title">Editing and preview</h2>
           <p>Files open in tabs. When the preview is showing a PDF, compiling an independent TeX document switches it to that document's PDF. Switching between TeX tabs alone leaves the last compiled PDF visible. For a chapter included by another file, use the default main document or a <code>% !TeX root = ../main.tex</code> comment.</p>
+          <p><strong>Outline</strong> shows the headings from the selected TeX or Markdown tab and updates when you switch tabs. Click a heading to move to its source line.</p>
+          <p>Drag the right edge of the files and outline sidebar, the divider between the editor and preview, or the top edge of the log to adjust the space you use. You can also focus a divider and use the arrow keys, or double-click it to restore its default position. Your chosen widths and log height are saved for the next launch.</p>
+          <p>In <strong>Settings → Appearance</strong>, choose system, light, or dark mode, a color scheme, an accent color, and the editor font. Changes appear immediately: choose <strong>Save appearance</strong> to use them next time, or <strong>Cancel</strong> to return to the previous appearance. System mode follows your computer's light/dark preference.</p>
 
           <div class="usage-block">
             <h3>Read the PDF and move to the source</h3>
-            <p>Scroll continuously through pages, select PDF text, search, and zoom with the toolbar, <kbd>Ctrl</kbd> + wheel or a trackpad pinch. SyncTeX connects the PDF to the source used to compile it.</p>
+            <p>Scroll continuously through pages, select PDF text and search. The <strong>＋</strong> / <strong>−</strong> buttons and zoom selector use the PDF position at the center of the preview; <kbd>Ctrl</kbd> + wheel and pinch zoom around the pointer or gesture position. SyncTeX connects the PDF to the source used to compile it.</p>
             <dl class="shortcut-list">
               <div><dt>PDF → source</dt><dd>Double-click text in the PDF to open its corresponding source line.</dd></div>
               <div><dt>Source → PDF</dt><dd><kbd>Ctrl</kbd> + click a source line on Windows, or <kbd>Cmd</kbd> + click on Mac.</dd></div>
@@ -176,6 +179,8 @@
           <div class="usage-block">
             <h3>Keep Markdown notes beside your document</h3>
             <p>With <strong>Auto</strong> selected, opening a <code>.md</code> file shows a preview that updates as you type, including tables, code, images and mathematics. Set the preview to <strong>PDF</strong> to read the compiled paper while editing notes. Choose <strong>Markdown</strong> to keep your notes visible, or <strong>Auto</strong> to follow the file being edited.</p>
+            <p>To move from Markdown source to its preview, use <kbd>Ctrl</kbd> + click on Windows or <kbd>Cmd</kbd> + click on Mac, or click the navigation button above the editor. The matching passage is briefly highlighted. Double-click a paragraph or heading in the preview to return to its source line.</p>
+            <p>Turn <strong>Sync scrolling</strong> on or off in the Markdown toolbar to choose whether the preview follows scrolling in the editor. It starts enabled, and the app saves your choice for future sessions.</p>
             <figure class="screenshot secondary-shot">
               <a href="assets/editor-markdown-light.png" aria-label="Open the Markdown editor screenshot at full size">
                 <img src="assets/editor-markdown-light.png" width="1440" height="900" alt="Markdown source and a live preview showing equations, a task list and a table, in light mode." loading="lazy" decoding="async">
@@ -188,11 +193,12 @@
 
         <section id="updates" aria-labelledby="updates-title">
           <h2 id="updates-title">Updates and help</h2>
-          <p>Use Microsoft Store to update the Windows Store edition. Launch the updated app from the Start menu.</p>
+          <p>Click the app's <strong>? (Help)</strong> button or press <kbd>F1</kbd> for the user guide, keyboard shortcuts, release notes, and troubleshooting steps. Help also opens the compilation log, Settings, and the update page for your edition.</p>
+          <p>Use Microsoft Store to update the Windows Store edition. New versions become available after Store review and publication. Launch the updated app from the Start menu.</p>
           <p>For the Windows ZIP edition and macOS, download updates from <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest">GitHub Releases</a>. On Windows, extract the new ZIP and run its <code>.exe</code>; follow the prompt if an older version is running. On Mac, save your work, quit the app and replace the copy in Applications.</p>
           <p>App updates use the same settings and drafts for each edition. The first Store launch copies valid settings and drafts from an existing Windows ZIP installation. Your documents stay in their project folders.</p>
           <p>To finish a session, save your work and close the last browser tab showing this app; the app stops after about five seconds.</p>
-          <p>For a problem or suggestion, open a GitHub issue with the app version, operating system and steps to reproduce it. A short log excerpt or a small sample project can help explain a compilation problem.</p>
+          <p>For a problem or suggestion, choose <strong>Open GitHub Issues</strong> in Help. Under <strong>About the app</strong>, use <strong>Copy environment information</strong> to copy the app version, operating system, architecture, edition, and available TeX programs. Include the steps to reproduce a problem; a short log excerpt or a small sample project can help explain a compilation problem.</p>
           <ul class="reading-links">
             <li><a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest">Downloads and release notes</a></li>
             <li><a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/issues">Report an issue</a></li>
