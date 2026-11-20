@@ -330,7 +330,8 @@ func (a *App) historySettingsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) historyHandler(w http.ResponseWriter, r *http.Request) {
-	if !requireMethod(w, r, http.MethodGet, http.MethodPost) { return }
+	if !requireMethod(w, r, http.MethodGet, http.MethodPost, http.MethodDelete) { return }
+	if r.Method == http.MethodDelete { a.deleteHistoryHandler(w, r); return }
 	var input struct { Path string `json:"path"`; Content string `json:"content"`; Revision string `json:"revision"`; Label string `json:"label"` }
 	input.Path = r.URL.Query().Get("path")
 	if r.Method == http.MethodPost {

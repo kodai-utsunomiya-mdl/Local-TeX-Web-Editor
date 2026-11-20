@@ -145,5 +145,5 @@ export function markdownEdit(document, command, options = {}) {
 }
 
 export function sameMarkdownSelection(current, expected) {
-  return !!current && current.path === expected.path && current.projectRoot === expected.projectRoot && current.pane === expected.pane && current.content === expected.content && current.anchor === expected.anchor && current.head === expected.head;
+  return !!current && !!expected && current.path === expected.path && current.projectRoot === expected.projectRoot && current.pane === expected.pane && current.content === expected.content && current.anchor === expected.anchor && current.head === expected.head && current.richAnchor === expected.richAnchor && current.richHead === expected.richHead;
 }

@@ -1,5 +1,11 @@
 export const markdownEditingEnglish = {
   'Markdown の編集': 'Markdown editing',
+  'Markdown の編集方法': 'Markdown editing mode',
+  '直接編集': 'Visual editing',
+  'ソース': 'Source',
+  'プレビューを表示': 'Show preview',
+  'プレビューを閉じる': 'Hide preview',
+  '数式を挿入': 'Insert math',
   '編集する Markdown の原稿を開いてください．': 'Open the Markdown source you want to edit.',
   'リンク先には http・https・mailto の URL，またはプロジェクト内の相対パスを入力してください．': 'Enter an http, https, or mailto URL, or a relative path within the project.',
   '言語の名前は空白や backtick を含めずに入力してください．': 'Enter a language name without spaces or backticks.',

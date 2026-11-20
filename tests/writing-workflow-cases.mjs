@@ -160,6 +160,7 @@ export function registerWritingWorkflowTests({ test, openProject, openEditor, se
     await page.locator('#split-editors').click();
     await page.locator('#primary-document').selectOption('main.tex');
     await page.locator('#secondary-document').selectOption('format.md');
+    await page.locator('#markdown-editor-mode').selectOption('source');
     const editor = source(page, true);
     const toolbar = page.locator('#markdown-editing');
     await expect(toolbar).toBeVisible();
@@ -367,6 +368,7 @@ export function registerWritingWorkflowTests({ test, openProject, openEditor, se
     await page.locator('#split-editors').click();
     await page.locator('#primary-document').selectOption('main.tex');
     await page.locator('#secondary-document').selectOption('notes.md');
+    await page.locator('#markdown-editor-mode').selectOption('source');
     const editor = source(page, true), toolbar = page.locator('#markdown-editing');
     await editor.click(); await page.keyboard.press(`${modifier}+End`);
     await toolbar.getByRole('button', { name: '画像を挿入', exact: true }).click();
@@ -439,6 +441,7 @@ export function registerWritingWorkflowTests({ test, openProject, openEditor, se
     expect(actualFolder.dev).toBe(requestedFolder.dev);
     expect(actualFolder.ino).toBe(requestedFolder.ino);
     await page.getByTestId('file-notes.md').click();
+    await page.locator('#markdown-editor-mode').selectOption('source');
     expect(clean(await readFile(path.join(created, 'notes.md'), 'utf8'))).toBe(notes);
     expect((await stat(path.join(created, 'figures', 'pasted.png'))).size).toBeGreaterThan(0);
     await expect(page.getByTestId('markdown-document')).toContainText('A&B');

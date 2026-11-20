@@ -1,0 +1,61 @@
+#welcome .welcome-card { width: min(900px, 100%); }
+#welcome .welcome-recent { margin-top: 32px; padding-top: 22px; }
+#welcome .welcome-recent h2 { font-size: 12px; color: var(--secondary); margin-bottom: 13px; }
+.project-home-list { display: grid; gap: 11px; }
+.project-home-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 18px; min-width: 0; padding: 16px 18px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); }
+.project-home-card.current { border-color: var(--accent); background: var(--accent-soft); }
+.project-home-information { min-width: 0; }
+.project-home-title { display: flex; flex-wrap: wrap; align-items: center; gap: 7px 12px; margin-bottom: 5px; }
+.project-home-title h3 { min-width: 0; font-size: 14px; font-weight: 600; line-height: 1.5; color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; }
+.project-home-current { display: inline-block; padding: 2px 6px; border: 1px solid var(--accent); border-radius: 4px; font-size: 10px; line-height: 1.5; color: var(--accent); }
+.project-home-path { min-width: 0; margin: 0; color: var(--secondary); font: 11px/1.7 var(--editor-font-family, Consolas, monospace); white-space: pre-wrap; overflow-wrap: anywhere; }
+.project-home-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; }
+.project-home-delete { color: var(--danger); background: transparent; border-color: transparent; }
+.project-home-delete:hover:not(:disabled) { color: var(--danger); border-color: var(--danger-border); background: var(--danger-bg); }
+#go-home { border: 0; padding: 0; border-radius: 5px; color: inherit; background: transparent; font: inherit; }
+#go-home:focus-visible { outline-offset: 3px; }
+.home-mode :is(#sidebar-toggle, #compile-bar, .compile-bar, #log-toggle, .mobile-view-switch, .header-divider) { display: none; }
+.project-delete-dialog { width: min(760px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); padding: 24px; }
+.project-delete-dialog[open] { display: flex; flex-direction: column; gap: 16px; }
+.project-delete-dialog .dialog-heading { flex: 0 0 auto; margin-bottom: 0; }
+.project-delete-body { display: flex; flex-direction: column; gap: 13px; min-height: 0; overflow-y: auto; padding: 1px 3px 2px; scrollbar-width: thin; }
+.project-delete-description { font-size: 12px; line-height: 1.8; color: var(--danger); }
+.project-delete-target { display: flex; flex-direction: column; gap: 5px; padding: 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--subtle); min-width: 0; }
+.project-delete-target strong { font-size: 14px; color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; }
+.project-delete-target code { color: var(--secondary); font: 11px/1.7 var(--editor-font-family, Consolas, monospace); white-space: pre-wrap; overflow-wrap: anywhere; }
+.project-delete-count { font-size: 12px; color: var(--secondary); }
+.project-delete-entries { flex: 0 1 auto; min-height: 64px; max-height: 220px; overflow: auto; margin: 0; padding: 5px 10px; list-style: none; border: 1px solid var(--border); border-radius: 6px; background: var(--input-surface, var(--surface)); scrollbar-width: thin; }
+.project-delete-entries li { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 9px; align-items: start; padding: 4px 0; font-size: 11px; line-height: 1.7; }
+.project-delete-entry-type { color: var(--muted); font-size: 10px; }
+.project-delete-entries code { color: var(--text); font: inherit; white-space: pre-wrap; overflow-wrap: anywhere; }
+.project-delete-notes { padding: 10px 12px; border: 1px solid var(--warning-border); border-radius: 6px; color: var(--warning); background: var(--warning-bg); }
+.project-delete-notes h3 { margin: 0 0 5px; font-size: 12px; font-weight: 600; }
+.project-delete-notes ul { margin: 0; padding-left: 18px; max-height: 100px; overflow: auto; font: 11px/1.7 var(--editor-font-family, Consolas, monospace); scrollbar-width: thin; }
+.project-delete-notes li { white-space: pre-wrap; overflow-wrap: anywhere; }
+.project-delete-acknowledge { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; line-height: 1.8; color: var(--text); }
+.project-delete-acknowledge input { flex: 0 0 auto; width: 15px; height: 15px; margin: 3px 0 0; accent-color: var(--danger); }
+.project-delete-name-field { display: flex; flex-direction: column; gap: 6px; }
+.project-delete-name-field input { width: 100%; }
+.project-delete-name-field .field-label, .project-delete-name-field .field-help { margin: 0; }
+.project-delete-name-field .field-help { white-space: pre-wrap; overflow-wrap: anywhere; }
+.project-delete-message { padding: 10px 12px; border: 1px solid var(--warning-border); border-radius: 6px; background: var(--warning-bg); color: var(--warning); font-size: 12px; line-height: 1.8; }
+.project-delete-dialog .form-error { flex: 0 0 auto; max-height: 100px; overflow: auto; margin: 0; }
+.project-delete-dialog .dialog-actions { flex: 0 0 auto; margin-top: 0; }
+.project-delete-confirm { color: var(--danger); border-color: var(--danger-border); background: var(--danger-bg); font-weight: 600; }
+.project-delete-confirm:hover:not(:disabled) { color: var(--danger); border-color: var(--danger); background: var(--danger-bg); }
+@media (max-width: 640px) {
+  .app-header { flex: 0 0 auto; flex-wrap: wrap; min-height: 44px; gap: 3px; padding-block: 4px; }
+  .app-header .compile-bar { flex: 0 0 auto; }
+  .app-header .header-actions { margin-left: auto; }
+  .app-header .header-divider { display: none; }
+  #go-home { display: inline-flex; gap: 0; }
+  #go-home .brand-name { display: none; }
+  #go-home .brand-mark { min-width: 29px; height: 26px; }
+  #welcome { padding: 27px 16px; }
+  #welcome .welcome-card > .button { margin-bottom: 7px; max-width: 100%; }
+  .project-home-card { grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 14px; }
+  .project-home-actions { justify-content: flex-start; }
+  .project-delete-dialog { padding: 18px 15px; gap: 12px; width: calc(100vw - 20px); max-height: calc(100dvh - 20px); }
+  .project-delete-entries { max-height: 170px; }
+  .project-delete-entries li { grid-template-columns: 62px minmax(0, 1fr); gap: 5px; }
+}

@@ -413,6 +413,7 @@ export const english = {
   '設定を保存': 'Save settings',
   'プロジェクト内のパス': 'Path within the project',
   '.tex，.bib などのテキストファイルを作成できます．': 'Create a text file such as .tex or .bib.',
+  'ファイル一覧で追加先のフォルダーを右クリックすると，その場所での新規作成や，コンピューター上のファイルをコピーして追加する操作も選べます．': 'You can also right-click the destination folder in the file list to create a new file there or copy files from your computer.',
   '作成': 'Create',
   '保存する内容を確認': 'Review the version to save',
   'ディスクの内容': 'File on disk',

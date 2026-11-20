@@ -298,3 +298,42 @@ test('a fresh large paste stays pending until its regular save completes', async
   assert.equal(store.pending, false);
   assert.deepEqual(server.current(key).value, value);
 });
+
+test('settling waits for a close-time write before a project cache is removed', async () => {
+  const key = 'session:deleted-project';
+  const server = storageServer({ [key]: { position: 0 } });
+  const pending = deferred();
+  const store = new SessionStore(async (url, options = {}) => {
+    if (options.keepalive) await pending.promise;
+    return server.api(url, options);
+  });
+  await store.read(key);
+  store.write(key, { position: 1 }, 60_000);
+  store.flushOnHide();
+  await store.resume();
+  let settled = false;
+  const completion = store.settle().then(() => { settled = true; });
+  await delay(5);
+  assert.equal(settled, false);
+  pending.resolve();
+  await completion;
+  assert.equal(store.keepaliveRequests.size, 0);
+  store.forget(key);
+  server.values.delete(key);
+  const count = server.calls.length;
+  await store.resume(); store.flushOnHide(); await delay(5);
+  assert.equal(server.calls.length, count);
+  assert.equal(server.current(key).value, null);
+});
+
+test('forgetting a project cancels its queued writes while other projects continue', async () => {
+  const server = storageServer();
+  const store = new SessionStore(server.api);
+  store.write('session:deleted-project', { position: 8 }, 60_000);
+  store.write('session:kept-project', { position: 3 }, 60_000);
+  store.forget('session:deleted-project');
+  await store.flush();
+  assert.equal(server.current('session:deleted-project').value, null);
+  assert.deepEqual(server.current('session:kept-project').value, { position: 3 });
+  assert.equal(store.pending, false);
+});

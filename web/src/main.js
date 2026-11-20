@@ -2,7 +2,7 @@ import { t, getLanguage, setLanguage } from './i18n.js';
 import { EditorState, Compartment, Prec, StateEffect, StateField, Transaction } from '@codemirror/state';
 import { EditorView, keymap, Decoration, scrollPastEnd } from '@codemirror/view';
 import { basicSetup } from 'codemirror';
-import { indentWithTab, isolateHistory } from '@codemirror/commands';
+import { indentWithTab, isolateHistory, undo, redo } from '@codemirror/commands';
 import { StreamLanguage, HighlightStyle, syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language';
 import { autocompletion, closeCompletion } from '@codemirror/autocomplete';
 import { stex } from '@codemirror/legacy-modes/mode/stex';
@@ -25,6 +25,9 @@ import { createDocumentTools } from './document-tools.js';
 import { createTemplateManager } from './template-manager.js';
 import { createLogIssues } from './log-issues.js';
 import { createMarkdownEditing } from './markdown-editing.js';
+import { MarkdownRichEditor } from './markdown-rich-editor.js';
+import { createProjectHome } from './project-home.js';
+import { createFileImporter } from './file-import.js';
 import { completionPresentation } from './completion-ui.js';
 import { createTeXCompletionSource } from './tex-completion.js';
 import { sourceFolding, revealSourceRange } from './source-folding.js';
@@ -82,7 +85,9 @@ const state = {
   connectionError: false,
   externalProjectChanged: false,
   reportedBuild: '',
-  preferences: { autoSave: true, theme: null, appearance: normalizeAppearance(), editorFontSize: 14, language: getLanguage(), panelLayout: normalizePanelLayout(), markdownScrollSync: true, texCompletion: true, automaticCompletion: true, pdfDarkMode: false },
+  preferences: { autoSave: true, theme: null, appearance: normalizeAppearance(), editorFontSize: 14, language: getLanguage(), panelLayout: normalizePanelLayout(), markdownEditorModes: { primary: 'rich', secondary: 'rich' }, previewVisibility: { rich: false, markdown: true, source: true }, markdownScrollSync: true, texCompletion: true, automaticCompletion: true, pdfDarkMode: false },
+  previewContext: '',
+  homeVisible: false,
   theme: 'light',
   saveQueue: Promise.resolve(),
   autoSaveTimer: null,
@@ -116,10 +121,11 @@ let documentHistory = null;
 let templateManager = null;
 let logIssues = null;
 let markdownEditing = null;
+let projectHome = null;
 let outlineTree = null;
 const editorSlots = {
-  primary: { host: $('editor'), element: $('source-pane-primary'), select: $('primary-document'), view: null, path: '', cleanup: null },
-  secondary: { host: $('editor-secondary'), element: $('source-pane-secondary'), select: $('secondary-document'), view: null, path: '', cleanup: null },
+  primary: { host: $('editor'), richHost: $('markdown-rich-primary'), element: $('source-pane-primary'), select: $('primary-document'), view: null, rich: null, path: '', cleanup: null },
+  secondary: { host: $('editor-secondary'), richHost: $('markdown-rich-secondary'), element: $('source-pane-secondary'), select: $('secondary-document'), view: null, rich: null, path: '', cleanup: null },
 };
 const editorTheme = new Compartment();
 const editorLanguage = new Compartment();
@@ -169,18 +175,18 @@ function setConnected(connected) {
   label.textContent = state.closed ? t("アプリを終了しました") : connected ? t("この PC に接続済み") : t("接続を確認してください");
 }
 
-async function api(path, { method = 'GET', body, timeout = 15000, projectRoot = state.meta?.project?.root, signal, keepalive = false } = {}) {
+async function api(path, { method = 'GET', body, binary = false, headers: additionalHeaders = {}, timeout = 15000, projectRoot = state.meta?.project?.root, signal, keepalive = false } = {}) {
   if (state.closed) throw new Error(t("アプリは終了しています．実行ファイルから開き直してください．"));
   if (!token) throw new APIError(t("接続に必要な情報が見つかりません．アプリの実行ファイルを起動して開いたページを使用してください．"), 401);
-  const headers = { 'X-Local-Token': token, Accept: 'application/json', 'Accept-Language': getLanguage() };
+  const headers = { ...additionalHeaders, 'X-Local-Token': token, Accept: 'application/json', 'Accept-Language': getLanguage() };
   if (projectRoot && !/^\/api\/(state|project\/(open|pick)|shutdown)(\?|$)/.test(path)) headers['X-Project-Root'] = encodeURIComponent(projectRoot);
-  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  if (body !== undefined) headers['Content-Type'] = binary ? 'application/octet-stream' : 'application/json';
   const controller = new AbortController();
   const cancel = () => controller.abort(signal.reason);
   if (signal?.aborted) cancel(); else signal?.addEventListener('abort', cancel, { once: true });
   const timer = timeout ? setTimeout(() => controller.abort(), timeout) : null;
   try {
-    const response = await fetch(path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), cache: 'no-store', signal: controller.signal, keepalive });
+    const response = await fetch(path, { method, headers, body: body === undefined ? undefined : binary ? body : JSON.stringify(body), cache: 'no-store', signal: controller.signal, keepalive });
     const text = await response.text();
     let data;
     try { data = text ? JSON.parse(text) : null; }
@@ -324,7 +330,7 @@ function scrollSourceWithMarkdown(position) {
   if (!state.preferences.markdownScrollSync || state.closed || state.operation || position.projectRoot !== state.meta?.project?.root) return;
   const candidates = visibleEditorSlots(position.path);
   const slot = candidates.find(([name]) => name === state.activePane)?.[1] || candidates[0]?.[1];
-  if (!slot?.view) return;
+  if (!slot?.view || (slot.rich && !slot.richHost.hidden)) return;
   const view = slot.view;
   const sourceLine = Math.max(1, Math.min(view.state.doc.lines, position.sourceLine));
   const line = view.state.doc.line(Math.floor(sourceLine));
@@ -340,9 +346,10 @@ function scrollSourceWithMarkdown(position) {
 function fileKind(file) { return file?.kind || 'text'; }
 function rememberTab(path) { if (!state.tabOrder.includes(path)) state.tabOrder.push(path); }
 function rememberEditorPosition() {
+  if (state.homeVisible) return;
   for (const [, slot] of visibleEditorSlots()) {
     const doc = state.documents.get(slot.path);
-    if (doc) doc.scrollTop = slot.view.scrollDOM.scrollTop;
+    if (doc) { doc.scrollTop = slot.view.scrollDOM.scrollTop; if (slot.rich) doc.richScrollTop = slot.richHost.scrollTop; }
   }
 }
 function updateTreeSelection() {
@@ -456,6 +463,129 @@ function makeDocument(file) {
 
 function slotForView(view) { return Object.entries(editorSlots).find(([, slot]) => slot.view === view)?.[0]; }
 function visibleEditorSlots(path = null) { return Object.entries(editorSlots).filter(([name, slot]) => slot.view && (!path || slot.path === path) && (name === 'primary' || state.splitEditors)); }
+function editorMode(name = state.activePane) {
+  return isMarkdown(editorSlots[name]?.path) && state.preferences.markdownEditorModes[name] !== 'source' ? 'rich' : 'source';
+}
+function activeRichEditor() { return editorMode() === 'rich' ? editorSlots[state.activePane].rich : null; }
+function focusEditorSlot(name = state.activePane) {
+  const slot = editorSlots[name];
+  if (editorMode(name) === 'rich' && slot.rich) slot.rich.focus(); else slot?.view?.focus();
+}
+function previewContext() { return isMarkdown(state.activePath) ? editorMode() === 'rich' ? 'rich' : 'markdown' : 'source'; }
+function updatePreviewVisibilityControls() {
+  const visible = state.preferences.panelLayout.previewVisible;
+  const button = $('toggle-preview');
+  button.setAttribute('aria-pressed', String(visible));
+  button.setAttribute('aria-label', t(visible ? 'プレビューを閉じる' : 'プレビューを表示'));
+  button.title = t(visible ? 'プレビューを閉じる' : 'プレビューを表示');
+}
+function applyPreviewVisibility() {
+  const context = previewContext();
+  if (state.previewContext !== context) {
+    state.previewContext = context;
+    panelLayout.setPreviewVisible(state.preferences.previewVisibility[context]);
+    if (!state.preferences.panelLayout.previewVisible) switchView(false);
+  }
+  updatePreviewVisibilityControls();
+}
+function setPreviewVisible(visible) {
+  state.preferences.previewVisibility[previewContext()] = !!visible;
+  panelLayout.setPreviewVisible(visible);
+  if (!visible) switchView(false);
+  else if (matchMedia('(max-width: 900px)').matches) switchView(true);
+  else requestAnimationFrame(() => viewer.refreshLayout());
+  updatePreviewVisibilityControls(); savePreferences(150);
+}
+function updateEditorModeControls() {
+  const available = !!activeDocument() && isMarkdown(state.activePath);
+  $('markdown-editor-mode-label').hidden = !available;
+  $('markdown-editor-mode').value = editorMode();
+  $('markdown-editor-mode').disabled = !!state.operation || state.closed;
+  $('markdown-scroll-sync').closest('label').hidden = editorMode() === 'rich';
+  for (const [name, slot] of Object.entries(editorSlots)) {
+    const rich = editorMode(name) === 'rich' && !!slot.rich;
+    slot.richHost.hidden = !rich;
+    if (slot.view) slot.host.hidden = rich;
+    slot.element.dataset.editorMode = rich ? 'rich' : 'source';
+    slot.rich?.setReadOnly(!!state.operation || state.closed);
+  }
+}
+function synchronizeRichSelection(name, selection) {
+  const slot = editorSlots[name];
+  if (state.synchronizingEditors || !slot?.view || editorMode(name) !== 'rich' || !selection) return;
+  const current = slot.view.state.selection.main;
+  const length = slot.view.state.doc.length;
+  const anchor = Math.max(0, Math.min(length, selection.anchor));
+  const head = Math.max(0, Math.min(length, selection.head));
+  if (current.anchor !== anchor || current.head !== head) slot.view.dispatch({ selection: { anchor, head }, annotations: Transaction.addToHistory.of(false) });
+  if (name === state.activePane) updateCursor();
+}
+function ensureRichEditor(slot, name) {
+  if (!slot.view || !isMarkdown(slot.path) || editorMode(name) !== 'rich') return;
+  const properties = { text: slot.view.state.doc.toString(), path: slot.path, projectRoot: state.meta?.project?.root };
+  if (slot.rich) { slot.rich.setDocument(properties); return; }
+  slot.rich = new MarkdownRichEditor({ host: slot.richHost, ...properties, token,
+    onFocus: () => { state.lastSurface = 'source'; activateEditorPane(name); },
+    onChange: ({ text, changes, beforeText, userEvent, selection }) => {
+      const doc = state.documents.get(slot.path);
+      if (!doc || !slot.view || state.closed || state.operation) return;
+      if (slot.view.state.doc.toString() !== beforeText) { slot.rich.setText(slot.view.state.doc.toString()); return; }
+      const event = userEvent || 'input.type';
+      applyDocumentTransaction(doc, slot.view.state.update({ changes, selection, userEvent: event,
+        annotations: ['input.format', 'input.insert', 'input.paste'].includes(event) ? isolateHistory.of('full') : undefined }));
+      if (slot.view.state.doc.toString() !== text) slot.rich.setText(slot.view.state.doc.toString());
+    },
+    onSelectionChange: selection => synchronizeRichSelection(name, selection),
+    onUndo: () => applyRichHistory(slot, undo), onRedo: () => applyRichHistory(slot, redo),
+    onFind: () => { activateEditorPane(name); setMarkdownEditorMode('source'); openSourceSearchPanel(slot.view); },
+    onPaste: event => { activateEditorPane(name); return insertTools?.handlePaste(event) || false; },
+    onDrop: event => { activateEditorPane(name); return insertTools?.handleDrop(event) || false; },
+    onOpenFile: (path, options = {}) => openMarkdownLink(path, options, name),
+    onError: showError,
+  });
+  const selection = slot.view.state.selection.main;
+  slot.rich.selectSource(selection.anchor, selection.head);
+}
+function applyRichHistory(slot, command) {
+  const changed = command(slot.view);
+  if (changed) {
+    const { anchor, head } = slot.view.state.selection.main;
+    slot.rich?.selectSource(anchor, head, { scrollIntoView: true });
+  }
+  return changed;
+}
+function setMarkdownEditorMode(mode, name = state.activePane, { focus = true, persist = true } = {}) {
+  const slot = editorSlots[name];
+  if (!slot?.view || !isMarkdown(slot.path)) return;
+  const next = mode === 'source' ? 'source' : 'rich';
+  if (editorMode(name) === 'rich' && slot.rich) synchronizeRichSelection(name, slot.rich.sourceSelection());
+  state.preferences.markdownEditorModes[name] = next;
+  ensureRichEditor(slot, name);
+  updateEditorModeControls(); markdownEditing?.update();
+  if (name === state.activePane) applyPreviewVisibility();
+  panelLayout.refresh();
+  const selection = slot.view.state.selection.main;
+  if (next === 'rich') slot.rich.selectSource(selection.anchor, selection.head, { scrollIntoView: focus });
+  else if (focus) slot.view.dispatch({ effects: EditorView.scrollIntoView(selection.head, { y: 'nearest' }) });
+  if (focus) focusEditorSlot(name);
+  if (persist) { savePreferences(150); scheduleSession(); }
+}
+async function openMarkdownLink(path, { fragment } = {}, pane = state.activePane) {
+  return runTask(() => navigate(async () => {
+    await openFile(path, { pane });
+    const doc = activeDocument();
+    if (doc?.path === path && isMarkdown(path) && fragment) {
+      const counts = new Map();
+      const heading = extractMarkdownOutline(documentText(doc)).find(item => {
+        const slug = item.title.toLowerCase().trim().replace(/[^\p{L}\p{N}\p{M}_\-\s]/gu, '').replace(/\s/g, '-') || 'section';
+        const count = counts.get(slug) || 0; counts.set(slug, count + 1);
+        return (count ? `${slug}-${count}` : slug) === fragment;
+      });
+      if (heading) await goToSource(path, heading.line);
+    }
+    await afterNavigationFrame();
+  }));
+}
 
 function activateEditorPane(name, focus = false) {
   const slot = editorSlots[name];
@@ -465,9 +595,9 @@ function activateEditorPane(name, focus = false) {
   for (const [key, item] of Object.entries(editorSlots)) item.element.classList.toggle('active', key === name);
   $('active-filename').textContent = doc.path; $('active-filename').title = doc.path;
   renderTabs(); updateTreeSelection(); updateDocumentIndicators(doc); updateCursor(); renderOutline();
-  updateDocumentPreview(); renderControls();
-  if (focus) slot.view.focus();
-  document.title = `${isDirty(doc) ? '● ' : ''}${basename(doc.path)} — Local TeX Web Editor`;
+  updateDocumentPreview(); renderControls(); applyPreviewVisibility();
+  if (focus) focusEditorSlot(name);
+  if (!state.homeVisible) document.title = `${isDirty(doc) ? '● ' : ''}${basename(doc.path)} — Local TeX Web Editor`;
 }
 
 function synchronizeEditorViews(doc, origin, changes = null) {
@@ -475,6 +605,7 @@ function synchronizeEditorViews(doc, origin, changes = null) {
   state.synchronizingEditors = true;
   try {
     for (const [, slot] of visibleEditorSlots(doc.path)) {
+      slot.rich?.setText(doc.state.doc.toString(), changes);
       if (slot.view === origin) continue;
       const view = slot.view;
       const top = view.scrollDOM.scrollTop, left = view.scrollDOM.scrollLeft;
@@ -520,7 +651,8 @@ function destroyEditorSlot(name) {
   const slot = editorSlots[name];
   slot.openSequence = (slot.openSequence || 0) + 1; slot.pendingPath = '';
   if (slot.view && state.documents.has(slot.path)) state.documents.get(slot.path).scrollTop = slot.view.scrollDOM.scrollTop;
-  slot.cleanup?.(); slot.cleanup = null; slot.view?.destroy(); slot.view = null; slot.path = ''; slot.host.replaceChildren();
+  slot.cleanup?.(); slot.cleanup = null; slot.rich?.destroy(); slot.rich = null; slot.richHost.hidden = true;
+  slot.view?.destroy(); slot.view = null; slot.path = ''; slot.host.replaceChildren();
 }
 function destroyEditors() {
   destroyEditorSlot('primary'); destroyEditorSlot('secondary');
@@ -597,8 +729,9 @@ function selectDocument(doc, { pane = state.activePane, focus = true, activate =
   pauseMarkdownScrollSync(); rememberEditorPosition(); rememberTab(doc.path);
   const slot = editorSlots[pane];
   const sameDocument = slot.path === doc.path && slot.view;
-  const position = requestedPosition || (sameDocument ? { scrollTop: slot.view.scrollDOM.scrollTop, anchor: slot.view.state.selection.main.anchor, head: slot.view.state.selection.main.head }
-    : (!doc.visited ? state.session?.positions?.[doc.path] : { scrollTop: doc.scrollTop || 0 }) || { scrollTop: 0 });
+  if (!sameDocument && slot.rich) { slot.rich.destroy(); slot.rich = null; slot.richHost.hidden = true; }
+  const position = requestedPosition || (sameDocument ? { scrollTop: slot.view.scrollDOM.scrollTop, richScrollTop: slot.richHost.scrollTop, anchor: slot.view.state.selection.main.anchor, head: slot.view.state.selection.main.head }
+    : (!doc.visited ? state.session?.positions?.[doc.path] : { scrollTop: doc.scrollTop || 0, richScrollTop: doc.richScrollTop || 0 }) || { scrollTop: 0 });
   doc.state = doc.state.update({ effects: readOnly.reconfigure([EditorState.readOnly.of(!!state.operation), EditorView.editable.of(!state.operation)]) }).state;
   let editorState = doc.state;
   if (position?.anchor != null) editorState = editorState.update({ selection: { anchor: Math.min(editorState.doc.length, Math.max(0, Number(position.anchor) || 0)), head: Math.min(editorState.doc.length, Math.max(0, Number(position.head) || 0)) } }).state;
@@ -606,11 +739,20 @@ function selectDocument(doc, { pane = state.activePane, focus = true, activate =
   if (pane === 'primary') { assetPreview.hide(); $('editor').hidden = false; $('editor-empty').hidden = true; }
   if (slot.view) slot.view.setState(editorState); else createEditorView(slot, pane, editorState);
   doc.state = slot.view.state;
+  ensureRichEditor(slot, pane);
   synchronizeEditorViews(doc, slot.view);
+  if (requestedPosition && slot.rich && editorMode(pane) === 'rich') {
+    const { anchor, head } = slot.view.state.selection.main;
+    slot.rich.selectSource(anchor, head);
+  }
   if (activate) activateEditorPane(pane, focus);
   else { renderTabs(); updateTreeSelection(); renderControls(); }
   const view = slot.view, restoreSequence = slot.restoreSequence = (slot.restoreSequence || 0) + 1;
-  requestAnimationFrame(() => { if (slot.view === view && slot.path === doc.path && slot.restoreSequence === restoreSequence) { view.scrollDOM.scrollTop = Math.max(0, Number(position?.scrollTop) || 0); view.dispatch({ effects: EditorView.scrollIntoView(view.state.selection.main.head, { y: 'nearest' }) }); } });
+  requestAnimationFrame(() => { if (slot.view === view && slot.path === doc.path && slot.restoreSequence === restoreSequence) {
+    view.scrollDOM.scrollTop = Math.max(0, Number(position?.scrollTop) || 0);
+    if (editorMode(pane) === 'rich' && slot.rich) slot.richHost.scrollTop = Math.max(0, Number(position?.richScrollTop) || 0);
+    else view.dispatch({ effects: EditorView.scrollIntoView(view.state.selection.main.head, { y: 'nearest' }) });
+  } });
   if ((/\.(tex|bib)$/i.test(doc.path) || isMarkdown(doc.path)) && doc.indexedDoc !== doc.state.doc) updateIndex(doc.path, doc.state.doc.toString());
   renderRecovery(); renderPaneSelectors(); scheduleSession(); updateDocumentPreview({ immediate: true });
 }
@@ -657,8 +799,9 @@ async function selectAsset(file) {
   $('active-filename').textContent = file.path; $('active-filename').title = file.path;
   $('save-status').textContent = ''; $('save-status').classList.remove('dirty', 'error');
   renderTabs(); updateTreeSelection(); renderControls(); updateCursor(); renderOutline(); scheduleSession();
-  document.title = `${basename(file.path)} — Local TeX Web Editor`;
+  if (!state.homeVisible) document.title = `${basename(file.path)} — Local TeX Web Editor`;
   updateDocumentPreview();
+  applyPreviewVisibility();
   await assetPreview.show(asset, state.meta.project.root);
 }
 
@@ -1000,14 +1143,15 @@ async function resolveConflict(doc) {
 }
 
 function recentPaths() {
-  return (state.meta?.recentProjects || []).map(item => typeof item === 'string' ? item : item.root || item.path || '').filter(Boolean).slice(0, 6);
+  return (state.meta?.recentProjects || []).map(item => typeof item === 'string' ? item : item.root || item.path || '').filter(Boolean).slice(0, 12);
 }
 function renderRecent() {
   const paths = recentPaths();
-  for (const id of ['welcome-recent', 'project-recent']) $(id).hidden = paths.length === 0;
-  for (const id of ['welcome-recent-list', 'project-recent-list']) {
+  $('welcome-recent').hidden = paths.length === 0 && !state.meta?.project;
+  $('project-recent').hidden = paths.length === 0;
+  for (const id of ['project-recent-list']) {
     $(id).replaceChildren();
-    for (const path of paths) {
+    for (const path of paths.slice(0, 6)) {
       const button = document.createElement('button'); button.type = 'button'; button.className = 'recent-project'; button.title = path;
       const name = document.createElement('strong'); name.textContent = basename(path);
       const detail = document.createElement('span'); detail.textContent = path; button.append(name, detail);
@@ -1015,6 +1159,53 @@ function renderRecent() {
       $(id).append(button);
     }
   }
+  projectHome?.refresh();
+}
+function renderWorkspaceView() {
+  const project = state.meta?.project;
+  const home = state.homeVisible || !project;
+  $('app-shell').classList.toggle('home-mode', home);
+  if (!state.closed) { $('welcome').hidden = !home; $('workbench').hidden = home; }
+  $('go-home').setAttribute('aria-current', home ? 'page' : 'false');
+  $('project-name').textContent = home ? t('プロジェクト') : basename(project.root);
+  $('project-name').title = home ? '' : project.root;
+  if (!state.closed) document.title = home ? `${t('プロジェクト')} — Local TeX Web Editor`
+    : state.activePath ? `${isDirty(activeDocument()) ? '● ' : ''}${basename(state.activePath)} — Local TeX Web Editor` : 'Local TeX Web Editor';
+}
+function showHome() {
+  if (state.operation || state.closed) return;
+  if (state.homeVisible) { $('home-title').focus(); return; }
+  rememberEditorPosition(); syncDrafts(); persistSession();
+  state.homeVisible = true;
+  renderRecent(); renderWorkspaceView();
+  document.title = `${t('プロジェクト')} — Local TeX Web Editor`;
+  $('home-title').focus();
+}
+function resumeProject() {
+  if (state.operation || state.closed || !state.meta?.project) return;
+  state.homeVisible = false; renderWorkspaceView(); renderControls(); panelLayout.refresh();
+  if (state.editor && activeDocument()) activateEditorPane(state.activePane, true);
+  requestAnimationFrame(() => { viewer.refreshLayout(); assetPreview.refreshLayout?.(); });
+}
+async function beginProjectDeletion() {
+  if (state.operation || state.closed || isRunning()) return false;
+  try {
+    await beginFileAction();
+    await sessionStore.settle();
+    return true;
+  } catch (error) { setOperation(''); throw error; }
+}
+async function completeProjectDeletion(result) {
+  const roots = new Set([result.path, ...(result.removedProjects || [])].filter(Boolean));
+  const reset = state.meta?.project?.root !== result.state?.project?.root;
+  if (reset) {
+    state.persistenceReady = false;
+    clearTimeout(state.autoSaveTimer); clearTimeout(state.draftTimer); clearTimeout(state.sessionTimer);
+    if (state.meta?.project?.root) roots.add(state.meta.project.root);
+  }
+  for (const root of roots) { sessionStore.forget(`session:${root}`); sessionStore.forget(`drafts:${root}`); }
+  await applyMeta(result.state, reset);
+  state.homeVisible = true; renderRecent(); renderWorkspaceView(); clearError();
 }
 
 async function applyMeta(meta, resetProject = false) {
@@ -1029,6 +1220,7 @@ async function applyMeta(meta, resetProject = false) {
   state.texPackages = meta.texPackages || null;
   state.externalProjectChanged = false;
   if (resetProject) {
+    state.homeVisible = !meta.project;
     projectSearch?.close(); documentHistory?.close();
     clearTimeout(state.autoSaveTimer); clearTimeout(state.draftTimer); clearTimeout(state.sessionTimer); clearTimeout(state.outlineTimer);
     state.persistenceReady = false; state.initialFilePending = !!meta.project; state.session = null; state.drafts = { entries: [] }; state.recoverySelection = null;
@@ -1046,9 +1238,7 @@ async function applyMeta(meta, resetProject = false) {
   const project = meta.project;
   if (project && resetProject) await loadProjectSession(project.root, generation);
   if (generation !== state.projectGeneration) return;
-  $('welcome').hidden = !!project; $('workbench').hidden = !project;
-  $('project-name').textContent = project ? basename(project.root) : 'Local TeX Web Editor';
-  $('project-name').title = project?.root || '';
+  renderWorkspaceView();
   $('project-root').textContent = project?.root || ''; $('project-root').title = project?.root || '';
   updateApplicationDetails(meta);
   renderRecent(); renderTree(); renderTabs(); renderControls(); updateCursor(); renderOutline(); renderRecovery();
@@ -1249,10 +1439,36 @@ async function beginFileAction() {
   syncDrafts(); persistSession();
 }
 
-async function inspectOpenDocuments(entry) {
+function uploadProjectFile(path, file, { projectRoot, revision, signal } = {}) {
+  return api(`/api/files/import?path=${encodeURIComponent(path)}`, {
+    method: 'POST', body: file, binary: true, projectRoot, signal, timeout: 120000,
+    headers: revision ? { 'X-File-Revision': revision } : {},
+  });
+}
+
+async function applyImportedFile(result) {
+  const paths = [...new Set((result.importedPaths || [result.path]).filter(path => typeof path === 'string' && path))];
+  for (const path of paths) {
+    state.texIndex.delete(path);
+    for (let end = path.lastIndexOf('/'); end > 0; end = path.lastIndexOf('/', end - 1)) state.directoryState.set(path.slice(0, end), true);
+  }
+  await applyMeta(result.state);
+  if (state.build && paths.length) {
+    state.build.sourceChanged = true;
+    if (state.build.pdfReady && paths.some(sourceAffectsPDF)) state.build.pdfSourceChanged = true;
+  }
+  for (const [, slot] of visibleEditorSlots()) for (const path of paths) slot.rich?.refreshImages(path, { caseInsensitive: state.meta?.platform === 'windows' });
+  markdownPreview.refresh();
+  await indexProject();
+  updatePreviewNote(); persistSession(); clearError();
+}
+
+async function inspectOpenDocuments(entry, action) {
   for (const doc of state.documents.values()) {
     if (!entryContains(entry, doc.path)) continue;
-    const revision = entry.directory ? (await api(`/api/file?path=${encodeURIComponent(doc.path)}`)).revision : entry.contentRevision;
+    const listed = entry.directory && Array.isArray(entry.entries) ? entry.entries.find(item => item.path === doc.path && !item.directory) : null;
+    if (entry.directory && Array.isArray(entry.entries) && !listed && action === 'delete') continue;
+    const revision = entry.directory ? listed?.contentRevision ?? (await api(`/api/file?path=${encodeURIComponent(doc.path)}`)).revision : entry.contentRevision;
     if (doc.revision !== revision || doc.conflict) throw new Error(`${doc.path}\n${fileActionText('stale')}`);
   }
 }
@@ -1306,6 +1522,10 @@ async function applyEntryChange(result) {
   if (wasMarkdown) markdownPreview.reset();
   state.texIndex.clear(); state.indexing = false; state.indexError = ''; rebuildIndex();
   await applyMeta(result.state);
+  for (const [name, slot] of visibleEditorSlots()) {
+    if (slot.rich) slot.rich.setDocument({ text: slot.view.state.doc.toString(), path: slot.path, projectRoot: state.meta?.project?.root });
+    ensureRichEditor(slot, name);
+  }
   if (state.build) {
     state.build.sourceChanged = true;
     if (state.build.pdfReady) state.build.pdfSourceChanged = true;
@@ -1493,6 +1713,7 @@ function renderControls() {
   $('welcome-open').disabled = busy;
   $('shutdown-button').disabled = busy;
   $('new-file').disabled = busy || !project;
+  $('import-files').disabled = busy || !project || running;
   $('close-all-tabs').disabled = busy || !state.tabOrder.length;
   $('refresh-files').disabled = busy || !project;
   $('download-pdf').disabled = !state.build?.pdfReady || state.closed;
@@ -1508,6 +1729,10 @@ function renderControls() {
   for (const id of ['project-templates', 'welcome-template']) $(id).disabled = busy || running;
   for (const slot of Object.values(editorSlots)) slot.select.disabled = busy;
   for (const control of $('markdown-editing').querySelectorAll('button, select')) control.disabled = busy;
+  $('toggle-preview').disabled = state.closed;
+  $('go-home').disabled = busy;
+  projectHome?.refresh(); renderWorkspaceView();
+  updateEditorModeControls(); updatePreviewVisibilityControls();
   updateNavigationControls();
   for (const button of state.treeButtons.values()) button.disabled = busy;
   for (const tab of state.tabElements.values()) { tab.button.disabled = busy; tab.close.disabled = busy; }
@@ -1772,6 +1997,9 @@ async function loadPreferences() {
     state.preferences.theme = state.preferences.appearance.mode === 'system' ? null : state.preferences.appearance.mode;
     state.preferences.editorFontSize = preferences.editorFontSize;
     state.preferences.panelLayout = normalizePanelLayout(preferences.panelLayout);
+    for (const name of ['primary', 'secondary']) state.preferences.markdownEditorModes[name] = preferences.markdownEditorModes?.[name] === 'source' ? 'source' : 'rich';
+    for (const name of ['rich', 'markdown', 'source']) if (typeof preferences.previewVisibility?.[name] === 'boolean') state.preferences.previewVisibility[name] = preferences.previewVisibility[name];
+    state.previewContext = '';
     state.preferences.markdownScrollSync = preferences.markdownScrollSync !== false;
     state.preferences.pdfDarkMode = preferences.pdfDarkMode === true;
     if (['ja', 'en'].includes(preferences.language)) state.preferences.language = preferences.language;
@@ -1891,9 +2119,11 @@ async function restoreDraft() {
   if (remote.revision !== doc.revision) doc.conflict = new APIError(t("草稿を記録した後にディスクの内容が変更されています．保存する内容を確認してください．"), 409);
   state.documents.set(doc.path, doc);
   const selection = doc.state.selection.main;
+  state.homeVisible = false; renderWorkspaceView();
   $('recovery-dialog').close(); switchView(false); selectDocument(doc, { position: { anchor: selection.anchor, head: selection.head } });
   editorSlots[state.activePane].restoreSequence++;
-  state.editor.dispatch({ effects: EditorView.scrollIntoView(state.editor.state.selection.main.head, { y: 'center' }) });
+  if (activeRichEditor()) activeRichEditor().selectSource(selection.anchor, selection.head, { scrollIntoView: true });
+  else state.editor.dispatch({ effects: EditorView.scrollIntoView(state.editor.state.selection.main.head, { y: 'center' }) });
   updateIndex(doc.path, doc.state.doc.toString());
   syncDrafts(); renderRecovery(); scheduleAutoSave();
   toast(doc.conflict ? t("草稿を開きました．保存の前に，ディスクの内容との比較を確認してください．") : t("草稿を開きました．"));
@@ -1912,11 +2142,12 @@ function scheduleSession() {
 }
 function persistSession() {
   clearTimeout(state.sessionTimer); state.sessionTimer = null;
-  if (!state.persistenceReady || state.initialFilePending || !state.meta?.project || state.closed) return;
+  if (!state.persistenceReady || state.initialFilePending || !state.meta?.project || state.closed || state.homeVisible) return;
   const positions = { ...state.session?.positions };
   for (const doc of state.documents.values()) {
     const selection = doc.state.selection.main;
-    positions[doc.path] = { anchor: selection.anchor, head: selection.head, scrollTop: doc.path === state.activePath && state.editor ? state.editor.scrollDOM.scrollTop : doc.scrollTop ?? positions[doc.path]?.scrollTop ?? 0 };
+    positions[doc.path] = { anchor: selection.anchor, head: selection.head, scrollTop: doc.path === state.activePath && state.editor ? state.editor.scrollDOM.scrollTop : doc.scrollTop ?? positions[doc.path]?.scrollTop ?? 0,
+      richScrollTop: doc.path === state.activePath && activeRichEditor() ? editorSlots[state.activePane].richHost.scrollTop : doc.richScrollTop ?? positions[doc.path]?.richScrollTop ?? 0 };
   }
   state.session = { version: 2, updatedAt: Date.now(), activePath: state.activePath, tabs: [...state.tabOrder], workspace: captureSourceWorkspace(), positions, pdf: viewer.getViewState(), pdfPositions: viewer.getPositions(), previewChoice: state.previewChoice, lastMarkdownPath: state.lastMarkdownPath, sidebar: state.sidebar, directories: Object.fromEntries(state.directoryState) };
   sessionStore.write(`session:${state.meta.project.root}`, state.session, 0);
@@ -1974,7 +2205,8 @@ function sourcePosition(name = state.activePane) {
   const slot = editorSlots[name];
   if (!slot?.view || !state.documents.has(slot.path)) return slot?.path ? { path: slot.path, pane: name } : null;
   const selection = slot.view.state.selection.main;
-  return { path: slot.path, pane: name, anchor: selection.anchor, head: selection.head, scrollTop: slot.view.scrollDOM.scrollTop, scrollLeft: slot.view.scrollDOM.scrollLeft };
+  return { path: slot.path, pane: name, anchor: selection.anchor, head: selection.head, scrollTop: slot.view.scrollDOM.scrollTop, scrollLeft: slot.view.scrollDOM.scrollLeft,
+    markdownMode: editorMode(name), richScrollTop: slot.richHost.scrollTop };
 }
 function captureSourceWorkspace() {
   return { split: state.splitEditors, ratio: state.sourceRatio, activePane: state.activePane, primary: sourcePosition('primary'), secondary: state.splitEditors ? sourcePosition('secondary') : null };
@@ -1982,15 +2214,17 @@ function captureSourceWorkspace() {
 function restoreSourcePosition(name, position) {
   const slot = editorSlots[name];
   if (!slot?.view || slot.path !== position?.path) return;
+  if (isMarkdown(slot.path) && ['source', 'rich'].includes(position.markdownMode)) setMarkdownEditorMode(position.markdownMode, name, { focus: false, persist: false });
   const view = slot.view;
   const anchor = Math.min(view.state.doc.length, Math.max(0, Number(position.anchor) || 0));
   const head = Math.min(view.state.doc.length, Math.max(0, Number(position.head ?? position.anchor) || 0));
   view.dispatch({ selection: { anchor, head }, effects: revealSourceRange(view.state, anchor, head), annotations: Transaction.addToHistory.of(false) });
   view.scrollDOM.scrollTop = Math.max(0, Number(position.scrollTop) || 0); view.scrollDOM.scrollLeft = Math.max(0, Number(position.scrollLeft) || 0);
+  if (editorMode(name) === 'rich' && slot.rich) { slot.rich.selectSource(anchor, head); slot.richHost.scrollTop = Math.max(0, Number(position.richScrollTop) || 0); }
 }
 function captureNavigationLocation() {
   if (!state.meta?.project) return null;
-  return { projectRoot: state.meta.project.root, source: sourcePosition(), pdf: viewer.document ? viewer.getViewState() : null, asset: assetPreview.getViewState?.(), markdown: markdownPreview.getViewState?.(), previewChoice: state.previewChoice, previewVisible: $('app-shell').classList.contains('preview-mode'), surface: state.lastSurface };
+  return { projectRoot: state.meta.project.root, source: sourcePosition(), pdf: viewer.document ? viewer.getViewState() : null, asset: assetPreview.getViewState?.(), markdown: markdownPreview.getViewState?.(), previewChoice: state.previewChoice, previewVisible: $('app-shell').classList.contains('preview-mode'), previewOpen: state.preferences.panelLayout.previewVisible, surface: state.lastSurface };
 }
 async function restoreNavigationLocation(location) {
   if (!location || state.closed || state.operation || location.projectRoot !== state.meta?.project?.root) return false;
@@ -2020,6 +2254,7 @@ async function restoreNavigationLocation(location) {
     if (doc) state.lastMarkdownPath = doc.path;
   }
   if (location.previewChoice) setPreviewChoice(location.previewChoice);
+  if (typeof location.previewOpen === 'boolean') setPreviewVisible(location.previewOpen);
   switchView(!!location.previewVisible);
   if (location.pdf?.main && viewer.documentMain !== location.pdf.main && location.pdf.buildId) await viewer.load(location.pdf.buildId, state.meta.project.root, location.pdf.main);
   if (generation !== state.projectGeneration) return false;
@@ -2034,7 +2269,7 @@ async function restoreNavigationLocation(location) {
   if (state.lastSurface === 'pdf') $('pdf-scroll').focus({ preventScroll: true });
   else if (state.lastSurface === 'markdown') $('markdown-preview-container').focus({ preventScroll: true });
   else if (state.lastSurface === 'asset') $('asset-scroll').focus({ preventScroll: true });
-  else state.editor?.focus();
+  else focusEditorSlot();
   pauseMarkdownScrollSync(); scheduleSession();
   return true;
 }
@@ -2049,7 +2284,8 @@ function openDocumentSnapshots() {
 function currentDocumentSnapshot() {
   const doc = activeDocument();
   if (!doc || !state.editor) return null;
-  return { path: doc.path, content: documentText(doc), revision: doc.revision, projectRoot: state.meta?.project?.root, position: state.editor.state.selection.main.head, ...sourcePosition() };
+  return { path: doc.path, content: documentText(doc), revision: doc.revision, projectRoot: state.meta?.project?.root, position: state.editor.state.selection.main.head, ...sourcePosition(),
+    ...(activeRichEditor()?.selectionSnapshot() || {}) };
 }
 function changedText(before, after) {
   let from = 0;
@@ -2097,7 +2333,7 @@ function focusSourceDocument(snapshot) {
   requestAnimationFrame(() => {
     if (!snapshot || state.closed || state.operation || snapshot.projectRoot !== state.meta?.project?.root || document.querySelector('dialog[open]')) return;
     const slot = editorSlots[snapshot.pane];
-    if (slot?.view && slot.path === snapshot.path && (snapshot.pane === 'primary' || state.splitEditors)) slot.view.focus();
+    if (slot?.view && slot.path === snapshot.path && (snapshot.pane === 'primary' || state.splitEditors)) focusEditorSlot(snapshot.pane);
   });
 }
 async function insertSourceText(text, snapshot = {}) {
@@ -2108,6 +2344,11 @@ async function insertSourceText(text, snapshot = {}) {
   if (!doc || !slot?.view || slot.path !== path || (pane === 'secondary' && !state.splitEditors)) throw new Error(t('挿入先の原稿を開き直してください．'));
   const view = slot.view, selection = view.state.selection.main;
   if (view.state.doc.toString() !== content || selection.anchor !== anchor || selection.head !== head) throw new Error(t('原稿が変更されています．内容を開き直してから操作してください．'));
+  if (snapshot.richAnchor != null) {
+    const current = slot.rich?.selectionSnapshot();
+    if (editorMode(pane) !== 'rich' || current?.richAnchor !== snapshot.richAnchor || current?.richHead !== snapshot.richHead) throw new Error(t('原稿や選択範囲が変わりました．挿入先を選び直して，もう一度開いてください．'));
+    slot.rich.insertMarkdown(text); activateEditorPane(pane); focusSourceDocument(snapshot); syncDrafts(); return;
+  }
   const from = Math.min(anchor, head), to = Math.max(anchor, head);
   applyDocumentTransaction(doc, view.state.update({ changes: { from, to, insert: text }, selection: { anchor: from + text.length }, userEvent: 'input', annotations: isolateHistory.of('full'), scrollIntoView: true }));
   activateEditorPane(pane); focusSourceDocument(snapshot);
@@ -2218,7 +2459,8 @@ async function goToSource(path, lineNumber, column = 1, { align = 'start', from 
   const margin = align === 'start' ? Math.max(24, Math.min(96, state.editor.scrollDOM.clientHeight * .12)) : 12;
   pauseMarkdownScrollSync();
   state.editor.dispatch({ selection: { anchor: position, head: end }, effects: [...revealSourceRange(state.editor.state, position, end), EditorView.scrollIntoView(position, { y: align, yMargin: margin }), lineFlash.of(number)] });
-  state.editor.focus();
+  activeRichEditor()?.selectSource(position, end, { scrollIntoView: true });
+  focusEditorSlot();
   state.lastSurface = 'source';
   clearTimeout(lineFlashTimer);
   const target = activeDocument();
@@ -2363,17 +2605,35 @@ templateManager = createTemplateManager({ api, getProject: () => state.meta?.pro
 logIssues = createLogIssues({ container: $('log-locations'), onOpen: (path, line) => runTask(() => navigate(() => goToSource(path, line))) });
 markdownEditing = createMarkdownEditing({
   container: $('markdown-editing'), getDocument: currentDocumentSnapshot, applyEdit: applyMarkdownEdit, focusDocument: focusSourceDocument,
+  getRichEditor: activeRichEditor,
   onImage: () => openWritingTool(() => insertTools.openImage()),
   onTable: () => openWritingTool(() => insertTools.openTable()),
   onNewPage: () => openWritingTool(() => documentTools.openMarkdownPage()),
   onError: showError,
+});
+const fileImporter = createFileImporter({
+  api, uploadFile: uploadProjectFile, getProject: () => state.meta?.project,
+  isBlocked: () => !!state.operation || state.closed || state.externalProjectChanged || isRunning() || !!document.querySelector('dialog[open]'),
+  begin: beginFileAction, end: () => setOperation(''), checkDestination: assertNewFilePathAvailable,
+  onImported: applyImportedFile, onError: showError, onNotice: toast,
 });
 createFileActions({
   tree: $('file-tree'), getProject: () => state.meta?.project,
   isBlocked: () => !!state.operation || state.closed || state.externalProjectChanged || isRunning() || !!document.querySelector('dialog[open]'),
   begin: beginFileAction, end: () => setOperation(''), inspectOpenDocuments, checkDestination: assertNewFilePathAvailable, api,
   getUnsavedPaths: entry => [...new Set([...state.documents.values()].filter(doc => isDirty(doc) && entryContains(entry, doc.path)).map(doc => doc.path).concat((state.drafts.entries || []).filter(draft => entryContains(entry, draft.path)).map(draft => draft.path)))],
-  onChanged: applyEntryChange, onNewFile: showNewFile, onError: showError, onNotice: toast,
+  onChanged: applyEntryChange, onNewFile: showNewFile, onImportFiles: folder => fileImporter.open(folder), onError: showError, onNotice: toast,
+});
+projectHome = createProjectHome({
+  list: $('welcome-recent-list'), api,
+  getMeta: () => state.meta ? { ...state.meta, build: state.build } : null,
+  getUnsavedPaths: root => root === state.meta?.project?.root ? [...new Set([
+    ...dirtyDocuments().map(doc => doc.path), ...(state.drafts.entries || []).map(draft => draft.path),
+  ])] : [],
+  beginAction: beginProjectDeletion, endAction: () => setOperation(''),
+  onOpen: path => runTask(() => path === state.meta?.project?.root ? resumeProject() : openCreatedProject(path)),
+  onResume: resumeProject, onDeleted: completeProjectDeletion,
+  onError: showError, onNotice: toast, isBlocked: () => !!state.operation || state.closed,
 });
 
 help = createHelp({
@@ -2414,6 +2674,7 @@ systemColorScheme.addEventListener('change', () => {
 });
 
 onClick('show-project', showProjectDialog); onClick('welcome-open', showProjectDialog);
+onClick('go-home', showHome);
 onClick('settings-button', showSettings); onClick('main-document', showSettings);
 $('language-setting').addEventListener('change', event => {
   if ($('settings-dialog').open) applyLanguage(event.target.value, { preview: true });
@@ -2526,6 +2787,8 @@ sourceDivider.addEventListener('keydown', event => {
 });
 new ResizeObserver(updateSourceLayout).observe($('source-workspace'));
 for (const select of document.querySelectorAll('[data-preview-choice]')) select.addEventListener('change', () => setPreviewChoice(select.value));
+$('markdown-editor-mode').addEventListener('change', () => setMarkdownEditorMode($('markdown-editor-mode').value));
+onClick('toggle-preview', () => setPreviewVisible(!state.preferences.panelLayout.previewVisible));
 $('markdown-scroll-sync').addEventListener('change', () => {
   applyMarkdownScrollSync($('markdown-scroll-sync').checked);
   savePreferences();
@@ -2538,10 +2801,11 @@ onClick('outline-tab', () => { $('file-filter').value = ''; setSidebar('outline'
 onClick('review-drafts', showRecovery); onClick('dismiss-recovery', () => { $('recovery-banner').hidden = true; });
 onClick('restore-draft', restoreDraft); onClick('delete-draft', deleteSelectedDraft);
 $('recovery-file').addEventListener('change', () => runTask(inspectDraft));
-onClick('find-button', () => { if (state.editor && activeDocument()) openSourceSearchPanel(state.editor); });
+onClick('find-button', () => { if (state.editor && activeDocument()) { if (activeRichEditor()) setMarkdownEditorMode('source'); openSourceSearchPanel(state.editor); } });
 onClick('dismiss-error', clearError); onClick('review-conflict', () => resolveConflict(activeDocument()));
 onClick('log-toggle', () => setLogVisible($('log-panel').hidden)); onClick('close-log', () => setLogVisible(false));
 onClick('new-file', () => showNewFile());
+$('import-files').addEventListener('click', () => fileImporter.open());
 $('project-form').addEventListener('submit', event => { runTask(() => openProject(event)); event.preventDefault(); });
 $('settings-form').addEventListener('submit', event => { runTask(() => saveSettings(event)); event.preventDefault(); });
 $('new-file-form').addEventListener('submit', event => { runTask(() => createFile(event)); event.preventDefault(); });
@@ -2562,16 +2826,22 @@ onClick('sidebar-toggle', () => {
 });
 if (matchMedia('(max-width: 640px)').matches) { $('app-shell').classList.add('sidebar-collapsed'); $('sidebar-toggle').setAttribute('aria-expanded', 'false'); }
 function switchView(preview) {
+  if (preview) {
+    panelLayout.setPreviewVisible(true);
+    if (!state.preferences.previewVisibility[previewContext()]) { state.preferences.previewVisibility[previewContext()] = true; savePreferences(150); }
+  }
   $('app-shell').classList.toggle('preview-mode', preview);
   $('show-preview').classList.toggle('selected', preview); $('show-editor').classList.toggle('selected', !preview);
   $('show-preview').setAttribute('aria-pressed', String(preview)); $('show-editor').setAttribute('aria-pressed', String(!preview));
   panelLayout.refresh();
+  updatePreviewVisibilityControls();
   if (preview) requestAnimationFrame(() => viewer.refreshLayout());
 }
 onClick('show-editor', () => switchView(false)); onClick('show-preview', () => switchView(true));
 
 document.addEventListener('keydown', event => {
-  if (event.isComposing || document.querySelector('dialog[open]')) return;
+  if (event.defaultPrevented || event.isComposing || document.querySelector('dialog[open]')) return;
+  if (state.homeVisible || !state.meta?.project) return;
   if (event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey && ['ArrowLeft', 'ArrowRight'].includes(event.key)) {
     event.preventDefault(); runTask(() => event.key === 'ArrowLeft' ? navigationHistory.back() : navigationHistory.forward()); return;
   }
