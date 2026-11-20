@@ -30,6 +30,7 @@ p { margin-bottom: 1rem; }
 strong { font-weight: 650; }
 code, kbd { font-family: ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, monospace; font-size: .86em; }
 code { padding: .12em .3em; border-radius: 3px; background: var(--soft); overflow-wrap: anywhere; }
+code.notation { white-space: nowrap; overflow-wrap: normal; }
 kbd { padding: .12em .38em; border: 1px solid #cdd6ce; border-bottom-width: 2px; border-radius: 4px; background: var(--surface); white-space: nowrap; }
 .shortcut { white-space: nowrap; }
 .wrap { width: min(1184px, calc(100% - 72px)); margin-inline: auto; }
