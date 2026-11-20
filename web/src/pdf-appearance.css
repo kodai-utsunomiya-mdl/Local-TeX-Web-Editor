@@ -9,6 +9,8 @@
 .pdf-zoom-controls { display: flex; align-items: center; flex: 0 0 auto; gap: 3px; }
 .asset-view-controls .pdf-dark-toggle { flex-basis: 29px; width: 29px; height: 29px; }
 .pdf-more-button { flex: 0 0 29px; width: 29px; height: 29px; margin-inline-start: auto; }
+.pdf-persistent-controls { display: flex; align-items: center; flex: 0 0 auto; gap: 3px; margin-inline-start: auto; }
+.pdf-persistent-controls:not([hidden]) + .pdf-more-button { margin-inline-start: 0; }
 .pdf-toolbar[data-pdf-details="false"] :is(.pdf-state, .pdf-document) { display: none; }
 [data-pdf-compact="true"] > .preview-choice select { width: 70px; }
 [data-pdf-compact="true"] > .pdf-page-controls { gap: 2px; }

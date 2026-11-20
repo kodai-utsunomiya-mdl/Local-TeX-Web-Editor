@@ -137,9 +137,6 @@ func run() error {
 	fmt.Println(string(data))
 	serveResult := make(chan error, 1)
 	go func() { serveResult <- server.Serve(listener) }()
-	if update != nil || !noBrowser {
-		application.ExpectBrowserConnection(30 * time.Second)
-	}
 	if update != nil {
 		if !update.Complete(url + "#token=" + token) {
 			return nil

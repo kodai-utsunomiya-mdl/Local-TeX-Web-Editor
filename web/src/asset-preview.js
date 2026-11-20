@@ -18,7 +18,8 @@ export class AssetPreview {
     this.root = document.getElementById('asset-preview');
     this.elements = Object.fromEntries(['info', 'page-controls', 'prev', 'next', 'page', 'pages', 'zoom-out', 'zoom-in', 'zoom', 'reload', 'scroll', 'image-stage', 'image', 'pdf-stage', 'message', 'dark-mode'].map(id => [id, document.getElementById(`asset-${id}`)]));
     this.pdfAppearance = new PDFDarkMode({ container: this.elements.scroll, button: this.elements['dark-mode'], darkMode, onChange: onDarkModeChange });
-    this.toolbar = new PDFToolbar({ toolbar: this.root.querySelector('.asset-toolbar'), panel: document.getElementById('asset-view-controls'), button: document.getElementById('asset-more'), compactWidth: 420, label: 'プレビューの操作' });
+    this.toolbar = new PDFToolbar({ toolbar: this.root.querySelector('.asset-toolbar'), panel: document.getElementById('asset-view-controls'), button: document.getElementById('asset-more'), compactWidth: 420, label: 'プレビューの操作',
+      alwaysVisible: [this.elements['zoom-out'], this.elements['zoom-in']] });
     this.file = null; this.projectRoot = ''; this.generation = 0;
     this.controller = null; this.objectURL = null; this.loadingTask = null; this.document = null;
     this.loadCompletion = Promise.resolve(false); this.cancelLoadWait = null; this.pdfInitialisation = null;

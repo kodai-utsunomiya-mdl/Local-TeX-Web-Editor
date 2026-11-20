@@ -1,7 +1,7 @@
 import { getLanguage } from './i18n.js';
 
-// Keep one connection open for each editor tab. The local application waits
-// briefly after the final connection closes, so a reload can reconnect.
+// Observe the local application's availability while the editor is open.
+// Freezing, discarding or closing a tab does not end the local application.
 export class BrowserSession {
   constructor({ token, fetch: request = globalThis.fetch.bind(globalThis), onConnectionChange, retryDelays = [250, 500, 1000] }) {
     this.token = token;
@@ -27,6 +27,13 @@ export class BrowserSession {
     this.controller = null;
     controller?.abort();
     this.retry = 0;
+  }
+
+  resume() {
+    // A sleeping page can return with a stream whose close callback has not
+    // run yet. Replacing it also skips any retry left waiting by that page.
+    this.stop();
+    this.start();
   }
 
   async connect() {

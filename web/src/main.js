@@ -21,6 +21,7 @@ import { createProjectSearch, replaceProjectDocuments } from './project-search.j
 import { createEditHistory } from './edit-history.js';
 import { createReferenceTools } from './reference-tools.js';
 import { createInsertTools } from './insert-tools.js';
+import { createDocumentTools } from './document-tools.js';
 import { createTemplateManager } from './template-manager.js';
 import { createLogIssues } from './log-issues.js';
 import { createMarkdownEditing } from './markdown-editing.js';
@@ -28,6 +29,8 @@ import { completionPresentation } from './completion-ui.js';
 import { createTeXCompletionSource } from './tex-completion.js';
 import { sourceFolding, revealSourceRange } from './source-folding.js';
 import { createOutlineTree } from './outline-tree.js';
+import { programLanguage } from './program-language.js';
+import { createFileActions, fileActionText, fileDestinationConflict, entryContains, mapEntryPath } from './file-actions.js';
 import { tags } from '@lezer/highlight';
 import { SessionStore } from './session-store.js';
 import { BrowserSession } from './browser-session.js';
@@ -76,6 +79,7 @@ const state = {
   heartbeatPending: false,
   closed: false,
   connected: false,
+  connectionError: false,
   externalProjectChanged: false,
   reportedBuild: '',
   preferences: { autoSave: true, theme: null, appearance: normalizeAppearance(), editorFontSize: 14, language: getLanguage(), panelLayout: normalizePanelLayout(), markdownScrollSync: true, texCompletion: true, automaticCompletion: true, pdfDarkMode: false },
@@ -105,6 +109,7 @@ let appearanceDraft = null;
 let help = null;
 let navigationHistory = null;
 let insertTools = null;
+let documentTools = null;
 let referenceTools = null;
 let projectSearch = null;
 let documentHistory = null;
@@ -119,6 +124,7 @@ const editorSlots = {
 const editorTheme = new Compartment();
 const editorLanguage = new Compartment();
 const editorCompletion = new Compartment();
+const editorDocumentPath = new Compartment();
 const modeLabels = { project: 'latexmkrc', pdflatex: 'pdfLaTeX', uplatex: 'upLaTeX', xelatex: 'XeLaTeX', lualatex: 'LuaLaTeX' };
 let toastTimer = null;
 let lineFlashTimer = null;
@@ -156,6 +162,7 @@ class APIError extends Error {
 
 function setConnected(connected) {
   state.connected = connected;
+  if (connected && state.connectionError) clearError();
   const label = $('connection-status');
   label.classList.toggle('connected', connected);
   label.classList.toggle('disconnected', !connected);
@@ -195,6 +202,7 @@ async function api(path, { method = 'GET', body, timeout = 15000, projectRoot = 
 
 function showError(error, action = null) {
   if (state.closed) return;
+  state.connectionError = error instanceof APIError && error.status === 0 && !state.connected;
   const message = error?.message || String(error);
   $('error-text').textContent = message;
   $('app-error').hidden = false;
@@ -206,7 +214,7 @@ function showError(error, action = null) {
   if (error && typeof error === 'object') error.shown = true;
 }
 
-function clearError() { $('app-error').hidden = true; $('error-action').onclick = null; }
+function clearError() { state.connectionError = false; $('app-error').hidden = true; $('error-action').onclick = null; }
 function toast(message) {
   clearTimeout(toastTimer);
   $('toast').textContent = message;
@@ -401,14 +409,16 @@ const bibLanguage = StreamLanguage.define({
   },
 });
 
-function makeEditorState(path, content) {
+function documentPathExtension(path) {
   const extension = path.split('.').pop().toLowerCase();
-  const language = isMarkdown(path) ? markdown() : extension === 'bib' ? bibLanguage : /^(tex|sty|cls|ltx|def|bst)$/.test(extension) ? StreamLanguage.define(stex) : [];
+  const language = isMarkdown(path) ? markdown() : extension === 'bib' ? bibLanguage : /^(tex|sty|cls|ltx|def|bst)$/.test(extension) ? StreamLanguage.define(stex) : programLanguage(path);
+  return [sourceFolding(path), language, EditorView.updateListener.of(update => receiveEditorUpdate(update, path))];
+}
+function makeEditorState(path, content) {
   return EditorState.create({ doc: normalise(content), extensions: [
     basicSetup,
-    sourceFolding(path),
+    editorDocumentPath.of(documentPathExtension(path)),
     sourceSearch(),
-    language,
     editorTheme.of(themeExtension()),
     lineFlashField,
     EditorView.lineWrapping,
@@ -436,7 +446,6 @@ function makeEditorState(path, content) {
       { key: 'Mod-Shift-s', run: view => { if (view.composing) return false; runTask(saveEveryDocument); return true; } },
       { key: 'Mod-Enter', run: view => { if (view.composing) return false; runTask(startBuild); return true; } },
     ])),
-    EditorView.updateListener.of(update => receiveEditorUpdate(update, path)),
   ] });
 }
 
@@ -621,11 +630,11 @@ async function openFile(path, { pane = state.activePane, focus = true } = {}) {
     let promise = state.pendingFiles.get(path);
     if (!promise) {
       promise = api(`/api/file?path=${encodeURIComponent(path)}`).then(file => {
-        if (generation !== state.projectGeneration) return null;
+        if (generation !== state.projectGeneration || state.pendingFiles.get(path) !== promise) return null;
         const loaded = makeDocument(file);
         state.documents.set(path, loaded);
         return loaded;
-      }).finally(() => { if (generation === state.projectGeneration) state.pendingFiles.delete(path); });
+      }).finally(() => { if (state.pendingFiles.get(path) === promise) state.pendingFiles.delete(path); });
       state.pendingFiles.set(path, promise);
     }
     try { doc = await promise; }
@@ -732,6 +741,7 @@ function renderTree() {
       details.dataset.testid = 'tree-folder'; details.dataset.path = path;
       details.open = !!filter || (state.directoryState.has(path) ? state.directoryState.get(path) : state.activePath.startsWith(path + '/'));
       const summary = document.createElement('summary'); summary.setAttribute('aria-label', t("{value0} フォルダー", { value0: path }));
+      summary.setAttribute('aria-haspopup', 'menu'); summary.setAttribute('aria-keyshortcuts', 'Shift+F10 F2 Delete');
       const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       icon.classList.add('button-icon', 'folder-icon'); icon.setAttribute('viewBox', '0 0 24 24'); icon.setAttribute('aria-hidden', 'true');
       const outline = document.createElementNS('http://www.w3.org/2000/svg', 'path'); outline.setAttribute('d', 'M2 6h7l2 2h11v12H2ZM2 6V4h7l2 2h9v2'); icon.append(outline);
@@ -747,6 +757,7 @@ function renderTree() {
       button.type = 'button'; button.className = `file-button${file.path === state.activePath ? ' active' : ''}`;
       button.dataset.testid = `file-${file.path}`; button.dataset.path = file.path; button.dataset.kind = fileKind(file); button.title = file.path; button.disabled = !!state.operation;
       button.setAttribute('aria-current', String(file.path === state.activePath));
+      button.setAttribute('aria-haspopup', 'menu'); button.setAttribute('aria-keyshortcuts', 'Shift+F10 F2 Delete');
       const type = document.createElement('span'); type.className = 'file-type'; type.setAttribute('aria-hidden', 'true');
       type.textContent = basename(file.path).includes('.') ? file.path.split('.').pop().slice(0, 4) : fileKind(file) === 'text' ? 'txt' : 'file';
       const name = document.createElement('span'); name.className = 'file-name'; name.textContent = basename(file.path);
@@ -879,6 +890,49 @@ async function closeDocument(doc) {
     else removeDraft(doc.draftId);
   }
   await removeOpenFile(doc.path);
+}
+
+async function closeAllDocuments() {
+  if (state.operation || state.closed || !state.tabOrder.length) return;
+  setOperation('closing');
+  try {
+    await Promise.allSettled([...state.documents.values()].map(doc => doc.saving).filter(Boolean));
+    const dirty = dirtyDocuments();
+    if (dirty.length) {
+      const answer = await choose({
+        title: t('すべてのタブを閉じますか？'),
+        description: dirty.map(doc => doc.path).join('\n') + '\n\n' + t('未保存の変更があります．保存してからすべてのタブを閉じますか？'),
+        primary: t('保存して閉じる'), secondary: t('保存せずに閉じる'),
+      });
+      if (answer === 'cancel') return;
+      if (answer === 'primary') {
+        await saveAll();
+        if (dirtyDocuments().length) return;
+      } else {
+        for (const doc of dirty) {
+          removeDraft(doc.draftId);
+          updateIndex(doc.path, doc.savedDoc.toString(), false);
+        }
+        rebuildIndex();
+      }
+    }
+    rememberEditorPosition();
+    ++state.openSequence;
+    state.pendingFiles.clear();
+    destroyEditors();
+    state.documents.clear(); state.assets.clear(); state.tabOrder = [];
+    state.activePath = ''; state.lastMarkdownPath = '';
+    assetPreview.hide(); markdownPreview.reset();
+    $('editor').hidden = true; $('editor-empty').hidden = false;
+    $('active-filename').textContent = t('原稿');
+    $('active-filename').removeAttribute('title');
+    $('save-status').textContent = ''; $('conflict-banner').hidden = true;
+    document.title = 'Local TeX Web Editor';
+    updateSourceLayout(); renderTabs(); renderTree(); renderOutline(); renderRecovery();
+    updateCursor(); updatePreviewNote(); updateDocumentPreview();
+    persistSession(); await sessionStore.flush();
+    clearError();
+  } finally { setOperation(''); }
 }
 
 async function removeOpenFile(path) {
@@ -1180,12 +1234,110 @@ async function refreshFiles() {
   await applyMeta(meta); await indexProject(true); toast(t("ファイル一覧を更新しました．"));
 }
 
+function showNewFile(folder = '') {
+  if (!state.meta?.project || state.operation || state.closed) return;
+  $('new-file-path').value = folder ? `${folder}/` : '';
+  $('new-file-error').hidden = true; $('new-file-dialog').showModal(); $('new-file-path').focus();
+  $('new-file-path').setSelectionRange($('new-file-path').value.length, $('new-file-path').value.length);
+}
+
+async function beginFileAction() {
+  setOperation('file-action');
+  await state.saveQueue;
+  await Promise.allSettled([...state.pendingFiles.values()]);
+  setOperation('file-action');
+  syncDrafts(); persistSession();
+}
+
+async function inspectOpenDocuments(entry) {
+  for (const doc of state.documents.values()) {
+    if (!entryContains(entry, doc.path)) continue;
+    const revision = entry.directory ? (await api(`/api/file?path=${encodeURIComponent(doc.path)}`)).revision : entry.contentRevision;
+    if (doc.revision !== revision || doc.conflict) throw new Error(`${doc.path}\n${fileActionText('stale')}`);
+  }
+}
+
+function assertNewFilePathAvailable(path, sourceEntry = null) {
+  const candidates = [...state.documents.keys(), ...state.assets.keys(), ...state.tabOrder, ...state.pendingFiles.keys(), ...(state.drafts.entries || []).map(draft => draft.path)];
+  const conflict = fileDestinationConflict(path, candidates, { source: sourceEntry, platform: state.meta?.platform });
+  if (conflict) throw new Error(`${conflict}\n${fileActionText('occupied')}`);
+}
+
+async function applyEntryChange(result) {
+  const { oldPath, path, directory, removed } = result;
+  if (!oldPath) { await applyMeta(result.state); persistSession(); return; }
+  rememberEditorPosition(); ++state.projectGeneration;
+  state.pendingFiles.clear(); clearTimeout(state.outlineTimer);
+  const affected = value => !!value && entryContains({ path: oldPath, directory }, value);
+  const mapped = value => affected(value) ? (removed ? '' : mapEntryPath(value, oldPath, path, directory)) : value;
+  const wasActive = affected(state.activePath), wasMarkdown = affected(state.lastMarkdownPath);
+  const previousPane = state.activePane;
+  for (const slot of Object.values(editorSlots)) { slot.openSequence = (slot.openSequence || 0) + 1; slot.pendingPath = ''; }
+  if (removed) {
+    for (const [name, slot] of Object.entries(editorSlots)) if (affected(slot.path)) destroyEditorSlot(name);
+    for (const key of state.documents.keys()) if (affected(key)) state.documents.delete(key);
+    for (const key of state.assets.keys()) if (affected(key)) state.assets.delete(key);
+    if (wasActive) { state.activePath = ''; state.editor = null; assetPreview.hide(); }
+    if (!editorSlots.secondary.view) state.splitEditors = false;
+  } else {
+    for (const slot of Object.values(editorSlots)) slot.path = mapped(slot.path);
+    const documents = [...state.documents];
+    for (const [key, doc] of documents) if (affected(key)) { state.documents.delete(key); doc.path = mapped(key); state.documents.set(doc.path, doc); }
+    for (const [key, asset] of [...state.assets]) if (affected(key)) { state.assets.delete(key); asset.path = mapped(key); state.assets.set(asset.path, asset); }
+    state.activePath = mapped(state.activePath);
+    for (const [key, doc] of documents) if (affected(key)) {
+      applyDocumentTransaction(doc, doc.state.update({ effects: [editorDocumentPath.reconfigure(documentPathExtension(doc.path)), editorCompletion.reconfigure(completionExtension(doc.path))] }));
+    }
+  }
+  state.tabOrder = state.tabOrder.map(mapped).filter(Boolean);
+  state.lastMarkdownPath = mapped(state.lastMarkdownPath);
+  state.directoryState = new Map([...state.directoryState].map(([key, value]) => [mapped(key), value]).filter(([key]) => key));
+  if (state.session) state.session.positions = Object.fromEntries(Object.entries(state.session.positions || {}).map(([key, value]) => [mapped(key), value]).filter(([key]) => key));
+  state.drafts = { version: 1, updatedAt: Date.now(), entries: (state.drafts.entries || []).filter(item => !removed || !affected(item.path)).map(item => ({ ...item, path: mapped(item.path) })) };
+  sessionStore.write(`drafts:${state.meta.project.root}`, state.drafts, 0);
+  navigationHistory?.mapEntries(location => {
+    for (const key of ['source', 'asset', 'markdown']) {
+      if (!location[key]?.path || !affected(location[key].path)) continue;
+      if (removed) return null;
+      location[key].path = mapped(location[key].path);
+    }
+    return location;
+  });
+  if (wasMarkdown) markdownPreview.reset();
+  state.texIndex.clear(); state.indexing = false; state.indexError = ''; rebuildIndex();
+  await applyMeta(result.state);
+  if (state.build) {
+    state.build.sourceChanged = true;
+    if (state.build.pdfReady) state.build.pdfSourceChanged = true;
+  }
+  if (wasActive && removed) {
+    const pane = editorSlots[previousPane].view ? previousPane : editorSlots.primary.view ? 'primary' : editorSlots.secondary.view ? 'secondary' : null;
+    if (pane) activateEditorPane(pane);
+    else {
+      state.activePane = 'primary'; $('editor').hidden = true; $('editor-empty').hidden = false;
+      $('active-filename').textContent = t('原稿'); $('save-status').textContent = ''; $('conflict-banner').hidden = true;
+      document.title = 'Local TeX Web Editor';
+    }
+  } else if (state.documents.has(state.activePath)) activateEditorPane(state.activePane);
+  updateSourceLayout(); renderTree(); renderTabs(); renderPaneSelectors(); renderOutline(); renderRecovery(); renderControls(); updateCursor(); updatePreviewNote(); updateDocumentPreview({ immediate: true });
+  syncDrafts(); persistSession();
+  return async () => {
+    if ((!state.activePath || !editorSlots.primary.path) && state.tabOrder.length) {
+      await openFile(state.tabOrder[0], { pane: 'primary', focus: !state.activePath });
+      if (previousPane === 'secondary' && editorSlots.secondary.view) activateEditorPane(previousPane);
+    }
+    else if (wasActive && state.assets.has(state.activePath)) await selectAsset(state.assets.get(state.activePath));
+    await indexProject(true); persistSession();
+  };
+}
+
 async function createFile(event) {
   event.preventDefault(); if (state.operation) return;
   const path = $('new-file-path').value.trim().replace(/\\/g, '/'); if (!path) return;
   setOperation('creating'); setDialogBusy($('new-file-dialog'), true); $('new-file-error').hidden = true;
   let created = null;
   try {
+    assertNewFilePathAvailable(path);
     const file = await api('/api/file', { method: 'PUT', body: { path, content: '', revision: '' } });
     created = makeDocument(file); state.documents.set(file.path, created);
     const meta = await api('/api/state'); await applyMeta(meta);
@@ -1336,6 +1488,7 @@ function renderControls() {
   $('welcome-open').disabled = busy;
   $('shutdown-button').disabled = busy;
   $('new-file').disabled = busy || !project;
+  $('close-all-tabs').disabled = busy || !state.tabOrder.length;
   $('refresh-files').disabled = busy || !project;
   $('download-pdf').disabled = !state.build?.pdfReady || state.closed;
   $('copy-log').disabled = !state.fullLog;
@@ -1345,6 +1498,8 @@ function renderControls() {
   $('project-search-button').disabled = busy || !project;
   $('split-editors').disabled = busy || !doc;
   for (const id of ['reference-tools', 'document-history', 'insert-image', 'insert-table']) $(id).disabled = busy || !doc;
+  for (const id of ['markdown-new-page', 'markdown-export-pdf']) $(id).disabled = busy || !useMarkdown;
+  $('pdf-export-text').disabled = busy || !project;
   for (const id of ['project-templates', 'welcome-template']) $(id).disabled = busy || running;
   for (const slot of Object.values(editorSlots)) slot.select.disabled = busy;
   for (const control of $('markdown-editing').querySelectorAll('button, select')) control.disabled = busy;
@@ -1452,9 +1607,10 @@ function editorLanguageExtension() {
     EditorState.phrases.of({ 'Find': t('検索'), 'Replace': t('置換'), 'next': t('次'), 'previous': t('前'), 'all': t('すべて'), 'match case': t('大文字と小文字を区別'), 'by word': t('単語単位'), 'regexp': t('正規表現'), 'replace': t('置換'), 'replace all': t('すべて置換'), 'close': t('閉じる'), 'Go to line': t('行へ移動'), 'go': t('移動'), 'Fold line': t('折りたたむ'), 'Unfold line': t('展開') }),
   ];
 }
-function applyLanguage(language) {
-  state.preferences.language = setLanguage(language);
-  $('language-setting').value = state.preferences.language;
+function applyLanguage(language, { preview = false } = {}) {
+  const selected = setLanguage(language);
+  if (!preview) state.preferences.language = selected;
+  $('language-setting').value = selected;
   for (const doc of state.documents.values()) {
     const transaction = doc.state.update({ effects: editorLanguage.reconfigure(editorLanguageExtension()) });
     applyDocumentTransaction(doc, transaction);
@@ -1760,7 +1916,8 @@ async function openInitialFile() {
   const generation = state.projectGeneration;
   const workspace = state.session?.workspace;
   state.tabOrder = restoredTabPaths(state.session, project.files || []);
-  const file = project.files?.find(item => item.path === (workspace?.primary?.path || state.session?.activePath)) || project.files?.find(item => item.path === project.main) || project.files?.find(item => /\.tex$/i.test(item.path)) || project.files?.[0];
+  const noOpenTabs = Array.isArray(state.session?.tabs) && !state.session.tabs.length && !state.session.activePath && !workspace?.primary?.path && !workspace?.secondary?.path;
+  const file = !noOpenTabs && (project.files?.find(item => item.path === (workspace?.primary?.path || state.session?.activePath)) || project.files?.find(item => item.path === project.main) || project.files?.find(item => /\.tex$/i.test(item.path)) || project.files?.[0]);
   try {
     if (file) await openFile(file.path, { pane: 'primary', focus: false });
     if (generation !== state.projectGeneration) return;
@@ -2154,9 +2311,26 @@ referenceTools = createReferenceTools({
   onError: showError,
 });
 insertTools = createInsertTools({ api, getDocument: currentDocumentSnapshot, getProject: () => state.meta?.project, insertText: insertSourceText, refreshProject: refreshFiles, focusDocument: focusSourceDocument, onError: showError });
+documentTools = createDocumentTools({
+  api, token, getDocument: currentDocumentSnapshot, getProject: () => state.meta?.project,
+  assertNewPath: assertNewFilePathAvailable,
+  getPDF: () => {
+    if (!assetPreview.root.hidden && assetPreview.document && assetPreview.ready) return { document: assetPreview.document, path: assetPreview.file.path };
+    if (!$('pdf-preview').hidden && viewer.document && viewer.ready) return { document: viewer.document, path: viewer.documentMain || 'document.pdf' };
+    return null;
+  },
+  insertText: insertSourceText, refreshProject: refreshFiles, openFile, focusDocument: focusSourceDocument, onError: showError,
+});
 templateManager = createTemplateManager({ api, getProject: () => state.meta?.project, saveAll, openProject: openCreatedProject, onError: showError });
 logIssues = createLogIssues({ container: $('log-locations'), onOpen: (path, line) => runTask(() => navigate(() => goToSource(path, line))) });
 markdownEditing = createMarkdownEditing({ container: $('markdown-editing'), getDocument: currentDocumentSnapshot, applyEdit: applyMarkdownEdit, focusDocument: focusSourceDocument, onTable: () => insertTools.openTable(), onError: showError });
+createFileActions({
+  tree: $('file-tree'), getProject: () => state.meta?.project,
+  isBlocked: () => !!state.operation || state.closed || state.externalProjectChanged || isRunning() || !!document.querySelector('dialog[open]'),
+  begin: beginFileAction, end: () => setOperation(''), inspectOpenDocuments, checkDestination: assertNewFilePathAvailable, api,
+  getUnsavedPaths: entry => [...new Set([...state.documents.values()].filter(doc => isDirty(doc) && entryContains(entry, doc.path)).map(doc => doc.path).concat((state.drafts.entries || []).filter(draft => entryContains(entry, draft.path)).map(draft => draft.path)))],
+  onChanged: applyEntryChange, onNewFile: showNewFile, onError: showError, onNotice: toast,
+});
 
 help = createHelp({
   button: $('help-button'), dialog: $('help-dialog'), getMeta: () => state.meta, isClosed: () => state.closed,
@@ -2194,6 +2368,20 @@ systemColorScheme.addEventListener('change', () => {
 
 onClick('show-project', showProjectDialog); onClick('welcome-open', showProjectDialog);
 onClick('settings-button', showSettings); onClick('main-document', showSettings);
+$('language-setting').addEventListener('change', event => {
+  if ($('settings-dialog').open) applyLanguage(event.target.value, { preview: true });
+});
+$('settings-dialog').addEventListener('close', () => {
+  if (getLanguage() !== state.preferences.language) applyLanguage(state.preferences.language);
+});
+onClick('close-all-tabs', closeAllDocuments);
+$('editor-tabs').addEventListener('wheel', event => {
+  const tabs = $('editor-tabs');
+  if (Math.abs(event.deltaX) > Math.abs(event.deltaY) || tabs.scrollWidth <= tabs.clientWidth) return;
+  const before = tabs.scrollLeft;
+  tabs.scrollLeft += event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? tabs.clientWidth : 1);
+  if (tabs.scrollLeft !== before) event.preventDefault();
+}, { passive: false });
 $('tex-completion-setting').addEventListener('change', () => { $('completion-on-type-setting').disabled = !$('tex-completion-setting').checked; });
 onClick('open-appearance', showAppearance);
 onClick('appearance-reset', () => { appearanceDraft = normalizeAppearance(); renderAppearanceForm(); });
@@ -2220,6 +2408,9 @@ onClick('reference-tools', () => openWritingTool(() => referenceTools.open()));
 onClick('document-history', () => openWritingTool(() => documentHistory.open()));
 onClick('insert-image', () => openWritingTool(() => insertTools.openImage()));
 onClick('insert-table', () => openWritingTool(() => insertTools.openTable()));
+onClick('markdown-new-page', () => openWritingTool(() => documentTools.openMarkdownPage()));
+onClick('markdown-export-pdf', () => openWritingTool(() => documentTools.openMarkdownPDF()));
+onClick('pdf-export-text', () => openWritingTool(() => documentTools.openPDFText()));
 onClick('project-templates', () => openWritingTool(() => templateManager.open()));
 onClick('welcome-template', () => templateManager.open());
 for (const [name, slot] of Object.entries(editorSlots)) slot.select.addEventListener('change', () => runTask(() => openFile(slot.select.value, { pane: name })));
@@ -2288,7 +2479,7 @@ $('recovery-file').addEventListener('change', () => runTask(inspectDraft));
 onClick('find-button', () => { if (state.editor && activeDocument()) openSourceSearchPanel(state.editor); });
 onClick('dismiss-error', clearError); onClick('review-conflict', () => resolveConflict(activeDocument()));
 onClick('log-toggle', () => setLogVisible($('log-panel').hidden)); onClick('close-log', () => setLogVisible(false));
-onClick('new-file', () => { if (!state.meta?.project) return; $('new-file-path').value = ''; $('new-file-error').hidden = true; $('new-file-dialog').showModal(); });
+onClick('new-file', () => showNewFile());
 $('project-form').addEventListener('submit', event => { runTask(() => openProject(event)); event.preventDefault(); });
 $('settings-form').addEventListener('submit', event => { runTask(() => saveSettings(event)); event.preventDefault(); });
 $('new-file-form').addEventListener('submit', event => { runTask(() => createFile(event)); event.preventDefault(); });
@@ -2334,18 +2525,24 @@ window.addEventListener('beforeunload', event => {
   syncDrafts(); persistSession(); sessionStore.flush().catch(() => {});
   if (dirtyDocuments().length || [...state.documents.values()].some(doc => doc.saving)) { event.preventDefault(); event.returnValue = ''; }
 });
-window.addEventListener('pagehide', () => {
+function pauseBrowserSession() {
   if (state.closed) return;
   syncDrafts(); persistSession(); sessionStore.flushOnHide();
   browserSession.stop();
-});
-window.addEventListener('pageshow', () => {
+}
+function resumeBrowserSession(replaceConnection = false) {
   if (state.closed) return;
-  browserSession.start();
+  if (replaceConnection) browserSession.resume();
+  else browserSession.start();
   runTask(() => sessionStore.resume());
-});
+  runTask(heartbeat); scheduleAutoSave();
+}
+window.addEventListener('pagehide', pauseBrowserSession);
+window.addEventListener('pageshow', () => resumeBrowserSession());
+document.addEventListener('freeze', pauseBrowserSession);
+document.addEventListener('resume', () => resumeBrowserSession(true));
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') { runTask(heartbeat); scheduleAutoSave(); }
+  if (document.visibilityState === 'visible') resumeBrowserSession(true);
   else { syncDrafts(); persistSession(); sessionStore.flush().catch(() => {}); }
 });
 setInterval(() => { if (isRunning()) updateElapsed(); }, 1000);

@@ -1,4 +1,7 @@
 export const english = {
+  'すべてのタブを閉じる': 'Close all tabs',
+  'すべてのタブを閉じますか？': 'Close all tabs?',
+  '未保存の変更があります．保存してからすべてのタブを閉じますか？': 'There are unsaved changes. Save them before closing all tabs?',
   'このアプリのインストールと更新は Windows が管理しています．スタートメニューから起動できます．': 'Windows manages installation and updates for this app. Open it from the Start menu.',
   'アプリを終了しました': 'The app has closed',
   'この PC に接続済み': 'Connected to this computer',

@@ -4,9 +4,10 @@ import { writingEnglish } from './locales/writing-en.js';
 import { markdownEditingEnglish } from './locales/markdown-editing-en.js';
 import { pdfAppearanceEnglish } from './locales/pdf-appearance-en.js';
 import { outlineEnglish } from './locales/outline-en.js';
+import { documentToolsEnglish } from './locales/document-tools-en.js';
 import { shortcutModifier } from './platform-keys.js';
 
-Object.assign(english, importsEnglish, writingEnglish, markdownEditingEnglish, pdfAppearanceEnglish, outlineEnglish);
+Object.assign(english, importsEnglish, writingEnglish, markdownEditingEnglish, pdfAppearanceEnglish, outlineEnglish, documentToolsEnglish);
 
 let language = 'en';
 const listeners = new Set();

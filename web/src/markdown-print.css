@@ -1,0 +1,22 @@
+@page { size: A4; margin: 16mm; }
+:root { color-scheme: light; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: #fff; color: #202124; }
+body { padding: 20px 24px; }
+.markdown-body { margin: 0 auto; padding: 0; max-width: 178mm; min-width: 0; font-size: 11pt; line-height: 1.7; overflow-wrap: anywhere; }
+.markdown-body :is(h1, h2, h3, h4, h5, h6) { break-after: avoid-page; color: #111; }
+.markdown-body :is(p, li) { orphans: 3; widows: 3; }
+.markdown-body a { color: #175f9c; }
+.markdown-body img { max-width: 100%; max-height: 245mm; object-fit: contain; break-inside: avoid; }
+.markdown-body pre { overflow: visible; white-space: pre-wrap; overflow-wrap: anywhere; background: #f3f4f5; color: #202124; border: 1px solid #d7d9dc; }
+.markdown-body pre code { white-space: pre-wrap; overflow-wrap: anywhere; }
+.markdown-body table { display: table; width: 100%; max-width: 100%; table-layout: fixed; overflow: visible; font-size: .92em; }
+.markdown-body :is(th, td) { overflow-wrap: anywhere; word-break: normal; }
+.markdown-body thead { display: table-header-group; }
+.markdown-body tr { break-inside: avoid; }
+.markdown-body blockquote { color: #45484d; border-color: #aeb4bd; }
+.markdown-body .katex-display { overflow: visible; break-inside: avoid; }
+@media print {
+  body { padding: 0; }
+  .markdown-body { max-width: none; }
+}

@@ -23,6 +23,8 @@
   <link rel="stylesheet" href="/imports.css">
   <link rel="stylesheet" href="/log-issues.css">
   <link rel="stylesheet" href="/markdown-editing.css">
+  <link rel="stylesheet" href="/document-tools.css">
+  <link rel="stylesheet" href="/file-actions.css">
   <link rel="stylesheet" href="/katex/katex.min.css">
   <script type="module" src="/app.js"></script>
 </head>
@@ -105,6 +107,9 @@
             <button type="button" id="document-history" data-i18n="編集履歴を開く">Document history</button>
             <button type="button" id="insert-image" data-i18n="画像を挿入">Insert an image</button>
             <button type="button" id="insert-table" data-i18n="表を挿入">Insert a table</button>
+            <button type="button" id="markdown-new-page" data-i18n="新しい Markdown ページ">New Markdown page</button>
+            <button type="button" id="markdown-export-pdf" data-i18n="Markdown を PDF に保存">Save Markdown as PDF</button>
+            <button type="button" id="pdf-export-text" data-i18n="PDF をテキストに変換">Convert PDF to text</button>
             <button type="button" id="project-templates" data-i18n="テンプレートを管理">Manage templates</button>
           </div></details>
         </div>
@@ -112,6 +117,7 @@
           <h2 id="active-filename" class="sr-only"><span data-i18n="原稿">Source</span></h2>
           <div id="editor-tabs" class="editor-tabs" role="tablist" aria-label="Open files" data-i18n-aria-label="開いているファイル"></div>
           <div class="title-actions">
+            <button type="button" id="close-all-tabs" data-testid="close-all-tabs" class="icon-button" title="Close all tabs" aria-label="Close all tabs" disabled data-i18n-title="すべてのタブを閉じる" data-i18n-aria-label="すべてのタブを閉じる"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h14v14M3 7h14v14H3Z"/><path d="m7 11 6 6m0-6-6 6"/></svg></button>
             <button type="button" id="synctex-forward" data-testid="synctex-forward" class="icon-button" title="Show the cursor location in the PDF (also Ctrl+click)" aria-label="Go to the matching PDF location" disabled data-i18n-title="カーソル位置を PDF で表示 ({modifier}+クリックでも移動)" data-i18n-aria-label="PDF の位置へ移動"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3h7v7m0-7L10 14M20 14v6H4V4h6"/></svg></button>
             <button type="button" id="find-button" class="icon-button" title="Find and replace (Ctrl+F)" aria-label="Find and replace in source" disabled data-i18n-title="検索・置換 ({modifier}+F)" data-i18n-aria-label="原稿を検索・置換"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg></button>
             <button type="button" id="save-button" data-testid="save-button" class="icon-button" title="Save current file (Ctrl+S)" aria-label="Save current file" disabled data-i18n-title="現在のファイルを保存 ({modifier}+S)" data-i18n-aria-label="現在のファイルを保存"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h15l3 3v15H3ZM7 3v6h10V3M7 21v-8h10v8"/></svg></button>
@@ -232,9 +238,9 @@
   <dialog id="settings-dialog" class="dialog" aria-labelledby="settings-title">
     <form id="settings-form">
       <div class="dialog-heading"><h2 id="settings-title"><span data-i18n="編集とコンパイルの設定">Editing and compilation settings</span></h2><button type="button" class="icon-button" data-close-dialog="settings-dialog" aria-label="Close" data-i18n-aria-label="閉じる">×</button></div>
-      <div class="field-group"><label class="field-label" for="language-setting"><span data-i18n="表示言語">Language</span></label><select id="language-setting" data-testid="language-setting"><option value="en" lang="en">English</option><option value="ja" lang="ja">日本語</option></select></div>
+      <div class="field-group"><label class="field-label" for="language-setting"><span lang="ja">言語設定</span> / <span lang="en">Language</span></label><select id="language-setting" data-testid="language-setting"><option value="en" lang="en">English</option><option value="ja" lang="ja">日本語</option></select></div>
       <div class="field-group"><label class="checkbox-field"><input type="checkbox" id="autosave-setting" data-testid="autosave-setting"><span><span data-i18n="編集が落ち着いたら自動で保存する">Save automatically after a pause in editing</span></span></label><p class="field-help"><span data-i18n="コンパイル中の自動保存は，終了するまで待ちます．自動保存を切っても，編集中の草稿は PC に記録されます．">Autosave waits for compilation to finish. Drafts are recorded on this computer even when autosave is off.</span></p></div>
-      <div class="field-group"><label class="checkbox-field"><input type="checkbox" id="tex-completion-setting" data-testid="tex-completion-setting"><span data-i18n="TeX の入力補完を使う">Enable TeX completion</span></label><p class="field-help" data-i18n="コマンド，環境，引用，相互参照の候補を表示します．環境は対応する終了まで挿入できます．">Show commands, environments, citations, and cross-references. Environments can include their matching end.</p><label class="checkbox-field"><input type="checkbox" id="completion-on-type-setting" data-testid="completion-on-type-setting"><span data-i18n="入力中に候補を自動で表示する">Show suggestions while typing</span></label><p class="field-help" data-i18n="自動表示をオフにしても Ctrl + Space で候補を開けます．Enter で確定し，Tab で次の入力箇所へ進みます．">With automatic suggestions off, use Ctrl + Space to open them. Enter accepts a suggestion and Tab moves to the next field.</p></div>
+      <div class="field-group completion-settings"><label class="checkbox-field"><input type="checkbox" id="tex-completion-setting" data-testid="tex-completion-setting"><span data-i18n="TeX の入力補完を使う">Enable TeX completion</span></label><p class="field-help" data-i18n="コマンド，環境，引用，相互参照の候補を表示します．環境は対応する終了まで挿入できます．">Show commands, environments, citations, and cross-references. Environments can include their matching end.</p><label class="checkbox-field"><input type="checkbox" id="completion-on-type-setting" data-testid="completion-on-type-setting"><span data-i18n="入力中に候補を自動で表示する">Show suggestions while typing</span></label><p class="field-help" data-i18n="自動表示をオフにしても Ctrl + Space で候補を開けます．Enter で確定し，Tab で次の入力箇所へ進みます．">With automatic suggestions off, use Ctrl + Space to open them. Enter accepts a suggestion and Tab moves to the next field.</p></div>
       <div class="field-group"><label class="field-label" for="editor-font-size"><span data-i18n="エディタの文字サイズ">Editor font size</span></label><div class="font-size-field"><input id="editor-font-size" data-testid="editor-font-size" type="number" min="8" max="40" step="0.1" value="14" required><span>px</span></div><p class="field-help"><span data-i18n="8〜40 px で指定できます．既定は 14 px です．原稿上の Ctrl + ホイールやピンチ操作でも変更できます．">Choose 8–40 px. The default is 14 px. You can also use Ctrl + wheel or pinch in the editor.</span></p></div>
       <div class="field-group appearance-entry"><div><span class="field-label" data-i18n="外観">Appearance</span><p class="field-help" data-i18n="モード，配色，アクセント，原稿のフォントを選びます．">Choose the mode, color scheme, accent, and editor font.</p></div><button type="button" id="open-appearance" data-testid="open-appearance" class="button"><span data-i18n="外観を開く">Open appearance</span></button></div>
       <div class="field-group"><label class="field-label" for="tex-bin"><span data-i18n="TeX Live の bin フォルダー">TeX Live bin folder</span></label><input id="tex-bin" data-testid="tex-bin" type="text" placeholder="Leave blank to detect automatically" autocomplete="off" spellcheck="false" data-i18n-placeholder="空欄で自動検索"><p id="tex-tool-status" class="field-help"></p></div>

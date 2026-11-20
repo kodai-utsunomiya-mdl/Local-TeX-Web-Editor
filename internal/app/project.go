@@ -283,11 +283,13 @@ func chooseMain(root string, files []ProjectFile) string {
 
 func isTextFile(path string) bool {
 	base := strings.ToLower(filepath.Base(path))
-	if base == "latexmkrc" || base == ".latexmkrc" || base == "makefile" {
+	if base == "latexmkrc" || base == ".latexmkrc" || base == "makefile" || base == "dockerfile" || base == "cmakelists.txt" || base == ".gitignore" || base == ".gitattributes" || base == ".editorconfig" || base == ".env" {
 		return true
 	}
 	switch strings.ToLower(filepath.Ext(path)) {
 	case ".tex", ".bib", ".sty", ".cls", ".bst", ".clo", ".def", ".cfg", ".bbx", ".cbx", ".lbx", ".dtx", ".ins", ".ltx", ".tikz", ".pgf", ".txt", ".md", ".markdown", ".csv", ".tsv", ".json", ".yaml", ".yml", ".toml", ".lua", ".asy":
+		return true
+	case ".py", ".pyw", ".pyi", ".ipynb", ".js", ".mjs", ".cjs", ".jsx", ".ts", ".tsx", ".c", ".h", ".cc", ".cpp", ".cxx", ".hh", ".hpp", ".hxx", ".cs", ".java", ".kt", ".kts", ".go", ".rs", ".r", ".rb", ".sh", ".bash", ".zsh", ".fish", ".ps1", ".psm1", ".bat", ".cmd", ".html", ".htm", ".css", ".scss", ".less", ".xml", ".sql", ".ini", ".conf", ".properties", ".log", ".cmake", ".jl", ".pl", ".pm", ".php":
 		return true
 	default:
 		return false

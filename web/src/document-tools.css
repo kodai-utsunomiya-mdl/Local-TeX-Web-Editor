@@ -1,0 +1,8 @@
+.document-print-dialog { width: min(960px, calc(100vw - 32px)); }
+.document-print-dialog .import-body { display: flex; flex-direction: column; gap: 12px; }
+.document-print-dialog .import-field { margin: 0; }
+.document-print-preview { width: 100%; height: min(48vh, 480px); min-height: 160px; border: 1px solid var(--border-strong); border-radius: 6px; background: #fff; }
+.document-conversion-status { margin: 10px 0; min-height: 1.7em; font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
+.document-conversion-progress { width: 100%; height: 10px; accent-color: var(--accent); }
+.document-text-preview textarea { min-height: 160px; max-height: 32vh; }
+#markdown-page-link { overflow-wrap: anywhere; }

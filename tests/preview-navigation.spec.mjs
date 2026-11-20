@@ -129,11 +129,22 @@ for (const kind of ['pdf', 'asset']) {
       });
       expect(layout.height).toBeLessThanOrEqual(40);
       expect(layout.overflow).toBe(false); expect(layout.outside).toEqual([]);
+      const zoomIn = page.locator(`#${kind}-zoom-in`), zoomOut = page.locator(`#${kind}-zoom-out`);
+      await expect(zoomIn).toBeVisible(); await expect(zoomOut).toBeVisible();
+      if (kind === 'pdf') await expect(page.locator('#download-pdf')).toBeVisible();
+      const scale = () => page.evaluate(() => (window.preview.pageViewer || window.preview.pdfViewer).currentScale);
+      const beforeZoom = await scale();
+      await zoomIn.click(); await expect.poll(scale).toBeGreaterThan(beforeZoom);
+      const enlarged = await scale();
+      await zoomOut.click(); await expect.poll(scale).toBeLessThan(enlarged);
+      if ([500, 240].includes(width)) await page.screenshot({ path: testInfo.outputPath(`${kind}-pdf-toolbar-${width}-closed.png`) });
       await expect(pageInput).toBeVisible();
       await pageInput.fill('2'); await pageInput.press('Enter');
       await expect.poll(() => page.evaluate(() => window.preview.pageNumber || window.preview.pdfViewer.currentPageNumber)).toBe(2);
+      if (!await page.locator(`#${kind}-prev`).isVisible()) await showPDFControls(page, kind);
       await page.locator(`#${kind}-prev`).click();
       await expect(pageInput).toHaveValue('1');
+      if (await page.getByTestId(`${kind}-more`).isVisible()) await page.keyboard.press('Escape');
 
       await showPDFControls(page, kind);
       const zoom = page.locator(`#${kind}-zoom`), toggle = page.getByTestId(`${kind}-dark-mode`);
