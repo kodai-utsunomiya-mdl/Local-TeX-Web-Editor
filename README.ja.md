@@ -401,7 +401,7 @@ PDF の操作欄は 1 行で表示する．狭い表示欄でも「＋」「−�
 | 対応環境 | ダウンロードする ZIP | 展開後のアプリ本体 |
 | --- | ---: | ---: |
 | Windows x64 | 約 **8 MB** | 約 **17 MB** (`.exe`) |
-| macOS，Apple Silicon + Intel | 約 **15 MB** | 約 **33 MB** (`.app`) |
+| macOS，Apple Silicon + Intel | 約 **15 MB** | 約 **34 MB** (`.app`) |
 
 ZIP には README，画像，ライセンスも含む．Mac のアプリは両方の CPU 向けの実行ファイルを収録している．冒頭の Windows ZIP と macOS のボタンから，対応する配布ファイルを取得できる．
 

@@ -401,7 +401,7 @@ The **v0.1.8** files have the sizes below, rounded to the nearest MB (1 MB = 1,0
 | Platform | ZIP download | App after extraction |
 | --- | ---: | ---: |
 | Windows x64 | About **8 MB** | About **17 MB** (`.exe`) |
-| macOS, Apple Silicon + Intel | About **15 MB** | About **33 MB** (`.app`) |
+| macOS, Apple Silicon + Intel | About **15 MB** | About **34 MB** (`.app`) |
 
 The ZIP also includes the README files, screenshots, and licenses. The macOS app contains both CPU versions. The Windows ZIP and macOS download buttons above link to the current release files.
 

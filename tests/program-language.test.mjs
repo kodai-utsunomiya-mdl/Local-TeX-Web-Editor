@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { EditorState, Compartment } from '@codemirror/state';
 import { ensureSyntaxTree } from '@codemirror/language';
-import { history, undo } from '@codemirror/commands';
+import { history, undo, redo } from '@codemirror/commands';
 import { programLanguage, programLanguageName } from '../web/src/program-language.js';
 import { absoluteProjectPath, entryContains, mapEntryPath, fileDestinationConflict } from '../web/src/file-actions.js';
 
@@ -44,13 +44,15 @@ test('only state keys that will actually move are excluded from destination conf
   }), decomposed);
 });
 
-test('changing a file extension can change syntax without losing Undo history', () => {
+test('changing a file extension can change syntax while Undo and Redo continue to update the document', () => {
   const syntax = new Compartment();
   let state = EditorState.create({ doc: 'old', extensions: [history(), syntax.of(programLanguage('notes.txt'))] });
   state = state.update({ changes: { from: 0, to: 3, insert: 'print("new")' }, userEvent: 'input' }).state;
   state = state.update({ effects: syntax.reconfigure(programLanguage('script.py')) }).state;
   assert.equal(undo({ state, dispatch: transaction => { state = transaction.state; } }), true);
   assert.equal(state.doc.toString(), 'old');
+  assert.equal(redo({ state, dispatch: transaction => { state = transaction.state; } }), true);
+  assert.equal(state.doc.toString(), 'print("new")');
 });
 
 test('folder path changes apply only inside that folder and copied paths use the host spelling', () => {

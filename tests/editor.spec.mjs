@@ -14,6 +14,7 @@ import { registerDocumentToolsTests } from './document-tools-workflow-cases.mjs'
 import { registerInterfaceWorkflowTests } from './interface-workflow-cases.mjs';
 import { registerFileOperationTests } from './file-operation-cases.mjs';
 import { showPDFControls } from './pdf-controls.mjs';
+import { launchLifecycleBrowser } from './lifecycle-browser.mjs';
 
 const repository = path.resolve(import.meta.dirname, '..');
 const fixture = path.join(import.meta.dirname, 'fixtures', 'japanese');
@@ -738,36 +739,60 @@ test('タブを閉じる確認を取り消すと，接続したまま原稿を�
   await quitApplication(session);
 });
 
-test('別のタブで作業してエディタが休止しても，戻って編集と保存を続けられる', async ({ page, context, session }) => {
-  await openProject(session);
-  await openEditor(page, session);
-  await setAutoSave(page, false);
-  const draft = '% タブが休止する前の未保存の本文\n';
-  await replaceEditor(page, draft);
-  const meta = await json(session, '/api/state');
-  const storageURL = `/api/storage?${new URLSearchParams({ key: `drafts:${meta.project.root}` })}`;
-  await expect.poll(async () => (await json(session, storageURL)).value?.entries?.some(entry => entry.content === draft) || false).toBe(true);
-  const address = page.url();
-  await page.evaluate(() => {
-    window.testLifecycle = { freezes: 0, resumes: 0 };
-    document.addEventListener('freeze', () => window.testLifecycle.freezes++);
-    document.addEventListener('resume', () => window.testLifecycle.resumes++);
+test('別のタブで作業してエディタが休止しても，戻って編集と保存を続けられる', async ({ session }, testInfo) => {
+  const lifecycleBrowser = await launchLifecycleBrowser(path.join(session.temp, 'lifecycle-browser'));
+  const { page, context } = lifecycleBrowser;
+  let cdp;
+  const lifecycle = [];
+  let connections = 0;
+  let completed = false;
+  page.on('response', response => {
+    if (new URL(response.url()).pathname === '/api/session' && response.status() === 200) connections++;
   });
-  const other = await context.newPage();
-  await other.goto('about:blank');
-  await other.bringToFront();
-  const cdp = await context.newCDPSession(page);
   try {
+    // Screencast recording also keeps Chromium rendering hidden pages. DOM
+    // snapshots and the observed events provide a trace without that override.
+    await context.tracing.stop();
+    await context.tracing.start({ screenshots: false, snapshots: true, sources: true });
+    cdp = await context.newCDPSession(page);
+    await openProject(session);
+    await openEditor(page, session);
+    await setAutoSave(page, false);
+    const draft = '% タブが休止する前の未保存の本文\n';
+    await replaceEditor(page, draft);
+    const meta = await json(session, '/api/state');
+    const storageURL = `/api/storage?${new URLSearchParams({ key: `drafts:${meta.project.root}` })}`;
+    await expect.poll(async () => (await json(session, storageURL)).value?.entries?.some(entry => entry.content === draft) || false).toBe(true);
+    const address = page.url();
+    await page.exposeFunction('recordLifecycleEvent', event => lifecycle.push(event));
+    await page.evaluate(() => {
+      for (const type of ['visibilitychange', 'freeze', 'resume']) {
+        document.addEventListener(type, event => {
+          window.recordLifecycleEvent({ type, trusted: event.isTrusted, visibility: document.visibilityState, time: performance.now() });
+        });
+      }
+    });
+    const other = await context.newPage();
+    await other.goto('about:blank');
+    await other.bringToFront();
+    await expect.poll(() => page.evaluate(() => document.visibilityState), { message: 'The editor must be hidden before freezing.' }).toBe('hidden');
     await cdp.send('Page.setWebLifecycleState', { state: 'frozen' });
+    await expect.poll(() => lifecycle.filter(event => event.type === 'freeze' && event.trusted).length,
+      { message: 'Chromium must dispatch its document freeze event.' }).toBe(1);
+    const connectionsBeforeResume = connections;
     // The page cannot run its retry timer during this interval.
     await delay(5600);
     expect(session.isRunning()).toBe(true);
     expect((await json(session, '/api/state')).project.root).toBe(meta.project.root);
-    const connected = page.waitForResponse(response => new URL(response.url()).pathname === '/api/session' && response.status() === 200);
+    expect(connections).toBe(connectionsBeforeResume);
     await cdp.send('Page.setWebLifecycleState', { state: 'active' });
+    await expect.poll(() => lifecycle.filter(event => event.type === 'resume' && event.trusted).length,
+      { message: 'Chromium must dispatch its document resume event.' }).toBe(1);
     await page.bringToFront();
-    await connected;
-    expect(await page.evaluate(() => window.testLifecycle)).toEqual({ freezes: 1, resumes: 1 });
+    const frozenAt = lifecycle.find(event => event.type === 'freeze').time;
+    const resumedAt = lifecycle.find(event => event.type === 'resume').time;
+    expect(resumedAt - frozenAt).toBeGreaterThanOrEqual(5500);
+    await expect.poll(() => connections, { message: 'The resumed editor must reopen its session stream.' }).toBeGreaterThan(connectionsBeforeResume);
     await expect(page.getByTestId('editor').locator('.cm-content')).toContainText(draft.trim());
     await expect(page.getByTestId('app-error')).not.toBeVisible();
     await expect(page.locator('#connection-status')).toHaveClass(/\bconnected\b/);
@@ -781,10 +806,21 @@ test('別のタブで作業してエディタが休止しても，戻って編�
     await expect(page.getByTestId('editor').locator('.cm-content')).toContainText('戻った後の追記');
     expect(page.url()).toBe(address);
     expect(session.isRunning()).toBe(true);
+    completed = true;
   } finally {
-    await cdp.send('Page.setWebLifecycleState', { state: 'active' }).catch(() => {});
-    await cdp.detach();
-    await other.close();
+    try {
+      await cdp?.send('Page.setWebLifecycleState', { state: 'active' }).catch(() => {});
+      await cdp?.detach().catch(() => {});
+      await testInfo.attach('page-lifecycle.json', { body: JSON.stringify({ lifecycle, connections }, null, 2), contentType: 'application/json' });
+      if (!completed) {
+        await page.screenshot({ path: testInfo.outputPath('lifecycle-failed.png'), timeout: 5000 }).catch(() => {});
+        await context.tracing.stop({ path: testInfo.outputPath('lifecycle-trace.zip') }).catch(() => {});
+      } else {
+        await context.tracing.stop();
+      }
+    } finally {
+      await lifecycleBrowser.close();
+    }
   }
 });
 

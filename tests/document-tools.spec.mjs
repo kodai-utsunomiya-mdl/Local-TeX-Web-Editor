@@ -41,10 +41,15 @@ test.beforeAll(async () => {
       });
       window.loadPDF = async data => { window.pdf = { path: 'notes/paper.pdf', document: await getDocument({ data: new Uint8Array(data), standardFontDataUrl: '/standard_fonts/' }).promise }; };
       window.pdfText = async data => {
-        const pdf = await getDocument({ data: new Uint8Array(data), standardFontDataUrl: '/standard_fonts/' }).promise;
-        const pages = [];
-        for (let page = 1; page <= pdf.numPages; page++) pages.push((await (await pdf.getPage(page)).getTextContent()).items.map(item => item.str || '').join(' '));
-        await pdf.destroy(); return pages;
+        const loadingTask = getDocument({ data: new Uint8Array(data), standardFontDataUrl: '/standard_fonts/' });
+        try {
+          const pdf = await loadingTask.promise;
+          const pages = [];
+          for (let page = 1; page <= pdf.numPages; page++) pages.push((await (await pdf.getPage(page)).getTextContent()).items.map(item => item.str || '').join(' '));
+          return pages;
+        } finally {
+          await loadingTask.destroy();
+        }
       };
       document.getElementById('new-page').onclick = () => window.tools.openMarkdownPage();
       document.getElementById('print').onclick = () => window.tools.openMarkdownPDF();
