@@ -13,7 +13,7 @@ import { AssetPreview } from './asset-preview.js';
 import { sourceSearch, openSourceSearchPanel } from './source-search.js';
 import { attachEditorZoom, prepareEditorResize } from './editor-zoom.js';
 import { createPanelLayout, normalizePanelLayout } from './panel-layout.js';
-import { normalizeAppearance, resolveAppearance } from './appearance.js';
+import { normalizeAppearance, normalizeHexColor, resolveAppearance } from './appearance.js';
 import { createHelp } from './help.js';
 import { stateForOtherView, restoredTabPaths } from './shared-editor.js';
 import { NavigationHistory, afterNavigationFrame } from './navigation-history.js';
@@ -1361,15 +1361,22 @@ function updateElapsed() {
 
 function updatePreviewNote() {
   const build = state.build;
+  updatePDFDetails();
   const note = $('pdf-note'); const label = $('pdf-state');
   note.hidden = true; note.classList.remove('error'); label.classList.remove('stale');
-  if (!build?.pdfReady) { label.textContent = ''; return; }
+  if (!build?.pdfReady) { label.textContent = t('コンパイル前'); return; }
   if (build.status === 'failed') { note.textContent = t("最新のコンパイルに失敗しました．前回成功した PDF を表示しています．"); note.classList.add('error'); label.textContent = t("前回の PDF"); }
   else if (build.status === 'cancelled') { note.textContent = t("コンパイルを停止しました．前回成功した PDF を表示しています．"); label.textContent = t("前回の PDF"); }
   else if (build.status === 'running') { note.textContent = t("コンパイル中です．完了すると PDF が更新されます．"); label.textContent = t("更新待ち"); }
   else if ((build.pdfSourceChanged ?? build.sourceChanged) || dirtyDocuments().some(doc => sourceAffectsPDF(doc.path))) { note.textContent = t("原稿に変更があります．最新の内容を確認するにはコンパイルしてください．"); label.textContent = t("原稿に変更あり"); }
   else { label.textContent = viewer.hasRendered && viewer.buildId === build.pdfBuildId ? t("更新済み") : t("読み込み中"); return; }
   note.hidden = false; label.classList.add('stale');
+}
+
+function updatePDFDetails() {
+  const main = viewer.document ? viewer.documentMain : (state.build?.pdfReady ? state.build.pdfMain || state.meta?.project?.main : '') || '';
+  $('pdf-name').textContent = main ? basename(main).replace(/\.tex$/i, '') + '.pdf' : '—';
+  $('pdf-document').textContent = main || '—';
 }
 
 function applyBuild(build) {
@@ -1384,8 +1391,6 @@ function applyBuild(build) {
   const previouslyRunning = isRunning();
   state.build = build || null;
   const pdfMain = build?.pdfMain || (build?.pdfReady ? state.meta?.project?.main : '') || '';
-  $('pdf-document').textContent = basename(pdfMain);
-  $('pdf-document').title = pdfMain ? t("表示中の PDF: {value0}", { value0: pdfMain }) : '';
   const labels = { running: t("コンパイル中"), success: t("コンパイル完了"), failed: t("コンパイル失敗"), cancelled: t("停止しました") };
   $('build-status').textContent = labels[build?.status] || t("コンパイル前");
   $('build-status').dataset.status = build?.status || 'idle';
@@ -1666,15 +1671,44 @@ function applyAppearance(value, cache = false) {
       localStorage.setItem('local-tex-editor-theme', appearance.theme);
     } catch { /* The PC copy is written through the storage API. */ }
   }
-  for (const [id, color] of [['background', appearance.colors.surface], ['foreground', appearance.colors.text]]) {
-    $(`appearance-${id}`).textContent = color.toUpperCase();
-    $(`appearance-${id}-swatch`).style.backgroundColor = color;
+  if (appearanceDraft) renderAppearanceColors();
+}
+
+function renderAppearanceColors(refreshInputs = false) {
+  const appearance = resolveAppearance(appearanceDraft, systemColorScheme.matches);
+  const preset = resolveAppearance({ ...appearanceDraft, customColors: undefined }, systemColorScheme.matches);
+  const custom = appearanceDraft.customColors?.[appearance.theme] || {};
+  $('appearance-color-mode').textContent = t(appearance.theme === 'dark' ? 'ダークの色' : 'ライトの色');
+  for (const [id, key] of [['background', 'surface'], ['foreground', 'text'], ['accent', 'accent']]) {
+    const input = $(`appearance-${id}-input`);
+    input.placeholder = preset.colors[key].toUpperCase();
+    $(`appearance-${id}-swatch`).value = custom[id] || appearance.colors[key];
+    if (refreshInputs) {
+      input.value = (custom[id] || '').toUpperCase();
+      input.setCustomValidity('');
+      input.removeAttribute('aria-invalid');
+    }
   }
+}
+
+function changeAppearanceColor(id, value) {
+  if (!appearanceDraft) return;
+  const input = $(`appearance-${id}-input`);
+  const color = normalizeHexColor(value);
+  const invalid = value.trim() !== '' && !color;
+  input.setCustomValidity(invalid ? t('色は #RRGGBB または #RGB で入力してください．') : '');
+  if (invalid) { input.setAttribute('aria-invalid', 'true'); return; }
+  input.removeAttribute('aria-invalid');
+  const { theme } = resolveAppearance(appearanceDraft, systemColorScheme.matches);
+  const customColors = { ...appearanceDraft.customColors, [theme]: { ...appearanceDraft.customColors?.[theme], [id]: color } };
+  appearanceDraft = normalizeAppearance({ ...appearanceDraft, customColors });
+  applyAppearance(appearanceDraft);
 }
 
 function renderAppearanceForm() {
   for (const [id, key] of [['mode', 'mode'], ['palette', 'palette'], ['accent', 'accent'], ['font', 'editorFont']]) $(`appearance-${id}`).value = appearanceDraft[key];
   applyAppearance(appearanceDraft);
+  renderAppearanceColors(true);
 }
 
 function showAppearance() {
@@ -1687,6 +1721,7 @@ function showAppearance() {
 async function saveAppearance(event) {
   event.preventDefault();
   if (!appearanceDraft || $('appearance-dialog').dataset.busy === 'true') return;
+  if (!$('appearance-form').reportValidity()) return;
   const previous = state.preferences.appearance, previousTheme = state.preferences.theme;
   const appearance = normalizeAppearance(appearanceDraft);
   setDialogBusy($('appearance-dialog'), true); $('appearance-error').hidden = true;
@@ -2105,6 +2140,8 @@ function updateIndex(path, content, rebuild = true) {
 function rebuildIndex() {
   const values = [...state.texIndex.values()];
   state.completionItems = { citations: values.flatMap(item => item.citations), labels: values.flatMap(item => item.labels) };
+  viewer.citationTitles.refresh();
+  assetPreview.citationTitles?.refresh();
   renderOutline();
 }
 function scheduleIndex(doc) {
@@ -2262,6 +2299,7 @@ async function syncInverse(position) {
 
 const viewer = new PDFViewer({
   token,
+  getCitations: () => state.completionItems.citations,
   onError: error => showError(error, { label: t("PDF を再表示"), run: async () => { clearError(); await viewer.retry(); } }),
   onReady: () => { updatePreviewNote(); renderControls(); },
   onPositionChange: () => scheduleSession(),
@@ -2269,7 +2307,7 @@ const viewer = new PDFViewer({
   onNavigate: action => navigate(action),
   onDarkModeChange: changePDFDarkMode,
 });
-const assetPreview = new AssetPreview({ token, onNavigate: action => navigate(action), onDarkModeChange: changePDFDarkMode });
+const assetPreview = new AssetPreview({ token, onNavigate: action => navigate(action), onDarkModeChange: changePDFDarkMode, getCitations: () => state.completionItems.citations });
 const markdownPreview = new MarkdownPreview({
   container: $('markdown-preview-container'), token,
   onUserScroll: scrollSourceWithMarkdown,
@@ -2369,7 +2407,10 @@ onClick('theme-toggle', () => {
 });
 systemColorScheme.addEventListener('change', () => {
   const appearance = appearanceDraft || state.preferences.appearance;
-  if (appearance.mode === 'system') applyAppearance(appearance, !appearanceDraft);
+  if (appearance.mode === 'system') {
+    if (appearanceDraft) renderAppearanceForm();
+    else applyAppearance(appearance, true);
+  }
 });
 
 onClick('show-project', showProjectDialog); onClick('welcome-open', showProjectDialog);
@@ -2394,7 +2435,22 @@ onClick('appearance-reset', () => { appearanceDraft = normalizeAppearance(); ren
 for (const [id, key] of [['mode', 'mode'], ['palette', 'palette'], ['accent', 'accent'], ['font', 'editorFont']]) $(`appearance-${id}`).addEventListener('change', event => {
   if (!appearanceDraft) return;
   appearanceDraft[key] = event.target.value;
-  applyAppearance(appearanceDraft);
+  renderAppearanceForm();
+});
+for (const id of ['background', 'foreground', 'accent']) {
+  $(`appearance-${id}-input`).addEventListener('input', event => changeAppearanceColor(id, event.target.value));
+  $(`appearance-${id}-swatch`).addEventListener('input', event => {
+    $(`appearance-${id}-input`).value = event.target.value.toUpperCase();
+    changeAppearanceColor(id, event.target.value);
+  });
+}
+onClick('appearance-colors-reset', () => {
+  if (!appearanceDraft) return;
+  const { theme } = resolveAppearance(appearanceDraft, systemColorScheme.matches);
+  const customColors = { ...appearanceDraft.customColors };
+  delete customColors[theme];
+  appearanceDraft = normalizeAppearance({ ...appearanceDraft, customColors });
+  renderAppearanceForm();
 });
 $('appearance-form').addEventListener('submit', event => { runTask(() => saveAppearance(event)); event.preventDefault(); });
 $('appearance-dialog').addEventListener('close', () => {

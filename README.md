@@ -275,9 +275,11 @@ To add your own template, expand **Add the current project as a template**, ente
 
 ### Choose the appearance
 
-Open **Settings → Appearance** to choose **System**, **Light**, or **Dark** mode, a **Default**, **Gray**, **Black**, or **Warm** color scheme, an accent color, and the editor font. For a black background, select **Dark** mode and the **Black** color scheme. **System** follows your computer's light/dark preference. The dialog shows the editor's background and text colors with a sample of the selected appearance.
+Open **Settings → Appearance** to choose **System**, **Light**, or **Dark** mode, one of seven color schemes (**Gray**, **Black**, **Blue gray**, **Warm**, **Navy**, **Forest**, or **Plum**), one of eight accent colors, and one of ten editor fonts. For a black background, select **Dark** mode and the **Black** color scheme. **System** follows your computer's light/dark preference. The dialog shows a sample of the selected appearance.
 
-The initial appearance uses **System** mode, the **Gray** color scheme, and **Consolas** for the editor. Your previously saved appearance continues to apply. If Consolas is unavailable, the editor follows the existing Default font order through Cascadia Code, Menlo, DejaVu Sans Mono, and the browser's monospace font.
+Use the color picker or enter a hexadecimal color code to choose the background, text, and accent colors. Light and dark modes save their colors independently. Clearing a code returns that color to the selected scheme. The selected colors also apply to dialogs, completion popups, notifications, and compilation and draft status messages.
+
+The initial appearance uses **System** mode, the **Gray** color scheme, and **Consolas** for the editor. Gray and Consolas appear first in their lists and are marked as the defaults. Your previously saved appearance continues to apply. If Consolas is unavailable, the editor tries Cascadia Code, Menlo, DejaVu Sans Mono, and the browser's monospace font in that order.
 
 Changes appear immediately. Choose **Save appearance** to use them in future sessions. **Cancel**, `Esc`, or **×** restores the appearance you had when opening the dialog. **Reset appearance** previews the defaults; choose **Save appearance** to apply them.
 
@@ -333,7 +335,9 @@ Relative links in the preview can open other project documents. Returning to the
 
 The PDF scrolls continuously across pages. The app prioritizes rendering the visible page and nearby pages, so a long document does not require rendering every page into an image at once. You can select and copy PDF text and follow links inside the PDF. After following an internal reference link, use **←** above the PDF to return to the position you were reading; **→** moves forward again. `Alt + Left` and `Alt + Right` provide the same navigation from the source or preview. Source links, search results, outline entries, and SyncTeX jumps also participate in this navigation.
 
-The PDF toolbar uses one row. **＋**, **−**, **Save PDF**, and the page-number field stay visible in a narrow preview. Open **… (PDF actions)** for the zoom selector, dark display, and search. As space decreases, Back, Forward, the preview selector, and finally the previous/next page buttons move into that menu.
+The PDF toolbar uses one row. **Back**, **Forward**, **＋**, **−**, **Save PDF**, and the page-number field stay visible in a narrow preview. **… (PDF actions)** is available at every width and shows the PDF file name, the path of the TeX document compiled to produce it, and its update status. As space decreases, the zoom selector, dark display, search, preview selector, and previous/next page buttons move into that menu.
+
+Hover over a citation link in the PDF, or focus it with `Tab`, to see the title, author, and year from the project's `.bib` files. This works with citation links created by hyperref, natbib, and biblatex, in both the compiled preview and project PDF tabs. Clicking the citation still opens its destination. Press `Esc` to close the tooltip. Bibliography entries become available as the project files are read and update when their text is edited.
 
 | Action | How to use it |
 | --- | --- |
@@ -376,7 +380,7 @@ Open **Log** at the top right when you need the compilation details. The log ope
 
 ## Configure compilation
 
-The active `.tex` tab selects the document to compile. If the open file contains `\documentclass` or `\begin{document}`, clicking **Compile** builds that document and displays its PDF. Switching TeX tabs alone leaves the displayed PDF unchanged. The top toolbar shows the next compilation target, and the PDF toolbar shows the document currently displayed.
+The active `.tex` tab selects the document to compile. If the open file contains `\documentclass` or `\begin{document}`, clicking **Compile** builds that document and displays its PDF. Switching TeX tabs alone leaves the displayed PDF unchanged. The top toolbar shows the next compilation target. **… (PDF actions)** identifies the PDF on screen and the TeX document used to produce it, including when a later compilation fails and the previous PDF remains visible.
 
 When editing a chapter included with `\input`, a shared preamble, or another supporting file, compilation uses **Default main document** in Settings. To choose a parent document for an individual file, add a comment such as `% !TeX root = ../main.tex`. The path is relative to the folder containing that file.
 

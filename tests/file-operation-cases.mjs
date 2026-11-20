@@ -93,12 +93,25 @@ export function registerFileOperationTests({ test, openProject, openEditor, setA
     await expect.poll(() => readFile(path.join(session.project, 'notes', 'readme.md'), 'utf8')).toBe('# Notes\nUnsaved text.\n');
     await action(page, page.locator('.tree-directory[data-path="notes"] > summary'), 'remove');
     await page.locator('#file-action-submit').click(); await expect(dialog(page).locator('.form-error')).toBeVisible();
-    await dialog(page).getByRole('button', { name: 'キャンセル', exact: true }).click();
+    // Read the next control before the browser delivers the queued close event.
+    const afterCancel = await dialog(page).getByRole('button', { name: 'キャンセル', exact: true }).evaluate(button => {
+      button.click();
+      return {
+        dialogOpen: document.getElementById('file-action-dialog').open,
+        nextFileDisabled: document.querySelector('[data-testid="file-notes/readme.md"]').disabled,
+      };
+    });
+    expect(afterCancel).toEqual({ dialogOpen: false, nextFileDisabled: false });
     await page.getByTestId('file-notes/readme.md').focus(); await page.keyboard.press('Shift+F10');
+    await expect(menu(page)).toBeVisible(); await expect(menu(page).locator('[data-action="newFile"]')).toBeFocused();
     await page.keyboard.press('End'); await expect(menu(page).locator('[data-action="remove"]')).toBeFocused();
     await page.screenshot({ path: testInfo.outputPath('file-context-menu-keyboard.png') });
     await page.keyboard.press('Escape'); await expect(menu(page)).not.toBeVisible();
     await expect(page.getByTestId('file-notes/readme.md')).toBeFocused();
+    await page.keyboard.press('Delete'); await expect(dialog(page)).toBeVisible();
+    await page.keyboard.press('Escape'); await expect(dialog(page)).not.toBeVisible();
+    await expect(page.getByTestId('file-notes/readme.md')).toBeFocused();
+    await expect(page.getByTestId('file-notes/readme.md')).toBeEnabled();
   });
 
   test('削除には未保存の本文の確認があり，キャンセル時はファイルと本文が残る', async ({ page, session }) => {

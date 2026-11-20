@@ -15,6 +15,18 @@ const palettes = {
     light: { background: '#f4eee4', surface: '#fffaf2', text: '#3e352b', secondary: '#695d4d', muted: '#786b5b', subtle: '#f6efe3', hover: '#eee3d1', border: '#ded2bf', 'border-strong': '#b8a88f', 'input-surface': '#fffdf8', 'preview-surface': '#e9dfcf', gutter: '#8b7961', 'code-surface': '#f3eadb' },
     dark: { background: '#201d19', surface: '#29241f', text: '#ede3d6', secondary: '#c7b8a2', muted: '#b3a18c', subtle: '#231f1b', hover: '#3d342b', border: '#4c4034', 'border-strong': '#75604c', 'input-surface': '#201c18', 'preview-surface': '#1b1815', gutter: '#a38b70', 'code-surface': '#221d18' },
   },
+  navy: {
+    light: { background: '#edf2f9', surface: '#fbfdff', text: '#20324b', secondary: '#4d607c', muted: '#5f718a', subtle: '#f0f4fa', hover: '#e0e9f6', border: '#d4dfea', 'border-strong': '#a6b9d0', 'input-surface': '#ffffff', 'preview-surface': '#dfe7f1', gutter: '#647994', 'code-surface': '#edf3fb' },
+    dark: { background: '#101b30', surface: '#17253d', text: '#e2ebfb', secondary: '#b6c9e8', muted: '#a2b7d8', subtle: '#142137', hover: '#253b5c', border: '#3a5072', 'border-strong': '#607ca6', 'input-surface': '#101c31', 'preview-surface': '#0c1628', gutter: '#849fc4', 'code-surface': '#111e33' },
+  },
+  forest: {
+    light: { background: '#eff5ef', surface: '#fbfefa', text: '#253b2b', secondary: '#4f6855', muted: '#5f7463', subtle: '#f0f6ef', hover: '#e0eddf', border: '#d0e0cf', 'border-strong': '#a8c2a6', 'input-surface': '#ffffff', 'preview-surface': '#dfeadd', gutter: '#6c876d', 'code-surface': '#edf4eb' },
+    dark: { background: '#14211a', surface: '#1b2b21', text: '#e2eee3', secondary: '#b6cdbb', muted: '#a1b9a7', subtle: '#17251c', hover: '#2b4232', border: '#3d5946', 'border-strong': '#64866b', 'input-surface': '#142118', 'preview-surface': '#101a13', gutter: '#86a78c', 'code-surface': '#17241b' },
+  },
+  plum: {
+    light: { background: '#f6f0f5', surface: '#fffaff', text: '#3d2c3b', secondary: '#6b5467', muted: '#7a6576', subtle: '#f8f0f6', hover: '#efdfeb', border: '#e4d1df', 'border-strong': '#c3a6ba', 'input-surface': '#fffcff', 'preview-surface': '#eadde7', gutter: '#907487', 'code-surface': '#f6ecf3' },
+    dark: { background: '#231822', surface: '#2d202b', text: '#f1e3ee', secondary: '#d3bbce', muted: '#bea5b8', subtle: '#261b24', hover: '#443040', border: '#61455a', 'border-strong': '#89657f', 'input-surface': '#231721', 'preview-surface': '#1c121b', gutter: '#b18aa6', 'code-surface': '#271a25' },
+  },
 };
 
 const accents = {
@@ -38,6 +50,18 @@ const accents = {
     light: { accent: '#5c626b', 'accent-button': '#5c626b', 'accent-dark': '#454b54', 'accent-soft': '#edeef1', selection: '#cdd1d8' },
     dark: { accent: '#c0c5ce', 'accent-button': '#59616d', 'accent-dark': '#4a515c', 'accent-soft': '#303741', selection: '#464f5c' },
   },
+  green: {
+    light: { accent: '#28723d', 'accent-button': '#28723d', 'accent-dark': '#1c5a2e', 'accent-soft': '#edf6ee', selection: '#c8e3ce' },
+    dark: { accent: '#a0d3aa', 'accent-button': '#2d6f3e', 'accent-dark': '#235b32', 'accent-soft': '#203c28', selection: '#335b3d' },
+  },
+  red: {
+    light: { accent: '#b23b41', 'accent-button': '#b23b41', 'accent-dark': '#942c34', 'accent-soft': '#fff0f1', selection: '#f2c9cc' },
+    dark: { accent: '#f7a3a7', 'accent-button': '#a83f48', 'accent-dark': '#8d303a', 'accent-soft': '#49272e', selection: '#683b43' },
+  },
+  pink: {
+    light: { accent: '#ae3975', 'accent-button': '#ae3975', 'accent-dark': '#8f2d60', 'accent-soft': '#fff0f7', selection: '#efc9de' },
+    dark: { accent: '#eda0cc', 'accent-button': '#a23d74', 'accent-dark': '#87305f', 'accent-soft': '#46263a', selection: '#633951' },
+  },
 };
 
 const fallbackFonts = 'Consolas, Menlo, "DejaVu Sans Mono", monospace';
@@ -46,25 +70,130 @@ const fonts = {
   cascadia: `"Cascadia Code", ${fallbackFonts}`,
   consolas: 'Consolas, "Cascadia Code", Menlo, "DejaVu Sans Mono", monospace',
   menlo: 'Menlo, "Cascadia Code", Consolas, "DejaVu Sans Mono", monospace',
+  monaco: `Monaco, ${fallbackFonts}`,
+  sfmono: `"SF Mono", ${fallbackFonts}`,
+  dejavu: `"DejaVu Sans Mono", ${fallbackFonts}`,
+  liberation: `"Liberation Mono", ${fallbackFonts}`,
+  fira: `"Fira Code", ${fallbackFonts}`,
+  jetbrains: `"JetBrains Mono", ${fallbackFonts}`,
   monospace: 'ui-monospace, monospace',
 };
 
 const has = (object, key) => Object.hasOwn(object, key);
 
+export function normalizeHexColor(value) {
+  if (typeof value !== 'string') return '';
+  const hex = value.trim().replace(/^#/, '');
+  if (/^[a-f\d]{6}$/i.test(hex)) return '#' + hex.toLowerCase();
+  if (/^[a-f\d]{3}$/i.test(hex)) return '#' + [...hex].map(character => character + character).join('').toLowerCase();
+  return '';
+}
+
+function normalizeCustomColors(value) {
+  const result = {};
+  for (const mode of ['light', 'dark']) {
+    const colors = {};
+    for (const key of ['background', 'foreground', 'accent']) {
+      const color = normalizeHexColor(value?.[mode]?.[key]);
+      if (color) colors[key] = color;
+    }
+    if (Object.keys(colors).length) result[mode] = colors;
+  }
+  return result;
+}
+
 export function normalizeAppearance(value, legacyTheme = null) {
   const source = value && typeof value === 'object' ? value : {};
+  const customColors = normalizeCustomColors(source.customColors);
   return {
     mode: ['system', 'light', 'dark'].includes(source.mode) ? source.mode : ['light', 'dark'].includes(legacyTheme) ? legacyTheme : 'system',
     palette: has(palettes, source.palette) ? source.palette : 'gray',
     accent: has(accents, source.accent) ? source.accent : 'teal',
-    editorFont: has(fonts, source.editorFont) ? source.editorFont : 'consolas',
+    editorFont: source.editorFont === 'default' ? 'cascadia' : has(fonts, source.editorFont) ? source.editorFont : 'consolas',
+    ...(Object.keys(customColors).length ? { customColors } : {}),
   };
+}
+
+function rgb(hex) { return hex.slice(1).match(/../g).map(channel => parseInt(channel, 16)); }
+function mix(first, second, amount) {
+  const other = rgb(second);
+  return '#' + rgb(first).map((channel, index) => Math.round(channel + (other[index] - channel) * amount).toString(16).padStart(2, '0')).join('');
+}
+function luminance(hex) {
+  const [r, g, b] = rgb(hex).map(channel => {
+    const value = channel / 255;
+    return value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4;
+  });
+  return r * .2126 + g * .7152 + b * .0722;
+}
+function contrast(first, second) {
+  const values = [luminance(first), luminance(second)];
+  return (Math.max(...values) + .05) / (Math.min(...values) + .05);
+}
+function textOn(background) { return contrast('#ffffff', background) >= contrast('#000000', background) ? '#ffffff' : '#000000'; }
+function readableColor(color, background, minimum = 4.5) {
+  const backgrounds = Array.isArray(background) ? background : [background];
+  const readable = candidate => backgrounds.every(value => contrast(candidate, value) >= minimum);
+  if (readable(color)) return color;
+  const score = candidate => Math.min(...backgrounds.map(value => contrast(candidate, value)));
+  const target = score('#ffffff') >= score('#000000') ? '#ffffff' : '#000000';
+  for (let step = 1; step <= 20; step++) {
+    const candidate = mix(color, target, step / 20);
+    if (readable(candidate)) return candidate;
+  }
+  return target;
+}
+function tintedBackground(background, color, amount) {
+  const foreground = textOn(background);
+  for (let step = 20; step >= 0; step--) {
+    const candidate = mix(background, color, amount * step / 20);
+    if (contrast(foreground, candidate) >= 4.5) return candidate;
+  }
+  return background;
 }
 
 export function resolveAppearance(value, systemDark = false) {
   const appearance = normalizeAppearance(value);
   const theme = appearance.mode === 'system' ? systemDark ? 'dark' : 'light' : appearance.mode;
   const colors = { ...palettes[appearance.palette][theme], ...accents[appearance.accent][theme] };
+  const custom = appearance.customColors?.[theme] || {};
+  if (custom.background) {
+    colors.surface = custom.background;
+    const shade = textOn(colors.surface);
+    colors.background = mix(colors.surface, shade, .045);
+    colors.subtle = tintedBackground(colors.surface, shade, .025);
+    colors['input-surface'] = colors.surface;
+    colors['preview-surface'] = mix(colors.surface, shade, .08);
+    colors['code-surface'] = colors.subtle;
+    colors.text = readableColor(colors.text, colors.surface, 7);
+  }
+  if (custom.foreground) colors.text = custom.foreground;
+  if (custom.background || custom.foreground) {
+    colors.secondary = readableColor(mix(colors.surface, colors.text, .8), colors.subtle);
+    colors.muted = readableColor(mix(colors.surface, colors.text, .65), colors.subtle);
+    colors.gutter = readableColor(mix(colors.surface, colors.text, .55), colors.surface, 3);
+    colors.hover = mix(colors.surface, colors.text, .1);
+    colors.border = mix(colors.surface, colors.text, .18);
+    colors['border-strong'] = mix(colors.surface, colors.text, .35);
+  }
+  if (custom.accent || custom.background || custom.foreground) {
+    const accent = custom.accent || colors.accent;
+    colors.accent = readableColor(accent, colors.surface);
+    colors['accent-soft'] = tintedBackground(colors.surface, accent, .12);
+    colors.accent = readableColor(colors.accent, [colors.surface, colors['accent-soft']]);
+    colors.selection = mix(colors.surface, accent, .25);
+    if (custom.accent) {
+      colors['accent-button'] = custom.accent;
+      colors['accent-dark'] = mix(custom.accent, textOn(custom.accent), .12);
+    }
+  }
+  colors['accent-on-button'] = textOn(colors['accent-button']);
+  colors['accent-on-button-hover'] = textOn(colors['accent-dark']);
+  for (const [name, color] of Object.entries({ success: '#278461', warning: '#a46d1a', danger: '#bb3f4d' })) {
+    colors[`${name}-bg`] = tintedBackground(colors.surface, color, .09);
+    colors[name] = readableColor(mix(color, colors.text, .15), [colors.surface, colors[`${name}-bg`]]);
+    colors[`${name}-border`] = mix(colors.surface, colors[name], .4);
+  }
   colors['line-highlight'] = colors.accent + (theme === 'dark' ? '14' : '0d');
   return { ...appearance, theme, colors, fontFamily: fonts[appearance.editorFont] };
 }

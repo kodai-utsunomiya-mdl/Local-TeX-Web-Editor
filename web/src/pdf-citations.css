@@ -1,0 +1,6 @@
+.pdf-citation-tooltip { position: fixed; z-index: 1000; width: max-content; max-width: min(420px, calc(100vw - 16px)); max-height: min(360px, calc(100dvh - 16px)); overflow: auto; padding: 11px 13px; border: 1px solid var(--border-strong); border-radius: 7px; background: var(--surface); color: var(--text, inherit); box-shadow: 0 6px 22px #0003; font: 13px/1.6 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "Yu Gothic UI", Meiryo, sans-serif; overflow-wrap: anywhere; }
+.pdf-citation-tooltip[hidden] { display: none; }
+.pdf-citation-entry + .pdf-citation-entry { border-top: 1px solid var(--border); margin-top: 10px; padding-top: 10px; }
+.pdf-citation-entry strong { display: block; font-weight: 600; }
+.pdf-citation-entry p { margin: 4px 0 0; }
+.pdf-citation-entry .pdf-citation-source { font-size: 11px; color: var(--muted); }

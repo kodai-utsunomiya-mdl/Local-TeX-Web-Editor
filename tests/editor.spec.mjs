@@ -1257,7 +1257,11 @@ test('編集中の文書をコンパイルし，タブを選ぶだけでは表�
 
   await page.getByTestId(`file-${other}`).click();
   await expect(page.locator('#main-document-label')).toContainText(other);
+  await showPDFControls(page);
+  await expect(page.locator('#pdf-menu')).toBeVisible();
+  await expect(page.getByTestId('pdf-name')).toHaveText('main.pdf');
   await expect(page.getByTestId('pdf-document')).toHaveText('main.tex');
+  await page.keyboard.press('Escape');
   await expect(canvas).toHaveAttribute('data-build-id', first.finished.pdfBuildId);
   await expect(page.getByTestId('pdf-page')).toHaveValue('2');
   const second = await compileFromUI(page, session);
@@ -1268,6 +1272,7 @@ test('編集中の文書をコンパイルし，タブを選ぶだけでは表�
   await expect(canvas).toHaveAttribute('data-build-id', second.finished.pdfBuildId);
   await expect(canvas).toHaveAttribute('data-ready', 'true');
   await expect(page.getByTestId('pdf-document')).toHaveText(other);
+  await expect(page.getByTestId('pdf-name')).toHaveText('別の 原稿.pdf');
   await expect(page.getByTestId('pdf-page')).toHaveValue('1');
   const forward = await json(session, '/api/synctex/forward', { method: 'POST', data: { buildId: second.finished.pdfBuildId, path: other, line: 3, column: 0 } });
   expect(forward.locations.length).toBeGreaterThan(0);
@@ -1292,6 +1297,10 @@ test('編集中の文書をコンパイルし，タブを選ぶだけでは表�
   expect(failed.finished.pdfBuildId).toBe(back.finished.pdfBuildId);
   await expect(canvas).toHaveAttribute('data-build-id', back.finished.pdfBuildId);
   await expect(page.getByTestId('pdf-document')).toHaveText('main.tex');
+  await showPDFControls(page);
+  await expect(page.locator('#pdf-menu')).toBeVisible();
+  await expect(page.getByTestId('pdf-name')).toHaveText('main.pdf');
+  await expect(page.locator('#pdf-state')).toHaveText('前回の PDF');
   await page.screenshot({ path: testInfo.outputPath('compile-another-document.png') });
 });
 
@@ -1945,6 +1954,74 @@ test('外観の配色，アクセント，原稿フォントを保存し，再�
   await expect.poll(() => readEditorAppearance(reopened)).toEqual(black);
   await expect(reopened.getByTestId('pdf-canvas')).toHaveAttribute('data-ready', 'true');
   await reopened.screenshot({ path: testInfo.outputPath('appearance-black-editor.png') });
+  expect(errors).toEqual([]);
+});
+
+test('ライトとダークのカラーコードを保存し，入力の取消と配色への復帰を使える', async ({ page, session }, testInfo) => {
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await openProject(session);
+  await openEditor(page, session);
+  await openAppearance(page);
+  await expect(page.locator('#appearance-palette option')).toHaveCount(7);
+  await expect(page.locator('#appearance-accent option')).toHaveCount(8);
+  await expect(page.locator('#appearance-font option')).toHaveCount(10);
+  await expect(page.locator('#appearance-palette option').first()).toHaveText('グレー (初期値)');
+  await expect(page.locator('#appearance-font option').first()).toHaveText('Consolas (初期値)');
+
+  await page.locator('#appearance-mode').selectOption('light');
+  await page.locator('#appearance-background-input').fill('#f5f1e9');
+  await page.locator('#appearance-foreground-input').fill('#203040');
+  await page.locator('#appearance-accent-input').fill('#0a7');
+  await expect(page.locator('#appearance-accent-swatch')).toHaveValue('#00aa77');
+  await page.locator('#appearance-mode').selectOption('dark');
+  await expect(page.locator('#appearance-background-input')).toHaveValue('');
+  await expect(page.locator('#appearance-color-mode')).toHaveText('ダークの色');
+  await page.locator('#appearance-background-input').fill('#12212c');
+  await page.locator('#appearance-foreground-input').fill('#ddeeff');
+  await page.locator('#appearance-accent-input').fill('#ffe08a');
+  await expect(page.locator('.appearance-preview-accent')).toHaveCSS('color', 'rgb(0, 0, 0)');
+  await page.locator('#save-appearance').click();
+  await expect(page.locator('#appearance-dialog')).not.toBeVisible();
+  const customColors = {
+    light: { background: '#f5f1e9', foreground: '#203040', accent: '#00aa77' },
+    dark: { background: '#12212c', foreground: '#ddeeff', accent: '#ffe08a' },
+  };
+  await expect.poll(async () => (await json(session, '/api/storage?key=preferences')).value?.appearance?.customColors).toEqual(customColors);
+  await expect(page.locator('#toast')).toHaveCSS('background-color', 'rgb(18, 33, 44)');
+  await expect(page.locator('#toast')).toHaveCSS('color', 'rgb(221, 238, 255)');
+  await expect(page.locator('.status-bar')).toHaveCSS('background-color', 'rgb(18, 33, 44)');
+  await closeSettings(page);
+
+  await page.reload();
+  await expect(page.getByTestId('editor')).toBeVisible();
+  await openAppearance(page);
+  await expect(page.locator('#appearance-background-input')).toHaveValue('#12212C');
+  await page.locator('#appearance-mode').selectOption('light');
+  await expect(page.locator('#appearance-background-input')).toHaveValue('#F5F1E9');
+  await expect(page.locator('#appearance-accent-input')).toHaveValue('#00AA77');
+  await page.locator('#appearance-background-input').fill('#zzzzzz');
+  await page.locator('#save-appearance').click();
+  await expect(page.locator('#appearance-dialog')).toBeVisible();
+  await expect(page.locator('#appearance-background-input')).toHaveAttribute('aria-invalid', 'true');
+  expect((await json(session, '/api/storage?key=preferences')).value.appearance.customColors).toEqual(customColors);
+  await page.locator('#appearance-cancel').click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(page.locator('.app-header')).toHaveCSS('background-color', 'rgb(18, 33, 44)');
+
+  await page.locator('#open-appearance').click();
+  await page.setViewportSize({ width: 480, height: 800 });
+  for (const id of ['background', 'foreground', 'accent']) {
+    const bounds = await page.locator(`#appearance-${id}-input`).boundingBox();
+    expect(bounds.x).toBeGreaterThanOrEqual(0);
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(480);
+  }
+  await page.screenshot({ path: testInfo.outputPath('appearance-custom-colors.png') });
+  await page.locator('#appearance-colors-reset').click();
+  await expect(page.locator('#appearance-background-input')).toHaveValue('');
+  await page.locator('#save-appearance').click();
+  await expect.poll(async () => (await json(session, '/api/storage?key=preferences')).value?.appearance?.customColors).toEqual({ light: customColors.light });
+  await closeSettings(page);
   expect(errors).toEqual([]);
 });
 

@@ -4,6 +4,7 @@ import { EventBus, PDFViewer, PDFLinkService, LinkTarget } from 'pdfjs-dist/web/
 import { zoomPDFAt } from './pdf-zoom.js';
 import { afterNavigationFrame, connectPDFNavigation } from './navigation-history.js';
 import { PDFDarkMode, PDFToolbar } from './pdf-appearance.js';
+import { PDFCitationTitles } from './pdf-citations.js';
 
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
@@ -12,9 +13,10 @@ const bytes = value => value < 1024 ? `${value} B` : value < 1024 ** 2 ? `${(val
 // The selected image or PDF has its own view. Source documents stay in the
 // editor's state map, and decoded assets are released when their tab is left.
 export class AssetPreview {
-  constructor({ token, onNavigate, darkMode = false, onDarkModeChange }) {
+  constructor({ token, onNavigate, darkMode = false, onDarkModeChange, getCitations }) {
     this.token = token;
     this.onNavigate = onNavigate;
+    this.getCitations = getCitations;
     this.root = document.getElementById('asset-preview');
     this.elements = Object.fromEntries(['info', 'page-controls', 'prev', 'next', 'page', 'pages', 'zoom-out', 'zoom-in', 'zoom', 'reload', 'scroll', 'image-stage', 'image', 'pdf-stage', 'message', 'dark-mode'].map(id => [id, document.getElementById(`asset-${id}`)]));
     this.pdfAppearance = new PDFDarkMode({ container: this.elements.scroll, button: this.elements['dark-mode'], darkMode, onChange: onDarkModeChange });
@@ -119,6 +121,7 @@ export class AssetPreview {
   }
 
   hide() {
+    this.citationTitles?.hide();
     this.savePosition(); ++this.generation; this.ready = false;
     this.cancelLoadWait?.(); this.cancelLoadWait = null; this.loadCompletion = Promise.resolve(false); this.pdfInitialisation = null;
     this.root.hidden = true; this.root.dataset.state = 'idle';
@@ -203,6 +206,7 @@ export class AssetPreview {
   ensurePDFViewer() {
     if (this.pdfViewer) return;
     this.eventBus = new EventBus();
+    this.citationTitles = new PDFCitationTitles({ container: this.elements['pdf-stage'], eventBus: this.eventBus, getCitations: this.getCitations });
     this.linkService = new PDFLinkService({ eventBus: this.eventBus, externalLinkTarget: LinkTarget.BLANK, externalLinkRel: 'noopener noreferrer', ignoreDestinationZoom: true });
     connectPDFNavigation(this.linkService, action => this.navigate(action), async () => { await afterNavigationFrame(); this.pdfViewer.update(); });
     this.pdfViewer = new PDFViewer({

@@ -82,10 +82,15 @@ export function createFileActions({ tree, getProject, isBlocked, begin, end, ins
     }
   }
   function release() { if (locked) { locked = false; end(); } }
-  function closeDialog() { if (!busy) dialog.close(); }
+  function finishDialog() {
+    dialog.close(); action = ''; release();
+    if (returnFocus?.isConnected) returnFocus.focus();
+  }
+  function closeDialog() { if (!busy) finishDialog(); }
   close.addEventListener('click', closeDialog); cancel.addEventListener('click', closeDialog);
-  dialog.addEventListener('cancel', event => { if (busy) event.preventDefault(); });
-  dialog.addEventListener('close', () => { action = ''; release(); if (returnFocus?.isConnected) returnFocus.focus(); });
+  // The browser queues the close event. Complete the action now so that
+  // keyboard input can immediately return to the file list.
+  dialog.addEventListener('cancel', event => { event.preventDefault(); closeDialog(); });
   const perform = task => Promise.resolve().then(task).catch(onError);
 
   async function openDialog(kind, target) {
@@ -125,7 +130,7 @@ export function createFileActions({ tree, getProject, isBlocked, begin, end, ins
         const message = text(action === 'folder' ? 'created' : action === 'delete' ? 'removed' : 'renamed');
         returnFocus = [...tree.querySelectorAll('.file-button, .tree-directory')].find(node => node.dataset.path === result.path) || tree;
         if (returnFocus.matches('.tree-directory')) returnFocus = returnFocus.querySelector('summary');
-        dialog.close(); release(); await finish?.(); onNotice(result.historyWarning || message);
+        finishDialog(); await finish?.(); onNotice(result.historyWarning || message);
       } catch (err) { error.textContent = err?.message || String(err); error.hidden = false; }
       finally {
         busy = false; dialog.removeAttribute('aria-busy'); input.disabled = false;

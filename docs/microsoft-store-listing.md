@@ -121,9 +121,14 @@ Document-specific TeX packages, fonts and bibliography tools
 ```text
 Version 0.1.9
 
+- Keep PDF Back and Forward buttons visible. PDF actions shows the file name, compiled TeX path, and update status.
+- Hover over PDF citation links to read bibliography titles, authors, and years.
+- Choose from seven color schemes, eight accents, and ten editor fonts. Set background, text, and accent colors by color picker or code, separately for light and dark modes.
+- Apply selected colors to popups, notifications, compilation results, and draft status.
 - Open image insertion, table creation or pasting, and linked Markdown page creation from labelled buttons in the Markdown formatting toolbar. Buttons wrap in narrow panes.
 - Show the language setting as Language / 言語設定 in both interface languages, with English first.
 - Use Delete for the file-list menu item. The confirmation dialog still appears before a file or empty folder is deleted.
+- Restore keyboard navigation immediately after cancelling a file operation.
 ```
 
 ## 日本語の掲載内容
@@ -213,9 +218,14 @@ TeX のコンパイルには latexmk を含む TeX Live
 ```text
 バージョン 0.1.9
 
+・PDF の「戻る」「進む」を常に表示し，三点リーダから PDF 名，コンパイルした TeX のパス，更新状態を確認できるようにした．
+・PDF の引用リンクにカーソルを合わせると，文献のタイトル・著者・年を表示する．
+・配色を 7 種，アクセントを 8 色，フォントを 10 種から選べる．背景・文字・アクセントは色の選択欄やカラーコードで指定し，ライトとダークごとに保存できる．
+・ポップアップ，通知，コンパイル結果，草稿の状態にも選んだ配色を反映する．
 ・Markdown の書式ツールバーに文字付きの「画像」「表」「新規ページ」を配置し，画像や表の挿入，リンク付きのページ作成を直接開けるようにした．表示幅が狭い場合は次の行へ折り返す．
 ・言語設定の項目名を「Language / 言語設定」とし，日本語と英語のどちらの画面でも英語を先に表示するようにした．
 ・ファイル一覧のメニュー項目を「削除」に揃えた．ファイルまたは空のフォルダーを削除する前には，確認画面を表示する．
+・ファイル操作をキャンセルした直後から，キーボードで次のファイルやメニューを操作できるようにした．
 ```
 
 ## Images and captions
