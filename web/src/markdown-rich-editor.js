@@ -324,11 +324,21 @@ export class MarkdownRichEditor {
       const item = closestNode($from, node => node.type === nodes.list_item);
       return splitListItemKeepMarks(nodes.list_item, item?.node.attrs.checked == null ? undefined : { ...item.node.attrs, checked: false })(state, dispatch);
     };
+    const moveToDocumentBoundary = (direction, extend = false) => (state, dispatch) => {
+      const boundary = direction < 0 ? Selection.atStart(state.doc) : Selection.atEnd(state.doc);
+      const selection = extend
+        ? TextSelection.between(state.selection.$anchor, direction < 0 ? boundary.$from : boundary.$to, direction)
+        : boundary;
+      if (dispatch) dispatch(state.tr.setSelection(selection).scrollIntoView());
+      return true;
+    };
     return [
       inputRules({ rules }),
       keymap({
         'Mod-b': () => this.command('bold'), 'Mod-i': () => this.command('italic'), 'Mod-Shift-x': () => this.command('strike'),
         'Mod-`': () => this.command('inlineCode'),
+        'Mod-Home': moveToDocumentBoundary(-1), 'Mod-End': moveToDocumentBoundary(1),
+        'Mod-Shift-Home': moveToDocumentBoundary(-1, true), 'Mod-Shift-End': moveToDocumentBoundary(1, true),
         Enter: chainCommands(enter, baseKeymap.Enter),
         'Shift-Enter': (state, dispatch) => {
           if (isInTable(state)) { this.tab(state, dispatch, -1); return true; }

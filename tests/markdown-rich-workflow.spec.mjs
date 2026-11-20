@@ -143,7 +143,7 @@ test('直接編集とソースの両方から同じ文書の Undo と Redo を�
   await mode(page).selectOption('source');
   await source(page).press(`${modifier}+z`);
   await expect.poll(() => sourceText(page)).toBe(initial);
-  await source(page).press(`${modifier}+Shift+z`);
+  await source(page).press(`${modifier}+Shift+Z`);
   await expect.poll(() => sourceText(page)).toBe(afterParagraph);
 
   await mode(page).selectOption('rich');
@@ -152,7 +152,7 @@ test('直接編集とソースの両方から同じ文書の Undo と Redo を�
   await rich(page).press(`${modifier}+z`);
   await expect(rich(page).locator('p')).toHaveText('First paragraph.');
   await expect.poll(() => page.evaluate(() => getSelection()?.anchorNode?.parentElement?.closest('p')?.textContent)).toBe('First paragraph.');
-  await rich(page).press(`${modifier}+Shift+z`);
+  await rich(page).press(`${modifier}+Shift+Z`);
   await expect(rich(page).locator('p')).toHaveText('First paragraph. Edited in the rich view.');
 
   await mode(page).selectOption('source');
@@ -166,7 +166,7 @@ test('直接編集とソースの両方から同じ文書の Undo と Redo を�
   await rich(page).press(`${modifier}+z`);
   await expect(rich(page).getByRole('heading', { name: 'Notes', exact: true })).toBeVisible();
   await mode(page).selectOption('source');
-  await source(page).press(`${modifier}+Shift+z`);
+  await source(page).press(`${modifier}+Shift+Z`);
   await expect.poll(() => sourceText(page)).toBe(afterHeading);
   await saveMarkdown(page, file, afterHeading);
 });

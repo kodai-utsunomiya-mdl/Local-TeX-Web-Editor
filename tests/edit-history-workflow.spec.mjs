@@ -95,7 +95,7 @@ test('複数の変更箇所を戻し，選ばなかった本文をそのまま�
   expect(await readFile(path.join(session.project, 'history.tex'), 'utf8')).toBe(current);
   await source(page).click(); await page.keyboard.press(`${modifier}+z`);
   await expect.poll(() => sourceText(page)).toBe(current);
-  await page.keyboard.press(modifier === 'Meta' ? 'Meta+Shift+z' : 'Control+y');
+  await page.keyboard.press(modifier === 'Meta' ? 'Meta+Shift+Z' : 'Control+y');
   await expect.poll(() => sourceText(page)).toBe(restored);
   await page.keyboard.press(`${modifier}+s`);
   await expect.poll(() => readFile(path.join(session.project, 'history.tex'), 'utf8')).toBe(restored);

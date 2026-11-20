@@ -101,7 +101,7 @@ test('開いた Markdown を変えずに表示し，装飾と入力を原稿の 
   await page.keyboard.press('Control+z');
   await expect(page.locator('.markdown-rich-document strong')).toHaveCount(0);
   expect(await page.evaluate(() => sourceText())).toBe(original);
-  await page.keyboard.press('Control+Shift+z');
+  await page.keyboard.press('Control+Shift+Z');
   await expect(page.locator('.markdown-rich-document strong')).toHaveText('sentence');
   await page.evaluate(() => { rich.selectSource(rich.text.indexOf('sentence') + 8); rich.focus(); });
   await page.keyboard.type(' updated');

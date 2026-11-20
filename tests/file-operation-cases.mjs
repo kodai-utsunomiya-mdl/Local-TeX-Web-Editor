@@ -58,7 +58,7 @@ export function registerFileOperationTests({ test, openProject, openEditor, setA
     expect(await exists(path.join(session.project, 'analysis.py'))).toBe(false);
     await source(page).click(); await page.keyboard.press(`${modifier}+z`);
     await expect(source(page)).toContainText('def square');
-    await page.keyboard.press(modifier === 'Meta' ? 'Meta+Shift+z' : 'Control+y'); await expect(source(page)).toContainText('print(square(3))');
+    await page.keyboard.press(modifier === 'Meta' ? 'Meta+Shift+Z' : 'Control+y'); await expect(source(page)).toContainText('print(square(3))');
     await page.keyboard.press(`${modifier}+s`);
     await expect.poll(() => readFile(path.join(session.project, 'analysis-renamed.py'), 'utf8')).toBe(edited);
     const root = (await json(session, '/api/state')).project.root;
