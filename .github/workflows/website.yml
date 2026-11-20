@@ -33,6 +33,9 @@ jobs:
           npm install --prefix "$RUNNER_TEMP/website-browser" --no-save --ignore-scripts playwright@1.64.1
           "$RUNNER_TEMP/website-browser/node_modules/.bin/playwright" install --with-deps chromium
 
+      - name: Render the social preview from the application screenshot
+        run: node .github/scripts/render-social-preview.mjs
+
       - name: Check the pages and capture screenshots
         run: node .github/scripts/check-website.mjs
 

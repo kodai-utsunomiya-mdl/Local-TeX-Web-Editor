@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Local TeX Web Editor — TeX and Markdown in your browser</title>
-  <meta name="description" content="A free TeX and Markdown editor for Windows and macOS, with project search, local edit history, two source editors, and live PDF and Markdown previews.">
+  <meta name="description" content="A free TeX and Markdown editor for Windows and macOS, with local compilation, live previews, project file operations, linked Markdown pages, and PDF export.">
   <meta name="theme-color" content="#f7f8f5">
   <link rel="canonical" href="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/">
   <link rel="alternate" hreflang="en" href="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/">
@@ -13,7 +13,7 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Local TeX Web Editor">
   <meta property="og:title" content="Local TeX Web Editor">
-  <meta property="og:description" content="Write TeX and Markdown locally. Search a project, compare drafts, and read the PDF while editing two documents side by side.">
+  <meta property="og:description" content="Write TeX and Markdown locally with live previews. Manage project files, create linked Markdown pages, and export your notes as PDF.">
   <meta property="og:url" content="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/">
   <meta property="og:image" content="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/assets/social-preview.png">
   <meta property="og:image:type" content="image/png">
@@ -24,7 +24,7 @@
   <meta property="og:locale:alternate" content="ja_JP">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Local TeX Web Editor">
-  <meta name="twitter:description" content="Write TeX and Markdown locally. Search a project, compare drafts, and read the PDF while editing two documents side by side.">
+  <meta name="twitter:description" content="Write TeX and Markdown locally with live previews. Manage project files, create linked Markdown pages, and export your notes as PDF.">
   <meta name="twitter:image" content="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/assets/social-preview.png">
   <meta name="twitter:image:alt" content="Local TeX Web Editor's icon and name beside its TeX source editor and PDF preview">
   <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
@@ -63,18 +63,18 @@
             <span><span class="download-label">Get it from Microsoft Store</span><small>Windows x64 · Free · Store updates</small></span>
             <span class="download-arrow" aria-hidden="true">↗</span>
           </a>
-          <a class="download" href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.7/local-tex-web-editor-0.1.7-windows-x64.zip">
+          <a class="download" href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.8/local-tex-web-editor-0.1.8-windows-x64.zip">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 4.4 10.7 3v8.2H2zm9.7-1.6L22 1.2v10H11.7zM2 12.3h8.7v8.2L2 19.1zm9.7 0H22v10l-10.3-1.6z"/></svg>
-            <span><span class="download-label">Download the Windows ZIP</span><small>v0.1.7 · x64 · ZIP</small></span>
+            <span><span class="download-label">Download the Windows ZIP</span><small>v0.1.8 · x64 · ZIP</small></span>
             <span class="download-arrow" aria-hidden="true">↓</span>
           </a>
-          <a class="download" href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.7/local-tex-web-editor-0.1.7-macos-universal.zip">
+          <a class="download" href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.8/local-tex-web-editor-0.1.8-macos-universal.zip">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="13" rx="1.4"/><path d="M8 21h8M12 16v5M3 12.5h18"/></svg>
-            <span><span class="download-label">Download for macOS</span><small>v0.1.7 · Apple Silicon + Intel · ZIP</small></span>
+            <span><span class="download-label">Download for macOS</span><small>v0.1.8 · Apple Silicon + Intel · ZIP</small></span>
             <span class="download-arrow" aria-hidden="true">↓</span>
           </a>
-          <p class="release-note"><span class="version-badge">v0.1.7</span> <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.7">Release notes and downloads</a></p>
-          <p class="store-release-note">The ZIP downloads are v0.1.7. The Microsoft Store update becomes available after Store review and publication.</p>
+          <p class="release-note"><span class="version-badge">v0.1.8</span> <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.8">Release notes and downloads</a></p>
+          <p class="store-release-note">The ZIP downloads are v0.1.8. The Microsoft Store update becomes available after Store review and publication.</p>
         </div>
       </div>
 
@@ -93,7 +93,7 @@
       <nav class="contents" aria-label="On this page">
         <p>On this page</p>
         <ul>
-          <li><a href="#whats-new">New in v0.1.7</a></li>
+          <li><a href="#whats-new">New in v0.1.8</a></li>
           <li><a href="#requirements">Requirements &amp; size</a></li>
           <li><a href="#get-started">Get started</a></li>
           <li><a href="#editing">Editing &amp; preview</a></li>
@@ -103,19 +103,19 @@
       </nav>
       <div class="guide">
         <section id="whats-new" aria-labelledby="whats-new-title">
-          <h2 id="whats-new-title">New in v0.1.7</h2>
-          <p>Keep the surrounding project close while you write: search across chapters, revisit a reference, compare earlier text, or work on two documents together.</p>
+          <h2 id="whats-new-title">New in v0.1.8</h2>
+          <p>Return to the editor after working in other browser tabs, manage the files beside your manuscript, and turn Markdown notes into pages and PDFs.</p>
           <ul class="release-highlights">
-            <li><strong>Search and replace across the project.</strong> Include unsaved text, review the replacements, and choose the matches to change.</li>
-            <li><strong>Return to where you were writing.</strong> Back and forward work after source jumps and links within the PDF.</li>
-            <li><strong>Compare drafts and edit side by side.</strong> Restore selected passages from local history; reopen your tabs in their saved order and layout.</li>
-            <li><strong>Follow citations and references.</strong> Find definitions and uses, and preview changes before renaming a key. Filter compilation errors and warnings by type.</li>
-            <li><strong>Reuse material.</strong> Paste or drop images, create or paste tables, and start a project from a built-in template or one you register yourself.</li>
-            <li><strong>Write Markdown with fewer steps.</strong> Use formatting, link and code-block controls, edit table cells directly, and sync scrolling from either the source or preview.</li>
-            <li><strong>Complete TeX and fold long documents.</strong> Insert commands and environments with editable fields, read citation details beside the candidates, and collapse sections in the source or outline.</li>
-            <li><strong>Read PDFs in dark colors.</strong> Switch the display without changing saved PDF colors. The toolbar stays on one row, with more controls in <strong>PDF actions</strong> when space is limited.</li>
+            <li><strong>Keep the editor running between visits.</strong> Background, sleeping, discarded, or closed browser tabs leave the local app running. Use <strong>Quit</strong> in the app to end the session.</li>
+            <li><strong>Manage project files from the file list.</strong> Right-click to create files and folders, copy paths, rename entries, or delete them after confirmation.</li>
+            <li><strong>Edit code beside your manuscript.</strong> Open Python, JavaScript, and other supported program and configuration files with syntax highlighting.</li>
+            <li><strong>Create linked Markdown pages.</strong> Enter a title and file path to create a page and insert its relative link at the cursor.</li>
+            <li><strong>Export Markdown and extract PDF text.</strong> Save the current Markdown through the browser's PDF printer, or download a PDF's text as TXT.</li>
+            <li><strong>Keep frequent PDF controls visible.</strong> Zoom in, zoom out, and save the PDF directly from the toolbar, including in a narrow preview.</li>
+            <li><strong>Clear the open tabs together.</strong> Save or discard unsaved edits when closing all tabs. Long tab strips scroll horizontally.</li>
+            <li><strong>Preview the interface language.</strong> Selecting English or Japanese changes the settings screen immediately; Save applies the choice to future sessions.</li>
           </ul>
-          <p class="small-note">New installations start with the gray color scheme and Consolas as the editor font. The new <strong>Black</strong> color scheme gives <strong>Dark</strong> mode a black background. Saved appearance choices continue to apply. See the <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.7">v0.1.7 release notes</a> for the complete changes.</p>
+          <p class="small-note">The spacing around TeX completion settings is also improved. See the <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.8">v0.1.8 release notes</a> for the complete changes.</p>
         </section>
 
         <section id="requirements" aria-labelledby="requirements-title">
@@ -134,14 +134,14 @@
           <p>The app uses <code>latexmk</code> to compile and <code>synctex</code> to move between source and PDF. If your project uses a <code>latexmkrc</code> or <code>.latexmkrc</code> file, keep it with the source files.</p>
           <div class="table-scroll">
             <table class="size-table">
-              <thead><tr><th scope="col">v0.1.7</th><th scope="col">ZIP download</th><th scope="col">App after extraction</th></tr></thead>
+              <thead><tr><th scope="col">v0.1.8</th><th scope="col">ZIP download</th><th scope="col">App after extraction</th></tr></thead>
               <tbody>
                 <tr><th scope="row">Windows x64</th><td>About 8 MB</td><td>About 17 MB</td></tr>
-                <tr><th scope="row">macOS, both CPUs</th><td>About 15 MB</td><td>About 33 MB</td></tr>
+                <tr><th scope="row">macOS, both CPUs</th><td>About 15 MB</td><td>About 34 MB</td></tr>
               </tbody>
             </table>
           </div>
-          <p class="small-note">Sizes are rounded to the nearest MB; see the <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.7">v0.1.7 release assets</a> for each download's size. 1 MB = 1,000,000 bytes. TeX Live, documents, drafts, edit history, templates and compilation files use additional space. The app includes its editor and PDF viewer; it runs without installing Python, Node.js, Go or VS Code.</p>
+          <p class="small-note">Sizes are rounded to the nearest MB; see the <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.8">v0.1.8 release assets</a> for each download's size. 1 MB = 1,000,000 bytes. TeX Live, documents, drafts, edit history, templates and compilation files use additional space. The app includes its editor and PDF viewer; it runs without installing Python, Node.js, Go or VS Code.</p>
           <details>
             <summary>Starting with a smaller TeX installation</summary>
             <p>On Windows, the <a href="https://tug.org/texlive/acquire-netinstall.html">TeX Live installer</a> lets you choose a smaller installation scheme. On Mac, <a href="https://tug.org/mactex/morepackages.html">BasicTeX</a> provides a small starting point. Add <code>latexmk</code>, <code>synctex</code> and packages needed by your documents.</p>
@@ -168,7 +168,7 @@
             <li>
               <h3>Open a TeX document and compile</h3>
               <p>Select the document in the file list and click <strong>Compile</strong>, or press <span class="shortcut"><kbd>Ctrl</kbd> + <kbd>Enter</kbd></span> on Windows or <span class="shortcut"><kbd>Cmd</kbd> + <kbd>Enter</kbd></span> on Mac. The resulting PDF appears on the right.</p>
-              <p class="file-note">The interface starts in English. Choose <strong>Settings → Language → 日本語</strong> to switch to Japanese.</p>
+              <p class="file-note">The interface starts in English. Open <strong>Settings → 言語設定 / Language</strong> and select <strong>日本語</strong> to see it change immediately. Choose <strong>Save</strong> to use that language next time, or <strong>Cancel</strong> to return to the saved language. The language label always appears in both languages.</p>
             </li>
           </ol>
           <details>
@@ -177,14 +177,27 @@
             <p>On Mac, see the <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/blob/main/README.md#macos">macOS launch instructions</a> and <a href="https://support.apple.com/en-us/102445">Apple's guide to opening an app</a>.</p>
           </details>
           <p class="small-note" style="margin-top: 1.2rem;">The Microsoft Store installation adds the app to the Windows Start menu. In the Windows ZIP edition, the app's Settings can create Start menu or desktop shortcuts. On Mac, open the app from Applications or Spotlight.</p>
+          <div class="usage-block">
+            <h3>Return to the editor and finish a session</h3>
+            <p>The local app keeps running when its browser tab sleeps, is discarded, or closes. Returning to the tab reconnects to the same local address. Launching the same version again opens the existing editor.</p>
+            <p>To finish, choose <strong>Quit</strong> in the app and follow the save prompt. This stops the local app and its background work.</p>
+          </div>
         </section>
 
         <section id="editing" aria-labelledby="editing-title">
           <h2 id="editing-title">Editing and preview</h2>
           <p>Files open in tabs. When the preview is showing a PDF, compiling an independent TeX document switches it to that document's PDF. Switching between TeX tabs alone leaves the last compiled PDF visible. For a chapter included by another file, use the default main document or a <code>% !TeX root = ../main.tex</code> comment.</p>
+          <p>Use a mouse wheel, a horizontal trackpad gesture, or touch to move through a long tab strip. <strong>Close all tabs</strong> above the editor clears the strip and offers <strong>Save</strong>, <strong>Discard</strong>, or <strong>Cancel</strong> for unsaved edits. The next session restores your chosen tabs and order, including a strip with no open tabs.</p>
           <p><strong>Outline</strong> shows the headings from the selected TeX or Markdown tab and updates when you switch tabs. Vertical guides show the hierarchy; the arrows expand or collapse child headings. Click a heading to open its source line with space above it. Folded source content opens at the destination.</p>
           <p>Drag the right edge of the files and outline sidebar, the divider between the editor and preview, or the top edge of the log to adjust the space you use. You can also focus a divider and use the arrow keys, or double-click it to restore its default position. Your chosen widths and log height are saved for the next launch.</p>
           <p>In <strong>Settings → Appearance</strong>, choose system, light, or dark mode, a color scheme, an accent color, and the editor font. For a black background, choose <strong>Dark</strong> mode and the <strong>Black</strong> color scheme. Changes appear immediately: choose <strong>Save appearance</strong> to use them next time, or <strong>Cancel</strong> to return to the previous appearance. System mode follows your computer's light/dark preference. The default color scheme is gray; the default editor font is Consolas, with another monospace font used when it is unavailable.</p>
+
+          <div class="usage-block">
+            <h3>Manage files and edit code</h3>
+            <p>Right-click a file or folder to create a file or folder at that location, copy its relative or full path, rename it, or delete it. From the keyboard, focus the entry and press <span class="shortcut"><kbd>Shift</kbd> + <kbd>F10</kbd></span> or the context-menu key. Use <kbd>F2</kbd> to rename and <kbd>Delete</kbd> to open the deletion confirmation. Folders can be deleted when empty.</p>
+            <p>Renaming updates the open tabs and their unsaved text. After a rename, update any links to that path in your documents.</p>
+            <p>Python, JavaScript/TypeScript, C/C++, Java, Kotlin, C#, Go, Rust, R, Ruby, shell, PowerShell, HTML, CSS, XML, SQL, JSON, YAML, TOML, and Lua files have syntax highlighting. Other supported text files open as plain text; notebooks with the <code>.ipynb</code> extension open as JSON. Use the same saving, search, drafts, and history tools while editing these files.</p>
+          </div>
 
           <div class="usage-block">
             <h3>Complete TeX and fold sections</h3>
@@ -202,7 +215,8 @@
               <div><dt>Source text size</dt><dd>Use <kbd>Ctrl</kbd> + wheel over the editor, pinch, or change the font size in Settings.</dd></div>
             </dl>
             <p>Use the <strong>← / →</strong> buttons above the editor or preview to go back and forward through visited locations. After following a citation or section link within the PDF, <strong>←</strong> returns to the page and position you were reading.</p>
-            <p>Choose <strong>Dark PDF view</strong> to change the PDF colors on screen, including figures and photographs. Saved PDFs keep their original colors. In a narrow preview, open <strong>PDF actions</strong> for zoom and dark view; the compiled PDF's search and <strong>Save PDF</strong> controls are also available there.</p>
+            <p>The toolbar stays on one row. <strong>＋</strong>, <strong>−</strong>, <strong>Save PDF</strong>, and the page-number field stay visible in a narrow preview. Open <strong>… (PDF actions)</strong> for the zoom selector, dark view, and search. Navigation controls move into that menu as the available width decreases.</p>
+            <p>Choose <strong>Dark PDF view</strong> to change the PDF colors on screen, including figures and photographs. Saved PDFs use their original colors.</p>
           </div>
 
           <div class="usage-block">
@@ -211,6 +225,7 @@
             <p>To move from Markdown source to its preview, use <kbd>Ctrl</kbd> + click on Windows or <kbd>Cmd</kbd> + click on Mac, or click the navigation button above the editor. The matching passage is briefly highlighted. Double-click a paragraph or heading in the preview to return to its source line.</p>
             <p>Turn <strong>Sync scrolling</strong> on or off in the Markdown preview toolbar. With it enabled, scrolling either the source or the preview moves the other to the corresponding passage. It starts enabled, and the app saves your choice for future sessions.</p>
             <p>The Markdown editing toolbar adds headings, bold and italic text, strikethrough, lists, quotes and inline code. The link dialog has separate fields for display text and the destination; the code-block dialog lets you specify a language. The table dialog creates a grid you can edit before inserting it.</p>
+            <p>Choose <strong>Editing tools → New Markdown page</strong> to add another page. Enter its title and a path in an existing project folder, review the relative link, and choose whether to open the new page. The file starts with its title as a heading, and the link replaces the current selection. Undo in the original document removes the inserted link; the new page remains in the project.</p>
             <figure class="screenshot secondary-shot">
               <a href="assets/editor-markdown-light.png" aria-label="Open the Markdown editor screenshot at full size">
                 <img src="assets/editor-markdown-light.png" width="1440" height="900" alt="Markdown source and a live preview showing equations, a task list and a table, in light mode." loading="lazy" decoding="async">
@@ -218,12 +233,18 @@
               <figcaption><span>Markdown editing and preview, in light mode.</span><span>Click to view at full size.</span></figcaption>
             </figure>
           </div>
+          <div class="usage-block">
+            <h3>Save Markdown as PDF and extract PDF text</h3>
+            <p>Open <strong>Editing tools → Save Markdown as PDF</strong> to review the current Markdown, including unsaved edits, mathematics, tables, and project images. Choose <strong>Print / Save as PDF</strong>, then select the browser's PDF destination. Markdown export works without TeX Live.</p>
+            <p>To extract text, display a compiled PDF or open a PDF from the file list, then choose <strong>Editing tools → Convert PDF to text</strong>. Review the text and choose <strong>Download TXT</strong>. Progress is shown while reading the pages, and you can cancel the operation. The preview shows the first 20,000 characters; the download contains all extracted text, up to 16 MiB.</p>
+            <p class="small-note">Text follows the PDF's page order. Scanned images require OCR. Columns, equations, and font mappings in the PDF can affect the resulting text and its order.</p>
+          </div>
           <p style="margin-top: 1.5rem;">Search accepts pasted text across multiple lines. Autosave, local drafts, light and dark themes, and a saved place in each document support everyday editing. See the <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/blob/main/README.md#edit-documents">editing guide</a> for shortcuts and details.</p>
         </section>
 
         <section id="writing" aria-labelledby="writing-title">
           <h2 id="writing-title">Search, compare and reuse</h2>
-          <p>Use <strong>Search project</strong> above the editor, or open <strong>Editing tools</strong> for references, history, images, tables and templates.</p>
+          <p>Use <strong>Search project</strong> above the editor, or open <strong>Editing tools</strong> for references, history, images, tables, templates, Markdown pages, and document export.</p>
           <div class="usage-block">
             <h3>Search the whole project and follow references</h3>
             <p><strong>Search project</strong> searches the text in project files, including unsaved edits in open tabs. Use <span class="shortcut"><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd></span> on Windows or <span class="shortcut"><kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd></span> on Mac. Review the before-and-after text, select the matches to replace, and apply the changes. Selecting a result opens its source location.</p>
@@ -255,12 +276,12 @@
           <h2 id="updates-title">Updates and help</h2>
           <p>Click the app's <strong>? (Help)</strong> button or press <kbd>F1</kbd> for the user guide, keyboard shortcuts, release notes, and troubleshooting steps. Help also opens the compilation log, Settings, and the update page for your edition.</p>
           <p>Use Microsoft Store to update the Windows Store edition. New versions become available after Store review and publication. Launch the updated app from the Start menu.</p>
-          <p>For the Windows ZIP edition and macOS, download updates from <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.7">GitHub Releases</a>. On Windows, extract the new ZIP and run its <code>.exe</code>; follow the prompt if an older version is running. On Mac, save your work, quit the app and replace the copy in Applications.</p>
+          <p>For the Windows ZIP edition and macOS, download updates from <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.8">GitHub Releases</a>. On Windows, extract the new ZIP and run its <code>.exe</code>; follow the prompt if an older version is running. On Mac, save your work, quit the app and replace the copy in Applications.</p>
           <p>App updates use the same settings and drafts for each edition. The first Store launch copies valid settings and drafts from an existing Windows ZIP installation. Your documents stay in their project folders.</p>
-          <p>To finish a session, save your work and close the last browser tab showing this app; the app stops after about five seconds.</p>
+          <p>Use the app's <strong>Quit</strong> action to finish a session. Closing browser tabs leaves the local app running so you can reopen the editor later.</p>
           <p>For a problem or suggestion, choose <strong>Open GitHub Issues</strong> in Help. Under <strong>About the app</strong>, use <strong>Copy environment information</strong> to copy the app version, operating system, architecture, edition, and available TeX programs. Include the steps to reproduce a problem; a short log excerpt or a small sample project can help explain a compilation problem.</p>
           <ul class="reading-links">
-            <li><a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.7">Downloads and release notes</a></li>
+            <li><a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.8">Downloads and release notes</a></li>
             <li><a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/issues">Report an issue</a></li>
             <li><a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/blob/main/README.md">Full README</a></li>
           </ul>
