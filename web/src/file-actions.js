@@ -33,10 +33,9 @@ export function fileDestinationConflict(destination, paths, { source = null, pla
     return platform === 'windows' || platform === 'darwin' ? path.toLocaleLowerCase('en-US') : path;
   };
   const target = normalize(destination);
-  const origin = source && { path: normalize(source.path), directory: source.directory };
   return paths.find(path => {
     const candidate = normalize(path);
-    return candidate && (!origin || !entryContains(origin, candidate)) && (candidate === target || candidate.startsWith(`${target}/`));
+    return candidate && (!source || !entryContains(source, path)) && (candidate === target || candidate.startsWith(`${target}/`));
   }) || '';
 }
 export function absoluteProjectPath(root, relative) {

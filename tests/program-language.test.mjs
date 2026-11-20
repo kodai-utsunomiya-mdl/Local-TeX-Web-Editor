@@ -31,6 +31,19 @@ test('an open document or draft at the destination blocks a rename even after th
   assert.equal(fileDestinationConflict('notes/missing.md', paths, { source: { path: 'notes', directory: true } }), '');
 });
 
+test('only state keys that will actually move are excluded from destination conflicts', () => {
+  assert.equal(fileDestinationConflict('a.py', ['A.py', 'a.py'], {
+    source: { path: 'A.py', directory: false }, platform: 'darwin',
+  }), 'a.py');
+  assert.equal(fileDestinationConflict('chapters', ['Chapters/a.tex', 'chapters/a.tex'], {
+    source: { path: 'Chapters', directory: true }, platform: 'darwin',
+  }), 'chapters/a.tex');
+  const composed = '\u00e9.py', decomposed = 'e\u0301.py';
+  assert.equal(fileDestinationConflict(decomposed, [composed, decomposed], {
+    source: { path: composed, directory: false }, platform: 'linux',
+  }), decomposed);
+});
+
 test('changing a file extension can change syntax without losing Undo history', () => {
   const syntax = new Compartment();
   let state = EditorState.create({ doc: 'old', extensions: [history(), syntax.of(programLanguage('notes.txt'))] });
