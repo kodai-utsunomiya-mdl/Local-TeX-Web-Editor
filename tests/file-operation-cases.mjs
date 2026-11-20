@@ -166,7 +166,7 @@ export function registerFileOperationTests({ test, openProject, openEditor, setA
     ]);
     await expect(dialog(page).locator('.file-action-unsaved')).toContainText('remove-folder/first.md');
     await expect(dialog(page).locator('.file-action-unsaved')).toContainText('remove-folder/nested/second.tex');
-    await testInfo.attach('folder-delete-confirmation.png', { body: await page.screenshot(), contentType: 'image/png' });
+    await page.screenshot({ path: testInfo.outputPath('folder-delete-confirmation.png') });
     await dialog(page).getByRole('button', { name: 'キャンセル', exact: true }).click();
     expect(await readFile(path.join(folder, 'first.md'), 'utf8')).toBe('# Saved note\n');
     expect(await readFile(path.join(folder, 'nested', 'second.tex'), 'utf8')).toBe('Saved chapter.\n');

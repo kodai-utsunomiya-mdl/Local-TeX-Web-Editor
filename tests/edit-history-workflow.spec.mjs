@@ -54,7 +54,7 @@ test('複数の版を選び，削除の確認を取り消した後に選んだ�
   await expect(page.locator('#history-delete-dialog')).toBeVisible();
   for (const entry of removed) await expect(page.locator('#history-delete-entries')).toContainText(entry.label);
   await expect(page.locator('#history-delete-entries')).not.toContainText(remaining.label);
-  await testInfo.attach('history-delete-confirmation.png', { body: await page.screenshot(), contentType: 'image/png' });
+  await page.screenshot({ path: testInfo.outputPath('history-delete-confirmation.png') });
   await page.locator('#history-delete-cancel').click();
   await expect(page.locator('#history-delete-dialog')).not.toBeVisible(); await expect(history(page)).toBeVisible();
   expect((await json(session, '/api/history?path=history.tex')).entries.map(entry => entry.id)).toEqual(recorded.map(entry => entry.id));

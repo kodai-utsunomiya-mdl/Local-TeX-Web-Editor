@@ -65,7 +65,7 @@ test('ロゴでホームへ移り，削除をキャンセルして同じエデ�
   await expect(card(page, root).locator('[data-action="resume"]')).toBeVisible();
   await expect(card(page, root)).toContainText('Current project');
   expect(await editorElement.evaluate(element => element.isConnected)).toBe(true);
-  await testInfo.attach('project-home.png', { body: await page.screenshot(), contentType: 'image/png' });
+  await page.screenshot({ path: testInfo.outputPath('project-home.png') });
   await inspectDeletion(page, root);
   await expect(page.locator('#project-delete-unsaved')).toContainText('main.tex');
   await page.locator('#project-delete-cancel').click();

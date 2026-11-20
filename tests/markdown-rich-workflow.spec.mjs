@@ -101,7 +101,7 @@ test('Markdown は直接編集で開き，ソースと往復しても元の記�
   await expect(rich(page).locator('table')).toBeVisible();
   await expect(rich(page).locator('.katex').first()).toBeVisible();
   await expect(page.locator('#toast')).toBeHidden();
-  await testInfo.attach('markdown-direct-editing.png', { body: await page.screenshot(), contentType: 'image/png' });
+  await page.screenshot({ path: testInfo.outputPath('markdown-direct-editing.png') });
 
   await mode(page).selectOption('source');
   await expect(source(page)).toBeVisible();
@@ -232,7 +232,7 @@ test('同じ Markdown を 2 つのペインでソースと直接編集にし，�
   const expected = changedSource.replace('Changed in the source pane.', 'Changed in the source pane. Edited in the rich pane.');
   await expect.poll(() => sourceText(page)).toBe(expected);
   await saveMarkdown(page, file, expected);
-  await testInfo.attach('markdown-two-editors.png', { body: await page.screenshot(), contentType: 'image/png' });
+  await page.screenshot({ path: testInfo.outputPath('markdown-two-editors.png') });
 });
 
 test('長い Markdown で表示を切り替え，ホームで再読み込みしても編集位置へ戻る', async ({ page, session }) => {
