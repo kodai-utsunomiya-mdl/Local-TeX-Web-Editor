@@ -79,8 +79,8 @@ export function registerInterfaceWorkflowTests({ test, openProject, openEditor, 
     const expectLanguage = async (value, title, save) => {
       await expect(page.locator('html')).toHaveAttribute('lang', value);
       await expect(language).toHaveValue(value);
-      await expect(label).toHaveText('言語設定 / Language');
-      await expect(language).toHaveAccessibleName('言語設定 / Language');
+      await expect(label).toHaveText('Language / 言語設定');
+      await expect(language).toHaveAccessibleName('Language / 言語設定');
       await expect(page.locator('#settings-title')).toHaveText(title);
       await expect(page.locator('#save-settings')).toHaveText(save);
     };

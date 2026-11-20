@@ -3,7 +3,7 @@ import { getLanguage, onLanguageChange } from './i18n.js';
 const labels = {
   menu: ['ファイルとフォルダーの操作', 'File and folder actions'],
   newFile: ['ここに新規ファイルを作成', 'New file here'], newFolder: ['ここに新規フォルダーを作成', 'New folder here'],
-  rename: ['名前を変更', 'Rename'], remove: ['削除…', 'Delete…'],
+  rename: ['名前を変更', 'Rename'], remove: ['削除', 'Delete'],
   relative: ['相対パスをコピー', 'Copy relative path'], absolute: ['絶対パスをコピー', 'Copy full path'],
   cancel: ['キャンセル', 'Cancel'], close: ['閉じる', 'Close'], create: ['作成', 'Create'], delete: ['削除', 'Delete'],
   path: ['プロジェクト内のパス', 'Path in the project'],

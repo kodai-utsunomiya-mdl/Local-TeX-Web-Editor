@@ -4,11 +4,11 @@ English | [日本語](README.ja.md) · [Website and guide](https://kodai-utsunom
 
 [![Get the free Windows app from Microsoft Store](docs/download-store.svg)](https://apps.microsoft.com/detail/9P6QF32N19HG)
 &nbsp;&nbsp;
-[![Download Windows ZIP](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.8/local-tex-web-editor-0.1.8-windows-x64.zip)
+[![Download Windows ZIP](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.9/local-tex-web-editor-0.1.9-windows-x64.zip)
 &nbsp;&nbsp;
-[![Download for macOS](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.8/local-tex-web-editor-0.1.8-macos-universal.zip)
+[![Download for macOS](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.9/local-tex-web-editor-0.1.9-macos-universal.zip)
 
-**v0.1.8** · [All downloads and release notes](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [Requirements](#requirements) · [App size](#app-files-and-storage) · [Get started](#download-and-launch)
+**v0.1.9** · [All downloads and release notes](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [Requirements](#requirements) · [App size](#app-files-and-storage) · [Get started](#download-and-launch)
 
 Edit TeX documents in your browser on Windows or macOS, and compile them with TeX Live on your computer. The editor and PDF preview appear in the same window. Launching the app opens a `localhost` page in your default browser. Markdown editing and preview are also supported.
 
@@ -122,7 +122,7 @@ Microsoft Store manages installation and app updates. TeX Live is installed sepa
 #### ZIP download
 
 1. Open [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) and select the latest version.
-2. Under **Assets**, download `local-tex-web-editor-0.1.8-windows-x64.zip`. The **Source code** archives contain the files for development.
+2. Under **Assets**, download `local-tex-web-editor-0.1.9-windows-x64.zip`. The **Source code** archives contain the files for development.
 3. Extract the ZIP and double-click `local-tex-web-editor.exe`.
 4. In the browser window, choose your project folder. You can also enter its path.
 5. If TeX Live is not found automatically, open Settings and select the folder containing `latexmk.exe`, for example `C:\texlive\2025\bin\windows`.
@@ -132,7 +132,7 @@ The Windows executable in the ZIP download does not have a code signature. If Sm
 
 ### macOS
 
-1. Under **Assets** in [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases), download `local-tex-web-editor-0.1.8-macos-universal.zip`. The same ZIP supports Apple Silicon and Intel.
+1. Under **Assets** in [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases), download `local-tex-web-editor-0.1.9-macos-universal.zip`. The same ZIP supports Apple Silicon and Intel.
 2. Extract the ZIP and move `Local TeX Web Editor.app` to **Applications**.
 3. Open **Local TeX Web Editor** from Finder or Spotlight. The editor opens in your browser.
 4. Open your project folder. If TeX is not found automatically, select `/Library/TeX/texbin` in Settings.
@@ -176,7 +176,7 @@ Launching the `.exe` from a new ZIP updates the installed copy and the Start men
 
 ## Edit documents
 
-The interface starts in **English**. In **Settings → 言語設定 / Language**, select **English** or **日本語** to see the interface change immediately. **Save** uses the selected language for future sessions; **Cancel** or `Esc` returns to the saved language. The label always shows both languages. Documents, PDFs, and Markdown content are displayed as written.
+The interface starts in **English**. In **Settings → Language / 言語設定**, select **English** or **日本語** to see the interface change immediately. **Save** uses the selected language for future sessions; **Cancel** or `Esc` returns to the saved language. The label always shows both languages. Documents, PDFs, and Markdown content are displayed as written.
 
 Open `.tex`, `.bib`, Markdown, Python, JavaScript, and other supported text files from the file list on the left. Each file opens in a tab, and you can drag tabs to change their order. Use a mouse wheel, horizontal trackpad gesture, or touch to move through a long tab strip. **Close all tabs** above the editor offers Save, Discard, or Cancel when there are unsaved edits. The next session restores the open tabs and their order, including a strip with no open tabs. Settings lets you choose an editor font size from 8 to 40 px; the default is 14 px. The font size is saved for future sessions.
 
@@ -396,7 +396,7 @@ The app does not impose a compilation time limit. Use the stop button to stop a 
 
 ## App files and storage
 
-The **v0.1.8** files have the sizes below, rounded to the nearest MB (1 MB = 1,000,000 bytes). The Assets section of the [release](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) shows each download's size.
+The **v0.1.9** files have the sizes below, rounded to the nearest MB (1 MB = 1,000,000 bytes). The Assets section of the [release](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) shows each download's size.
 
 | Platform | ZIP download | App after extraction |
 | --- | ---: | ---: |
@@ -439,7 +439,7 @@ go build -o bin/local-tex-web-editor.exe ./cmd/local-tex-editor
 Build a Windows distribution executable:
 
 ```sh
-go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.8" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
+go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.9" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
 ```
 
 `build:windows-resources` generates Windows x64 resources from the bundled ICO. The executable embeds nine icon sizes from 16 to 256 px.
@@ -455,7 +455,7 @@ npx playwright install chromium
 node scripts/build-macos.mjs
 ```
 
-This creates `dist/local-tex-web-editor-0.1.8-macos-universal.zip` with an app supporting Apple Silicon and Intel, the English and Japanese READMEs, and license files.
+This creates `dist/local-tex-web-editor-0.1.9-macos-universal.zip` with an app supporting Apple Silicon and Intel, the English and Japanese READMEs, and license files.
 
 Command-line options:
 
