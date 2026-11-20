@@ -4,16 +4,21 @@ import { markdownEdit, sameMarkdownSelection } from './markdown-editing-commands
 
 const isMarkdown = path => /\.(md|markdown)$/i.test(path || '');
 
-function tableIcon() {
+function insertionIcon(kind) {
   const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   for (const [name, value] of Object.entries({ viewBox: '0 0 20 20', width: '16', height: '16', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5', 'aria-hidden': 'true', focusable: 'false' })) icon.setAttribute(name, value);
   const grid = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  grid.setAttribute('d', 'M3 3.5h14v13H3Z M3 8h14 M3 12.5h14 M7.5 3.5v13 M12.5 3.5v13');
+  const paths = {
+    table: 'M3 3.5h14v13H3Z M3 8h14 M3 12.5h14 M7.5 3.5v13 M12.5 3.5v13',
+    image: 'M3 3.5h14v13H3Z M3 13l4-4 4 4 2-2 4 4 M12 6.5h1',
+    page: 'M4 2.5h7l5 5v10H4Z M11 2.5v5h5 M7 12h6 M10 9v6',
+  };
+  grid.setAttribute('d', paths[kind]);
   icon.append(grid);
   return icon;
 }
 
-export function createMarkdownEditing({ container, getDocument, applyEdit, focusDocument = () => {}, onTable = () => {}, onError = () => {} }) {
+export function createMarkdownEditing({ container, getDocument, applyEdit, focusDocument = () => {}, onImage = () => {}, onTable = () => {}, onNewPage = () => {}, onError = () => {} }) {
   container.classList.add('markdown-editing');
   container.setAttribute('role', 'toolbar');
   container.setAttribute('aria-label', t('Markdown の編集'));
@@ -45,6 +50,11 @@ export function createMarkdownEditing({ container, getDocument, applyEdit, focus
     button.addEventListener('click', action);
     return button;
   }
+  function insertionButton(key, label, icon, action) {
+    const control = button(key, insertionIcon(icon), action, 'markdown-edit-labelled');
+    control.append(translated('span', label));
+    return control;
+  }
   const heading = element('select', { class: 'markdown-heading-select', 'aria-label': t('見出しの種類'), 'data-i18n-aria-label': '見出しの種類', title: t('見出しの種類'), 'data-i18n-title': '見出しの種類' });
   heading.append(translated('option', '本文', { value: '0' }));
   for (let level = 1; level <= 6; level++) heading.append(element('option', { value: String(level) }, `H${level}`));
@@ -57,8 +67,13 @@ export function createMarkdownEditing({ container, getDocument, applyEdit, focus
   const blocks = element('div', { class: 'markdown-edit-group' });
   blocks.append(button('箇条書き', '•', () => run('bullet')), button('番号付きリスト', '1.', () => run('ordered')), button('チェックリスト', '☑', () => run('task')), button('引用', '❝', () => run('quote')));
   const insertions = element('div', { class: 'markdown-edit-group' });
-  insertions.append(button('行内コード', '<>', () => run('inlineCode', { placeholder: t('コード') })), button('コードブロック', '{ }', () => openCode()), button('リンクを挿入', '↗', () => openLink()), button('表を挿入', tableIcon(), onTable));
-  container.replaceChildren(formatting, blocks, insertions);
+  insertions.append(button('行内コード', '<>', () => run('inlineCode', { placeholder: t('コード') })), button('コードブロック', '{ }', () => openCode()), button('リンクを挿入', '↗', () => openLink()));
+  const files = element('div', { class: 'markdown-edit-group' });
+  files.append(
+    insertionButton('画像を挿入', '画像', 'image', onImage),
+    insertionButton('表を挿入', '表', 'table', onTable),
+    insertionButton('新しい Markdown ページ', '新規ページ', 'page', onNewPage));
+  container.replaceChildren(formatting, blocks, insertions, files);
 
   const link = createImportDialog('markdown-link-dialog', 'リンクを挿入');
   const linkLabel = labelledInput('markdown-link-label', '表示する文字');

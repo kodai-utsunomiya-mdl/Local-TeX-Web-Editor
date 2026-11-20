@@ -17,6 +17,8 @@ export const markdownEditingEnglish = {
   '行内コード': 'Inline code',
   'コード': 'Code',
   'コードブロック': 'Code block',
+  '表': 'Table',
+  '新規ページ': 'New page',
   'リンクを挿入': 'Insert a link',
   '表示する文字': 'Display text',
   'リンク先': 'Link destination',

@@ -301,7 +301,7 @@ The next session opens the previous project and restores all open tabs in their 
 
 ### Create a linked Markdown page
 
-With a Markdown document open, choose **Editing tools → New Markdown page**. Enter a title and a path in an existing project folder. The dialog previews the relative link that will be inserted at the current selection and can open the new page afterward. The new file starts with its title as a heading. Existing files are not overwritten. Undo in the original document removes the inserted link; the created page remains in the project.
+With a Markdown document open, choose **New page** in the formatting toolbar above the source, or **Editing tools → New Markdown page**. Enter a title and a path in an existing project folder. The dialog previews the relative link that will be inserted at the current selection and can open the new page afterward. The new file starts with its title as a heading. Existing files are not overwritten. Undo in the original document removes the inserted link; the created page remains in the project.
 
 ### Convert Markdown and PDF
 
@@ -315,7 +315,7 @@ These tools reuse the Markdown renderer, browser printing, and PDF.js already us
 
 With the preview type set to **Auto**, opening a `.md` or `.markdown` file displays its Markdown preview on the right. The preview updates as you type and supports headings, lists, tables, code blocks, task lists, links, images, and mathematics. Click **Preview** or press `Ctrl + Enter` to save and refresh it.
 
-The Markdown editing toolbar appears above the source. Select text or place the cursor, then choose a heading level, bold, italic, strikethrough, a bullet or numbered list, a task list, a blockquote, or inline code. **Insert a link** lets you enter the display text and a web, email, or project-relative destination. **Code block** accepts code and an optional language name. The table button opens the same dialog for pasting cells or creating a new table. These actions edit the Markdown source and can be undone.
+The Markdown editing toolbar appears above the source. Select text or place the cursor, then choose a heading level, bold, italic, strikethrough, a bullet or numbered list, a task list, a blockquote, or inline code. **Insert a link** lets you enter the display text and a web, email, or project-relative destination. **Code block** accepts code and an optional language name. The labelled **Image**, **Table**, and **New page** buttons open image insertion, table creation or pasting, and linked Markdown page creation. These buttons stay visible and wrap onto another row when the source pane is narrow. These actions edit the Markdown source and can be undone.
 
 ![Local TeX Web Editor displaying Markdown source and its live preview in light mode](docs/screenshots/editor-markdown-light.png)
 

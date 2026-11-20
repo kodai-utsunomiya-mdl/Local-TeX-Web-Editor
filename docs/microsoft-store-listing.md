@@ -121,6 +121,7 @@ Document-specific TeX packages, fonts and bibliography tools
 ```text
 Version 0.1.9
 
+- Open image insertion, table creation or pasting, and linked Markdown page creation from labelled buttons in the Markdown formatting toolbar. Buttons wrap in narrow panes.
 - Show the language setting as Language / 言語設定 in both interface languages, with English first.
 - Use Delete for the file-list menu item. The confirmation dialog still appears before a file or empty folder is deleted.
 ```
@@ -212,6 +213,7 @@ TeX のコンパイルには latexmk を含む TeX Live
 ```text
 バージョン 0.1.9
 
+・Markdown の書式ツールバーに文字付きの「画像」「表」「新規ページ」を配置し，画像や表の挿入，リンク付きのページ作成を直接開けるようにした．表示幅が狭い場合は次の行へ折り返す．
 ・言語設定の項目名を「Language / 言語設定」とし，日本語と英語のどちらの画面でも英語を先に表示するようにした．
 ・ファイル一覧のメニュー項目を「削除」に揃えた．ファイルまたは空のフォルダーを削除する前には，確認画面を表示する．
 ```
@@ -260,7 +262,7 @@ Also try Search project with an unsaved edit and review a selected replacement; 
 
 In main.tex, type \b, accept \begin, type i inside the braces, and accept itemize; Tab / Shift+Tab moves between fields. In Settings, try Enable TeX completion and Show suggestions while typing; with automatic suggestions off, Ctrl+Space opens the list. Add \subsection{Details} below the sample section. Fold the section with its line-number arrow or Ctrl+Shift+[, then select Details in Outline: its source should unfold with space above it. Ctrl+Shift+] unfolds at the cursor. Use the Outline arrows to collapse and expand child headings, and also try folding a heading in notes.md. For the compiled PDF, toggle Dark PDF view, narrow the preview, and use the always-visible +/− and Save PDF buttons, and … (PDF actions) for the zoom selector and search. Confirm that the toolbar stays on one row and the saved PDF uses its original colors.
 
-For version 0.1.9, leave the editor in a background browser tab, return, and continue editing. In Settings, selecting a language changes the dialog immediately; Cancel restores the saved language, and Save applies it. The label always shows Language / 言語設定. Try Close all tabs with Save, Discard and Cancel. Right-click a project entry to create a file/folder, copy a path, rename it, or delete a disposable file; folder deletion is limited to empty folders. A .py file can be edited and saved with syntax highlighting. In notes.md, use Editing tools > New Markdown page, then Save Markdown as PDF > Print / Save as PDF. Display the compiled PDF and choose Editing tools > Convert PDF to text > Download TXT. The conversion extracts existing PDF text, with no OCR.
+For version 0.1.9, leave the editor in a background browser tab, return, and continue editing. In Settings, selecting a language changes the dialog immediately; Cancel restores the saved language, and Save applies it. The label always shows Language / 言語設定. Try Close all tabs with Save, Discard and Cancel. Right-click a project entry to create a file/folder, copy a path, rename it, or delete a disposable file; folder deletion is limited to empty folders. A .py file can be edited and saved with syntax highlighting. In notes.md, use Image, Table and New page in the formatting toolbar. The same actions remain available in Editing tools. Then use Editing tools > Save Markdown as PDF > Print / Save as PDF. Display the compiled PDF and choose Editing tools > Convert PDF to text > Download TXT. The conversion extracts existing PDF text, with no OCR.
 
 TeX Live is an external prerequisite for TeX compilation. Markdown editing and preview work without it. The app prepares package-install commands for the user to run; it does not install TeX or packages automatically.
 
@@ -293,7 +295,7 @@ Local TeX Web Editor は，ブラウザを画面として使う Windows のデ�
 
 main.tex で \b から \begin を選び，中括弧に i と入力して itemize を選びます．Tab / Shift + Tab で入力箇所を移動できます．「設定」の「TeX の入力補完を使う」と「入力中に候補を自動で表示する」を試し，自動表示をオフにした状態で Ctrl + Space から候補を開きます．サンプルのセクションの下に \subsection{Details} を追加し，行番号の横の矢印か Ctrl + Shift + [ でセクションを折りたたみます．アウトラインの Details を選び，原稿が展開され，上側に余白を付けて表示されることを確認します．Ctrl + Shift + ] でも展開できます．アウトラインの矢印で下位の見出しを開閉し，notes.md の見出しも折りたたんでください．コンパイルした PDF で「PDF を暗く表示」を切り替え，表示欄を狭くして常に表示される +/− と保存ボタン，「… (PDF の操作)」内の倍率の選択と検索を試します．操作欄が 1 行に収まり，保存した PDF が元の配色であることを確認します．
 
-v0.1.9 では，別のブラウザタブで作業してから編集画面へ戻り，編集を続けてください．設定で言語を選ぶと直ちに表示が切り替わり，キャンセルで元へ戻り，保存で次回に反映します．項目名は「Language / 言語設定」です．「すべてのタブを閉じる」の保存・破棄・キャンセルも確認できます．ファイル一覧の右クリックで新規ファイル・フォルダー，パスのコピー，名前の変更を試し，不要なテスト用ファイルを削除してください．フォルダーは空の場合に削除できます．.py ファイルも色付けして編集・保存できます．notes.md で「編集の操作 → 新しい Markdown ページ」と「Markdown を PDF に保存 → 印刷画面で PDF に保存」を試します．コンパイルした PDF を表示して「編集の操作 → PDF をテキストに変換 → TXT をダウンロード」を使えます．この変換は PDF の文字情報を読み取り，OCR は行いません．
+v0.1.9 では，別のブラウザタブで作業してから編集画面へ戻り，編集を続けてください．設定で言語を選ぶと直ちに表示が切り替わり，キャンセルで元へ戻り，保存で次回に反映します．項目名は「Language / 言語設定」です．「すべてのタブを閉じる」の保存・破棄・キャンセルも確認できます．ファイル一覧の右クリックで新規ファイル・フォルダー，パスのコピー，名前の変更を試し，不要なテスト用ファイルを削除してください．フォルダーは空の場合に削除できます．.py ファイルも色付けして編集・保存できます．notes.md の書式ツールバーで「画像」「表」「新規ページ」を試します．同じ操作は「編集の操作」からも開けます．続いて「編集の操作 → Markdown を PDF に保存 → 印刷画面で PDF に保存」を試します．コンパイルした PDF を表示して「編集の操作 → PDF をテキストに変換 → TXT をダウンロード」を使えます．この変換は PDF の文字情報を読み取り，OCR は行いません．
 
 TeX Live はコンパイルに使う外部のソフトウェアです．Markdown の編集とプレビューは TeX Live がなくても使えます．アプリはパッケージ追加用のコマンドを用意し，ユーザーが必要に応じて実行します．TeX やパッケージの自動導入は行いません．
 

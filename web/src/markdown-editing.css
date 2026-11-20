@@ -3,6 +3,8 @@
 .markdown-edit-group { display: flex; align-items: center; flex-wrap: wrap; gap: 3px; min-width: 0; }
 .markdown-edit-group + .markdown-edit-group { padding-left: 8px; border-left: 1px solid var(--border-strong); }
 .markdown-edit-button { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 32px; width: 32px; height: 31px; padding: 0; border: 1px solid transparent; border-radius: 5px; background: transparent; color: var(--text); font: 13px/1.2 ui-monospace, monospace; white-space: nowrap; cursor: pointer; }
+.markdown-edit-labelled { flex: 0 0 auto; width: auto; gap: 5px; padding-inline: 6px; font-family: inherit; font-size: 12px; }
+.markdown-edit-labelled svg { flex: 0 0 16px; }
 .markdown-edit-button:hover { background: var(--hover); border-color: var(--border-strong); }
 .markdown-edit-button:focus-visible, .markdown-heading-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .markdown-edit-bold { font-weight: 800; }

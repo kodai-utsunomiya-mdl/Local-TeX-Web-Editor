@@ -39,6 +39,7 @@ test.beforeAll(async () => {
         });
         const editing = createMarkdownEditing({
           container: document.getElementById('markdown-tools'), getDocument, onError,
+          onImage: () => tools.openImage(),
           onTable: () => tools.openTable(),
           applyEdit: async (edit, snapshot) => {
             window.writingEdits.push({ edit, snapshot });
@@ -110,10 +111,16 @@ test('Markdown のリンクは表示文字と URL を入力でき，編集中の
 test('狭い幅でも Markdown の各操作を選べて，コードブロック内の backtick をそのまま使える', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 320, height: 640 });
   await openTools(page);
+  const toolbar = page.locator('#markdown-tools');
+  for (const [name, label] of [['画像を挿入', '画像'], ['表を挿入', '表'], ['新しい Markdown ページ', '新規ページ']]) {
+    await expect(toolbar.getByRole('button', { name, exact: true })).toContainText(label);
+  }
+  const size = await toolbar.evaluate(node => ({ width: node.clientWidth, scrollWidth: node.scrollWidth }));
+  expect(size.scrollWidth).toBeLessThanOrEqual(size.width + 1);
   const bounds = await page.locator('#markdown-tools button, #markdown-tools select').evaluateAll(nodes => nodes.map(node => {
     const rect = node.getBoundingClientRect(); return { left: rect.left, right: rect.right, width: rect.width, height: rect.height };
   }));
-  expect(bounds.length).toBe(12);
+  expect(bounds.length).toBe(14);
   for (const bound of bounds) {
     expect(bound.left).toBeGreaterThanOrEqual(0);
     expect(bound.right).toBeLessThanOrEqual(320);

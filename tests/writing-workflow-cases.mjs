@@ -359,30 +359,48 @@ export function registerWritingWorkflowTests({ test, openProject, openEditor, se
     expect(errors).toEqual([]);
   });
 
-  test('画像とコピーした表を挿入し，自分のテンプレートから新しいプロジェクトを作る', async ({ page, session }, testInfo) => {
+  test('書式ツールバーから画像・表・新規ページを挿入し，自分のテンプレートから新しいプロジェクトを作る', async ({ page, session }, testInfo) => {
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await writeFile(path.join(session.project, 'notes.md'), '# Notes\n\n');
     await openProject(session); await openEditor(page, session); await setAutoSave(page, false);
     await page.getByTestId('file-notes.md').click();
-    await source(page).click(); await page.keyboard.press(`${modifier}+End`);
-    await tool(page, 'insert-image');
+    await page.locator('#split-editors').click();
+    await page.locator('#primary-document').selectOption('main.tex');
+    await page.locator('#secondary-document').selectOption('notes.md');
+    const editor = source(page, true), toolbar = page.locator('#markdown-editing');
+    await editor.click(); await page.keyboard.press(`${modifier}+End`);
+    await toolbar.getByRole('button', { name: '画像を挿入', exact: true }).click();
     await page.locator('#insert-image-file').setInputFiles({ name: 'figure.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNQaXjwHwAE1AKEf31AsgAAAABJRU5ErkJggg==', 'base64') });
     await page.locator('#insert-image-path').fill('figures/pasted.png');
     await page.locator('#insert-image-caption').fill('A small figure');
     await page.locator('#insert-image-confirm').click();
     await expect(page.locator('#insert-image-dialog')).not.toBeVisible();
-    await expect(source(page)).toContainText('figures/pasted.png');
+    await expect(editor).toContainText('figures/pasted.png');
     expect((await stat(path.join(session.project, 'figures', 'pasted.png'))).size).toBeGreaterThan(0);
-    await expect(source(page)).toBeFocused();
-    await tool(page, 'insert-table');
+    await expect(editor).toBeFocused();
+    await toolbar.getByRole('button', { name: '表を挿入', exact: true }).click();
     await page.locator('#insert-table-dialog').getByRole('button', { name: 'キャンセル', exact: true }).click();
-    await expect(source(page)).toBeFocused();
-    await tool(page, 'insert-table');
+    await expect(editor).toBeFocused();
+    await toolbar.getByRole('button', { name: '表を挿入', exact: true }).click();
     await page.locator('#insert-table-input').fill('Name\tValue\nA&B\t2');
     await expect(page.locator('#insert-table-source')).toHaveValue(/\| Name \| Value \|/);
     await page.locator('#insert-table-confirm').click();
-    await expect(source(page)).toContainText('| Name | Value |');
-    await expect(source(page)).toBeFocused();
+    await expect(editor).toContainText('| Name | Value |');
+    await expect(editor).toBeFocused();
+    await toolbar.getByRole('button', { name: '新しい Markdown ページ', exact: true }).click();
+    await page.locator('#markdown-page-title').fill('Next page');
+    await page.locator('#markdown-page-path').fill('next-page.md');
+    await page.locator('#markdown-page-confirm').click();
+    await expect(page.locator('#markdown-page-dialog')).not.toBeVisible();
+    await expect(page.locator('#secondary-document')).toHaveValue('next-page.md');
+    expect(clean(await readFile(path.join(session.project, 'next-page.md'), 'utf8'))).toBe('# Next page\n\n');
+    await page.locator('#secondary-document').selectOption('notes.md');
+    await expect(editor).toContainText('[Next page](next-page.md)');
+    await expect(source(page)).toContainText('\\documentclass');
+    await expect(source(page)).not.toContainText('figures/pasted.png');
+    await expect(source(page)).not.toContainText('| Name | Value |');
+    await expect(source(page)).not.toContainText('next-page.md');
+    await editor.click();
     const savingNotes = page.waitForResponse(response => new URL(response.url()).pathname === '/api/file'
       && response.request().method() === 'PUT' && response.request().postDataJSON()?.path === 'notes.md');
     await page.keyboard.press(`${modifier}+s`);
@@ -391,6 +409,7 @@ export function registerWritingWorkflowTests({ test, openProject, openEditor, se
     const notes = clean(await readFile(path.join(session.project, 'notes.md'), 'utf8'));
     expect(notes).toContain('![A small figure](figures/pasted.png)');
     expect(notes).toContain('| A&amp;B | 2 |');
+    expect(notes).toContain('[Next page](next-page.md)');
     await tool(page, 'project-templates');
     await expect(page.locator('#template-list .template-card')).toHaveCount(4);
     await page.locator('#template-capture > summary').click();

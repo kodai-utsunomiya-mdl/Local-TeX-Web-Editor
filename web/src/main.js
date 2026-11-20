@@ -2323,7 +2323,13 @@ documentTools = createDocumentTools({
 });
 templateManager = createTemplateManager({ api, getProject: () => state.meta?.project, saveAll, openProject: openCreatedProject, onError: showError });
 logIssues = createLogIssues({ container: $('log-locations'), onOpen: (path, line) => runTask(() => navigate(() => goToSource(path, line))) });
-markdownEditing = createMarkdownEditing({ container: $('markdown-editing'), getDocument: currentDocumentSnapshot, applyEdit: applyMarkdownEdit, focusDocument: focusSourceDocument, onTable: () => insertTools.openTable(), onError: showError });
+markdownEditing = createMarkdownEditing({
+  container: $('markdown-editing'), getDocument: currentDocumentSnapshot, applyEdit: applyMarkdownEdit, focusDocument: focusSourceDocument,
+  onImage: () => openWritingTool(() => insertTools.openImage()),
+  onTable: () => openWritingTool(() => insertTools.openTable()),
+  onNewPage: () => openWritingTool(() => documentTools.openMarkdownPage()),
+  onError: showError,
+});
 createFileActions({
   tree: $('file-tree'), getProject: () => state.meta?.project,
   isBlocked: () => !!state.operation || state.closed || state.externalProjectChanged || isRunning() || !!document.querySelector('dialog[open]'),

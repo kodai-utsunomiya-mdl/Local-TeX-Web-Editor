@@ -13,6 +13,7 @@ test.beforeAll(async () => {
   const built = await bundle({ stdin: {
     resolveDir: path.join(repository, 'web/src'), contents: `
       import { createDocumentTools } from './document-tools.js';
+      import { createMarkdownEditing } from './markdown-editing.js';
       import { setLanguage } from './i18n.js';
       import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
       GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
@@ -51,7 +52,10 @@ test.beforeAll(async () => {
           await loadingTask.destroy();
         }
       };
-      document.getElementById('new-page').onclick = () => window.tools.openMarkdownPage();
+      createMarkdownEditing({ container: document.getElementById('markdown-tools'),
+        getDocument: () => ({ ...window.source }), applyEdit: () => {},
+        onNewPage: () => window.tools.openMarkdownPage(), onError: error => window.errors.push(error.message),
+      });
       document.getElementById('print').onclick = () => window.tools.openMarkdownPDF();
       document.getElementById('text').onclick = () => window.tools.openPDFText();
       window.ready = true;
@@ -62,10 +66,10 @@ test.beforeAll(async () => {
 
 async function openTools(page, language = 'en') {
   const assets = new Map([['/tools.js', { contentType: 'text/javascript', body: script }]]);
-  for (const name of ['style.css', 'imports.css', 'document-tools.css', 'markdown-preview.css', 'markdown-print.css']) {
+  for (const name of ['style.css', 'imports.css', 'document-tools.css', 'markdown-editing.css', 'markdown-preview.css', 'markdown-print.css']) {
     assets.set(`/${name}`, { contentType: 'text/css', body: await readFile(path.join(repository, 'web/src', name)) });
   }
-  assets.set('/', { contentType: 'text/html', headers: { 'Content-Security-Policy': applicationPolicy }, body: `<!doctype html><html lang="${language}"><head><meta charset="utf-8"><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/imports.css"><link rel="stylesheet" href="/document-tools.css"></head><body><button id="new-page">New page</button><button id="print">Print</button><button id="text">Text</button><script type="module" src="/tools.js"></script></body></html>` });
+  assets.set('/', { contentType: 'text/html', headers: { 'Content-Security-Policy': applicationPolicy }, body: `<!doctype html><html lang="${language}"><head><meta charset="utf-8"><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/imports.css"><link rel="stylesheet" href="/document-tools.css"><link rel="stylesheet" href="/markdown-editing.css"></head><body><div id="markdown-tools"></div><button id="print">Print</button><button id="text">Text</button><script type="module" src="/tools.js"></script></body></html>` });
   await page.context().route(`${origin}/**`, async route => {
     const url = new URL(route.request().url());
     if (url.pathname === '/api/asset') {
@@ -83,6 +87,8 @@ async function openTools(page, language = 'en') {
   });
   await page.goto(origin); await page.waitForFunction(() => window.ready);
 }
+
+const newPageButton = page => page.locator('#markdown-tools').getByRole('button', { name: /^(New Markdown page|新しい Markdown ページ)$/ });
 
 function examplePDF() {
   const first = 'BT /F1 18 Tf 30 700 Td (First page) Tj 0 -30 Td (Second line) Tj ET\n';
@@ -105,7 +111,7 @@ function examplePDF() {
 test('new Markdown pages create a file once and insert an escaped relative link in the original pane', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 700 });
   await openTools(page);
-  await page.locator('#new-page').click();
+  await newPageButton(page).click();
   await page.locator('#markdown-page-title').fill('Taken');
   await expect(page.locator('#markdown-page-path')).toHaveValue('notes/Taken-2.md');
   await page.locator('#markdown-page-title').fill('Next [page] $x$');
@@ -133,7 +139,7 @@ test('new Markdown pages create a file once and insert an escaped relative link 
 
 test('changing the source while a new-page dialog is open leaves the project unchanged', async ({ page }) => {
   await openTools(page, 'ja');
-  await page.locator('#new-page').click();
+  await newPageButton(page).click();
   await page.locator('#markdown-page-title').fill('新しいページ');
   await page.evaluate(() => window.source.content = 'changed');
   await page.locator('#markdown-page-confirm').click();
@@ -143,7 +149,7 @@ test('changing the source while a new-page dialog is open leaves the project unc
 
 test('cancelling a new page returns to the source, while creation fixes the submitted title and path', async ({ page }) => {
   await openTools(page);
-  await page.locator('#new-page').click();
+  await newPageButton(page).click();
   await page.locator('#markdown-page-title').fill('Cancelled page');
   await page.keyboard.press('Escape');
   await expect(page.locator('#markdown-page-dialog')).not.toBeVisible();
@@ -152,7 +158,7 @@ test('cancelling a new page returns to the source, while creation fixes the subm
   await expect.poll(() => page.evaluate(() => window.focused.length)).toBe(1);
   expect(await page.evaluate(() => window.focused.at(-1))).toMatchObject({ path: 'notes/current.md', pane: 'secondary', anchor: 5, head: 9 });
 
-  await page.locator('#new-page').click();
+  await newPageButton(page).click();
   await page.locator('#markdown-page-title').fill('Waiting page');
   await page.evaluate(() => window.deferCreate = true);
   await page.locator('#markdown-page-confirm').click();
@@ -171,7 +177,7 @@ test('cancelling a new page returns to the source, while creation fixes the subm
 
 test('retrying after a refresh failure updates the file list without creating the page twice', async ({ page }) => {
   await openTools(page);
-  await page.locator('#new-page').click();
+  await newPageButton(page).click();
   await page.locator('#markdown-page-title').fill('Created page');
   await page.evaluate(() => window.rejectRefresh = true);
   await page.locator('#markdown-page-confirm').click();
@@ -191,7 +197,7 @@ test('retrying after a refresh failure updates the file list without creating th
 
 test('a selection changed during page creation leaves a link to copy and keeps the edited source', async ({ page }) => {
   await openTools(page);
-  await page.locator('#new-page').click();
+  await newPageButton(page).click();
   await page.locator('#markdown-page-title').fill('Saved page');
   await page.evaluate(() => window.deferCreate = true);
   await page.locator('#markdown-page-confirm').click();
