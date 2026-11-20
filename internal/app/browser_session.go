@@ -9,8 +9,9 @@ import (
 	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/platform"
 )
 
-// Each editor tab keeps an authenticated response open. Its request context
-// ends when the tab closes, including when its unload JavaScript cannot run.
+// Each editor tab observes the application through an authenticated stream.
+// Tabs may freeze or be discarded while the user works elsewhere. Ending a
+// stream only releases that request; Quit or an OS exit ends the application.
 func (a *App) browserSessionHandler(w http.ResponseWriter, r *http.Request) {
 	if !requireMethod(w, r, http.MethodGet) {
 		return
@@ -25,16 +26,8 @@ func (a *App) browserSessionHandler(w http.ResponseWriter, r *http.Request) {
 		writeError(w, fail(http.StatusServiceUnavailable, "アプリを起動し直してください．"))
 		return
 	}
-	a.browserConnections++
-	a.browserEverConnected = true
-	a.browserGeneration++
-	if a.browserTimer != nil {
-		a.browserTimer.Stop()
-		a.browserTimer = nil
-	}
 	end := a.browserEnd
 	a.mu.Unlock()
-	defer a.browserDisconnected()
 
 	w.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
 	w.Header().Set("X-Accel-Buffering", "no")
@@ -71,44 +64,6 @@ func (a *App) browserSessionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (a *App) browserDisconnected() {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	a.browserConnections--
-	if a.closed || a.browserConnections != 0 {
-		return
-	}
-	a.scheduleBrowserShutdownLocked(a.browserCloseDelay)
-}
-
-// ExpectBrowserConnection bounds the first connection wait after opening the
-// editor or completing an update. API-only launches do not call this method.
-func (a *App) ExpectBrowserConnection(timeout time.Duration) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	if a.closed || a.browserEverConnected || a.browserTimer != nil {
-		return
-	}
-	a.scheduleBrowserShutdownLocked(timeout)
-}
-
-func (a *App) scheduleBrowserShutdownLocked(delay time.Duration) {
-	a.browserGeneration++
-	generation := a.browserGeneration
-	a.browserTimer = time.AfterFunc(delay, func() {
-		a.mu.Lock()
-		if a.closed || a.browserConnections != 0 || a.browserGeneration != generation {
-			a.mu.Unlock()
-			return
-		}
-		// Claim the shutdown while holding the same mutex used by new tabs.
-		// A reload that already reconnected cancels this pending shutdown.
-		a.closeBrowserSessionsLocked()
-		a.mu.Unlock()
-		a.requestShutdown()
-	})
-}
-
 // CloseBrowserSessions ends the open responses before http.Server.Shutdown
 // waits for handlers. The application no longer accepts requests after this.
 func (a *App) CloseBrowserSessions() {
@@ -119,11 +74,6 @@ func (a *App) CloseBrowserSessions() {
 
 func (a *App) closeBrowserSessionsLocked() {
 	a.closed = true
-	a.browserGeneration++
-	if a.browserTimer != nil {
-		a.browserTimer.Stop()
-		a.browserTimer = nil
-	}
 	if a.browserEnd != nil {
 		close(a.browserEnd)
 		a.browserEnd = nil

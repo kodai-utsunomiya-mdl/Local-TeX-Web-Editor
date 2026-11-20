@@ -102,3 +102,45 @@ test('a brief fetch failure retries without requiring the editor to reload', asy
   assert.equal(server.connections.length, 1);
   session.stop();
 });
+
+test('resuming replaces an unfinished stream without waiting for its close callback', async () => {
+  const server = streamingServer();
+  const statuses = [];
+  const session = new BrowserSession({ token: 'local-token', fetch: server.request, onConnectionChange: value => statuses.push(value) });
+  try {
+    session.start();
+    await delay(0);
+    const old = server.connections[0];
+    session.resume();
+    await delay(0);
+    assert.equal(old.options.signal.aborted, true);
+    assert.equal(server.connections.length, 2);
+    assert.equal(server.connections[1].options.signal.aborted, false);
+    assert.deepEqual(statuses, [true, true]);
+    await delay(10);
+    assert.equal(server.connections.length, 2);
+  } finally {
+    session.stop();
+  }
+});
+
+test('resuming retries immediately when a sleeping tab had a delayed retry', async () => {
+  const server = streamingServer();
+  const session = new BrowserSession({ token: 'local-token', fetch: server.request, retryDelays: [60_000] });
+  try {
+    session.start();
+    await delay(0);
+    server.connections[0].close();
+    await delay(0);
+    assert.equal(server.connections.length, 1);
+    assert.notEqual(session.timer, null);
+    session.resume();
+    await delay(0);
+    assert.equal(server.connections.length, 2);
+    assert.equal(session.timer, null);
+    session.start();
+    assert.equal(server.connections.length, 2);
+  } finally {
+    session.stop();
+  }
+});

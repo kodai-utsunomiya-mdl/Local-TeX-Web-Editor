@@ -4,11 +4,11 @@ English | [日本語](README.ja.md) · [Website and guide](https://kodai-utsunom
 
 [![Get the free Windows app from Microsoft Store](docs/download-store.svg)](https://apps.microsoft.com/detail/9P6QF32N19HG)
 &nbsp;&nbsp;
-[![Download Windows ZIP](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.7/local-tex-web-editor-0.1.7-windows-x64.zip)
+[![Download Windows ZIP](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.8/local-tex-web-editor-0.1.8-windows-x64.zip)
 &nbsp;&nbsp;
-[![Download for macOS](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.7/local-tex-web-editor-0.1.7-macos-universal.zip)
+[![Download for macOS](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.8/local-tex-web-editor-0.1.8-macos-universal.zip)
 
-**v0.1.7** · [All downloads and release notes](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [Requirements](#requirements) · [App size](#app-files-and-storage) · [Get started](#download-and-launch)
+**v0.1.8** · [All downloads and release notes](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [Requirements](#requirements) · [App size](#app-files-and-storage) · [Get started](#download-and-launch)
 
 Edit TeX documents in your browser on Windows or macOS, and compile them with TeX Live on your computer. The editor and PDF preview appear in the same window. Launching the app opens a `localhost` page in your default browser. Markdown editing and preview are also supported.
 
@@ -122,7 +122,7 @@ Microsoft Store manages installation and app updates. TeX Live is installed sepa
 #### ZIP download
 
 1. Open [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) and select the latest version.
-2. Under **Assets**, download `local-tex-web-editor-0.1.7-windows-x64.zip`. The **Source code** archives contain the files for development.
+2. Under **Assets**, download `local-tex-web-editor-0.1.8-windows-x64.zip`. The **Source code** archives contain the files for development.
 3. Extract the ZIP and double-click `local-tex-web-editor.exe`.
 4. In the browser window, choose your project folder. You can also enter its path.
 5. If TeX Live is not found automatically, open Settings and select the folder containing `latexmk.exe`, for example `C:\texlive\2025\bin\windows`.
@@ -132,7 +132,7 @@ The Windows executable in the ZIP download does not have a code signature. If Sm
 
 ### macOS
 
-1. Under **Assets** in [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases), download `local-tex-web-editor-0.1.7-macos-universal.zip`. The same ZIP supports Apple Silicon and Intel.
+1. Under **Assets** in [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases), download `local-tex-web-editor-0.1.8-macos-universal.zip`. The same ZIP supports Apple Silicon and Intel.
 2. Extract the ZIP and move `Local TeX Web Editor.app` to **Applications**.
 3. Open **Local TeX Web Editor** from Finder or Spotlight. The editor opens in your browser.
 4. Open your project folder. If TeX is not found automatically, select `/Library/TeX/texbin` in Settings.
@@ -144,9 +144,9 @@ The macOS app does not have an Apple Developer ID signature or notarization. If 
 
 To use a project from Overleaf, download its source as a ZIP, extract it, and open that folder. For a project obtained from GitHub or another source, select the folder containing the `.tex` and `.bib` files, images, `latexmkrc`, and other project files.
 
-Closing the last browser tab connected to the editor stops the app and any running compilation after about five seconds. Reloading the page and reconnecting within that time, or keeping another editor browser tab open, lets the app continue running. The browser asks for confirmation when a document has unsaved edits. Drafts are also recorded on your computer while you edit, and are available when you next open the app.
+The app keeps running when an editor browser tab sleeps, is discarded, or closes. Returning to the tab reconnects to the same local address. Launching the same version again opens the running editor. Drafts and tab positions are recorded when the page becomes inactive and are available when you return. The browser asks for confirmation when a document has unsaved edits.
 
-You can also use the exit button at the top right. If there are unsaved edits, choose whether to save them to the project files or leave them as drafts. If the browser does not allow the tab to close automatically, the page shows that the app has stopped. Close the tab with `Ctrl + W` on Windows or `Cmd + W` on Mac.
+Use the exit button at the top right to stop the app and any running compilation. If there are unsaved edits, choose whether to save them to the project files or leave them as drafts. If the browser does not allow the tab to close automatically, the page shows that the app has stopped. Close the tab with `Ctrl + W` on Windows or `Cmd + W` on Mac.
 
 ### Update the app
 
@@ -176,9 +176,9 @@ Launching the `.exe` from a new ZIP updates the installed copy and the Start men
 
 ## Edit documents
 
-The interface starts in **English**. Use **Settings → Language → 日本語** to switch to Japanese. Your language choice is saved for future sessions. This setting changes the app's controls and messages; documents, PDFs, and Markdown content are displayed as written.
+The interface starts in **English**. In **Settings → 言語設定 / Language**, select **English** or **日本語** to see the interface change immediately. **Save** uses the selected language for future sessions; **Cancel** or `Esc` returns to the saved language. The label always shows both languages. Documents, PDFs, and Markdown content are displayed as written.
 
-Open `.tex`, `.bib`, and other files from the file list on the left. Each file opens in a tab, and you can drag tabs to change their order. The next session restores the open tabs and their order. Settings lets you choose an editor font size from 8 to 40 px; the default is 14 px. The font size is saved for future sessions.
+Open `.tex`, `.bib`, Markdown, Python, JavaScript, and other supported text files from the file list on the left. Each file opens in a tab, and you can drag tabs to change their order. Use a mouse wheel, horizontal trackpad gesture, or touch to move through a long tab strip. **Close all tabs** above the editor offers Save, Discard, or Cancel when there are unsaved edits. The next session restores the open tabs and their order, including a strip with no open tabs. Settings lets you choose an editor font size from 8 to 40 px; the default is 14 px. The font size is saved for future sessions.
 
 Drag the right edge of the file list or outline to change its width, the divider between the editor and preview to change their widths, or the top edge of the log to change its height. You can also focus a divider with `Tab` and use the left/right or up/down arrow keys. Double-click a divider to restore its default position. Your chosen sizes are saved for future sessions and adjusted to fit smaller windows.
 
@@ -210,6 +210,12 @@ On Mac, use `Cmd` in place of `Ctrl` for saving, searching, compiling, and the S
 The search and replacement fields accept newlines and TeX backslashes as entered. Press `Enter` for the next match, `Shift + Enter` for the previous match, and `Ctrl + Enter` to insert a newline in a field. A checkbox enables regular expressions. Close the search panel with its **×** button or press `Esc` while a search field has focus.
 
 Changing the font size or theme leaves the document content and compiled PDF unchanged. The notice to recompile appears when source files or compilation settings have changed.
+
+### Manage project files and edit code
+
+Right-click a file or folder to create a file or folder at that location, copy its relative or full path, rename it, or delete it. From the keyboard, focus the entry and press `Shift + F10` or the context-menu key. Use the arrow keys to select an action, `F2` to rename, and `Delete` to open the deletion confirmation. Files are removed after confirmation; folders can be deleted when empty. Renaming updates the open tabs and their editing state, including unsaved text. References written inside other documents remain as written, so update those links when needed.
+
+Program and configuration files can be edited with the same saving, search, drafts, and history tools. Syntax highlighting covers Python, JavaScript/TypeScript, C/C++, Java, Kotlin, C#, Go, Rust, R, Ruby, shell, PowerShell, HTML, CSS, XML, SQL, JSON, YAML, TOML, and Lua. Other supported text formats open as plain text. `.ipynb` opens as JSON text. The editor does not run these programs.
 
 ### Complete TeX and navigate the outline
 
@@ -293,6 +299,18 @@ Drafts are recorded on your computer in addition to saving the project files. If
 
 The next session opens the previous project and restores all open tabs in their order, the two-editor layout when used, source cursor and scroll positions, the PDF page, and the zoom level. The last successfully compiled PDF is available immediately for reading.
 
+### Create a linked Markdown page
+
+With a Markdown document open, choose **Editing tools → New Markdown page**. Enter a title and a path in an existing project folder. The dialog previews the relative link that will be inserted at the current selection and can open the new page afterward. The new file starts with its title as a heading. Existing files are not overwritten. Undo in the original document removes the inserted link; the created page remains in the project.
+
+### Convert Markdown and PDF
+
+Choose **Editing tools → Save Markdown as PDF** to preview the current Markdown, including unsaved text, mathematics, tables, and project images. Choose **Print / Save as PDF**, then select the browser's PDF destination. Page size and margins are set in that print dialog. This works without TeX Live.
+
+To extract text, display a compiled PDF or open a project PDF, then choose **Editing tools → Convert PDF to text**. Review the preview and choose **Download TXT**. Text is collected in page order; extraction has a progress display and can be cancelled. Scanned pages need OCR, which is outside this conversion. Complex columns, equations, and font mappings can affect the text order and characters in the result.
+
+These tools reuse the Markdown renderer, browser printing, and PDF.js already used by the app.
+
 ### Edit Markdown
 
 With the preview type set to **Auto**, opening a `.md` or `.markdown` file displays its Markdown preview on the right. The preview updates as you type and supports headings, lists, tables, code blocks, task lists, links, images, and mathematics. Click **Preview** or press `Ctrl + Enter` to save and refresh it.
@@ -315,7 +333,7 @@ Relative links in the preview can open other project documents. Returning to the
 
 The PDF scrolls continuously across pages. The app prioritizes rendering the visible page and nearby pages, so a long document does not require rendering every page into an image at once. You can select and copy PDF text and follow links inside the PDF. After following an internal reference link, use **←** above the PDF to return to the position you were reading; **→** moves forward again. `Alt + Left` and `Alt + Right` provide the same navigation from the source or preview. Source links, search results, outline entries, and SyncTeX jumps also participate in this navigation.
 
-The PDF toolbar uses one row. In a narrow preview, open **… (PDF actions)** at the right to find zoom, dark display, search, and save controls. Page navigation stays in the toolbar; very narrow panes also move Back, Forward, and the preview selector into the menu.
+The PDF toolbar uses one row. **＋**, **−**, **Save PDF**, and the page-number field stay visible in a narrow preview. Open **… (PDF actions)** for the zoom selector, dark display, and search. As space decreases, Back, Forward, the preview selector, and finally the previous/next page buttons move into that menu.
 
 | Action | How to use it |
 | --- | --- |
@@ -378,12 +396,12 @@ The app does not impose a compilation time limit. Use the stop button to stop a 
 
 ## App files and storage
 
-The **v0.1.7** files have the sizes below, rounded to the nearest MB (1 MB = 1,000,000 bytes). The Assets section of the [release](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) shows each download's size.
+The **v0.1.8** files have the sizes below, rounded to the nearest MB (1 MB = 1,000,000 bytes). The Assets section of the [release](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) shows each download's size.
 
 | Platform | ZIP download | App after extraction |
 | --- | ---: | ---: |
 | Windows x64 | About **8 MB** | About **17 MB** (`.exe`) |
-| macOS, Apple Silicon + Intel | About **15 MB** | About **33 MB** (`.app`) |
+| macOS, Apple Silicon + Intel | About **15 MB** | About **34 MB** (`.app`) |
 
 The ZIP also includes the README files, screenshots, and licenses. The macOS app contains both CPU versions. The Windows ZIP and macOS download buttons above link to the current release files.
 
@@ -421,7 +439,7 @@ go build -o bin/local-tex-web-editor.exe ./cmd/local-tex-editor
 Build a Windows distribution executable:
 
 ```sh
-go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.7" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
+go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.8" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
 ```
 
 `build:windows-resources` generates Windows x64 resources from the bundled ICO. The executable embeds nine icon sizes from 16 to 256 px.
@@ -437,7 +455,7 @@ npx playwright install chromium
 node scripts/build-macos.mjs
 ```
 
-This creates `dist/local-tex-web-editor-0.1.7-macos-universal.zip` with an app supporting Apple Silicon and Intel, the English and Japanese READMEs, and license files.
+This creates `dist/local-tex-web-editor-0.1.8-macos-universal.zip` with an app supporting Apple Silicon and Intel, the English and Japanese READMEs, and license files.
 
 Command-line options:
 

@@ -10,7 +10,11 @@ import { promisify } from 'node:util';
 import { checkEditorSelectionVisibility, checkPDFSelectionVisibility } from './selection-checks.mjs';
 import { registerWritingWorkflowTests } from './writing-workflow-cases.mjs';
 import { registerSourceDisplayTests } from './source-display-cases.mjs';
+import { registerDocumentToolsTests } from './document-tools-workflow-cases.mjs';
+import { registerInterfaceWorkflowTests } from './interface-workflow-cases.mjs';
+import { registerFileOperationTests } from './file-operation-cases.mjs';
 import { showPDFControls } from './pdf-controls.mjs';
+import { launchLifecycleBrowser } from './lifecycle-browser.mjs';
 
 const repository = path.resolve(import.meta.dirname, '..');
 const fixture = path.join(import.meta.dirname, 'fixtures', 'japanese');
@@ -232,6 +236,11 @@ async function closeEditorTab(page, acceptUnsaved = false) {
   const closed = page.waitForEvent('close');
   await page.close({ runBeforeUnload: true });
   await closed;
+}
+
+async function quitApplication(session) {
+  await json(session, '/api/shutdown', { method: 'POST', data: {} });
+  await session.waitForExit();
 }
 
 async function buildFinished(session, id) {
@@ -615,7 +624,7 @@ $\widehat w$ & Estimated coefficient vector \\
     expect(preferences.value.language).toBe('en');
     expect(preferences.value.autoSave).toBe(false);
     await closeEditorTab(page);
-    await session.waitForExit();
+    await quitApplication(session);
     await session.restart();
     const reopened = await context.newPage();
     reopened.on('pageerror', error => errors.push(error.message));
@@ -644,7 +653,7 @@ test('起動時のエラーを無人実行でも受け取れる', async () => {
   expect(result.stderr).toContain('loopback');
 });
 
-test('起動中の版と実行ファイルを表示し，最後のタブを閉じるとアプリが終了する', async ({ page, session }) => {
+test('最後のタブを閉じた後も同じアプリを開け，終了ボタンで終了する', async ({ page, context, session }) => {
   await openProject(session);
   await openEditor(page, session);
   const meta = await json(session, '/api/state');
@@ -656,6 +665,13 @@ test('起動中の版と実行ファイルを表示し，最後のタブを閉�
   expect(path.resolve(meta.executablePath)).toBe(executable);
   await page.keyboard.press('Escape');
   await closeEditorTab(page);
+  await delay(5600);
+  expect(session.isRunning()).toBe(true);
+  expect((await json(session, '/api/state')).version).toBe(applicationVersion);
+  const reopened = await context.newPage();
+  await openEditor(reopened, session);
+  await expect(reopened.getByTestId('editor').locator('.cm-content')).toContainText('Local TeX Web Editor');
+  await reopened.locator('#shutdown-button').click();
   await session.waitForExit();
 });
 
@@ -670,7 +686,7 @@ test('重い読み込みを待つ再読み込みでも接続し直し，編集�
     new URL(response.url()).pathname === '/api/session' && response.status() === 200);
   await page.reload();
   await connected;
-  // This exceeds the interval used to close an application with no tabs.
+  // Exceed the former five-second exit delay while the page finishes loading.
   await delay(5600);
   expect(session.isRunning()).toBe(true);
   await expect(page.getByTestId('editor').locator('.cm-content')).toBeVisible();
@@ -680,7 +696,7 @@ test('重い読み込みを待つ再読み込みでも接続し直し，編集�
   await expect.poll(() => readFile(path.join(session.project, 'main.tex'), 'utf8')).toBe(expectedMainContent(session, content));
 });
 
-test('二つのタブのうち一方を閉じても動き続け，最後のタブを閉じると終了する', async ({ page, context, session }) => {
+test('複数のタブをすべて閉じた後も同じアプリへ接続できる', async ({ page, context, session }) => {
   await openProject(session);
   await openEditor(page, session);
   const second = await context.newPage();
@@ -691,7 +707,11 @@ test('二つのタブのうち一方を閉じても動き続け，最後のタ�
   expect((await json(session, '/api/state')).version).toBe(applicationVersion);
   await expect(second.getByTestId('editor').locator('.cm-content')).toBeVisible();
   await closeEditorTab(second);
-  await session.waitForExit();
+  await delay(5600);
+  expect(session.isRunning()).toBe(true);
+  const reopened = await context.newPage();
+  await openEditor(reopened, session);
+  await expect(reopened.getByTestId('editor').locator('.cm-content')).toContainText('Local TeX Web Editor');
 });
 
 test('タブを閉じる確認を取り消すと，接続したまま原稿を編集できる', async ({ page, session }) => {
@@ -716,7 +736,92 @@ test('タブを閉じる確認を取り消すと，接続したまま原稿を�
   await page.keyboard.press('Control+S');
   await expect.poll(() => readFile(path.join(session.project, 'main.tex'), 'utf8')).toBe(expectedMainContent(session, content + '% 取消後の入力\n'));
   await closeEditorTab(page);
-  await session.waitForExit();
+  await quitApplication(session);
+});
+
+test('別のタブで作業してエディタが休止しても，戻って編集と保存を続けられる', async ({ session }, testInfo) => {
+  const lifecycleBrowser = await launchLifecycleBrowser(path.join(session.temp, 'lifecycle-browser'));
+  const { page, context } = lifecycleBrowser;
+  let cdp;
+  const lifecycle = [];
+  let connections = 0;
+  let completed = false;
+  page.on('response', response => {
+    if (new URL(response.url()).pathname === '/api/session' && response.status() === 200) connections++;
+  });
+  try {
+    // Screencast recording also keeps Chromium rendering hidden pages. DOM
+    // snapshots and the observed events provide a trace without that override.
+    await context.tracing.stop();
+    await context.tracing.start({ screenshots: false, snapshots: true, sources: true });
+    cdp = await context.newCDPSession(page);
+    await openProject(session);
+    await openEditor(page, session);
+    await setAutoSave(page, false);
+    const draft = '% タブが休止する前の未保存の本文\n';
+    await replaceEditor(page, draft);
+    const meta = await json(session, '/api/state');
+    const storageURL = `/api/storage?${new URLSearchParams({ key: `drafts:${meta.project.root}` })}`;
+    await expect.poll(async () => (await json(session, storageURL)).value?.entries?.some(entry => entry.content === draft) || false).toBe(true);
+    const address = page.url();
+    await page.exposeFunction('recordLifecycleEvent', event => lifecycle.push(event));
+    await page.evaluate(() => {
+      for (const type of ['visibilitychange', 'freeze', 'resume']) {
+        document.addEventListener(type, event => {
+          window.recordLifecycleEvent({ type, trusted: event.isTrusted, visibility: document.visibilityState, time: performance.now() });
+        });
+      }
+    });
+    const other = await context.newPage();
+    await other.goto('about:blank');
+    await other.bringToFront();
+    await expect.poll(() => page.evaluate(() => document.visibilityState), { message: 'The editor must be hidden before freezing.' }).toBe('hidden');
+    await cdp.send('Page.setWebLifecycleState', { state: 'frozen' });
+    await expect.poll(() => lifecycle.filter(event => event.type === 'freeze' && event.trusted).length,
+      { message: 'Chromium must dispatch its document freeze event.' }).toBe(1);
+    const connectionsBeforeResume = connections;
+    // The page cannot run its retry timer during this interval.
+    await delay(5600);
+    expect(session.isRunning()).toBe(true);
+    expect((await json(session, '/api/state')).project.root).toBe(meta.project.root);
+    expect(connections).toBe(connectionsBeforeResume);
+    await cdp.send('Page.setWebLifecycleState', { state: 'active' });
+    await expect.poll(() => lifecycle.filter(event => event.type === 'resume' && event.trusted).length,
+      { message: 'Chromium must dispatch its document resume event.' }).toBe(1);
+    await page.bringToFront();
+    const frozenAt = lifecycle.find(event => event.type === 'freeze').time;
+    const resumedAt = lifecycle.find(event => event.type === 'resume').time;
+    expect(resumedAt - frozenAt).toBeGreaterThanOrEqual(5500);
+    await expect.poll(() => connections, { message: 'The resumed editor must reopen its session stream.' }).toBeGreaterThan(connectionsBeforeResume);
+    await expect(page.getByTestId('editor').locator('.cm-content')).toContainText(draft.trim());
+    await expect(page.getByTestId('app-error')).not.toBeVisible();
+    await expect(page.locator('#connection-status')).toHaveClass(/\bconnected\b/);
+    await page.getByTestId('editor').locator('.cm-content').click();
+    await page.keyboard.press('Control+End');
+    await page.keyboard.insertText('% 戻った後の追記\n');
+    await page.keyboard.press('Control+S');
+    const saved = draft + '% 戻った後の追記\n';
+    await expect.poll(() => readFile(path.join(session.project, 'main.tex'), 'utf8')).toBe(expectedMainContent(session, saved));
+    await page.reload();
+    await expect(page.getByTestId('editor').locator('.cm-content')).toContainText('戻った後の追記');
+    expect(page.url()).toBe(address);
+    expect(session.isRunning()).toBe(true);
+    completed = true;
+  } finally {
+    try {
+      await cdp?.send('Page.setWebLifecycleState', { state: 'active' }).catch(() => {});
+      await cdp?.detach().catch(() => {});
+      await testInfo.attach('page-lifecycle.json', { body: JSON.stringify({ lifecycle, connections }, null, 2), contentType: 'application/json' });
+      if (!completed) {
+        await page.screenshot({ path: testInfo.outputPath('lifecycle-failed.png'), timeout: 5000 }).catch(() => {});
+        await context.tracing.stop({ path: testInfo.outputPath('lifecycle-trace.zip') }).catch(() => {});
+      } else {
+        await context.tracing.stop();
+      }
+    } finally {
+      await lifecycleBrowser.close();
+    }
+  }
 });
 
 test('配布済みの古い版から保存を確認して更新し，新しい版の編集画面を開く', async ({ page, context }, testInfo) => {
@@ -794,7 +899,7 @@ test('配布済みの古い版から保存を確認して更新し，新しい�
     await expect(updating.getByTestId('editor').locator('.cm-content')).toContainText(saved.trim());
     expect((await json(started, '/api/state')).version).toBe(applicationVersion);
     await page.close();
-    await closeEditorTab(updating);
+    await updating.locator('#shutdown-button').click();
     await expect.poll(() => next.child.exitCode, { timeout: 15_000 }).toBe(0);
   } finally {
     for (const connection of connections.toReversed()) {
@@ -853,7 +958,11 @@ test('長い原稿の中央への最後の入力をタブが閉じた後に草�
   }, finalInput);
   await page.keyboard.insertText(finalInput);
   await closeEditorTab(page, true);
-  await session.waitForExit();
+  await expect.poll(async () => {
+    const stored = await json(session, storageURL);
+    return stored.value?.entries?.find(entry => entry.path === 'main.tex')?.content === expected;
+  }).toBe(true);
+  await quitApplication(session);
   // Inspect the PC copy before another browser tab or process can restore it.
   // Events from a page's keepalive requests may arrive after Playwright has
   // detached that page, so the saved content is the observable result here.
@@ -1525,7 +1634,7 @@ test('ファイル一覧とログの大きさを調整し，再起動後も同�
   if (await page.locator('html').getAttribute('data-theme') !== 'dark') await page.getByTestId('theme-toggle').click();
   await page.screenshot({ path: testInfo.outputPath('panels-resized.png') });
   await closeEditorTab(page);
-  await session.waitForExit();
+  await quitApplication(session);
   await session.restart();
   const reopened = await context.newPage();
   reopened.on('pageerror', error => errors.push(error.message));
@@ -1787,7 +1896,7 @@ test('外観の配色，アクセント，原稿フォントを保存し，再�
   await page.screenshot({ path: testInfo.outputPath('appearance-light-editor.png') });
 
   await closeEditorTab(page);
-  await session.waitForExit();
+  await quitApplication(session);
   await session.restart();
   const reopened = await context.newPage();
   reopened.on('pageerror', error => errors.push(error.message));
@@ -2686,4 +2795,7 @@ Finished.
 });
 
 registerWritingWorkflowTests({ test, openProject, openEditor, setAutoSave, json, compileFromUI });
+registerFileOperationTests({ test, openProject, openEditor, setAutoSave, json });
 registerSourceDisplayTests({ test, openProject, openEditor, compileFromUI, exampleFigurePDF });
+registerDocumentToolsTests({ test, openProject, openEditor, setAutoSave, exampleFigurePDF });
+registerInterfaceWorkflowTests({ test, openProject, openEditor, setAutoSave, json });

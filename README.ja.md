@@ -4,11 +4,11 @@
 
 [![Microsoft Store から無料の Windows 版をインストール](docs/download-store.svg)](https://apps.microsoft.com/detail/9P6QF32N19HG?hl=ja-jp&gl=JP)
 &nbsp;&nbsp;
-[![Windows 版の ZIP をダウンロード](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.7/local-tex-web-editor-0.1.7-windows-x64.zip)
+[![Windows 版の ZIP をダウンロード](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.8/local-tex-web-editor-0.1.8-windows-x64.zip)
 &nbsp;&nbsp;
-[![macOS 版をダウンロード](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.7/local-tex-web-editor-0.1.7-macos-universal.zip)
+[![macOS 版をダウンロード](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.8/local-tex-web-editor-0.1.8-macos-universal.zip)
 
-**v0.1.7** · [配布ファイルと更新内容](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [利用前の準備](#利用前の準備) · [アプリの容量](#アプリとデータの保存先) · [起動する](#ダウンロードして起動する)
+**v0.1.8** · [配布ファイルと更新内容](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [利用前の準備](#利用前の準備) · [アプリの容量](#アプリとデータの保存先) · [起動する](#ダウンロードして起動する)
 
 Windows と macOS のブラウザで TeX の原稿を編集し，PC にある TeX Live でコンパイルするアプリ．編集画面と PDF を同じウィンドウで確認できる．アプリを起動すると，既定のブラウザで `localhost` の画面が開く．Markdown の編集とプレビューにも対応する．
 
@@ -122,7 +122,7 @@ Mac のターミナルでは次を実行する．
 #### ZIP をダウンロードする
 
 1. [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) を開き，最新のバージョンを選ぶ．
-2. **Assets** の `local-tex-web-editor-0.1.7-windows-x64.zip` をダウンロードする．`Source code` は開発用のソースである．
+2. **Assets** の `local-tex-web-editor-0.1.8-windows-x64.zip` をダウンロードする．`Source code` は開発用のソースである．
 3. ZIP を展開し，`local-tex-web-editor.exe` をダブルクリックする．
 4. 開いたブラウザで原稿のフォルダーを選ぶ．フォルダーのパスを入力して開くこともできる．
 5. TeX Live の場所が自動で見つからない場合は，設定に `C:\texlive\2025\bin\windows` など，`latexmk.exe` があるフォルダーを指定する．
@@ -132,7 +132,7 @@ Windows の ZIP に含まれる実行ファイルにはコード署名が付い�
 
 ### macOS
 
-1. [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) の **Assets** から `local-tex-web-editor-0.1.7-macos-universal.zip` をダウンロードする．Apple Silicon と Intel で共通の ZIP を使う．
+1. [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) の **Assets** から `local-tex-web-editor-0.1.8-macos-universal.zip` をダウンロードする．Apple Silicon と Intel で共通の ZIP を使う．
 2. ZIP を展開し，`Local TeX Web Editor.app` を「アプリケーション」フォルダーへ移す．
 3. Finder や Spotlight から `Local TeX Web Editor` を開く．ブラウザに編集画面が開く．
 4. 原稿のフォルダーを開く．TeX の場所が自動で見つからない場合は，設定に `/Library/TeX/texbin` を指定する．
@@ -144,9 +144,9 @@ macOS 版には Apple Developer ID による署名と notarization が付いて�
 
 例えば，Overleaf にあるような原稿は，プロジェクトのソースを ZIP としてダウンロードして展開し，そのフォルダーを開く．GitHub などから取得した原稿を開く場合も，`.tex`，`.bib`，画像，`latexmkrc` などを含むプロジェクトのフォルダーを指定する．
 
-最後の編集タブを閉じると，約 5 秒後にコンパイル中の処理とアプリが終了する．ページを再読み込みして接続が戻った場合や，別の編集タブが開いている場合は，そのまま動作を続ける．原稿に未保存の編集がある場合は，ブラウザの確認画面が出る．草稿は編集中にも PC に記録され，次回の起動で読み込まれる．
+ブラウザの編集タブが休止したり閉じられたりしても，アプリは動作を続ける．タブへ戻ると同じローカルアドレスへ接続し直す．同じ版のアプリをもう一度起動した場合も，起動中の編集画面を開く．ページから離れる際には草稿とタブの位置を記録し，戻ったときに読み込む．原稿に未保存の編集がある場合は，ブラウザの確認画面が出る．
 
-右上の終了ボタンからもアプリを終了できる．未保存の編集がある場合は，保存するか草稿に残すかを選べる．ブラウザが自動で閉じる操作を認めない場合は，終了したことを画面に表示するので，Windows では `Ctrl + W`，Mac では `Cmd + W` でタブを閉じる．
+右上の終了ボタンで，アプリとコンパイル中の処理を終了する．未保存の編集がある場合は，保存するか草稿に残すかを選べる．ブラウザが自動で閉じる操作を認めない場合は，終了したことを画面に表示するので，Windows では `Ctrl + W`，Mac では `Cmd + W` でタブを閉じる．
 
 ### 更新する
 
@@ -176,9 +176,9 @@ Mac では，原稿を保存してアプリを終了し，展開した新しい 
 
 ## 原稿を編集する
 
-初回の表示言語は English である．**Settings → Language → 日本語** で切り替えられ，保存した言語は次回の起動にも反映する．切り替える対象はアプリの画面と案内であり，原稿，PDF，Markdown の本文は入力した内容を表示する．
+初回の表示言語は English である．**Settings → 言語設定 / Language** で **English** または **日本語** を選ぶと，その場で画面の言語が切り替わる．「保存」で次回の起動にも反映し，「キャンセル」または `Esc` で保存済みの言語へ戻る．項目名は常に日英を併記する．原稿，PDF，Markdown の本文は入力した内容を表示する．
 
-左側のファイル一覧から `.tex`，`.bib` などを開く．複数のファイルはタブで切り替えられる．タブはドラッグして並べ替えられ，次回の起動時に開いていたタブと並び順を読み戻す．設定ではエディタの文字サイズを 8〜40 px に変更できる (既定は 14 px)．文字サイズの選択は，次回の起動でも同じになる．
+左側のファイル一覧から `.tex`，`.bib`，Markdown，Python，JavaScript などのテキストファイルを開く．複数のファイルはタブで切り替えられ，ドラッグで並べ替えられる．長いタブ欄はホイール，トラックパッド，タッチで横へスクロールできる．原稿の上の「すべてのタブを閉じる」では，未保存の本文があれば保存・破棄・キャンセルを選べる．次回の起動時には，タブと並び順を読み戻す．すべて閉じた場合は空のタブ欄で再開する．設定ではエディタの文字サイズを 8〜40 px に変更できる (既定は 14 px)．文字サイズの選択は，次回の起動でも同じになる．
 
 ファイル一覧・アウトラインの右端，原稿とプレビューの境界，ログの上端をドラッグして，幅や高さを変えられる．`Tab` キーで境界へフォーカスを移した後は，左右または上下の矢印キーでも調整できる．境界をダブルクリックすると，その境界が初期位置に戻る．変更した大きさは次回の起動にも反映され，ウィンドウを小さくすると画面に収まる範囲へ調整される．
 
@@ -210,6 +210,12 @@ Mac では，保存・検索・コンパイル・SyncTeX のクリック操作�
 検索欄と置換欄では，改行と TeX の `\` を入力どおりに扱う．`Enter` で次の一致箇所へ，`Shift + Enter` で前へ移動する．欄の中で改行を入力するには `Ctrl + Enter` を使う．正規表現は検索欄のチェックボックスから有効にできる．検索欄は **×** ボタンで閉じられ，欄にフォーカスがある状態では `Esc` でも閉じられる．
 
 文字サイズやテーマの変更は，原稿の内容とコンパイル済みの PDF に影響しない．PDF の更新案内は，原稿またはコンパイルの設定に変更がある場合に表示される．
+
+### ファイルを操作し，プログラムを編集する
+
+ファイルやフォルダーを右クリックすると，その場所への新規ファイル・フォルダーの作成，相対パス・絶対パスのコピー，名前の変更，削除を選べる．項目にフォーカスして `Shift + F10` またはメニューキーを押しても開く．矢印キーで操作を選び，`F2` で名前の変更，`Delete` で削除の確認画面へ進める．フォルダーは空の場合に削除できる．名前を変えると，開いているタブと編集中の本文も新しいパスへ移る．別の原稿に書いたリンクや参照先は必要に応じて書き換える．
+
+プログラムや設定ファイルでも，保存，検索，草稿，履歴を使える．Python，JavaScript/TypeScript，C/C++，Java，Kotlin，C#，Go，Rust，R，Ruby，shell，PowerShell，HTML，CSS，XML，SQL，JSON，YAML，TOML，Lua などを色付けして表示する．そのほかの対応形式はプレーンテキストで開く．`.ipynb` は JSON のテキストとして編集する．プログラムの実行には別途それぞれの実行環境を使う．
 
 ### TeX を補完し，アウトラインを使う
 
@@ -293,6 +299,18 @@ Mac では，保存・検索・コンパイル・SyncTeX のクリック操作�
 
 次回の起動では，前回のプロジェクト，全てのタブと並び順，二つのエディタを使っていた場合はその配置，原稿のカーソルとスクロール位置，PDF のページと倍率を読み戻す．前回成功した PDF も表示できるので，読み返すためにコンパイルを待つ必要はない．
 
+### Markdown のページを作り，リンクを挿入する
+
+Markdown を開き，「編集の操作 → 新しい Markdown ページ」を選ぶ．タイトルと，プロジェクト内の既存フォルダーに保存するパスを入力すると，挿入する相対リンクを確認できる．新しいファイルにはタイトルの見出しが入り，作成後にそのページを開くかも選べる．同名のファイルがある場合は別の名前を選ぶ．元の文書で Undo を使うと挿入したリンクが戻り，作成したファイルはプロジェクトに残る．
+
+### Markdown と PDF を変換する
+
+「編集の操作 → Markdown を PDF に保存」で，未保存の本文，数式，表，プロジェクト内の画像を含む印刷プレビューを開く．「印刷画面で PDF に保存」を押し，ブラウザの印刷先で PDF を選ぶ．ページサイズと余白は印刷画面で設定する．この変換は TeX Live がなくても使える．
+
+コンパイルした PDF またはプロジェクト内の PDF を表示して「編集の操作 → PDF をテキストに変換」を選ぶと，文字をページ順に取り出す．見本を確認し，「TXT をダウンロード」で保存する．進捗を確認でき，途中でキャンセルできる．スキャンしたページの文字には OCR が必要である．段組，数式，フォントの情報によっては，取り出した文字の順序や表記に差が出る．
+
+これらの操作には，アプリで使っている Markdown の描画，ブラウザの印刷，PDF.js を利用する．
+
 ### Markdown を編集する
 
 プレビューの種類が「自動」のとき，`.md` または `.markdown` を開くと，右側に Markdown のプレビューを表示する．入力に合わせて本文を更新し，見出し，箇条書き，表，コードブロック，チェック項目，リンク，画像，数式を表示する．「プレビュー」または `Ctrl + Enter` を押すと，原稿を保存して表示を更新する．
@@ -315,7 +333,7 @@ Markdown のプレビューの上にある「スクロールを同期」で，�
 
 PDF はページをまたいで連続してスクロールできる．表示中のページとその周辺を優先して描画し，長い原稿の全ページを一度に画像へ変換することを防ぐ．PDF の文字は選択してコピーでき，PDF 内のリンクから参照先にも移動できる．参照リンクを開いた後に PDF の上の `←` を押すと，読んでいた位置へ戻る．`→` で先の位置へ進める．原稿やプレビューでは `Alt + 左矢印` / `Alt + 右矢印` も使える．原稿へのリンク，検索結果，アウトライン，SyncTeX で移動した場所にも戻れる．
 
-PDF のツールバーは 1 行で表示する．表示欄が狭い場合は，右端の「… (PDF の操作)」を開くと倍率，暗い表示，検索，保存を使える．ページの移動は上部に表示し，さらに狭い場合は「戻る」「進む」とプレビューの種類も同じメニューへまとめる．
+PDF の操作欄は 1 行で表示する．狭い表示欄でも「＋」「−」「PDF を保存」とページ番号の入力欄は常に表示する．倍率の選択，暗い表示，検索は右端の「… (PDF の操作)」から使える．幅が狭くなるにつれて「戻る」「進む」，プレビューの種類，前後のページへのボタンをメニューへ移す．
 
 | 操作 | 使い方 |
 | --- | --- |
@@ -378,12 +396,12 @@ PDF のツールバーは 1 行で表示する．表示欄が狭い場合は，�
 
 ## アプリとデータの保存先
 
-**v0.1.7** の配布ファイルの容量を示す．1 MB = 1,000,000 bytes とし，MB 単位に丸めている．各配布ファイルの容量は，[Release](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) の Assets で確認できる．
+**v0.1.8** の配布ファイルの容量を示す．1 MB = 1,000,000 bytes とし，MB 単位に丸めている．各配布ファイルの容量は，[Release](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) の Assets で確認できる．
 
 | 対応環境 | ダウンロードする ZIP | 展開後のアプリ本体 |
 | --- | ---: | ---: |
 | Windows x64 | 約 **8 MB** | 約 **17 MB** (`.exe`) |
-| macOS，Apple Silicon + Intel | 約 **15 MB** | 約 **33 MB** (`.app`) |
+| macOS，Apple Silicon + Intel | 約 **15 MB** | 約 **34 MB** (`.app`) |
 
 ZIP には README，画像，ライセンスも含む．Mac のアプリは両方の CPU 向けの実行ファイルを収録している．冒頭の Windows ZIP と macOS のボタンから，対応する配布ファイルを取得できる．
 
@@ -421,7 +439,7 @@ go build -o bin/local-tex-web-editor.exe ./cmd/local-tex-editor
 Windows 用の配布ファイルは次のコマンドで作成する．
 
 ```sh
-go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.7" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
+go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.8" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
 ```
 
 `build:windows-resources` は同梱の ICO から Windows x64 用の resource を生成する．実行ファイルのビルド時に，16〜256 px の 9 サイズのアイコンが組み込まれる．
@@ -437,7 +455,7 @@ npx playwright install chromium
 node scripts/build-macos.mjs
 ```
 
-`dist/local-tex-web-editor-0.1.7-macos-universal.zip` に，Apple Silicon と Intel で動く `.app`，日英の README，ライセンスを収録する．
+`dist/local-tex-web-editor-0.1.8-macos-universal.zip` に，Apple Silicon と Intel で動く `.app`，日英の README，ライセンスを収録する．
 
 起動時のオプション:
 

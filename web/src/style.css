@@ -137,7 +137,9 @@ h1, h2, h3, p { margin: 0; }
 .save-status { font-size: 9px; color: #95a1ad; white-space: nowrap; }
 .save-status.dirty { color: #b08848; }
 .save-status.error { color: #b44a4d; }
-.editor-tabs { display: flex; flex: 1 1 auto; min-width: 0; overflow-x: auto; scrollbar-width: thin; background: #fbfcfd; min-height: 35px; }
+.editor-tabs { display: flex; flex: 1 1 auto; min-width: 0; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; touch-action: pan-x; background: #fbfcfd; height: 35px; min-height: 35px; }
+.editor-tabs::-webkit-scrollbar { display: none; }
+.editor-tabs :is(.tab-select, .tab-close):focus-visible { outline-offset: -3px; }
 .editor-tab { display: flex; align-items: center; padding-right: 6px; flex: 0 0 auto; border-right: 1px solid #e9edf1; border-top: 2px solid transparent; background: #f8fafb; }
 .editor-tab.active { border-top-color: var(--accent); background: white; }
 .tab-select { display: inline-flex; align-items: center; gap: 8px; background: transparent; border: 0; padding: 8px 9px 8px 13px; font-size: 10px; color: #8a96a2; max-width: 230px; }
@@ -253,6 +255,7 @@ body.resizing * { cursor: inherit !important; user-select: none !important; }
 .font-size-field { display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 12px; }
 .font-size-field input { width: 85px; font-size: 12px; }
 .field-help { font-size: 10px; color: #97a3ad; line-height: 1.8; margin-top: 7px; overflow-wrap: anywhere; }
+.completion-settings > .field-help + .checkbox-field { margin-top: 17px; }
 .path-field { display: flex; gap: 7px; }
 .path-field input { flex: 1 1 auto; }
 .picker-status { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 9px; padding: 9px 10px; color: var(--secondary); border: 1px solid var(--border); border-radius: 5px; font-size: 11px; line-height: 1.7; }

@@ -50,7 +50,9 @@ export class PDFViewer {
     this.search = new PDFSearch({ eventBus: this.eventBus, linkService: this.linkService, pane: document.getElementById('pdf-preview') || document.getElementById('pdf-pane'), toolbar: document.querySelector('.pdf-toolbar'), scroll: this.elements.scroll });
     const toolbar = document.querySelector('.pdf-toolbar');
     this.toolbar = new PDFToolbar({ toolbar, panel: document.getElementById('pdf-view-controls'), button: document.getElementById('pdf-more'),
-      moveWhenNarrow: [{ element: toolbar?.querySelector('.navigation-actions'), below: 360 }, { element: toolbar?.querySelector('.preview-choice'), below: 280 }] });
+      alwaysVisible: [this.elements['zoom-out'], this.elements['zoom-in'], document.getElementById('download-pdf')],
+      moveWhenNarrow: [{ element: toolbar?.querySelector('.navigation-actions'), below: 500 }, { element: toolbar?.querySelector('.preview-choice'), below: 350 },
+        { element: this.elements.prev, below: 280 }, { element: this.elements.next, below: 280 }] });
     this.pageViewer = new DocumentViewer({
       container: this.elements.scroll,
       viewer: this.elements.stage,

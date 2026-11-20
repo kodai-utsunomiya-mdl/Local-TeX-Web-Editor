@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { EditorState } from '@codemirror/state';
-import { codeFolding, foldable, foldEffect, foldedRanges, ensureSyntaxTree } from '@codemirror/language';
+import { codeFolding, foldable, foldEffect, foldedRanges, ensureSyntaxTree, syntaxTree } from '@codemirror/language';
 import { markdown } from '@codemirror/lang-markdown';
 import { sourceFolding, revealSourceRange } from '../web/src/source-folding.js';
 import { outlineHierarchy } from '../web/src/outline-tree.js';
@@ -19,6 +19,15 @@ function hiddenAt(state, number) {
 }
 function rangeCount(state) {
   let count = 0; foldedRanges(state).between(0, state.doc.length, () => count++); return count;
+}
+function parsedState(state) {
+  const tree = ensureSyntaxTree(state, state.doc.length, 500);
+  assert.ok(tree, 'the parser must finish before folding ranges are read');
+  // ensureSyntaxTree advances the parse context. An editor transaction makes
+  // that completed tree available to foldable through the language state field.
+  const parsed = state.update({}).state;
+  assert.equal(syntaxTree(parsed), tree);
+  return parsed;
 }
 
 test('TeX sections fold through child headings and stop before the next peer or document ending', () => {
@@ -103,13 +112,23 @@ Not closed yet.`);
 });
 
 test('Markdown folds ATX and Setext sections and fenced code through its language support', () => {
-  const state = stateFor('# Introduction\n\nOpening text.\n\n## Details\n\n```js\nconst value = 1;\n```\n\nResults\n=======\n\nDone.\n', 'notes.md');
-  ensureSyntaxTree(state, state.doc.length, 500);
+  const state = parsedState(stateFor('# Introduction\n\nOpening text.\n\n## Details\n\n```js\nconst value = 1;\n```\n\nResults\n=======\n\nDone.\n', 'notes.md'));
   assert.match(hiddenAt(state, 1), /## Details/);
   assert.doesNotMatch(hiddenAt(state, 1), /Results/);
   assert.match(hiddenAt(state, 5), /const value = 1/);
   assert.match(hiddenAt(state, 7), /const value = 1/);
   assert.match(hiddenAt(state, 11), /Done\./);
+});
+
+test('Markdown folding works after the initial parse runs out of its time budget', context => {
+  let elapsed = 0, state;
+  const clock = context.mock.method(Date, 'now', () => elapsed += 25);
+  try {
+    state = stateFor('# Introduction\n\nOpening text.\n\n```js\nconst value = 1;\n```\n', 'notes.md');
+  } finally { clock.mock.restore(); }
+  assert.ok(syntaxTree(state).length < state.doc.length, 'start with an incomplete initial parse');
+  state = parsedState(state);
+  assert.match(hiddenAt(state, 5), /const value = 1/);
 });
 
 test('a cursor jump opens nested folds and an explicit range reveals its selected text', () => {

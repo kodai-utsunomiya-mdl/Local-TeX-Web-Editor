@@ -48,13 +48,21 @@ export class PDFDarkMode {
 }
 
 export class PDFToolbar {
-  constructor({ toolbar, panel, button, compactWidth = 600, label = 'PDF の操作', moveWhenNarrow = [] }) {
+  constructor({ toolbar, panel, button, compactWidth = 600, label = 'PDF の操作', moveWhenNarrow = [], alwaysVisible = [] }) {
     this.toolbar = toolbar; this.panel = panel; this.button = button;
     this.compactWidth = compactWidth; this.label = label;
     if (!toolbar || !panel || !button) return;
     this.homes = moveWhenNarrow.filter(item => item.element).map(item => {
       const marker = document.createComment('toolbar control'); item.element.before(marker);
       return { ...item, marker };
+    });
+    this.persistent = document.createElement('div');
+    this.persistent.className = 'pdf-persistent-controls';
+    this.persistent.hidden = true;
+    button.before(this.persistent);
+    this.persistentHomes = alwaysVisible.filter(Boolean).map(element => {
+      const marker = document.createComment('persistent toolbar control'); element.before(marker);
+      return { element, marker };
     });
     button.addEventListener('click', () => {
       if (panel.matches(':popover-open')) panel.hidePopover();
@@ -108,6 +116,12 @@ export class PDFToolbar {
     for (const { element, marker, below } of [...this.homes].reverse()) {
       if (compact && width < below) this.panel.prepend(element);
       else marker.after(element);
+    }
+    this.persistent.hidden = !compact || !this.persistentHomes.length;
+    for (const { element, marker } of this.persistentHomes) {
+      if (compact) {
+        if (element.parentElement !== this.persistent) this.persistent.append(element);
+      } else if (element.previousSibling !== marker) marker.after(element);
     }
     if (this.panel.matches(':popover-open')) this.positionMenu();
   }

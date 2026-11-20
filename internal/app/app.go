@@ -59,12 +59,7 @@ type App struct {
 	synctexVersions       map[string]*synctexVersion
 	synctexSlots          chan struct{}
 
-	browserConnections   int
-	browserEverConnected bool
-	browserGeneration    uint64
-	browserTimer         *time.Timer
-	browserEnd           chan struct{}
-	browserCloseDelay    time.Duration
+	browserEnd chan struct{}
 }
 
 type State struct {
@@ -129,7 +124,7 @@ func New(options Options) (*App, error) {
 	a := &App{
 		options: options, packageIdentity: identity, pdfVersions: make(map[string]string),
 		synctexVersions: make(map[string]*synctexVersion), synctexSlots: make(chan struct{}, 2),
-		browserEnd: make(chan struct{}), browserCloseDelay: 5 * time.Second,
+		browserEnd: make(chan struct{}),
 	}
 	if err := a.loadConfig(); err != nil {
 		return nil, err
@@ -181,6 +176,7 @@ func (a *App) Handler() http.Handler {
 	mux.HandleFunc("/api/shortcuts", a.shortcutsHandler)
 	mux.HandleFunc("/api/storage", a.storageHandler)
 	mux.HandleFunc("/api/file", a.fileHandler)
+	mux.HandleFunc("/api/entry", a.entryHandler)
 	mux.HandleFunc("/api/project/search", a.projectSearchHandler)
 	mux.HandleFunc("/api/project/replace", a.projectReplaceHandler)
 	mux.HandleFunc("/api/history", a.historyHandler)

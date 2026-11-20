@@ -39,7 +39,7 @@ func TestProjectListsAssetsAndEmptyDirectories(t *testing.T) {
 		"notes.markdown":     {"text", "# Notes\n"},
 		"data/source.zip":    {"binary", "archive bytes"},
 		"figures/chart.eps":  {"binary", "%!PS-Adobe-3.0 EPSF-3.0\n"},
-		"page.html":          {"binary", "<html>project contents</html>"},
+		"page.html":          {"text", "<html>project contents</html>"},
 	}
 	for name, fixture := range fixtures {
 		writeTestFile(t, filepath.Join(root, filepath.FromSlash(name)), []byte(fixture.content))
@@ -77,7 +77,7 @@ func TestProjectListsAssetsAndEmptyDirectories(t *testing.T) {
 		}
 	}
 	revisions := snapshotSourceRevisions(root)
-	if len(revisions) != 3 || revisions["main.tex"] == "" || revisions["data/table.csv"] == "" || revisions["notes.markdown"] == "" {
+	if len(revisions) != 4 || revisions["main.tex"] == "" || revisions["data/table.csv"] == "" || revisions["notes.markdown"] == "" || revisions["page.html"] == "" {
 		t.Fatalf("source revisions include assets: %#v", revisions)
 	}
 }

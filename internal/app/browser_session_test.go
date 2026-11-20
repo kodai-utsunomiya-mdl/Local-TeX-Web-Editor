@@ -68,14 +68,13 @@ func keepBrowserRunning(t *testing.T, stopped <-chan struct{}, duration time.Dur
 	t.Helper()
 	select {
 	case <-stopped:
-		t.Fatal("the application stopped while a browser tab was open")
+		t.Fatal("the application stopped without an explicit Quit")
 	case <-time.After(duration):
 	}
 }
 
-func TestBrowserLastTabStopsApplicationAndBuild(t *testing.T) {
+func TestBrowserDisconnectKeepsApplicationAndBuildRunning(t *testing.T) {
 	a, _ := testApp(t)
-	a.browserCloseDelay = 30 * time.Millisecond
 	stopped := make(chan struct{})
 	a.options.Shutdown = func() { close(stopped) }
 	a.build = &buildRun{result: Build{Status: "running"}}
@@ -83,42 +82,57 @@ func TestBrowserLastTabStopsApplicationAndBuild(t *testing.T) {
 	second := openBrowserTestSession(t, a, false)
 	first.cancel()
 	waitForBrowserEvent(t, first.done, "first tab to close")
-	keepBrowserRunning(t, stopped, 3*a.browserCloseDelay)
 	second.cancel()
 	waitForBrowserEvent(t, second.done, "last tab to close")
-	waitForBrowserEvent(t, stopped, "application shutdown")
+	// Exceed the former five-second exit delay while every tab is disconnected.
+	keepBrowserRunning(t, stopped, 5200*time.Millisecond)
 	a.mu.Lock()
 	closed, cancelRequested := a.closed, a.build.cancelRequested
 	a.mu.Unlock()
-	if !closed || !cancelRequested {
+	if closed || cancelRequested {
 		t.Fatalf("closed=%v, build cancel requested=%v", closed, cancelRequested)
 	}
 	if first.response.Code != http.StatusOK || first.response.Body.String() != ": connected\n\n" {
 		t.Fatalf("session response: %d %q", first.response.Code, first.response.Body.String())
 	}
-	response := apiRequest(a, http.MethodGet, "/api/session", nil, nil)
-	if response.Code != http.StatusServiceUnavailable {
-		t.Fatalf("new session after shutdown: %d", response.Code)
+	reopened := openBrowserTestSession(t, a, false)
+	response := apiRequest(a, http.MethodPost, "/api/shutdown", nil, nil)
+	if response.Code != http.StatusOK {
+		t.Fatal(response.Body.String())
+	}
+	waitForBrowserEvent(t, stopped, "explicit shutdown")
+	waitForBrowserEvent(t, reopened.done, "reopened stream to finish")
+	a.mu.Lock()
+	closed, cancelRequested = a.closed, a.build.cancelRequested
+	a.mu.Unlock()
+	if !closed || !cancelRequested {
+		t.Fatalf("after Quit: closed=%v, build cancel requested=%v", closed, cancelRequested)
 	}
 }
 
-func TestBrowserReloadCancelsPendingShutdown(t *testing.T) {
+func TestBrowserReconnectCanSaveAfterAllStreamsClose(t *testing.T) {
 	a, _ := testApp(t)
-	a.browserCloseDelay = 60 * time.Millisecond
-	stopped := make(chan struct{})
-	a.options.Shutdown = func() { close(stopped) }
 	first := openBrowserTestSession(t, a, false)
 	first.cancel()
 	waitForBrowserEvent(t, first.done, "old page to close")
 	second := openBrowserTestSession(t, a, false)
-	keepBrowserRunning(t, stopped, 3*a.browserCloseDelay)
-	second.cancel()
-	waitForBrowserEvent(t, stopped, "shutdown after the reloaded tab closes")
+	if second.response.Code != http.StatusOK {
+		t.Fatalf("reopened session: %d", second.response.Code)
+	}
+	response := apiRequest(a, http.MethodPut, "/api/file", map[string]string{
+		"path": "after-reconnect.tex", "content": "% 再接続後の原稿\n", "revision": "",
+	}, nil)
+	if response.Code != http.StatusOK {
+		t.Fatalf("save after reconnect: %d %s", response.Code, response.Body.String())
+	}
+	response = apiRequest(a, http.MethodGet, "/api/file?path=after-reconnect.tex", nil, nil)
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "再接続後の原稿") {
+		t.Fatalf("read after reconnect: %d %s", response.Code, response.Body.String())
+	}
 }
 
-func TestBrowserNeverConnectedDoesNotStopAPIProcess(t *testing.T) {
+func TestBrowserFirstConnectionCanArriveAfterOtherRequests(t *testing.T) {
 	a, _ := testApp(t)
-	a.browserCloseDelay = 10 * time.Millisecond
 	stopped := make(chan struct{})
 	a.options.Shutdown = func() { close(stopped) }
 	response := apiRequest(a, http.MethodGet, "/api/session", nil, map[string]string{"X-Local-Token": ""})
@@ -129,54 +143,11 @@ func TestBrowserNeverConnectedDoesNotStopAPIProcess(t *testing.T) {
 	if response.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("invalid session method: %d", response.Code)
 	}
-	keepBrowserRunning(t, stopped, 3*a.browserCloseDelay)
-	a.mu.Lock()
-	connections, timer := a.browserConnections, a.browserTimer
-	a.mu.Unlock()
-	if connections != 0 || timer != nil {
-		t.Fatal("a request without a browser session changed the lifetime")
-	}
-}
-
-func TestExpectedBrowserThatNeverConnectsStopsApplication(t *testing.T) {
-	a, _ := testApp(t)
-	stopped := make(chan struct{})
-	a.options.Shutdown = func() { close(stopped) }
-	a.ExpectBrowserConnection(10 * time.Millisecond)
-	a.ExpectBrowserConnection(time.Hour)
-	waitForBrowserEvent(t, stopped, "first browser connection deadline")
-	a.ExpectBrowserConnection(time.Hour)
-	a.mu.Lock()
-	timer, closed := a.browserTimer, a.closed
-	a.mu.Unlock()
-	if timer != nil || !closed {
-		t.Fatal("an expectation reopened the closed application")
-	}
-}
-
-func TestExpectedBrowserConnectsBeforeDeadline(t *testing.T) {
-	a, _ := testApp(t)
-	a.browserCloseDelay = 10 * time.Millisecond
-	stopped := make(chan struct{})
-	a.options.Shutdown = func() { close(stopped) }
-	a.ExpectBrowserConnection(100 * time.Millisecond)
+	keepBrowserRunning(t, stopped, 50*time.Millisecond)
 	session := openBrowserTestSession(t, a, false)
-	keepBrowserRunning(t, stopped, 150*time.Millisecond)
-	session.cancel()
-	waitForBrowserEvent(t, stopped, "connected tab to close")
-}
-
-func TestExpectedBrowserDoesNotExtendLastTabGrace(t *testing.T) {
-	a, _ := testApp(t)
-	a.browserCloseDelay = 10 * time.Millisecond
-	stopped := make(chan struct{})
-	a.options.Shutdown = func() { close(stopped) }
-	session := openBrowserTestSession(t, a, false)
-	a.ExpectBrowserConnection(time.Hour)
-	session.cancel()
-	waitForBrowserEvent(t, session.done, "last tab to close")
-	a.ExpectBrowserConnection(time.Hour)
-	waitForBrowserEvent(t, stopped, "unchanged last-tab deadline")
+	if session.response.Code != http.StatusOK {
+		t.Fatalf("first session: %d", session.response.Code)
+	}
 }
 
 func TestBrowserSessionsCloseBeforeServerShutdown(t *testing.T) {
@@ -187,7 +158,6 @@ func TestBrowserSessionsCloseBeforeServerShutdown(t *testing.T) {
 		}
 		t.Run(name, func(t *testing.T) {
 			a, _ := testApp(t)
-			a.browserCloseDelay = 10 * time.Millisecond
 			var calls atomic.Int32
 			stopped := make(chan struct{})
 			a.options.Shutdown = func() {
@@ -207,6 +177,10 @@ func TestBrowserSessionsCloseBeforeServerShutdown(t *testing.T) {
 			}
 			waitForBrowserEvent(t, first.done, "first response to close")
 			waitForBrowserEvent(t, second.done, "second response to close")
+			response := apiRequest(a, http.MethodGet, "/api/session", nil, nil)
+			if response.Code != http.StatusServiceUnavailable {
+				t.Fatalf("new session after shutdown: %d", response.Code)
+			}
 			a.CloseBrowserSessions()
 			if explicit {
 				a.requestShutdown()
@@ -214,25 +188,27 @@ func TestBrowserSessionsCloseBeforeServerShutdown(t *testing.T) {
 					t.Fatalf("shutdown callback count: %d", calls.Load())
 				}
 			} else {
-				keepBrowserRunning(t, stopped, 3*a.browserCloseDelay)
+				keepBrowserRunning(t, stopped, 50*time.Millisecond)
 			}
 		})
 	}
 }
 
-func TestBrowserFailedWriteReleasesSession(t *testing.T) {
+func TestBrowserFailedWriteAllowsAnotherConnection(t *testing.T) {
 	a, _ := testApp(t)
-	a.browserCloseDelay = 10 * time.Millisecond
 	stopped := make(chan struct{})
 	a.options.Shutdown = func() { close(stopped) }
 	session := openBrowserTestSession(t, a, true)
 	waitForBrowserEvent(t, session.done, "failed response to close")
-	waitForBrowserEvent(t, stopped, "shutdown after the connection fails")
+	keepBrowserRunning(t, stopped, 50*time.Millisecond)
+	reopened := openBrowserTestSession(t, a, false)
+	if reopened.response.Code != http.StatusOK {
+		t.Fatalf("reopened session after a failed write: %d", reopened.response.Code)
+	}
 }
 
 func TestBrowserShutdownAllowsArrivedDraftPatchToFinish(t *testing.T) {
 	a, _ := testApp(t)
-	a.browserCloseDelay = 10 * time.Millisecond
 	stopped := make(chan struct{})
 	a.options.Shutdown = func() { close(stopped) }
 	patchArrived := make(chan struct{})
@@ -257,7 +233,7 @@ func TestBrowserShutdownAllowsArrivedDraftPatchToFinish(t *testing.T) {
 	if session.StatusCode != http.StatusOK {
 		t.Fatalf("session status: %d", session.StatusCode)
 	}
-	// Pause the accepted patch at its disk lock while the last tab closes.
+	// Pause the accepted patch at its disk lock while the user quits the app.
 	a.uiMu.Lock()
 	var unlock sync.Once
 	releaseWrite := func() { unlock.Do(a.uiMu.Unlock) }
@@ -279,7 +255,8 @@ func TestBrowserShutdownAllowsArrivedDraftPatchToFinish(t *testing.T) {
 	}()
 	waitForBrowserEvent(t, patchArrived, "draft patch to arrive")
 	session.Body.Close()
-	waitForBrowserEvent(t, stopped, "last tab to start shutdown")
+	a.requestShutdown()
+	waitForBrowserEvent(t, stopped, "explicit shutdown to start")
 	shutdownDone := make(chan error, 1)
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
