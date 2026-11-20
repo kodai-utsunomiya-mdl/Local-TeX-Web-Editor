@@ -28,7 +28,7 @@ test.beforeAll(async () => {
           window.rich?.destroy();
           richChanges.length = richSelections.length = richErrors.length = richLinks.length = 0;
           canonical = EditorState.create({ doc: text, extensions: [history()] });
-          window.rich = new MarkdownRichEditor({ host: document.getElementById('rich'), text, path, projectRoot, token: 'rich-test-token',
+          window.rich = new MarkdownRichEditor({ host: document.getElementById('rich-host'), text, path, projectRoot, token: 'rich-test-token',
             onChange: change => {
               if (change.beforeText !== canonical.doc.toString()) throw new Error('The canonical source changed.');
               const transaction = canonical.update({ changes: change.changes, selection: change.selection, userEvent: change.userEvent,
@@ -73,11 +73,11 @@ async function openEditor(page, text) {
     if (url.pathname !== '/') return route.fulfill({ status: 404, body: '' });
     return route.fulfill({ contentType: 'text/html', body: `<!doctype html><html lang="ja"><head><meta charset="utf-8">
       <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/markdown-rich-editor.css"><link rel="stylesheet" href="/katex/katex.min.css">
-      <style>body { display: flex; } #rich { width: 100%; height: 100%; }</style>
-      </head><body><div id="rich"></div><script type="module" src="/rich.js"></script></body></html>` });
+      <style>body { display: flex; } #rich-host { width: 100%; height: 100%; }</style>
+      </head><body><div id="rich-host"></div><script type="module" src="/rich.js"></script></body></html>` });
   });
   await page.goto(origin);
-  await expect.poll(() => page.evaluate(() => Boolean(window.rich))).toBe(true);
+  await expect.poll(() => page.evaluate(() => typeof window.rich?.destroy === 'function')).toBe(true);
   await page.evaluate(text => openRich(text), text);
   return requests;
 }
@@ -133,7 +133,7 @@ test('表のセルを編集し，行列を増減して Enter と Tab で移動�
   await page.locator('[data-rich-command="deleteColumn"]').click();
   await expect(page.locator('table tr').first().locator('th')).toHaveCount(2);
   await page.setViewportSize({ width: 320, height: 650 });
-  expect(await page.locator('#rich').evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+  expect(await page.locator('#rich-host').evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
   await checkErrors(page);
 });
 

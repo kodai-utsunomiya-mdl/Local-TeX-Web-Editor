@@ -448,6 +448,7 @@ function makeEditorState(path, content) {
     } }),
     keymap.of([indentWithTab]),
     Prec.highest(keymap.of([
+      { key: 'Mod-Shift-z', run: redo, preventDefault: true },
       { key: 'Mod-Shift-f', run: () => { projectSearch?.open(); return true; } },
       { key: 'Mod-s', run: view => { if (view.composing) return false; runTask(saveCurrent); return true; } },
       { key: 'Mod-Shift-s', run: view => { if (view.composing) return false; runTask(saveEveryDocument); return true; } },
@@ -550,6 +551,7 @@ function applyRichHistory(slot, command) {
   const changed = command(slot.view);
   if (changed) {
     const { anchor, head } = slot.view.state.selection.main;
+    slot.rich?.focus();
     slot.rich?.selectSource(anchor, head, { scrollIntoView: true });
   }
   return changed;
@@ -557,6 +559,7 @@ function applyRichHistory(slot, command) {
 function setMarkdownEditorMode(mode, name = state.activePane, { focus = true, persist = true } = {}) {
   const slot = editorSlots[name];
   if (!slot?.view || !isMarkdown(slot.path)) return;
+  if (focus) slot.restoreSequence = (slot.restoreSequence || 0) + 1;
   const next = mode === 'source' ? 'source' : 'rich';
   if (editorMode(name) === 'rich' && slot.rich) synchronizeRichSelection(name, slot.rich.sourceSelection());
   state.preferences.markdownEditorModes[name] = next;
@@ -565,9 +568,9 @@ function setMarkdownEditorMode(mode, name = state.activePane, { focus = true, pe
   if (name === state.activePane) applyPreviewVisibility();
   panelLayout.refresh();
   const selection = slot.view.state.selection.main;
+  if (focus) focusEditorSlot(name);
   if (next === 'rich') slot.rich.selectSource(selection.anchor, selection.head, { scrollIntoView: focus });
   else if (focus) slot.view.dispatch({ effects: EditorView.scrollIntoView(selection.head, { y: 'nearest' }) });
-  if (focus) focusEditorSlot(name);
   if (persist) { savePreferences(150); scheduleSession(); }
 }
 async function openMarkdownLink(path, { fragment } = {}, pane = state.activePane) {
@@ -751,7 +754,6 @@ function selectDocument(doc, { pane = state.activePane, focus = true, activate =
   requestAnimationFrame(() => { if (slot.view === view && slot.path === doc.path && slot.restoreSequence === restoreSequence) {
     view.scrollDOM.scrollTop = Math.max(0, Number(position?.scrollTop) || 0);
     if (editorMode(pane) === 'rich' && slot.rich) slot.richHost.scrollTop = Math.max(0, Number(position?.richScrollTop) || 0);
-    else view.dispatch({ effects: EditorView.scrollIntoView(view.state.selection.main.head, { y: 'nearest' }) });
   } });
   if ((/\.(tex|bib)$/i.test(doc.path) || isMarkdown(doc.path)) && doc.indexedDoc !== doc.state.doc) updateIndex(doc.path, doc.state.doc.toString());
   renderRecovery(); renderPaneSelectors(); scheduleSession(); updateDocumentPreview({ immediate: true });
@@ -2459,8 +2461,8 @@ async function goToSource(path, lineNumber, column = 1, { align = 'start', from 
   const margin = align === 'start' ? Math.max(24, Math.min(96, state.editor.scrollDOM.clientHeight * .12)) : 12;
   pauseMarkdownScrollSync();
   state.editor.dispatch({ selection: { anchor: position, head: end }, effects: [...revealSourceRange(state.editor.state, position, end), EditorView.scrollIntoView(position, { y: align, yMargin: margin }), lineFlash.of(number)] });
-  activeRichEditor()?.selectSource(position, end, { scrollIntoView: true });
   focusEditorSlot();
+  activeRichEditor()?.selectSource(position, end, { scrollIntoView: true });
   state.lastSurface = 'source';
   clearTimeout(lineFlashTimer);
   const target = activeDocument();

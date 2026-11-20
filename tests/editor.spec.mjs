@@ -427,7 +427,9 @@ $\widehat w$ & Estimated coefficient vector \\
     await expect(page.getByTestId('markdown-document').locator('.katex')).toHaveCount(4);
     await page.getByTestId('theme-toggle').click();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
-    await expect.poll(() => page.getByTestId('editor').locator('.cm-scroller').evaluate(element => element.scrollTop)).toBe(0);
+    const firstMarkdownLine = page.getByTestId('editor').locator('.cm-line').first();
+    await expect(firstMarkdownLine).toHaveText('# Research notes');
+    await expect(firstMarkdownLine).toBeInViewport({ ratio: 1 });
     await expect(page.locator('#toast')).not.toBeVisible();
     await page.screenshot({ path: testInfo.outputPath('editor-english-light-markdown.png') });
     await page.locator('#editor-tabs [data-path="main.tex"]').click();
