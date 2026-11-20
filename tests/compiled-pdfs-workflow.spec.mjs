@@ -32,7 +32,7 @@ test('文書ごとの PDF を選び，実際の名前で保存・コピーして
   for (const [main, text] of [['second.tex', 'Second document'], ['third.tex', 'Third document']]) {
     await writeFile(path.join(session.project, main), `\\documentclass{article}\n\\begin{document}\n${text}\n\\end{document}\n`);
   }
-  await openProject(session); await openEditor(page, session);
+  const meta = await openProject(session); await openEditor(page, session);
   const first = await compile(page, session, 'main.tex');
   const second = await compile(page, session, 'second.tex');
   const third = await compile(page, session, 'third.tex');
@@ -79,7 +79,7 @@ test('文書ごとの PDF を選び，実際の名前で保存・コピーして
   await page.keyboard.press('Escape');
   await page.screenshot({ path: testInfo.outputPath('compiled-pdf-file-list.png') });
 
-  const key = `/api/storage?key=${encodeURIComponent(`session:${session.project}`)}`;
+  const key = `/api/storage?key=${encodeURIComponent(`session:${meta.project.root}`)}`;
   await expect.poll(async () => (await json(session, key)).value?.pdf?.main).toBe('main.tex');
   await page.close(); await session.restart();
   const reopened = await context.newPage();
