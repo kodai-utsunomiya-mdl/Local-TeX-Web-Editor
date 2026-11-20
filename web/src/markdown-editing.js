@@ -18,7 +18,7 @@ function insertionIcon(kind) {
   return icon;
 }
 
-export function createMarkdownEditing({ container, getDocument, applyEdit, focusDocument = () => {}, onImage = () => {}, onTable = () => {}, onNewPage = () => {}, onError = () => {} }) {
+export function createMarkdownEditing({ container, getDocument, applyEdit, getRichEditor = () => null, focusDocument = () => {}, onImage = () => {}, onTable = () => {}, onNewPage = () => {}, onError = () => {} }) {
   container.classList.add('markdown-editing');
   container.setAttribute('role', 'toolbar');
   container.setAttribute('aria-label', t('Markdown の編集'));
@@ -27,7 +27,7 @@ export function createMarkdownEditing({ container, getDocument, applyEdit, focus
   const snapshot = () => {
     const document = getDocument();
     if (!document || !isMarkdown(document.path)) throw new Error(t('編集する Markdown の原稿を開いてください．'));
-    return { path: document.path, projectRoot: document.projectRoot, pane: document.pane, content: String(document.content || ''), anchor: document.anchor, head: document.head };
+    return { path: document.path, projectRoot: document.projectRoot, pane: document.pane, content: String(document.content || ''), anchor: document.anchor, head: document.head, richAnchor: document.richAnchor, richHead: document.richHead };
   };
   function commandError(error) {
     if (error.message === 'link-url') return new Error(t('リンク先には http・https・mailto の URL，またはプロジェクト内の相対パスを入力してください．'));
@@ -36,6 +36,11 @@ export function createMarkdownEditing({ container, getDocument, applyEdit, focus
   }
   async function apply(command, options, document = snapshot()) {
     if (!sameMarkdownSelection(getDocument(), document)) throw new Error(t('原稿や選択範囲が変わりました．挿入先を選び直して，もう一度開いてください．'));
+    const rich = getRichEditor();
+    if (rich) {
+      try { rich.command(command, options); } catch (error) { throw commandError(error); }
+      focusDocument(document); return;
+    }
     let edit;
     try { edit = markdownEdit(document, command, options); }
     catch (error) { throw commandError(error); }
@@ -67,7 +72,9 @@ export function createMarkdownEditing({ container, getDocument, applyEdit, focus
   const blocks = element('div', { class: 'markdown-edit-group' });
   blocks.append(button('箇条書き', '•', () => run('bullet')), button('番号付きリスト', '1.', () => run('ordered')), button('チェックリスト', '☑', () => run('task')), button('引用', '❝', () => run('quote')));
   const insertions = element('div', { class: 'markdown-edit-group' });
-  insertions.append(button('行内コード', '<>', () => run('inlineCode', { placeholder: t('コード') })), button('コードブロック', '{ }', () => openCode()), button('リンクを挿入', '↗', () => openLink()));
+  const math = button('数式を挿入', '∑', () => run('math', { displayMode: true }));
+  math.hidden = true;
+  insertions.append(button('行内コード', '<>', () => run('inlineCode', { placeholder: t('コード') })), button('コードブロック', '{ }', () => openCode()), math, button('リンクを挿入', '↗', () => openLink()));
   const files = element('div', { class: 'markdown-edit-group' });
   files.append(
     insertionButton('画像を挿入', '画像', 'image', onImage),
@@ -98,7 +105,7 @@ export function createMarkdownEditing({ container, getDocument, applyEdit, focus
     try {
       linkDocument = snapshot();
       const from = Math.min(linkDocument.anchor, linkDocument.head), to = Math.max(linkDocument.anchor, linkDocument.head);
-      linkLabel.input.value = linkDocument.content.slice(from, to);
+      linkLabel.input.value = getRichEditor()?.selectedText() ?? linkDocument.content.slice(from, to);
       linkURL.input.value = ''; linkPreview.input.value = '';
       link.open(); (linkLabel.input.value ? linkURL.input : linkLabel.input).focus();
     } catch (error) { onError(error); }
@@ -125,7 +132,7 @@ export function createMarkdownEditing({ container, getDocument, applyEdit, focus
         const end = codeDocument.content.indexOf('\n', to);
         to = end < 0 ? codeDocument.content.length : end;
       }
-      codeInput.input.value = codeDocument.content.slice(from, to); codeLanguage.input.value = '';
+      codeInput.input.value = getRichEditor()?.selectedText() ?? codeDocument.content.slice(from, to); codeLanguage.input.value = '';
       code.open(); codeInput.input.focus();
     } catch (error) { onError(error); }
   }
@@ -133,11 +140,13 @@ export function createMarkdownEditing({ container, getDocument, applyEdit, focus
   function update() {
     const document = getDocument();
     container.hidden = !document || !isMarkdown(document.path);
+    const rich = getRichEditor();
+    math.hidden = !rich;
     if (!container.hidden) {
       const position = Math.min(document.anchor, document.head);
       const start = position === 0 ? 0 : document.content.lastIndexOf('\n', position - 1) + 1;
       const match = document.content.slice(start).match(/^ {0,3}(#{1,6})(?:[ \t]|$)/);
-      heading.value = String(match?.[1].length || 0);
+      heading.value = String(rich ? rich.headingLevel() : match?.[1].length || 0);
     }
   }
   const stopLanguage = onLanguageChange(() => { translateElements(container); update(); });

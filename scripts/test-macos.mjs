@@ -120,6 +120,7 @@ try {
   assert.equal((await api('/api/state')).project.main, 'main.tex');
 
   await page.getByTestId('file-notes.md').click();
+  await page.locator('#markdown-editor-mode').selectOption('source');
   const preview = page.getByTestId('markdown-document');
   await expect(preview.getByRole('heading', { name: 'Mac での原稿' })).toBeVisible();
   await expect(preview.locator('.katex')).toHaveCount(1);

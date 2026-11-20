@@ -68,7 +68,9 @@ macOS では `scripts/build-macos.mjs` が Apple Silicon と Intel の実行フ�
 
 `document-tools.spec.mjs` と `document-tools-workflow-cases.mjs` は，新しい Markdown ページと相対リンク，Undo，同名ファイル，PDF の文字を保存する操作，画像のみの PDF，進捗とキャンセルを扱う．Markdown の印刷プレビューでは数式・表・画像を読み込み，実際の PDF もテスト結果へ出力する．
 
-`preview-navigation.spec.mjs` は，幅 240〜820 px の PDF 表示欄で +/− と保存ボタンを常に表示し，拡大・縮小，ページ移動，検索，暗い表示を使えることを確認する．
+`preview-navigation.spec.mjs` は，幅 240〜820 px の PDF 表示欄で戻る・進む，+/−，保存のボタンを常に表示し，拡大・縮小，ページ移動，検索，暗い表示を使えることを確認する．三点リーダから PDF 名・TeX のパス・更新状態を確認し，ボタンの再クリックでメニューを閉じる操作も扱う．
+
+`pdf-citations.spec.mjs` は，コンパイルした PDF とファイル一覧から開いた PDF の引用リンクで，文献タイトルをマウスとキーボードから表示する．日本語のキー，文献の読み込み，倍率の変更，別の文書への切り替え，配色の変更も確認する．
 
 ## 開発環境で実行する
 

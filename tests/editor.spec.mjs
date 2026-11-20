@@ -1,4 +1,4 @@
-import { test as base, expect } from '@playwright/test';
+import { expect } from '@playwright/test';
 import { build as bundle } from 'esbuild';
 import { execFile, spawn } from 'node:child_process';
 import { once } from 'node:events';
@@ -15,13 +15,9 @@ import { registerInterfaceWorkflowTests } from './interface-workflow-cases.mjs';
 import { registerFileOperationTests } from './file-operation-cases.mjs';
 import { showPDFControls } from './pdf-controls.mjs';
 import { launchLifecycleBrowser } from './lifecycle-browser.mjs';
+import { test, repository, fixture, executable, applicationVersion, waitUntil, request, json, openProject, openEditor, setAutoSave, redactOutput } from './editor-fixtures.mjs';
 
-const repository = path.resolve(import.meta.dirname, '..');
-const fixture = path.join(import.meta.dirname, 'fixtures', 'japanese');
-const executable = path.resolve(process.env.LOCAL_TEX_EDITOR_TEST_EXE ||
-  path.join(repository, 'bin', process.platform === 'win32' ? 'local-tex-web-editor.exe' : 'local-tex-web-editor'));
 const execFileAsync = promisify(execFile);
-const applicationVersion = JSON.parse(await readFile(path.join(repository, 'package.json'), 'utf8')).version;
 
 function exampleFigurePDF() {
   const content = 'BT /F1 18 Tf 30 100 Td (Figure PDF) Tj ET\n';
@@ -162,51 +158,6 @@ async function openPDFForZoom(page) {
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 }
 
-async function waitUntil(read, predicate, timeout, description) {
-  const deadline = Date.now() + timeout;
-  let latest;
-  while (Date.now() < deadline) {
-    latest = await read();
-    if (predicate(latest)) return latest;
-    await delay(150);
-  }
-  throw new Error(`${description}\nLast result: ${JSON.stringify(latest)}`);
-}
-
-async function request(session, endpoint, { method = 'GET', data, token = true, headers = {} } = {}) {
-  const response = await fetch(new URL(endpoint, session.url), {
-    method,
-    headers: {
-      ...(token ? { 'X-Local-Token': session.token } : {}),
-      Origin: new URL(session.url).origin,
-      ...(data === undefined ? {} : { 'Content-Type': 'application/json' }),
-      ...headers,
-    },
-    body: data === undefined ? undefined : JSON.stringify(data),
-    signal: AbortSignal.timeout(20_000),
-  });
-  return response;
-}
-
-async function json(session, endpoint, options) {
-  const response = await request(session, endpoint, options);
-  const content = await response.text();
-  if (!response.ok) throw new Error(`${options?.method || 'GET'} ${endpoint}: HTTP ${response.status}\n${content}`);
-  return JSON.parse(content);
-}
-
-async function openProject(session) {
-  return json(session, '/api/project/open', { method: 'POST', data: { path: session.project } });
-}
-
-async function openEditor(page, session) {
-  const connected = page.waitForResponse(response =>
-    new URL(response.url()).pathname === '/api/session' && response.status() === 200);
-  await page.goto(`${session.url}#token=${encodeURIComponent(session.token)}`);
-  await connected;
-  await expect(page.getByTestId('editor').locator('.cm-content')).toBeVisible();
-}
-
 async function dragPanelSeparator(page, selector, { dx = 0, dy = 0, x, y } = {}) {
   const separator = page.locator(selector);
   await expect(separator).toBeVisible();
@@ -269,13 +220,6 @@ function expectedMainContent(session, content) {
   return content.replaceAll('\r\n', '\n').replaceAll('\n', session.mainLineEnding);
 }
 
-async function setAutoSave(page, enabled) {
-  await page.getByTestId('settings-button').click();
-  await page.getByTestId('autosave-setting').setChecked(enabled);
-  await page.locator('#save-settings').click();
-  await expect(page.getByTestId('autosave-setting')).not.toBeVisible();
-}
-
 async function openAppearance(page) {
   await page.getByTestId('settings-button').click();
   await page.locator('#open-appearance').click();
@@ -316,43 +260,6 @@ async function checkHelpLinks(page, language, store = false) {
   }
 }
 
-function redactOutput(text, token) {
-  return token ? text.replaceAll(token, '[local session token]') : text;
-}
-
-async function attachBuildFiles(testInfo, directory, prefix, recursive = false) {
-  const entries = await readdir(directory, { withFileTypes: true }).catch(error => {
-    if (error.code === 'ENOENT') return [];
-    throw error;
-  });
-  for (const entry of entries) {
-    const file = path.join(directory, entry.name);
-    if (recursive && entry.isDirectory()) {
-      await attachBuildFiles(testInfo, file, `${prefix}-${entry.name}`, true);
-    } else if (entry.isFile() && (/(?:\.fls|\.synctex(?:\.gz)?)$/.test(entry.name) || /^pdf-.*\.json$/.test(entry.name))) {
-      await testInfo.attach(`${prefix}-${entry.name}`, {
-        path: file,
-        contentType: entry.name.endsWith('.gz') ? 'application/gzip' : entry.name.endsWith('.json') ? 'application/json' : 'text/plain',
-      });
-    }
-  }
-}
-
-async function attachStoredUI(testInfo, directory, tokens) {
-  const entries = await readdir(directory, { withFileTypes: true }).catch(error => {
-    if (error.code === 'ENOENT') return [];
-    throw error;
-  });
-  for (const entry of entries) {
-    if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
-    const content = await readFile(path.join(directory, entry.name), 'utf8');
-    await testInfo.attach(`ui-state-${entry.name}`, {
-      body: Buffer.from(tokens.reduce((text, token) => redactOutput(text, token), content)),
-      contentType: 'application/json',
-    });
-  }
-}
-
 async function recordEmptySyncTeX(testInfo, session, buildId, forward) {
   const result = { includedFile: forward, mainFile: null, cli: [] };
   result.mainFile = await json(session, '/api/synctex/forward', {
@@ -384,105 +291,6 @@ async function recordEmptySyncTeX(testInfo, session, buildId, forward) {
   await writeFile(file, JSON.stringify(result, null, 2));
   await testInfo.attach('synctex-empty-result.json', { path: file, contentType: 'application/json' });
 }
-
-const test = base.extend({
-  interfaceLanguage: ['ja', { option: true }],
-  projectDirectory: ['日本語の原稿 with spaces', { option: true }],
-  session: async ({ interfaceLanguage, projectDirectory }, use, testInfo) => {
-    await stat(executable).catch(() => {
-      throw new Error(`Build the application before running browser tests: ${executable}`);
-    });
-    const temp = await mkdtemp(path.join(os.tmpdir(), 'ltex-'));
-    const project = path.join(temp, projectDirectory);
-    await cp(fixture, project, { recursive: true });
-    const mainLineEnding = (await readFile(path.join(project, 'main.tex'), 'utf8')).includes('\r\n') ? '\r\n' : '\n';
-    const readyFile = path.join(temp, 'ready.json');
-    const args = ['--no-browser', '--ready-file', readyFile, '--config-dir', path.join(temp, 'config')];
-    if (process.env.LOCAL_TEX_EDITOR_TEST_TEX_BIN) {
-      args.push('--tex-bin', process.env.LOCAL_TEX_EDITOR_TEST_TEX_BIN);
-    }
-    let stdout = '';
-    let stderr = '';
-    let startupError;
-    let session;
-    let processHandle;
-    const tokens = [];
-    async function start() {
-      await rm(readyFile, { force: true });
-      startupError = undefined;
-      processHandle = spawn(executable, args, {
-        cwd: repository,
-        windowsHide: true,
-        stdio: ['ignore', 'pipe', 'pipe'],
-      });
-      processHandle.on('error', error => { startupError = error; });
-      processHandle.stdout.on('data', chunk => { stdout += chunk.toString('utf8'); });
-      processHandle.stderr.on('data', chunk => { stderr += chunk.toString('utf8'); });
-      const ready = await waitUntil(async () => {
-        if (startupError) throw startupError;
-        if (processHandle.exitCode !== null) {
-          throw new Error(`Application exited with code ${processHandle.exitCode}.\n${stderr}\n${stdout}`);
-        }
-        try { return JSON.parse(await readFile(readyFile, 'utf8')); }
-        catch (error) {
-          if (error.code === 'ENOENT' || error instanceof SyntaxError) return null;
-          throw error;
-        }
-      }, value => Boolean(value?.url && value?.token), 20_000, 'Application did not write its ready file.');
-      tokens.push(ready.token);
-      return ready;
-    }
-    async function stop() {
-      if (!processHandle) return;
-      if (session && processHandle.exitCode === null) {
-        await request(session, '/api/shutdown', { method: 'POST', data: {} }).catch(() => {});
-      }
-      if (processHandle.exitCode === null && processHandle.signalCode === null) {
-        await Promise.race([once(processHandle, 'exit').catch(() => {}), delay(4000)]);
-      }
-      if (processHandle.exitCode === null && processHandle.signalCode === null && processHandle.pid) {
-        if (process.platform === 'win32') {
-          const killer = spawn('taskkill.exe', ['/PID', String(processHandle.pid), '/T', '/F'], {
-            windowsHide: true, stdio: 'ignore',
-          });
-          await Promise.race([once(killer, 'exit').catch(() => {}), delay(3000)]);
-        } else {
-          processHandle.kill('SIGKILL');
-        }
-      }
-    }
-    try {
-      session = { ...await start(), project, temp, mainLineEnding };
-      if (interfaceLanguage) await json(session, '/api/storage', { method: 'PUT', data: { key: 'preferences', value: { language: interfaceLanguage } } });
-      session.restart = async () => {
-        await stop();
-        Object.assign(session, await start());
-      };
-      session.isRunning = () => processHandle.exitCode === null && processHandle.signalCode === null;
-      session.waitForExit = async () => {
-        await expect.poll(() => processHandle.exitCode, { timeout: 15_000 }).toBe(0);
-        expect(processHandle.signalCode).toBeNull();
-        await expect.poll(() => stat(readyFile).then(() => true, error => {
-          if (error.code === 'ENOENT') return false;
-          throw error;
-        })).toBe(false);
-      };
-      await use(session);
-    } finally {
-      await stop();
-      if (testInfo.status !== testInfo.expectedStatus) {
-        await testInfo.attach('application-output.txt', {
-          body: Buffer.from(tokens.reduce((output, token) => redactOutput(output, token), `${stdout}\n${stderr}`)),
-          contentType: 'text/plain',
-        });
-        await attachBuildFiles(testInfo, path.join(project, '.local-tex-editor', 'build'), 'tex');
-        await attachBuildFiles(testInfo, path.join(temp, 'config', 'cache'), 'cache', true);
-        await attachStoredUI(testInfo, path.join(temp, 'config', 'ui-state'), tokens);
-      }
-      await rm(temp, { recursive: true, force: true, maxRetries: 6, retryDelay: 200 });
-    }
-  },
-});
 
 test.describe('Interface language', () => {
   test.use({ interfaceLanguage: null, projectDirectory: path.join('日本語の原稿', 'Research notes') });
@@ -571,6 +379,7 @@ $\widehat w$ & Estimated coefficient vector \\
     await page.keyboard.press('Control+Home');
     await expect(page.locator('#toast')).not.toBeVisible();
     await page.screenshot({ path: testInfo.outputPath('editor-english-dark-tex.png') });
+    await showPDFControls(page);
     await page.getByTestId('pdf-zoom').selectOption('1');
     await page.getByTestId('pdf-next').click();
     await expect(page.getByTestId('pdf-page')).toHaveValue('2');
@@ -581,6 +390,7 @@ $\widehat w$ & Estimated coefficient vector \\
     await page.locator('#find-button').click();
     await page.getByTestId('source-search-input').fill('設定');
     await expect(page.getByTestId('source-search-input')).toHaveAttribute('placeholder', 'Find');
+    await showPDFControls(page);
     await page.getByTestId('pdf-search-toggle').click();
     await expect(page.getByTestId('pdf-search-input')).toHaveAttribute('placeholder', 'Find in PDF');
 
@@ -611,12 +421,15 @@ $\widehat w$ & Estimated coefficient vector \\
     await page.getByTestId('pdf-search-input').press('Escape');
     await expect(page.getByTestId('pdf-search-input')).not.toBeVisible();
     await page.getByTestId('file-notes.md').click();
+    await page.locator('#markdown-editor-mode').selectOption('source');
     await expect(page.getByTestId('markdown-preview')).toBeVisible();
     await expect(page.getByTestId('markdown-document').getByRole('heading', { name: 'Research notes', exact: true })).toBeVisible();
     await expect(page.getByTestId('markdown-document').locator('.katex')).toHaveCount(4);
     await page.getByTestId('theme-toggle').click();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
-    await expect.poll(() => page.getByTestId('editor').locator('.cm-scroller').evaluate(element => element.scrollTop)).toBe(0);
+    const firstMarkdownLine = page.getByTestId('editor').locator('.cm-line').first();
+    await expect(firstMarkdownLine).toHaveText('# Research notes');
+    await expect(firstMarkdownLine).toBeInViewport({ ratio: 1 });
     await expect(page.locator('#toast')).not.toBeVisible();
     await page.screenshot({ path: testInfo.outputPath('editor-english-light-markdown.png') });
     await page.locator('#editor-tabs [data-path="main.tex"]').click();
@@ -1257,7 +1070,11 @@ test('編集中の文書をコンパイルし，タブを選ぶだけでは表�
 
   await page.getByTestId(`file-${other}`).click();
   await expect(page.locator('#main-document-label')).toContainText(other);
+  await showPDFControls(page);
+  await expect(page.locator('#pdf-menu')).toBeVisible();
+  await expect(page.getByTestId('pdf-name')).toHaveText('main.pdf');
   await expect(page.getByTestId('pdf-document')).toHaveText('main.tex');
+  await page.keyboard.press('Escape');
   await expect(canvas).toHaveAttribute('data-build-id', first.finished.pdfBuildId);
   await expect(page.getByTestId('pdf-page')).toHaveValue('2');
   const second = await compileFromUI(page, session);
@@ -1268,6 +1085,7 @@ test('編集中の文書をコンパイルし，タブを選ぶだけでは表�
   await expect(canvas).toHaveAttribute('data-build-id', second.finished.pdfBuildId);
   await expect(canvas).toHaveAttribute('data-ready', 'true');
   await expect(page.getByTestId('pdf-document')).toHaveText(other);
+  await expect(page.getByTestId('pdf-name')).toHaveText('別の 原稿.pdf');
   await expect(page.getByTestId('pdf-page')).toHaveValue('1');
   const forward = await json(session, '/api/synctex/forward', { method: 'POST', data: { buildId: second.finished.pdfBuildId, path: other, line: 3, column: 0 } });
   expect(forward.locations.length).toBeGreaterThan(0);
@@ -1292,6 +1110,10 @@ test('編集中の文書をコンパイルし，タブを選ぶだけでは表�
   expect(failed.finished.pdfBuildId).toBe(back.finished.pdfBuildId);
   await expect(canvas).toHaveAttribute('data-build-id', back.finished.pdfBuildId);
   await expect(page.getByTestId('pdf-document')).toHaveText('main.tex');
+  await showPDFControls(page);
+  await expect(page.locator('#pdf-menu')).toBeVisible();
+  await expect(page.getByTestId('pdf-name')).toHaveText('main.pdf');
+  await expect(page.locator('#pdf-state')).toHaveText('前回の PDF');
   await page.screenshot({ path: testInfo.outputPath('compile-another-document.png') });
 });
 
@@ -1329,6 +1151,7 @@ test('Markdown を編集し，表示するプレビューを選んで文書を�
   expect(updated.finished.pdfMarkdownInputs).toEqual([]);
   await expect.poll(() => waiting).toBe(true);
   await page.getByTestId('file-notes.md').click();
+  await page.locator('#markdown-editor-mode').selectOption('source');
   const preview = page.getByTestId('markdown-preview');
   const article = page.getByTestId('markdown-document');
   await expect(preview).toBeVisible();
@@ -1476,6 +1299,7 @@ test('Markdown の原稿からプレビューへ移動し，スクロールの�
   await openProject(session);
   await openEditor(page, session);
   await page.getByTestId('file-navigation.md').click();
+  await page.locator('#markdown-editor-mode').selectOption('source');
   const preview = page.getByTestId('markdown-preview');
   const article = page.getByTestId('markdown-document');
   const sourceScroll = page.getByTestId('editor').locator('.cm-scroller');
@@ -1945,6 +1769,74 @@ test('外観の配色，アクセント，原稿フォントを保存し，再�
   await expect.poll(() => readEditorAppearance(reopened)).toEqual(black);
   await expect(reopened.getByTestId('pdf-canvas')).toHaveAttribute('data-ready', 'true');
   await reopened.screenshot({ path: testInfo.outputPath('appearance-black-editor.png') });
+  expect(errors).toEqual([]);
+});
+
+test('ライトとダークのカラーコードを保存し，入力の取消と配色への復帰を使える', async ({ page, session }, testInfo) => {
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await openProject(session);
+  await openEditor(page, session);
+  await openAppearance(page);
+  await expect(page.locator('#appearance-palette option')).toHaveCount(7);
+  await expect(page.locator('#appearance-accent option')).toHaveCount(8);
+  await expect(page.locator('#appearance-font option')).toHaveCount(10);
+  await expect(page.locator('#appearance-palette option').first()).toHaveText('グレー (初期値)');
+  await expect(page.locator('#appearance-font option').first()).toHaveText('Consolas (初期値)');
+
+  await page.locator('#appearance-mode').selectOption('light');
+  await page.locator('#appearance-background-input').fill('#f5f1e9');
+  await page.locator('#appearance-foreground-input').fill('#203040');
+  await page.locator('#appearance-accent-input').fill('#0a7');
+  await expect(page.locator('#appearance-accent-swatch')).toHaveValue('#00aa77');
+  await page.locator('#appearance-mode').selectOption('dark');
+  await expect(page.locator('#appearance-background-input')).toHaveValue('');
+  await expect(page.locator('#appearance-color-mode')).toHaveText('ダークの色');
+  await page.locator('#appearance-background-input').fill('#12212c');
+  await page.locator('#appearance-foreground-input').fill('#ddeeff');
+  await page.locator('#appearance-accent-input').fill('#ffe08a');
+  await expect(page.locator('.appearance-preview-accent')).toHaveCSS('color', 'rgb(0, 0, 0)');
+  await page.locator('#save-appearance').click();
+  await expect(page.locator('#appearance-dialog')).not.toBeVisible();
+  const customColors = {
+    light: { background: '#f5f1e9', foreground: '#203040', accent: '#00aa77' },
+    dark: { background: '#12212c', foreground: '#ddeeff', accent: '#ffe08a' },
+  };
+  await expect.poll(async () => (await json(session, '/api/storage?key=preferences')).value?.appearance?.customColors).toEqual(customColors);
+  await expect(page.locator('#toast')).toHaveCSS('background-color', 'rgb(18, 33, 44)');
+  await expect(page.locator('#toast')).toHaveCSS('color', 'rgb(221, 238, 255)');
+  await expect(page.locator('.status-bar')).toHaveCSS('background-color', 'rgb(18, 33, 44)');
+  await closeSettings(page);
+
+  await page.reload();
+  await expect(page.getByTestId('editor')).toBeVisible();
+  await openAppearance(page);
+  await expect(page.locator('#appearance-background-input')).toHaveValue('#12212C');
+  await page.locator('#appearance-mode').selectOption('light');
+  await expect(page.locator('#appearance-background-input')).toHaveValue('#F5F1E9');
+  await expect(page.locator('#appearance-accent-input')).toHaveValue('#00AA77');
+  await page.locator('#appearance-background-input').fill('#zzzzzz');
+  await page.locator('#save-appearance').click();
+  await expect(page.locator('#appearance-dialog')).toBeVisible();
+  await expect(page.locator('#appearance-background-input')).toHaveAttribute('aria-invalid', 'true');
+  expect((await json(session, '/api/storage?key=preferences')).value.appearance.customColors).toEqual(customColors);
+  await page.locator('#appearance-cancel').click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(page.locator('.app-header')).toHaveCSS('background-color', 'rgb(18, 33, 44)');
+
+  await page.locator('#open-appearance').click();
+  await page.setViewportSize({ width: 480, height: 800 });
+  for (const id of ['background', 'foreground', 'accent']) {
+    const bounds = await page.locator(`#appearance-${id}-input`).boundingBox();
+    expect(bounds.x).toBeGreaterThanOrEqual(0);
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(480);
+  }
+  await page.screenshot({ path: testInfo.outputPath('appearance-custom-colors.png') });
+  await page.locator('#appearance-colors-reset').click();
+  await expect(page.locator('#appearance-background-input')).toHaveValue('');
+  await page.locator('#save-appearance').click();
+  await expect.poll(async () => (await json(session, '/api/storage?key=preferences')).value?.appearance?.customColors).toEqual({ light: customColors.light });
+  await closeSettings(page);
   expect(errors).toEqual([]);
 });
 
@@ -2591,6 +2483,7 @@ test('選択した TeX と Markdown のタブに合わせてアウトライン�
   await expect.poll(() => readFile(path.join(session.project, 'outline.tex'), 'utf8')).toContain('編集中の見出し');
 
   await openOutline('outline.md');
+  await page.locator('#markdown-editor-mode').selectOption('source');
   await expect(links).toHaveCount(2);
   await expect(links.first()).toContainText('Markdown の原稿');
   await expect(links.last()).toContainText('詳細');

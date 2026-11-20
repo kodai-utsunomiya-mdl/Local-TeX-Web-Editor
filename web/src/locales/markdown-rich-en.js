@@ -1,0 +1,15 @@
+export const markdownRichEnglish = {
+  'Markdown の直接編集': 'Markdown rich text editor',
+  '数式を編集': 'Edit the equation',
+  '数式の TeX': 'Equation TeX',
+  'タスクの完了': 'Task completed',
+  '表の行と列': 'Table rows and columns',
+  '上に行を追加': 'Insert a row above',
+  '下に行を追加': 'Insert a row below',
+  '行を削除': 'Delete the row',
+  '左に列を追加': 'Insert a column to the left',
+  '右に列を追加': 'Insert a column to the right',
+  '列を削除': 'Delete the column',
+  '表を削除': 'Delete the table',
+  'Ctrl または ⌘ を押しながらクリックしてリンクを開く': 'Ctrl-click or Command-click to open the link',
+};

@@ -65,6 +65,7 @@ export class SessionStore {
     this.records = new Map();
     this.unloading = false;
     this.keepaliveBytes = 0;
+    this.keepaliveRequests = new Set();
   }
 
   async read(key) {
@@ -174,6 +175,18 @@ export class SessionStore {
     if (error) throw error.reason;
   }
 
+  async settle() {
+    await this.flush();
+    await Promise.allSettled([...this.keepaliveRequests]);
+    await this.flush();
+  }
+
+  forget(key) {
+    const record = this.records.get(key);
+    if (record) { clearTimeout(record.timer); record.saved = record.version; this.records.delete(key); }
+    try { localStorage.removeItem(`local-tex-editor-backup:${key}`); } catch { /* Browser storage is optional. */ }
+  }
+
   flushOnHide() {
     if (this.unloading) return;
     this.unloading = true;
@@ -193,13 +206,14 @@ export class SessionStore {
       available -= size; this.keepaliveBytes += size;
       const version = record.version;
       if (isDraft) record.closeWrites.set(version, record.serialized);
-      this.api('/api/storage', { method: isDraft ? 'PATCH' : 'PUT', body, keepalive: true, projectRoot: null, timeout: 0 })
+      const request = this.api('/api/storage', { method: isDraft ? 'PATCH' : 'PUT', body, keepalive: true, projectRoot: null, timeout: 0 })
         .then(response => this.acknowledge(key, record, response, version))
         .catch(error => {
           if (isDraft && error.status === 409 && record.saved < version) record.conflict = error;
           if (!this.unloading) this.onStatus?.('error', key, error);
         })
-        .finally(() => { this.keepaliveBytes -= size; record.closeWrites.delete(version); });
+        .finally(() => { this.keepaliveBytes -= size; record.closeWrites.delete(version); this.keepaliveRequests.delete(request); });
+      this.keepaliveRequests.add(request);
     }
   }
 

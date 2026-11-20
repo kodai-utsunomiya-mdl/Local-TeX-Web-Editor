@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="/outline-tree.css">
   <link rel="stylesheet" href="/pdf-search.css">
   <link rel="stylesheet" href="/pdf-appearance.css">
+  <link rel="stylesheet" href="/pdf-citations.css">
   <link rel="stylesheet" href="/source-search.css">
   <link rel="stylesheet" href="/markdown-preview.css">
   <link rel="stylesheet" href="/tex-packages.css">
@@ -23,8 +24,11 @@
   <link rel="stylesheet" href="/imports.css">
   <link rel="stylesheet" href="/log-issues.css">
   <link rel="stylesheet" href="/markdown-editing.css">
+  <link rel="stylesheet" href="/markdown-rich-editor.css">
   <link rel="stylesheet" href="/document-tools.css">
   <link rel="stylesheet" href="/file-actions.css">
+  <link rel="stylesheet" href="/file-import.css">
+  <link rel="stylesheet" href="/project-home.css">
   <link rel="stylesheet" href="/katex/katex.min.css">
   <script type="module" src="/app.js"></script>
 </head>
@@ -32,7 +36,7 @@
   <div class="app-shell" id="app-shell">
     <header class="app-header" data-testid="app-toolbar">
       <button type="button" id="sidebar-toggle" class="icon-button sidebar-toggle" aria-label="Toggle the file list" title="Files" aria-expanded="true" data-i18n-aria-label="ファイル一覧の表示を切り替える" data-i18n-title="ファイル一覧">☰</button>
-      <div class="brand" aria-label="Local TeX Web Editor" title="Local TeX Web Editor"><span class="brand-mark" aria-hidden="true">T<span>E</span>X</span></div>
+      <button type="button" id="go-home" class="brand" aria-label="Local TeX Web Editor" title="Home: manage projects" data-i18n-title="ホームでプロジェクトを管理"><span class="brand-mark" aria-hidden="true">T<span>E</span>X</span></button>
       <div class="project-heading">
         <strong id="project-name"><span data-i18n="プロジェクトを開く">Open a project</span></strong>
       </div>
@@ -66,7 +70,7 @@
 
     <main id="welcome" class="welcome">
       <div class="welcome-card">
-        <h1><span data-i18n="プロジェクト">Projects</span></h1>
+        <h1 id="home-title" tabindex="-1"><span data-i18n="プロジェクト">Projects</span></h1>
         <button type="button" id="welcome-open" class="button button-primary"><span data-i18n="プロジェクトフォルダーを開く">Open project folder</span></button>
         <button type="button" id="welcome-template" class="button"><span data-i18n="テンプレートから作成">Create from a template</span></button>
         <p class="welcome-note"><span data-i18n="原稿 (.tex)，参考文献 (.bib)，画像などが入ったフォルダーを選択してください．">Choose a folder containing your source (.tex), bibliography (.bib), images, and other project files.</span></p>
@@ -85,6 +89,7 @@
           <div class="sidebar-tabs" role="tablist" aria-label="Files and outline" data-i18n-aria-label="ファイルとアウトライン"><button type="button" id="files-tab" data-testid="files-tab" role="tab" aria-selected="true" class="selected"><span data-i18n="ファイル">Files</span> <span id="file-count" class="count-badge">0</span></button><button type="button" id="outline-tab" data-testid="outline-tab" role="tab" aria-selected="false"><span data-i18n="アウトライン">Outline</span></button></div>
           <div class="title-actions">
             <button type="button" id="new-file" class="icon-button" aria-label="Add a file" title="Add a file" data-i18n-aria-label="ファイルを追加" data-i18n-title="ファイルを追加">＋</button>
+            <button type="button" id="import-files" class="icon-button" aria-label="Add files from your computer…" title="Add files from your computer…" data-i18n-aria-label="コンピューターからファイルを追加…" data-i18n-title="コンピューターからファイルを追加…"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3m-5 5 5-5 5 5M4 14v7h16v-7"/></svg></button>
             <button type="button" id="refresh-files" class="icon-button" aria-label="Refresh the file list" title="Refresh the file list" data-i18n-aria-label="ファイル一覧を更新" data-i18n-title="ファイル一覧を更新">↻</button>
           </div>
         </div>
@@ -101,6 +106,8 @@
           <div class="navigation-actions"><button type="button" class="icon-button" data-navigation-back aria-label="Go back" title="Go back to the previous location" disabled data-i18n-aria-label="移動前の場所へ戻る" data-i18n-title="移動前の場所へ戻る">←</button><button type="button" class="icon-button" data-navigation-forward aria-label="Go forward" title="Go forward" disabled data-i18n-aria-label="次の場所へ進む" data-i18n-title="次の場所へ進む">→</button></div>
           <button type="button" id="project-search-button" class="button button-small" data-i18n-title="プロジェクト全体の本文を検索・置換" title="Search and replace across the project"><span data-i18n="全体を検索">Search project</span></button>
           <span class="toolbar-spacer"></span>
+          <label id="markdown-editor-mode-label" class="markdown-editor-mode" hidden><span class="sr-only" data-i18n="Markdown の編集方法">Markdown editing mode</span><select id="markdown-editor-mode" aria-label="Markdown editing mode" data-i18n-aria-label="Markdown の編集方法"><option value="rich" data-i18n="直接編集">Visual editing</option><option value="source" data-i18n="ソース">Source</option></select></label>
+          <button type="button" id="toggle-preview" class="icon-button" aria-pressed="true" aria-label="Hide preview" title="Hide preview"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v16H3ZM14 4v16"/><path d="M14 4h7v16h-7Z" fill="currentColor" opacity=".18"/></svg></button>
           <button type="button" id="split-editors" class="icon-button" aria-pressed="false" aria-label="Open two source editors" title="Open two source editors" data-i18n-title="原稿を二つ並べる" data-i18n-aria-label="原稿を二つ並べる"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v16H3ZM12 4v16"/></svg></button>
           <details id="writing-menu" class="writing-menu"><summary class="button button-small" data-i18n="編集の操作">Editing tools</summary><div class="writing-menu-items">
             <button type="button" id="reference-tools" data-i18n="引用・参照を確認">References and citations</button>
@@ -130,6 +137,7 @@
         <div class="source-pane-heading" hidden><label class="sr-only" for="primary-document" data-i18n="一つ目に表示する原稿">First source document</label><select id="primary-document" aria-label="First source document" data-i18n-aria-label="一つ目に表示する原稿"></select></div>
         <div id="editor-empty" class="editor-empty"><span class="empty-file-icon" aria-hidden="true">{ }</span><p><span data-i18n="左側の一覧からファイルを開いてください．">Open a file from the list on the left.</span></p></div>
         <div id="editor" class="editor-host" data-testid="editor" hidden></div>
+        <div id="markdown-rich-primary" class="markdown-rich-host" hidden></div>
         <section id="asset-preview" class="asset-preview" data-testid="asset-preview" aria-label="Selected file preview" hidden data-i18n-aria-label="選択したファイルのプレビュー">
           <div class="asset-toolbar">
             <span id="asset-info" class="asset-info"></span>
@@ -149,7 +157,7 @@
         </section>
         </section>
         <div id="source-splitter" class="source-splitter" role="separator" aria-orientation="vertical" aria-label="Resize the two source editors" data-i18n-aria-label="二つの原稿の幅を調整" tabindex="0" hidden></div>
-        <section id="source-pane-secondary" class="source-pane" aria-label="Second source editor" data-i18n-aria-label="二つ目の原稿" hidden><div class="source-pane-heading"><label class="sr-only" for="secondary-document" data-i18n="二つ目に表示する原稿">Second source document</label><select id="secondary-document" aria-label="Second source document" data-i18n-aria-label="二つ目に表示する原稿"></select><button type="button" id="close-second-editor" class="icon-button" aria-label="Close the second editor" title="Close the second editor" data-i18n-aria-label="二つ目のエディタを閉じる" data-i18n-title="二つ目のエディタを閉じる">×</button></div><div id="editor-secondary" class="editor-host" data-testid="editor-secondary"></div></section>
+        <section id="source-pane-secondary" class="source-pane" aria-label="Second source editor" data-i18n-aria-label="二つ目の原稿" hidden><div class="source-pane-heading"><label class="sr-only" for="secondary-document" data-i18n="二つ目に表示する原稿">Second source document</label><select id="secondary-document" aria-label="Second source document" data-i18n-aria-label="二つ目に表示する原稿"></select><button type="button" id="close-second-editor" class="icon-button" aria-label="Close the second editor" title="Close the second editor" data-i18n-aria-label="二つ目のエディタを閉じる" data-i18n-title="二つ目のエディタを閉じる">×</button></div><div id="editor-secondary" class="editor-host" data-testid="editor-secondary"></div><div id="markdown-rich-secondary" class="markdown-rich-host" hidden></div></section>
         </div>
       </section>
 
@@ -165,8 +173,6 @@
             <label class="page-control"><input id="pdf-page" data-testid="pdf-page" type="number" min="1" value="1" aria-label="PDF page number" disabled data-i18n-aria-label="PDF のページ番号"><span aria-hidden="true">/</span><span id="pdf-pages">—</span></label>
             <button type="button" id="pdf-next" data-testid="pdf-next" class="icon-button" aria-label="Next page" disabled data-i18n-aria-label="次のページ">›</button>
           </div>
-          <span id="pdf-state" class="pdf-state"></span>
-          <span id="pdf-document" data-testid="pdf-document" class="pdf-document"></span>
           <div id="pdf-view-controls" class="pdf-view-controls">
             <div class="pdf-zoom-controls">
             <button type="button" id="pdf-zoom-out" data-testid="pdf-zoom-out" class="icon-button zoom-button" aria-label="Zoom out of the PDF" title="Zoom out (also Ctrl + wheel or pinch)" disabled data-i18n-aria-label="PDF を縮小" data-i18n-title="縮小 (Ctrl + ホイールやピンチでも操作できます)">−</button>
@@ -177,7 +183,14 @@
             <button type="button" id="pdf-dark-mode" data-testid="pdf-dark-mode" class="icon-button pdf-dark-toggle" aria-label="Dark PDF view" aria-pressed="false" disabled><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M12 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5Z" fill="currentColor" stroke="none"/></svg></button>
             <button type="button" id="download-pdf" class="icon-button" title="Save the compiled PDF" aria-label="Save PDF" disabled data-i18n-title="コンパイルした PDF を保存" data-i18n-aria-label="PDF を保存"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/></svg></button>
           </div>
-          <button type="button" id="pdf-more" data-testid="pdf-more" class="icon-button pdf-more-button" aria-label="PDF actions" aria-expanded="false" aria-controls="pdf-view-controls" hidden><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></button>
+          <button type="button" id="pdf-more" data-testid="pdf-more" class="icon-button pdf-more-button" aria-label="PDF actions" aria-expanded="false" aria-controls="pdf-menu"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></button>
+          <div id="pdf-menu" class="pdf-menu" popover="auto" tabindex="-1" aria-label="PDF details and actions" data-i18n-aria-label="PDF の情報と操作">
+            <dl class="pdf-document-details">
+              <div><dt data-i18n="PDF ファイル">PDF file</dt><dd id="pdf-name" data-testid="pdf-name">—</dd></div>
+              <div><dt data-i18n="コンパイルした TeX">Compiled from</dt><dd id="pdf-document" data-testid="pdf-document">—</dd></div>
+              <div><dt data-i18n="PDF の状態">PDF status</dt><dd id="pdf-state">—</dd></div>
+            </dl>
+          </div>
         </div>
         <div id="pdf-note" class="pdf-note" hidden></div>
         <div class="pdf-frame">
@@ -262,13 +275,21 @@
       <p class="field-help appearance-help" data-i18n="変更はその場で確認できます．保存すると，次回も同じ外観で開きます．">Preview changes immediately. Save to use the same appearance next time.</p>
       <div class="appearance-options">
         <div class="field-group"><label class="field-label" for="appearance-mode" data-i18n="モード">Mode</label><select id="appearance-mode" data-testid="appearance-mode"><option value="system" data-i18n="システム">System</option><option value="light" data-i18n="ライト">Light</option><option value="dark" data-i18n="ダーク">Dark</option></select></div>
-        <div class="field-group"><label class="field-label" for="appearance-palette" data-i18n="配色">Color scheme</label><select id="appearance-palette" data-testid="appearance-palette"><option value="default" data-i18n="標準">Default</option><option value="gray" data-i18n="グレー">Gray</option><option value="black" data-i18n="ブラック">Black</option><option value="warm" data-i18n="暖色">Warm</option></select></div>
-        <div class="field-group"><label class="field-label" for="appearance-accent" data-i18n="アクセント">Accent</label><select id="appearance-accent" data-testid="appearance-accent"><option value="teal" data-i18n="緑">Green</option><option value="blue" data-i18n="青">Blue</option><option value="purple" data-i18n="紫">Purple</option><option value="orange" data-i18n="橙">Orange</option><option value="gray" data-i18n="グレー">Gray</option></select></div>
-        <div class="field-group"><label class="field-label" for="appearance-font" data-i18n="原稿のフォント">Editor font</label><select id="appearance-font" data-testid="appearance-font"><option value="default" data-i18n="標準">Default</option><option value="cascadia">Cascadia Code</option><option value="consolas">Consolas</option><option value="menlo">Menlo</option><option value="monospace" data-i18n="等幅">Monospace</option></select></div>
+        <div class="field-group"><label class="field-label" for="appearance-palette" data-i18n="配色">Color scheme</label><select id="appearance-palette" data-testid="appearance-palette"><option value="gray" data-i18n="グレー (初期値)">Gray (default)</option><option value="black" data-i18n="ブラック">Black</option><option value="default" data-i18n="ブルーグレー">Blue gray</option><option value="warm" data-i18n="暖色">Warm</option><option value="navy" data-i18n="ネイビー">Navy</option><option value="forest" data-i18n="フォレスト">Forest</option><option value="plum" data-i18n="プラム">Plum</option></select></div>
+        <div class="field-group"><label class="field-label" for="appearance-accent" data-i18n="アクセント">Accent</label><select id="appearance-accent" data-testid="appearance-accent"><option value="teal" data-i18n="ティール">Teal</option><option value="blue" data-i18n="青">Blue</option><option value="purple" data-i18n="紫">Purple</option><option value="orange" data-i18n="橙">Orange</option><option value="gray" data-i18n="グレー">Gray</option><option value="green" data-i18n="緑">Green</option><option value="red" data-i18n="赤">Red</option><option value="pink" data-i18n="ピンク">Pink</option></select></div>
+        <div class="field-group"><label class="field-label" for="appearance-font" data-i18n="原稿のフォント">Editor font</label><select id="appearance-font" data-testid="appearance-font"><option value="consolas" data-i18n="Consolas (初期値)">Consolas (default)</option><option value="cascadia">Cascadia Code</option><option value="menlo">Menlo</option><option value="monaco">Monaco</option><option value="sfmono">SF Mono</option><option value="dejavu">DejaVu Sans Mono</option><option value="liberation">Liberation Mono</option><option value="fira">Fira Code</option><option value="jetbrains">JetBrains Mono</option><option value="monospace" data-i18n="システムの等幅フォント">System monospace</option></select></div>
       </div>
       <p class="field-help" data-i18n="PC にないフォントは，利用できる等幅フォントで表示します．文字サイズは元の設定画面で変更できます．">If a font is unavailable on this computer, an available monospace font is used. Change the font size in the settings behind this dialog.</p>
-      <dl class="appearance-colors"><div><dt data-i18n="背景色">Background</dt><dd><span id="appearance-background-swatch" class="appearance-swatch" aria-hidden="true"></span><output id="appearance-background"></output></dd></div><div><dt data-i18n="文字色">Foreground</dt><dd><span id="appearance-foreground-swatch" class="appearance-swatch" aria-hidden="true"></span><output id="appearance-foreground"></output></dd></div></dl>
-      <p class="field-help" data-i18n="原稿の背景色と文字色は，モードと配色に合わせて変わります．">Editor background and foreground colors follow the mode and color scheme.</p>
+      <fieldset class="appearance-custom-colors">
+        <legend id="appearance-color-mode">Light colors</legend>
+        <div class="appearance-colors">
+          <div><label class="field-label" for="appearance-background-input" data-i18n="背景色">Background</label><div class="appearance-color-entry"><input id="appearance-background-swatch" type="color" aria-label="Choose a background color" data-i18n-aria-label="背景色を選ぶ"><input id="appearance-background-input" type="text" maxlength="7" autocomplete="off" spellcheck="false" aria-describedby="appearance-color-help" placeholder="#FFFFFF"></div></div>
+          <div><label class="field-label" for="appearance-foreground-input" data-i18n="文字色">Foreground</label><div class="appearance-color-entry"><input id="appearance-foreground-swatch" type="color" aria-label="Choose a foreground color" data-i18n-aria-label="文字色を選ぶ"><input id="appearance-foreground-input" type="text" maxlength="7" autocomplete="off" spellcheck="false" aria-describedby="appearance-color-help" placeholder="#292B30"></div></div>
+          <div><label class="field-label" for="appearance-accent-input" data-i18n="アクセント">Accent</label><div class="appearance-color-entry"><input id="appearance-accent-swatch" type="color" aria-label="Choose an accent color" data-i18n-aria-label="アクセントの色を選ぶ"><input id="appearance-accent-input" type="text" maxlength="7" autocomplete="off" spellcheck="false" aria-describedby="appearance-color-help" placeholder="#0D766E"></div></div>
+        </div>
+        <p id="appearance-color-help" class="field-help" data-i18n="#RRGGBB または #RGB で指定できます．空欄では選んだ配色を使います．ライトとダークの色は別々に保存します．">Enter #RRGGBB or #RGB. Leave a field empty to use the selected color scheme. Light and dark colors are saved separately.</p>
+        <button type="button" id="appearance-colors-reset" class="button button-subtle button-small"><span data-i18n="このモードの色を配色に戻す">Use the color scheme for this mode</span></button>
+      </fieldset>
       <section class="appearance-preview" aria-label="Appearance preview" data-i18n-aria-label="外観のプレビュー"><div class="appearance-preview-title"><span data-i18n="プレビュー">Preview</span><span class="appearance-preview-accent" data-i18n="アクセント">Accent</span></div><pre class="appearance-sample">\section{Introduction}
 E = mc^2
 <span data-i18n="日本語の原稿と English 123">日本語の原稿と English 123</span></pre></section>
@@ -279,7 +300,15 @@ E = mc^2
   </dialog>
 
   <dialog id="new-file-dialog" class="dialog" aria-labelledby="new-file-title">
-    <form id="new-file-form"><div class="dialog-heading"><h2 id="new-file-title"><span data-i18n="ファイルを追加">Add a file</span></h2><button type="button" class="icon-button" data-close-dialog="new-file-dialog" aria-label="Close" data-i18n-aria-label="閉じる">×</button></div><label class="field-label" for="new-file-path"><span data-i18n="プロジェクト内のパス">Path within the project</span></label><input id="new-file-path" type="text" placeholder="sections/introduction.tex" autocomplete="off" spellcheck="false" required><p class="field-help"><span data-i18n=".tex，.bib などのテキストファイルを作成できます．">Create a text file such as .tex or .bib.</span></p><p id="new-file-error" class="form-error" role="alert" hidden></p><div class="dialog-actions"><button type="button" class="button" data-close-dialog="new-file-dialog"><span data-i18n="キャンセル">Cancel</span></button><button type="submit" id="create-file" class="button button-primary"><span data-i18n="作成">Create</span></button></div></form>
+    <form id="new-file-form">
+      <div class="dialog-heading"><h2 id="new-file-title"><span data-i18n="ファイルを追加">Add a file</span></h2><button type="button" class="icon-button" data-close-dialog="new-file-dialog" aria-label="Close" data-i18n-aria-label="閉じる">×</button></div>
+      <label class="field-label" for="new-file-path"><span data-i18n="プロジェクト内のパス">Path within the project</span></label>
+      <input id="new-file-path" type="text" placeholder="sections/introduction.tex" autocomplete="off" spellcheck="false" aria-describedby="new-file-help new-file-location-help" required>
+      <p id="new-file-help" class="field-help"><span data-i18n=".tex，.bib などのテキストファイルを作成できます．">Create a text file such as .tex or .bib.</span></p>
+      <p id="new-file-location-help" class="field-help"><span data-i18n="ファイル一覧で追加先のフォルダーを右クリックすると，その場所での新規作成や，コンピューター上のファイルをコピーして追加する操作も選べます．">You can also right-click the destination folder in the file list to create a new file there or copy files from your computer.</span></p>
+      <p id="new-file-error" class="form-error" role="alert" hidden></p>
+      <div class="dialog-actions"><button type="button" class="button" data-close-dialog="new-file-dialog"><span data-i18n="キャンセル">Cancel</span></button><button type="submit" id="create-file" class="button button-primary"><span data-i18n="作成">Create</span></button></div>
+    </form>
   </dialog>
 
   <dialog id="decision-dialog" class="dialog decision-dialog" aria-labelledby="decision-title"><div class="dialog-heading"><h2 id="decision-title"></h2></div><p id="decision-description" class="dialog-description"></p><div class="dialog-actions decision-actions"><button type="button" id="decision-cancel" class="button"><span data-i18n="キャンセル">Cancel</span></button><button type="button" id="decision-secondary" class="button"></button><button type="button" id="decision-primary" class="button button-primary"></button></div></dialog>

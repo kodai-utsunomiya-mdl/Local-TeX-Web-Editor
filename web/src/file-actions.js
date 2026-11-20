@@ -3,7 +3,8 @@ import { getLanguage, onLanguageChange } from './i18n.js';
 const labels = {
   menu: ['ファイルとフォルダーの操作', 'File and folder actions'],
   newFile: ['ここに新規ファイルを作成', 'New file here'], newFolder: ['ここに新規フォルダーを作成', 'New folder here'],
-  rename: ['名前を変更', 'Rename'], remove: ['削除', 'Delete'],
+  importFiles: ['コンピューターからファイルを追加…', 'Add files from your computer…'],
+  rename: ['名前を変更', 'Rename'], remove: ['削除…', 'Delete…'],
   relative: ['相対パスをコピー', 'Copy relative path'], absolute: ['絶対パスをコピー', 'Copy full path'],
   cancel: ['キャンセル', 'Cancel'], close: ['閉じる', 'Close'], create: ['作成', 'Create'], delete: ['削除', 'Delete'],
   path: ['プロジェクト内のパス', 'Path in the project'],
@@ -11,7 +12,11 @@ const labels = {
   renameHelp: ['既存のフォルダーへの移動もできます．原稿内のリンクや参照先は，変更後のパスに合わせて編集してください．', 'You can also move this item to an existing folder. Update links and references in your documents to use the new path.'],
   folderTitle: ['フォルダーを作成', 'Create a folder'], folderHelp: ['既存のフォルダー内に，新しいフォルダーを作成します．', 'Create a new folder inside an existing folder.'],
   deleteTitle: ['この項目を削除しますか？', 'Delete this item?'],
-  deleteHelp: ['ファイルをディスクから削除します．この操作は元に戻せません．フォルダーは空の場合に削除できます．', 'This removes the file from disk and cannot be undone. Folders can be deleted when empty.'],
+  deleteHelp: ['このファイルをディスクから削除します．この操作は元に戻せません．', 'This removes the file from disk and cannot be undone.'],
+  deleteFolderHelp: ['このフォルダーと，次に示す全ての項目をディスクから削除します．この操作は元に戻せません．', 'This removes the folder and all items listed below from disk and cannot be undone.'],
+  contents: ['フォルダーに含まれる項目', 'Items inside this folder'],
+  counts: ['ファイル {files} 個，フォルダー {folders} 個', '{files} files and {folders} folders'],
+  empty: ['このフォルダーは空です．', 'This folder is empty.'],
   dirty: ['次の未保存の本文と草稿も削除します:', 'The following unsaved text and drafts will also be removed:'],
   copied: ['パスをコピーしました．', 'Path copied.'], created: ['フォルダーを作成しました．', 'Folder created.'],
   renamed: ['名前を変更しました．', 'Item renamed.'], removed: ['削除しました．', 'Item deleted.'],
@@ -44,7 +49,7 @@ export function absoluteProjectPath(root, relative) {
   return root.replace(/[\\/]$/, '') + (windows ? '\\' : '/') + relative.replaceAll('/', windows ? '\\' : '/');
 }
 
-export function createFileActions({ tree, getProject, isBlocked, begin, end, inspectOpenDocuments, checkDestination, getUnsavedPaths, api, onChanged, onNewFile, onError, onNotice }) {
+export function createFileActions({ tree, getProject, isBlocked, begin, end, inspectOpenDocuments, checkDestination, getUnsavedPaths, api, onChanged, onNewFile, onImportFiles = null, onError, onNotice }) {
   const menu = make('div', 'file-context-menu'); menu.id = 'file-context-menu'; menu.role = 'menu'; menu.hidden = true;
   const dialog = make('dialog', 'dialog file-action-dialog'); dialog.id = 'file-action-dialog'; dialog.setAttribute('aria-labelledby', 'file-action-title');
   const form = make('form');
@@ -55,9 +60,10 @@ export function createFileActions({ tree, getProject, isBlocked, begin, end, ins
   const current = make('p', 'file-action-current'), help = make('p', 'field-help');
   const label = make('label', 'field-label'); label.htmlFor = 'file-action-path';
   const input = make('input'); input.id = 'file-action-path'; input.type = 'text'; input.autocomplete = 'off'; input.spellcheck = false; input.required = true;
+  const contents = make('section', 'file-action-contents'); contents.hidden = true; contents.setAttribute('aria-live', 'polite');
   const dirty = make('div', 'file-action-unsaved');
   const error = make('p', 'form-error'); error.role = 'alert'; error.hidden = true;
-  body.append(current, help, label, input, dirty, error);
+  body.append(current, help, label, input, contents, dirty, error);
   const footer = make('div', 'dialog-actions'), cancel = make('button', 'button'), submit = make('button', 'button button-primary');
   cancel.type = 'button'; submit.type = 'submit'; submit.id = 'file-action-submit';
   footer.append(cancel, submit); form.append(heading, body, footer); dialog.append(form); document.body.append(menu, dialog);
@@ -72,8 +78,18 @@ export function createFileActions({ tree, getProject, isBlocked, begin, end, ins
     menu.ariaLabel = text('menu'); close.ariaLabel = text('close'); cancel.textContent = text('cancel'); label.textContent = text('path');
     if (!dialog.open && !action) return;
     title.textContent = text(action === 'rename' ? 'renameTitle' : action === 'delete' ? 'deleteTitle' : 'folderTitle');
-    help.textContent = text(action === 'rename' ? 'renameHelp' : action === 'delete' ? 'deleteHelp' : 'folderHelp');
+    help.textContent = text(action === 'rename' ? 'renameHelp' : action === 'delete' ? entry.directory ? 'deleteFolderHelp' : 'deleteHelp' : 'folderHelp');
     submit.textContent = text(action === 'rename' ? 'rename' : action === 'delete' ? 'delete' : 'create');
+    contents.replaceChildren(); contents.hidden = action !== 'delete' || !entry?.directory;
+    if (!contents.hidden) {
+      contents.append(make('h3', '', text('contents')));
+      contents.append(make('p', 'file-action-counts', entry.empty ? text('empty') : text('counts').replace('{files}', entry.fileCount).replace('{folders}', entry.directoryCount)));
+      if (entry.entries?.length) {
+        const list = make('ul');
+        for (const item of entry.entries) list.append(make('li', item.directory ? 'file-action-directory' : '', `${item.path}${item.directory ? '/' : ''}`));
+        contents.append(list);
+      }
+    }
     const paths = action === 'delete' ? getUnsavedPaths(entry) : [];
     dirty.replaceChildren(); dirty.hidden = !paths.length;
     if (paths.length) {
@@ -82,10 +98,15 @@ export function createFileActions({ tree, getProject, isBlocked, begin, end, ins
     }
   }
   function release() { if (locked) { locked = false; end(); } }
-  function closeDialog() { if (!busy) dialog.close(); }
+  function finishDialog() {
+    dialog.close(); action = ''; release();
+    if (returnFocus?.isConnected) returnFocus.focus();
+  }
+  function closeDialog() { if (!busy) finishDialog(); }
   close.addEventListener('click', closeDialog); cancel.addEventListener('click', closeDialog);
-  dialog.addEventListener('cancel', event => { if (busy) event.preventDefault(); });
-  dialog.addEventListener('close', () => { action = ''; release(); if (returnFocus?.isConnected) returnFocus.focus(); });
+  // The browser queues the close event. Complete the action now so that
+  // keyboard input can immediately return to the file list.
+  dialog.addEventListener('cancel', event => { event.preventDefault(); closeDialog(); });
   const perform = task => Promise.resolve().then(task).catch(onError);
 
   async function openDialog(kind, target) {
@@ -94,8 +115,8 @@ export function createFileActions({ tree, getProject, isBlocked, begin, end, ins
     action = kind; locked = true;
     try {
       await begin();
-      entry = kind === 'folder' ? target : await api(`/api/entry?path=${encodeURIComponent(target.path)}`, { projectRoot });
-      if (kind !== 'folder') await inspectOpenDocuments(entry);
+      entry = kind === 'folder' ? target : await api(`/api/entry?path=${encodeURIComponent(target.path)}`, { projectRoot, timeout: 60000 });
+      if (kind !== 'folder') await inspectOpenDocuments(entry, kind);
       error.hidden = true; current.textContent = target.path || projectRoot;
       input.hidden = label.hidden = kind === 'delete'; input.required = kind !== 'delete';
       input.value = kind === 'rename' ? target.path : (target.path ? `${target.path}/` : '');
@@ -116,20 +137,27 @@ export function createFileActions({ tree, getProject, isBlocked, begin, end, ins
     for (const button of dialog.querySelectorAll('button')) button.disabled = true;
     input.disabled = true;
     perform(async () => {
+      let reviewRequired = false;
       try {
         const method = action === 'rename' ? 'PATCH' : action === 'delete' ? 'DELETE' : 'POST';
         const body = action === 'folder' ? { path: input.value.trim() } : { path: entry.path, revision: entry.revision, ...(action === 'rename' ? { newPath: input.value.trim() } : {}) };
         if (action !== 'delete') checkDestination(body.newPath || body.path, action === 'rename' ? entry : null);
-        const result = await api('/api/entry', { method, body, projectRoot });
+        const result = await api('/api/entry', { method, body, projectRoot, timeout: 60000 });
         const finish = await onChanged(result);
         const message = text(action === 'folder' ? 'created' : action === 'delete' ? 'removed' : 'renamed');
         returnFocus = [...tree.querySelectorAll('.file-button, .tree-directory')].find(node => node.dataset.path === result.path) || tree;
         if (returnFocus.matches('.tree-directory')) returnFocus = returnFocus.querySelector('summary');
-        dialog.close(); release(); await finish?.(); onNotice(result.historyWarning || message);
-      } catch (err) { error.textContent = err?.message || String(err); error.hidden = false; }
+        finishDialog(); await finish?.(); onNotice(result.historyWarning || message);
+      } catch (err) {
+        if (action === 'delete' && err?.data?.reviewRequired && err.data.entry?.path === entry.path) {
+          entry = err.data.entry; language(); reviewRequired = true;
+        }
+        error.textContent = err?.message || String(err); error.hidden = false;
+      }
       finally {
         busy = false; dialog.removeAttribute('aria-busy'); input.disabled = false;
         for (const button of dialog.querySelectorAll('button')) button.disabled = false;
+        if (reviewRequired) cancel.focus();
       }
     });
   });
@@ -152,6 +180,7 @@ export function createFileActions({ tree, getProject, isBlocked, begin, end, ins
       button.addEventListener('click', () => { closeMenu(); perform(handler); }); menu.append(button);
     };
     item('newFile', () => onNewFile(folder)); item('newFolder', () => openDialog('folder', { path: folder, directory: true }));
+    if (onImportFiles) item('importFiles', () => { if (returnFocus?.isConnected) returnFocus.focus(); onImportFiles(folder); });
     const separator = () => { const rule = make('div', 'file-menu-separator'); rule.role = 'separator'; menu.append(rule); };
     separator();
     if (target.path) item('relative', async () => { await navigator.clipboard.writeText(target.path); onNotice(text('copied')); });

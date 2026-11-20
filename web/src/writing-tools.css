@@ -25,11 +25,30 @@
 .history-record-form { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0; }
 .history-record-form input { min-width: 180px; flex: 1; padding: 9px 11px; }
 .history-layout { display: grid; grid-template-columns: minmax(160px, 220px) minmax(0, 1fr); gap: 16px; min-height: 180px; margin: 16px 0; }
+.history-layout.is-empty { grid-template-columns: minmax(0, 1fr); }
+.history-empty { display: grid; gap: 5px; }
+.history-empty .field-help { margin: 0; }
+.history-empty-clause { display: inline-block; max-width: 100%; }
+.history-versions { min-width: 0; }
+.history-version-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.history-version-actions h3 { flex: 0 0 100%; margin: 0; font-size: 12px; color: var(--secondary); }
+.history-version-actions label { display: flex; align-items: center; gap: 6px; font-size: 11px; }
+.history-version-actions .field-help { margin: 0; font-size: 11px; }
+.history-version-actions button { flex: 1 0 100%; white-space: normal; }
+.history-version-actions input, .history-entry-row > input { width: 18px; height: 18px; flex: 0 0 18px; accent-color: var(--accent); }
 .history-entries { display: flex; flex-direction: column; gap: 6px; max-height: 52vh; overflow: auto; }
+.history-entry-row { display: grid; grid-template-columns: 18px minmax(0, 1fr); align-items: start; gap: 8px; }
+.history-entry-row > input { margin: 13px 0 0; }
 .history-entry { border: 1px solid var(--border); border-radius: 6px; padding: 10px; background: var(--surface); color: var(--text); text-align: left; cursor: pointer; }
 .history-entry[aria-pressed=true] { border-color: var(--accent); box-shadow: inset 3px 0 var(--accent); }
 .history-entry strong, .history-entry span { display: block; overflow-wrap: anywhere; }
 .history-entry span { margin-top: 5px; color: var(--muted); font-size: 12px; }
+.history-delete-button { color: var(--danger); border-color: var(--danger-border); background: var(--danger-bg); }
+.history-delete-dialog { width: min(560px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow: auto; }
+.history-delete-dialog .field-help { line-height: 1.8; overflow-wrap: anywhere; }
+.history-delete-entries { padding-left: 22px; max-height: 38vh; overflow: auto; margin: 16px 0; }
+.history-delete-entries li { margin: 8px 0; padding-left: 3px; overflow-wrap: anywhere; }
+.history-delete-entries span { display: block; color: var(--secondary); font-size: 11px; margin-top: 3px; }
 .history-changes { min-width: 0; max-height: 52vh; overflow: auto; display: flex; flex-direction: column; gap: 14px; }
 .history-change { border: 1px solid var(--border); border-radius: 6px; padding: 10px; }
 .history-change-heading { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }

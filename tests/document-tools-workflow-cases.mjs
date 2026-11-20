@@ -15,6 +15,7 @@ export function registerDocumentToolsTests({ test, openProject, openEditor, setA
     await writeFile(path.join(session.project, 'current.md'), '# Current\n\n');
     await openProject(session); await openEditor(page, session); await setAutoSave(page, false);
     await page.getByTestId('file-current.md').click();
+    await page.locator('#markdown-editor-mode').selectOption('source');
     await source(page).click(); await page.keyboard.press(`${modifier}+End`);
     await tool(page, 'markdown-new-page');
     await page.locator('#markdown-page-title').fill('Next [chapter]');
@@ -40,6 +41,7 @@ export function registerDocumentToolsTests({ test, openProject, openEditor, setA
     await writeFile(path.join(session.project, 'occupied.md'), '# Saved\n');
     await openProject(session); await openEditor(page, session); await setAutoSave(page, false);
     await page.getByTestId('file-occupied.md').click();
+    await page.locator('#markdown-editor-mode').selectOption('source');
     await source(page).click(); await page.keyboard.press(`${modifier}+a`);
     await page.keyboard.insertText('# Unsaved work\n');
     await unlink(path.join(session.project, 'occupied.md'));

@@ -229,6 +229,7 @@ $\widehat w$ & Estimated coefficient vector \\
   assert.equal(second.main, other);
   await expect(page.getByTestId('pdf-document')).toHaveText(other);
   await page.getByTestId('file-notes.md').click();
+  await page.locator('#markdown-editor-mode').selectOption('source');
   const preview = page.getByTestId('markdown-document');
   await expect(preview.getByRole('heading', { name: 'Research notes', exact: true })).toBeVisible();
   await expect(preview.locator('.katex')).toHaveCount(4);

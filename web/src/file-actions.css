@@ -10,6 +10,11 @@
 .file-action-body .field-label { margin-bottom: -6px; }
 .file-action-body .field-help { line-height: 1.7; }
 .file-action-body input { width: 100%; }
+.file-action-contents { padding: 12px; border: 1px solid var(--border); border-radius: 6px; line-height: 1.6; }
+.file-action-contents h3 { margin: 0 0 6px; font-size: 13px; font-weight: 600; }
+.file-action-counts { margin: 0; font-size: 12px; }
+.file-action-contents ul { max-height: min(220px, 28dvh); overflow: auto; margin: 8px 0 0; padding-left: 22px; overflow-wrap: anywhere; font-size: 12px; }
+.file-action-directory { font-weight: 600; }
 .file-action-unsaved { padding: 12px; border: 1px solid var(--border-strong); border-radius: 6px; line-height: 1.6; }
 .file-action-unsaved ul { max-height: 140px; overflow: auto; margin: 7px 0 0; padding-left: 22px; overflow-wrap: anywhere; }
 .file-action-dialog .dialog-heading .icon-button { width: 36px; height: 36px; }

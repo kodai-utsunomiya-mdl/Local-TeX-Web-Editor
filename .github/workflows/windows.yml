@@ -15,7 +15,7 @@ jobs:
   windows:
     name: Windows with TeX Live and Chromium
     runs-on: windows-2022
-    timeout-minutes: 25
+    timeout-minutes: 35
     env:
       CGO_ENABLED: '0'
       CTAN_REPO: https://mirror.ctan.org/systems/texlive/tlnet

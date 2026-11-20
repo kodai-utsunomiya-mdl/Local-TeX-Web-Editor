@@ -48,10 +48,15 @@ export class PDFDarkMode {
 }
 
 export class PDFToolbar {
-  constructor({ toolbar, panel, button, compactWidth = 600, label = 'PDF の操作', moveWhenNarrow = [], alwaysVisible = [] }) {
-    this.toolbar = toolbar; this.panel = panel; this.button = button;
+  constructor({ toolbar, panel, button, menu = panel, compactWidth = 600, label = 'PDF の操作', moveWhenNarrow = [], alwaysVisible = [] }) {
+    menu ||= panel;
+    this.toolbar = toolbar; this.panel = panel; this.button = button; this.menu = menu;
     this.compactWidth = compactWidth; this.label = label;
     if (!toolbar || !panel || !button) return;
+    if (menu !== panel) {
+      this.panelMarker = document.createComment('inline PDF controls');
+      panel.before(this.panelMarker);
+    }
     this.homes = moveWhenNarrow.filter(item => item.element).map(item => {
       const marker = document.createComment('toolbar control'); item.element.before(marker);
       return { ...item, marker };
@@ -64,25 +69,22 @@ export class PDFToolbar {
       const marker = document.createComment('persistent toolbar control'); element.before(marker);
       return { element, marker };
     });
-    button.addEventListener('click', () => {
-      if (panel.matches(':popover-open')) panel.hidePopover();
-      else {
-        panel.showPopover(); this.positionMenu();
-        panel.querySelector('button:not(:disabled), select:not(:disabled), input:not(:disabled)')?.focus({ preventScroll: true });
-      }
-    });
-    panel.addEventListener('toggle', () => {
-      const open = panel.matches(':popover-open');
+    button.popoverTargetElement = menu;
+    menu.addEventListener('toggle', () => {
+      const open = menu.matches(':popover-open');
       button.setAttribute('aria-expanded', String(open));
-      if (open) this.positionMenu();
+      if (open) {
+        this.positionMenu();
+        (menu.querySelector('button:not(:disabled), select:not(:disabled), input:not(:disabled)') || menu).focus({ preventScroll: true });
+      }
     });
     // The search field is outside the toolbar popup. Let it receive focus as
     // soon as the search action opens the search bar.
     panel.addEventListener('click', event => {
-      if (event.target.closest('.pdf-search-toggle, #download-pdf') && panel.matches(':popover-open')) panel.hidePopover();
+      if (event.target.closest('.pdf-search-toggle, #download-pdf') && menu.matches(':popover-open')) menu.hidePopover();
     });
     toolbar.parentElement?.addEventListener('focusin', event => {
-      if (event.target.closest('.pdf-search-bar') && panel.matches(':popover-open')) panel.hidePopover();
+      if (event.target.closest('.pdf-search-bar') && menu.matches(':popover-open')) menu.hidePopover();
     });
     this.resizeObserver = new ResizeObserver(() => this.refresh());
     this.resizeObserver.observe(toolbar);
@@ -102,16 +104,19 @@ export class PDFToolbar {
     const width = this.toolbar.clientWidth;
     if (!width) return;
     const compact = width < this.compactWidth;
-    if (!compact && this.panel.matches(':popover-open')) this.panel.hidePopover();
     this.toolbar.dataset.pdfCompact = String(compact);
-    // Leave enough space for readable status and document labels after the controls.
-    this.toolbar.dataset.pdfDetails = String(width >= 760);
-    this.button.hidden = !compact;
-    if (compact) this.panel.setAttribute('popover', 'auto');
+    this.toolbar.dataset.pdfNarrow = String(width < 400);
+    this.button.hidden = !compact && !this.panelMarker;
+    if (this.panelMarker) {
+      if (compact) {
+        if (this.panel.parentElement !== this.menu) this.menu.append(this.panel);
+      } else if (this.panel.previousSibling !== this.panelMarker) this.panelMarker.after(this.panel);
+    } else if (compact) this.panel.setAttribute('popover', 'auto');
     else {
-      this.panel.removeAttribute('popover');
+      if (this.menu.matches(':popover-open')) this.menu.hidePopover();
+      this.menu.removeAttribute('popover');
       this.button.setAttribute('aria-expanded', 'false');
-      this.panel.style.removeProperty('left'); this.panel.style.removeProperty('top');
+      this.menu.style.removeProperty('left'); this.menu.style.removeProperty('top');
     }
     for (const { element, marker, below } of [...this.homes].reverse()) {
       if (compact && width < below) this.panel.prepend(element);
@@ -123,13 +128,13 @@ export class PDFToolbar {
         if (element.parentElement !== this.persistent) this.persistent.append(element);
       } else if (element.previousSibling !== marker) marker.after(element);
     }
-    if (this.panel.matches(':popover-open')) this.positionMenu();
+    if (this.menu.matches(':popover-open')) this.positionMenu();
   }
 
   positionMenu() {
-    const anchor = this.button.getBoundingClientRect(), panel = this.panel.getBoundingClientRect();
+    const anchor = this.button.getBoundingClientRect(), panel = this.menu.getBoundingClientRect();
     const left = Math.max(8, Math.min(anchor.right - panel.width, innerWidth - panel.width - 8));
     const top = anchor.bottom + 6 + panel.height <= innerHeight - 8 ? anchor.bottom + 6 : Math.max(8, anchor.top - panel.height - 6);
-    this.panel.style.left = `${left}px`; this.panel.style.top = `${top}px`;
+    this.menu.style.left = `${left}px`; this.menu.style.top = `${top}px`;
   }
 }

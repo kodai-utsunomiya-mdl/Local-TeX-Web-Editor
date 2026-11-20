@@ -8,6 +8,38 @@ export function normalizePanelLayout(value) {
     sidebarWidth: Number.isFinite(source.sidebarWidth) && source.sidebarWidth > 0 ? source.sidebarWidth : null,
     editorRatio: Number.isFinite(source.editorRatio) ? clamp(source.editorRatio, 0, 1) : .5,
     logHeight: Number.isFinite(source.logHeight) && source.logHeight > 0 ? source.logHeight : null,
+    previewVisible: source.previewVisible !== false,
+  };
+}
+
+export function calculatePanelLayout({ width, height, viewportHeight = height, overlay = false, singlePane = false,
+  sidebarCollapsed = false, defaultSidebar = 226, preferences: value } = {}) {
+  if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) return null;
+  const preferences = normalizePanelLayout(value);
+  const twoPanes = !singlePane && preferences.previewVisible;
+  const sidebarMax = Math.max(0, overlay ? width - 40 : width - (twoPanes ? 530 : 265));
+  const sidebarMin = Math.min(180, sidebarMax);
+  const sidebarWidth = clamp(preferences.sidebarWidth ?? defaultSidebar, sidebarMin, sidebarMax);
+  const editorSpace = Math.max(0, width - (sidebarCollapsed || overlay ? 0 : sidebarWidth + 5) - (twoPanes ? 5 : 0));
+  const editorMin = Math.min(260, twoPanes ? editorSpace / 2 : editorSpace);
+  const editorMax = twoPanes ? Math.max(editorMin, editorSpace - editorMin) : editorSpace;
+  const editorWidth = twoPanes ? clamp(editorSpace * preferences.editorRatio, editorMin, editorMax) : editorSpace;
+  const previewWidth = twoPanes ? editorSpace - editorWidth : 0;
+  // If one track reaches its minimum, CSS Grid recalculates the other track.
+  // A remaining flex factor below 1 can leave part of the available space empty.
+  // Scale both factors so the smaller one is 1, including at either drag limit.
+  const unit = Math.min(editorWidth, previewWidth);
+  const logMax = Math.max(0, height - Math.min(160, height / 2));
+  const logMin = Math.min(100, logMax);
+  const defaultLog = clamp(viewportHeight * .25, 135, 260);
+  const logHeight = clamp(preferences.logHeight ?? defaultLog, logMin, logMax);
+  return {
+    preferences, editorSpace, previewWidth,
+    editorFactor: unit > 0 ? editorWidth / unit : 1,
+    previewFactor: unit > 0 ? previewWidth / unit : 1,
+    sidebar: { minimum: sidebarMin, maximum: sidebarMax, value: sidebarWidth },
+    editor: { minimum: editorMin, maximum: editorMax, value: editorWidth },
+    log: { minimum: logMin, maximum: logMax, value: logHeight },
   };
 }
 
@@ -16,41 +48,25 @@ export function createPanelLayout({ workbench, shell, handles, getPreferences, o
 
   function measurements() {
     const bounds = workbench.getBoundingClientRect();
-    if (!bounds.width || !bounds.height) return null;
-    const preferences = normalizePanelLayout(getPreferences());
-    const overlay = matchMedia('(max-width: 640px)').matches;
-    const singlePane = matchMedia('(max-width: 900px)').matches;
-    const collapsed = shell.classList.contains('sidebar-collapsed');
-    const defaultSidebar = parseFloat(getComputedStyle(workbench).getPropertyValue('--sidebar-width')) || 226;
-    const sidebarMax = Math.max(0, overlay ? bounds.width - 40 : bounds.width - (singlePane ? 265 : 530));
-    const sidebarMin = Math.min(180, sidebarMax);
-    const sidebarWidth = clamp(preferences.sidebarWidth ?? defaultSidebar, sidebarMin, sidebarMax);
-    const editorSpace = Math.max(0, bounds.width - (collapsed || overlay ? 0 : sidebarWidth + 5) - 5);
-    const editorMin = Math.min(260, editorSpace / 2);
-    const editorMax = Math.max(editorMin, editorSpace - editorMin);
-    const editorWidth = clamp(editorSpace * preferences.editorRatio, editorMin, editorMax);
-    const logMax = Math.max(0, bounds.height - Math.min(160, bounds.height / 2));
-    const logMin = Math.min(100, logMax);
-    const defaultLog = clamp(innerHeight * .25, 135, 260);
-    const logHeight = clamp(preferences.logHeight ?? defaultLog, logMin, logMax);
-    return {
-      preferences, editorSpace,
-      sidebar: { minimum: sidebarMin, maximum: sidebarMax, value: sidebarWidth },
-      editor: { minimum: editorMin, maximum: editorMax, value: editorWidth },
-      log: { minimum: logMin, maximum: logMax, value: logHeight },
-    };
+    return calculatePanelLayout({
+      width: bounds.width, height: bounds.height, viewportHeight: innerHeight,
+      overlay: matchMedia('(max-width: 640px)').matches,
+      singlePane: matchMedia('(max-width: 900px)').matches,
+      sidebarCollapsed: shell.classList.contains('sidebar-collapsed'),
+      defaultSidebar: parseFloat(getComputedStyle(workbench).getPropertyValue('--sidebar-width')) || 226,
+      preferences: getPreferences(),
+    });
   }
 
   function refresh() {
+    shell.classList.toggle('preview-hidden', !normalizePanelLayout(getPreferences()).previewVisible);
     const sizes = measurements();
     if (!sizes) { finishDrag(); return; }
     workbench.style.setProperty('--sidebar-size', sizes.sidebar.value + 'px');
     workbench.style.setProperty('--log-height', sizes.log.value + 'px');
-    if (sizes.editorSpace > 0) {
-      const ratio = sizes.editor.value / sizes.editorSpace;
-      workbench.style.setProperty('--editor-size', ratio + 'fr');
-      workbench.style.setProperty('--preview-size', (1 - ratio) + 'fr');
-    }
+    workbench.style.setProperty('--panel-min-width', sizes.editor.minimum + 'px');
+    workbench.style.setProperty('--editor-size', sizes.editorFactor + 'fr');
+    workbench.style.setProperty('--preview-size', sizes.previewFactor + 'fr');
     for (const name of ['sidebar', 'editor', 'log']) {
       const handle = handles[name], size = sizes[name];
       handle.setAttribute('aria-valuemin', String(Math.round(size.minimum)));
@@ -59,6 +75,16 @@ export function createPanelLayout({ workbench, shell, handles, getPreferences, o
       handle.setAttribute('aria-valuetext', t(name === 'log' ? '高さ {value0} px' : '幅 {value0} px', { value0: Math.round(size.value) }));
     }
     if (drag && !drag.handle.getClientRects().length) finishDrag();
+  }
+
+  function setPreviewVisible(visible) {
+    const preferences = normalizePanelLayout(getPreferences());
+    const next = Boolean(visible);
+    if (preferences.previewVisible === next) return false;
+    finishDrag();
+    onChange({ ...preferences, previewVisible: next }, true);
+    refresh();
+    return true;
   }
 
   function setSize(name, requested, persist) {
@@ -146,8 +172,9 @@ export function createPanelLayout({ workbench, shell, handles, getPreferences, o
     });
   }
   window.addEventListener('blur', finishDrag);
+  window.addEventListener('resize', refresh);
   const observer = new ResizeObserver(refresh);
   observer.observe(workbench);
   refresh();
-  return { refresh };
+  return { refresh, setPreviewVisible };
 }

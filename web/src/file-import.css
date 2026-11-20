@@ -1,0 +1,12 @@
+.file-import-dialog { width: min(690px, calc(100vw - 28px)); }
+.file-import-list { display: flex; flex-direction: column; gap: 12px; list-style: none; margin: 16px 0; padding: 0; }
+.file-import-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, 0.8fr); gap: 7px 14px; padding: 13px; border: 1px solid var(--border); border-radius: 7px; min-width: 0; }
+.file-import-name { grid-column: 1 / -1; overflow-wrap: anywhere; font-size: 12px; font-weight: 600; line-height: 1.6; }
+.file-import-row .import-field { margin: 0; }
+.file-import-row .file-import-message { grid-column: 1 / -1; overflow-wrap: anywhere; white-space: pre-line; margin: 2px 0 0; }
+.file-import-complete { background: var(--accent-soft); }
+.file-import-dialog > .form-error { white-space: pre-line; }
+@media (max-width: 540px) {
+  .file-import-row { grid-template-columns: minmax(0, 1fr); }
+  .file-import-row .file-import-name, .file-import-row .file-import-message { grid-column: 1; }
+}

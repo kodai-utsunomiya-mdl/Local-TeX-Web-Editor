@@ -47,9 +47,14 @@ async function bundleScript(kind) {
     const onDarkModeChange = enabled => window.darkModeChanges.push(enabled);
     window.preview = ${kind === 'pdf' ? "new PDFViewer({token:'test-token',onError:error=>window.errors.push(error.message),onNavigate:navigate,onDarkModeChange})" : "new AssetPreview({token:'test-token',onNavigate:navigate,onDarkModeChange})"};
     window.navigation = new NavigationHistory({capture:()=>window.preview.getViewState(),restore:position=>window.preview.applyViewState(position),
-      onChange:value=>{document.getElementById('back').disabled=!value.canBack;document.getElementById('forward').disabled=!value.canForward;}});
+      onChange:value=>{
+        for (const button of document.querySelectorAll('#back, [data-navigation-back]')) button.disabled=!value.canBack;
+        for (const button of document.querySelectorAll('#forward, [data-navigation-forward]')) button.disabled=!value.canForward;
+      }});
     document.getElementById('back').onclick=()=>window.navigation.back();
     document.getElementById('forward').onclick=()=>window.navigation.forward();
+    for (const button of document.querySelectorAll('[data-navigation-back]')) button.onclick=()=>window.navigation.back();
+    for (const button of document.querySelectorAll('[data-navigation-forward]')) button.onclick=()=>window.navigation.forward();
     ${kind === 'pdf' ? "await window.preview.load('build-one','project','main.tex');" : "await window.preview.show({path:'references/paper.pdf',kind:'pdf',size:1000},'project');"}
   `;
   const bundled = await build({ stdin: { contents, resolveDir: path.join(repository, 'web/src') }, bundle: true, format: 'esm', write: false });
@@ -103,21 +108,21 @@ for (const kind of ['pdf', 'asset']) {
     const pageInput = page.locator(`#${kind}-page`);
     if (kind === 'pdf') await page.evaluate(() => {
       document.getElementById('pdf-state').textContent = 'Up to date';
-      document.getElementById('pdf-document').textContent = 'thesis2027_utsunomiya.tex';
+      document.getElementById('pdf-name').textContent = 'thesis2027_utsunomiya.pdf';
+      document.getElementById('pdf-document').textContent = 'chapters/research-notes/thesis2027_utsunomiya.tex';
     });
-    for (const width of [820, 760, 620, 600, 500, 320, 240, 820]) {
+    for (const width of [820, 760, 640, 620, 600, 500, 420, 400, 350, 320, 240, 820]) {
       await page.setViewportSize({ width: Math.max(360, width + 32), height: 760 });
       await page.evaluate(({ kind, width }) => {
         document.body.classList.add('preview-mode');
         document.getElementById(kind === 'pdf' ? 'pdf-pane' : 'asset-preview').style.width = `${width}px`;
       }, { kind, width });
-      await expect(toolbar).toHaveAttribute('data-pdf-compact', String(width < (kind === 'pdf' ? 600 : 420)));
+      await expect(toolbar).toHaveAttribute('data-pdf-compact', String(width < (kind === 'pdf' ? 640 : 420)));
       if (kind === 'pdf') {
-        await expect(toolbar).toHaveAttribute('data-pdf-details', String(width >= 760));
-        for (const label of ['#pdf-state', '#pdf-document']) {
-          if (width >= 760) await expect(page.locator(label)).toBeVisible();
-          else await expect(page.locator(label)).toBeHidden();
-        }
+        await expect(page.getByTestId('pdf-more')).toBeVisible();
+        await expect(toolbar.locator('[data-navigation-back]')).toBeVisible();
+        await expect(toolbar.locator('[data-navigation-forward]')).toBeVisible();
+        await expect(page.locator('#pdf-menu')).toBeHidden();
       }
       const layout = await toolbar.evaluate(element => {
         const area = element.getBoundingClientRect();
@@ -147,6 +152,18 @@ for (const kind of ['pdf', 'asset']) {
       if (await page.getByTestId(`${kind}-more`).isVisible()) await page.keyboard.press('Escape');
 
       await showPDFControls(page, kind);
+      if (kind === 'pdf') {
+        await expect(page.locator('#pdf-menu')).toBeVisible();
+        await page.getByTestId('pdf-more').click();
+        await expect(page.locator('#pdf-menu')).toBeHidden();
+        await expect(page.getByTestId('pdf-more')).toHaveAttribute('aria-expanded', 'false');
+        await showPDFControls(page);
+        await expect(page.getByTestId('pdf-name')).toHaveText('thesis2027_utsunomiya.pdf');
+        await expect(page.getByTestId('pdf-document')).toHaveText('chapters/research-notes/thesis2027_utsunomiya.tex');
+        await expect(page.locator('#pdf-state')).toHaveText('Up to date');
+        const textBounds = await page.getByTestId('pdf-document').evaluate(element => ({ width: element.clientWidth, scrollWidth: element.scrollWidth }));
+        expect(textBounds.scrollWidth).toBeLessThanOrEqual(textBounds.width);
+      }
       const zoom = page.locator(`#${kind}-zoom`), toggle = page.getByTestId(`${kind}-dark-mode`);
       await expect(zoom).toBeVisible(); await expect(toggle).toBeVisible();
       const zoomRows = await page.locator(`#${kind}-view-controls .pdf-zoom-controls`).evaluate(element =>
@@ -169,7 +186,7 @@ for (const kind of ['pdf', 'asset']) {
         await expect(page.locator('.pdf-toolbar .navigation-actions')).toBeVisible();
         await expect(page.locator('#preview-mode')).toBeVisible();
       } else await expect(page.locator('#asset-reload')).toBeVisible();
-      const menu = page.locator(`#${kind}-view-controls`);
+      const menu = page.locator(kind === 'pdf' ? '#pdf-menu' : '#asset-view-controls');
       const bounds = await menu.boundingBox();
       expect(bounds.x).toBeGreaterThanOrEqual(0);
       expect(bounds.x + bounds.width).toBeLessThanOrEqual(Math.max(360, width + 32));
@@ -265,6 +282,12 @@ for (const kind of ['pdf', 'asset']) {
   test(`${kind}: PDF の参照リンクから元の位置へ戻り，再び参照先へ進める`, async ({ page }, testInfo) => {
     await openHarness(page, kind);
     await expect.poll(() => page.evaluate(() => window.preview.ready)).toBe(true);
+    const backButton = page.locator(kind === 'pdf' ? '.pdf-toolbar [data-navigation-back]' : '#back');
+    const forwardButton = page.locator(kind === 'pdf' ? '.pdf-toolbar [data-navigation-forward]' : '#forward');
+    await expect(backButton).toBeVisible();
+    await expect(forwardButton).toBeVisible();
+    await expect(backButton).toBeDisabled();
+    await expect(forwardButton).toBeDisabled();
     await page.evaluate(() => {
       const viewer = window.preview.pageViewer || window.preview.pdfViewer;
       viewer.currentScaleValue = '2'; viewer.update();
@@ -278,16 +301,16 @@ for (const kind of ['pdf', 'asset']) {
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     const before = await page.evaluate(() => ({ position: window.preview.getViewState(), top: window.preview.elements.scroll.scrollTop, left: window.preview.elements.scroll.scrollLeft }));
     await link.click();
-    await expect(page.locator('#back')).toBeEnabled();
+    await expect(backButton).toBeEnabled();
     await expect.poll(() => page.evaluate(() => window.preview.pageNumber || window.preview.pdfViewer.currentPageNumber)).toBe(3);
     const after = await page.evaluate(() => ({ top: window.preview.elements.scroll.scrollTop, left: window.preview.elements.scroll.scrollLeft }));
-    await page.locator('#back').click();
-    await expect(page.locator('#forward')).toBeEnabled();
+    await backButton.click();
+    await expect(forwardButton).toBeEnabled();
     await expect.poll(() => page.evaluate(() => window.preview.pageNumber || window.preview.pdfViewer.currentPageNumber)).toBe(1);
     await expect.poll(() => page.evaluate(() => window.preview.elements.scroll.scrollTop).then(value => Math.abs(value - before.top))).toBeLessThan(3);
     await expect.poll(() => page.evaluate(() => window.preview.elements.scroll.scrollLeft).then(value => Math.abs(value - before.left))).toBeLessThan(3);
-    await page.locator('#forward').click();
-    await expect(page.locator('#back')).toBeEnabled();
+    await forwardButton.click();
+    await expect(backButton).toBeEnabled();
     await expect.poll(() => page.evaluate(() => window.preview.elements.scroll.scrollTop).then(value => Math.abs(value - after.top))).toBeLessThan(3);
     await expect.poll(() => page.evaluate(() => window.preview.elements.scroll.scrollLeft).then(value => Math.abs(value - after.left))).toBeLessThan(3);
     expect(await page.evaluate(() => window.errors)).toEqual([]);

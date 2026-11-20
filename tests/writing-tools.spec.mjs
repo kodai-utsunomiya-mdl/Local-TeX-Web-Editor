@@ -117,7 +117,7 @@ test('狭い幅でも Markdown の各操作を選べて，コードブロック�
   }
   const size = await toolbar.evaluate(node => ({ width: node.clientWidth, scrollWidth: node.scrollWidth }));
   expect(size.scrollWidth).toBeLessThanOrEqual(size.width + 1);
-  const bounds = await page.locator('#markdown-tools button, #markdown-tools select').evaluateAll(nodes => nodes.map(node => {
+  const bounds = await toolbar.locator('button:visible, select:visible').evaluateAll(nodes => nodes.map(node => {
     const rect = node.getBoundingClientRect(); return { left: rect.left, right: rect.right, width: rect.width, height: rect.height };
   }));
   expect(bounds.length).toBe(14);

@@ -5,13 +5,14 @@ import { PDFSearch } from './pdf-search.js';
 import { zoomPDFAt } from './pdf-zoom.js';
 import { afterNavigationFrame, connectPDFNavigation } from './navigation-history.js';
 import { PDFDarkMode, PDFToolbar } from './pdf-appearance.js';
+import { PDFCitationTitles } from './pdf-citations.js';
 
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 const cancelled = error => /RenderingCancelledException|AbortException/.test(error?.name || '') || /destroyed|cancelled/i.test(error?.message || '');
 const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
 
 export class PDFViewer {
-  constructor({ token, onError, onReady, onPositionChange, onInverse, onNavigate, darkMode = false, onDarkModeChange }) {
+  constructor({ token, onError, onReady, onPositionChange, onInverse, onNavigate, darkMode = false, onDarkModeChange, getCitations }) {
     this.token = token;
     this.onError = onError;
     this.onReady = onReady;
@@ -45,14 +46,15 @@ export class PDFViewer {
       this.elements.empty.querySelector('p').textContent = this.emptyError?.message || (this.emptyError ? String(this.emptyError) : t('原稿を保存し，コンパイルしてください．'));
     });
     this.eventBus = new EventBus();
+    this.citationTitles = new PDFCitationTitles({ container: this.elements.stage, eventBus: this.eventBus, getCitations });
     this.linkService = new PDFLinkService({ eventBus: this.eventBus, externalLinkTarget: LinkTarget.BLANK, externalLinkRel: 'noopener noreferrer', ignoreDestinationZoom: true });
     connectPDFNavigation(this.linkService, action => this.navigate(action), async () => { await afterNavigationFrame(); this.pageViewer.update(); });
     this.search = new PDFSearch({ eventBus: this.eventBus, linkService: this.linkService, pane: document.getElementById('pdf-preview') || document.getElementById('pdf-pane'), toolbar: document.querySelector('.pdf-toolbar'), scroll: this.elements.scroll });
     const toolbar = document.querySelector('.pdf-toolbar');
-    this.toolbar = new PDFToolbar({ toolbar, panel: document.getElementById('pdf-view-controls'), button: document.getElementById('pdf-more'),
+    this.toolbar = new PDFToolbar({ toolbar, panel: document.getElementById('pdf-view-controls'), button: document.getElementById('pdf-more'), menu: document.getElementById('pdf-menu'), compactWidth: 640,
       alwaysVisible: [this.elements['zoom-out'], this.elements['zoom-in'], document.getElementById('download-pdf')],
-      moveWhenNarrow: [{ element: toolbar?.querySelector('.navigation-actions'), below: 500 }, { element: toolbar?.querySelector('.preview-choice'), below: 350 },
-        { element: this.elements.prev, below: 280 }, { element: this.elements.next, below: 280 }] });
+      moveWhenNarrow: [{ element: toolbar?.querySelector('.preview-choice'), below: 500 },
+        { element: this.elements.prev, below: 420 }, { element: this.elements.next, below: 420 }] });
     this.pageViewer = new DocumentViewer({
       container: this.elements.scroll,
       viewer: this.elements.stage,
@@ -217,6 +219,7 @@ export class PDFViewer {
   }
 
   async loadDocument(buildId, projectRoot, main, generation, cancelledWait) {
+    this.citationTitles.hide();
     this.requestedBuildId = buildId;
     this.lastRequest = { buildId, projectRoot, main };
     this.elements.loading.hidden = false;
@@ -453,6 +456,7 @@ export class PDFViewer {
   }
 
   async reset() {
+    this.citationTitles.hide();
     this.emptyError = null;
     ++this.generation;
     this.cancelLoadWait?.(); this.cancelLoadWait = null; this.loadCompletion = Promise.resolve(false);

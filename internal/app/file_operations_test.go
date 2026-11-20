@@ -2,6 +2,7 @@ package app
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/url"
@@ -60,7 +61,7 @@ func TestFileRenameUpdatesMainAndMovesEditHistory(t *testing.T) {
 	}
 }
 
-func TestFolderRenameUpdatesContainedMainAndRejectsNonemptyDeletion(t *testing.T) {
+func TestFolderRenameAndDeletionUpdateContainedMain(t *testing.T) {
 	a, root := testApp(t)
 	writeTestFile(t, filepath.Join(root, "chapters", "body.tex"), []byte("chapter\n"))
 	writeTestFile(t, filepath.Join(root, "chapters", "script.py"), []byte("print('日本語')\n"))
@@ -74,11 +75,10 @@ func TestFolderRenameUpdatesContainedMainAndRejectsNonemptyDeletion(t *testing.T
 	if !entry.Directory || entry.Empty {
 		t.Fatalf("folder entry: %#v", entry)
 	}
-	response := apiRequest(a, http.MethodDelete, "/api/entry", entry, nil)
-	if response.Code != http.StatusConflict {
-		t.Fatalf("nonempty delete: %d %s", response.Code, response.Body.String())
+	if entry.FileCount != 2 || entry.DirectoryCount != 0 || len(entry.Entries) != 2 || entry.Entries[0].Path != "chapters/body.tex" || entry.Entries[0].ContentRevision != doc.Revision {
+		t.Fatalf("folder contents are missing from the confirmation: %#v", entry)
 	}
-	response = apiRequest(a, http.MethodPatch, "/api/entry", map[string]string{"path": "chapters", "newPath": "sections", "revision": entry.Revision}, nil)
+	response := apiRequest(a, http.MethodPatch, "/api/entry", map[string]string{"path": "chapters", "newPath": "sections", "revision": entry.Revision}, nil)
 	if response.Code != http.StatusOK || a.project.Main != "sections/body.tex" {
 		t.Fatalf("folder rename: %d %s", response.Code, response.Body.String())
 	}
@@ -99,6 +99,122 @@ func TestFolderRenameUpdatesContainedMainAndRejectsNonemptyDeletion(t *testing.T
 	response = apiRequest(a, http.MethodDelete, "/api/entry", empty, nil)
 	if response.Code != http.StatusOK {
 		t.Fatalf("delete empty folder: %d %s", response.Code, response.Body.String())
+	}
+	entry = entryForTest(t, a, "sections")
+	response = apiRequest(a, http.MethodDelete, "/api/entry", entry, nil)
+	if response.Code != http.StatusOK || a.project.Main != "" || a.config.Projects[root].Main != "" {
+		t.Fatalf("delete folder containing the main file: %d %s", response.Code, response.Body.String())
+	}
+	if _, err := os.Stat(filepath.Join(root, "sections")); !os.IsNotExist(err) {
+		t.Fatalf("deleted folder still exists: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "main.tex")); err != nil {
+		t.Fatalf("a file outside the deleted folder changed: %v", err)
+	}
+}
+
+func TestFolderDeletionIncludesNestedFilesAndHiddenItems(t *testing.T) {
+	a, root := testApp(t)
+	for name, content := range map[string]string{
+		"notes/readme.md":        "# Notes\n",
+		"notes/figures/data.bin": "\x00\x01\x02",
+		"notes/.git/config":      "local repository\n",
+	} {
+		writeTestFile(t, filepath.Join(root, filepath.FromSlash(name)), []byte(content))
+	}
+	if err := os.Mkdir(filepath.Join(root, "notes", "empty"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	writeTestFile(t, filepath.Join(root, "notes-other", "keep.md"), []byte("keep this\n"))
+	entry := entryForTest(t, a, "notes")
+	if entry.FileCount != 3 || entry.DirectoryCount != 3 || len(entry.Entries) != 6 {
+		t.Fatalf("unexpected item counts: %#v", entry)
+	}
+	paths := []string{}
+	for _, child := range entry.Entries {
+		paths = append(paths, child.Path)
+		if !child.Directory && (child.ContentRevision == "" || child.Size == 0) {
+			t.Fatalf("file details are missing: %#v", child)
+		}
+	}
+	if strings.Join(paths, ",") != "notes/.git,notes/.git/config,notes/empty,notes/figures,notes/figures/data.bin,notes/readme.md" {
+		t.Fatalf("the confirmation omitted a path: %v", paths)
+	}
+	response := apiRequest(a, http.MethodDelete, "/api/entry", entry, nil)
+	if response.Code != http.StatusOK {
+		t.Fatalf("delete nested folder: %d %s", response.Code, response.Body.String())
+	}
+	if _, err := os.Stat(filepath.Join(root, "notes")); !os.IsNotExist(err) {
+		t.Fatalf("the folder still exists: %v", err)
+	}
+	content, err := os.ReadFile(filepath.Join(root, "notes-other", "keep.md"))
+	if err != nil || string(content) != "keep this\n" {
+		t.Fatalf("a sibling changed: %q %v", content, err)
+	}
+}
+
+func TestFolderDeletionRequiresAnotherConfirmationAfterChanges(t *testing.T) {
+	for _, change := range []string{"file", "folder", "content with unchanged metadata"} {
+		t.Run(change, func(t *testing.T) {
+			a, root := testApp(t)
+			file := filepath.Join(root, "notes", "draft.md")
+			writeTestFile(t, file, []byte("first"))
+			entry := entryForTest(t, a, "notes")
+			switch change {
+			case "file":
+				writeTestFile(t, filepath.Join(root, "notes", "new.md"), []byte("new"))
+			case "folder":
+				if err := os.Mkdir(filepath.Join(root, "notes", "new-folder"), 0755); err != nil {
+					t.Fatal(err)
+				}
+			default:
+				info, err := os.Stat(file)
+				if err != nil {
+					t.Fatal(err)
+				}
+				writeTestFile(t, file, []byte("other"))
+				if err := os.Chtimes(file, info.ModTime(), info.ModTime()); err != nil {
+					t.Fatal(err)
+				}
+			}
+			response := apiRequest(a, http.MethodDelete, "/api/entry", entry, nil)
+			var review struct {
+				Entry          projectEntry `json:"entry"`
+				ReviewRequired bool         `json:"reviewRequired"`
+			}
+			if response.Code != http.StatusConflict || json.Unmarshal(response.Body.Bytes(), &review) != nil || !review.ReviewRequired || review.Entry.Revision == entry.Revision {
+				t.Fatalf("another confirmation was not requested: %d %s", response.Code, response.Body.String())
+			}
+			if _, err := os.Stat(file); err != nil {
+				t.Fatalf("the original file was removed before confirmation: %v", err)
+			}
+			if change == "file" && review.Entry.FileCount != 2 || change == "folder" && review.Entry.DirectoryCount != 1 {
+				t.Fatalf("the new item is absent from the confirmation: %#v", review.Entry)
+			}
+			response = apiRequest(a, http.MethodDelete, "/api/entry", review.Entry, nil)
+			if response.Code != http.StatusOK {
+				t.Fatalf("delete after reviewing the changed items: %d %s", response.Code, response.Body.String())
+			}
+		})
+	}
+}
+
+func TestRemovingInspectedFolderChecksForNewItemsBeforeDeletingFiles(t *testing.T) {
+	_, root := testApp(t)
+	file := filepath.Join(root, "notes", "draft.md")
+	writeTestFile(t, file, []byte("keep until confirmed"))
+	entry, err := inspectProjectEntry(context.Background(), root, "notes")
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeTestFile(t, filepath.Join(root, "notes", "new.md"), []byte("not confirmed"))
+	if err := removeInspectedEntry(root, entry); err == nil {
+		t.Fatal("removed a folder after a new item was added")
+	}
+	for _, name := range []string{"draft.md", "new.md"} {
+		if _, err := os.Stat(filepath.Join(root, "notes", name)); err != nil {
+			t.Fatalf("%s was removed before another confirmation: %v", name, err)
+		}
 	}
 }
 
@@ -184,7 +300,7 @@ func TestEntryChangesRejectStaleRevisionsAndOccupiedDestinations(t *testing.T) {
 func TestEntryChangesRespectProjectBoundaryAndRejectLinks(t *testing.T) {
 	a, root := testApp(t)
 	entry := entryForTest(t, a, "main.tex")
-	for _, path := range []string{"../escape", ".git/new", "C:/outside", "file/../other", "CON", "trailing."} {
+	for _, path := range []string{"", ".", "..", "/", "../escape", ".git/new", "C:/outside", "file/../other", "CON", "trailing."} {
 		response := apiRequest(a, http.MethodPost, "/api/entry", map[string]string{"path": path}, nil)
 		if response.Code < 400 {
 			t.Fatalf("accepted folder path %q", path)
@@ -192,6 +308,10 @@ func TestEntryChangesRespectProjectBoundaryAndRejectLinks(t *testing.T) {
 		response = apiRequest(a, http.MethodPatch, "/api/entry", map[string]string{"path": "main.tex", "newPath": path, "revision": entry.Revision}, nil)
 		if response.Code < 400 {
 			t.Fatalf("accepted rename path %q", path)
+		}
+		response = apiRequest(a, http.MethodDelete, "/api/entry", map[string]string{"path": path, "revision": entry.Revision}, nil)
+		if response.Code < 400 {
+			t.Fatalf("accepted delete path %q", path)
 		}
 	}
 	response := apiRequest(a, http.MethodDelete, "/api/entry", entry, map[string]string{"X-Project-Root": url.PathEscape(root + "-other")})
@@ -212,6 +332,21 @@ func TestEntryChangesRespectProjectBoundaryAndRejectLinks(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(outside, "new-folder")); !os.IsNotExist(err) {
 		t.Fatal("the outside folder was changed")
+	}
+	writeTestFile(t, filepath.Join(outside, "keep.md"), []byte("outside the project"))
+	writeTestFile(t, filepath.Join(root, "folder", "draft.md"), []byte("inside the project"))
+	folder := entryForTest(t, a, "folder")
+	if err := os.Symlink(outside, filepath.Join(root, "folder", "linked")); err != nil {
+		t.Fatal(err)
+	}
+	response = apiRequest(a, http.MethodDelete, "/api/entry", folder, nil)
+	if response.Code < 400 {
+		t.Fatal("deleted a folder after a link was added")
+	}
+	for _, file := range []string{filepath.Join(outside, "keep.md"), filepath.Join(root, "folder", "draft.md")} {
+		if _, err := os.Stat(file); err != nil {
+			t.Fatalf("a file changed while the link blocked deletion: %v", err)
+		}
 	}
 }
 

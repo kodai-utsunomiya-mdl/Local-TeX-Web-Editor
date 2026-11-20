@@ -213,7 +213,13 @@ Changing the font size or theme leaves the document content and compiled PDF unc
 
 ### Manage project files and edit code
 
-Right-click a file or folder to create a file or folder at that location, copy its relative or full path, rename it, or delete it. From the keyboard, focus the entry and press `Shift + F10` or the context-menu key. Use the arrow keys to select an action, `F2` to rename, and `Delete` to open the deletion confirmation. Files are removed after confirmation; folders can be deleted when empty. Renaming updates the open tabs and their editing state, including unsaved text. References written inside other documents remain as written, so update those links when needed.
+Click the **TeX logo** to open Home and manage the current and recent projects. **Return to editing** brings you back to the same editor, including unsaved text, tabs, and cursor positions. Each project card shows its name and full folder path.
+
+**Delete…** on a project card opens a review of all files and folders, including hidden items and saved drafts. To delete the folder from your computer, tick the acknowledgment and type its exact project name, then choose **Delete project**. If a file or draft changes after the review, the app updates the list and asks you to review it again. Deleting a project removes its saved drafts and recent-project entry as well.
+
+Right-click a file, folder, or the empty area of the file list to create a file or folder at that location, or choose **Add files from your computer…** to select existing files. The same file picker is available beside the **＋** button. Selected files are copied into the project; choose the destination folder and review any existing filenames. For each conflict, choose to replace the file, add a copy under another name, or skip it. Files with open tabs or saved drafts must be closed or reviewed before replacement. Multiple files can be selected, with a limit of **128 MiB per file**. The **＋** button continues to accept a project-relative path for a new file.
+
+The context menu also offers relative and full path copying, renaming, and **Delete…**. From the keyboard, focus the entry and press `Shift + F10` or the context-menu key. Use the arrow keys to select an action, `F2` to rename, and `Delete` to open the deletion confirmation. A folder's confirmation shows its contents and unsaved documents, and can delete the folder together with those contents. Renaming updates the open tabs and their editing state, including unsaved text. References written inside other documents remain as written, so update those links when needed.
 
 Program and configuration files can be edited with the same saving, search, drafts, and history tools. Syntax highlighting covers Python, JavaScript/TypeScript, C/C++, Java, Kotlin, C#, Go, Rust, R, Ruby, shell, PowerShell, HTML, CSS, XML, SQL, JSON, YAML, TOML, and Lua. Other supported text formats open as plain text. `.ipynb` opens as JSON text. The editor does not run these programs.
 
@@ -247,7 +253,9 @@ To change a key, enter its new name under **Rename the key**, choose **Preview c
 
 ### Compare and restore earlier text
 
-Open **Editing tools → Document history**, select an earlier version, and tick the changes you want to bring back. **Restore … selected changes** applies them to the editor, where you can use Undo or continue editing before saving. Large rewrites may appear as one selectable change. **Record current text** lets you record the current text with an optional version name, including text you have not saved yet.
+Open **Editing tools → Document history**, select an earlier version, and tick the changes you want to bring back. Select several changes, use **Select all changes**, or hold `Shift` while clicking a checkbox to select a range. **Restore … selected changes** applies them together to the editor, where you can use Undo or continue editing before saving. Large rewrites may appear as one selectable change. **Record current text** lets you record the current text with an optional version name, including text you have not saved yet.
+
+Use the checkboxes beside recorded versions to select versions you no longer need. **Select all versions** and `Shift`-click also work in this list. Choose **Delete … selected versions…**, review the names and dates, and confirm their deletion. This removes the selected records from edit history; the current document remains as written. Deleted history cannot be recovered.
 
 Automatic history is enabled initially. When an edited file is saved, the app compresses its previous text, with at least one minute between automatic versions of that file. Open **History settings** in the same dialog to change the period or total storage, or clear **Record edit history** to stop recording new versions.
 
@@ -275,9 +283,11 @@ To add your own template, expand **Add the current project as a template**, ente
 
 ### Choose the appearance
 
-Open **Settings → Appearance** to choose **System**, **Light**, or **Dark** mode, a **Default**, **Gray**, **Black**, or **Warm** color scheme, an accent color, and the editor font. For a black background, select **Dark** mode and the **Black** color scheme. **System** follows your computer's light/dark preference. The dialog shows the editor's background and text colors with a sample of the selected appearance.
+Open **Settings → Appearance** to choose **System**, **Light**, or **Dark** mode, one of seven color schemes (**Gray**, **Black**, **Blue gray**, **Warm**, **Navy**, **Forest**, or **Plum**), one of eight accent colors, and one of ten editor fonts. For a black background, select **Dark** mode and the **Black** color scheme. **System** follows your computer's light/dark preference. The dialog shows a sample of the selected appearance.
 
-The initial appearance uses **System** mode, the **Gray** color scheme, and **Consolas** for the editor. Your previously saved appearance continues to apply. If Consolas is unavailable, the editor follows the existing Default font order through Cascadia Code, Menlo, DejaVu Sans Mono, and the browser's monospace font.
+Use the color picker or enter a hexadecimal color code to choose the background, text, and accent colors. Light and dark modes save their colors independently. Clearing a code returns that color to the selected scheme. The selected colors also apply to dialogs, completion popups, notifications, and compilation and draft status messages.
+
+The initial appearance uses **System** mode, the **Gray** color scheme, and **Consolas** for the editor. Gray and Consolas appear first in their lists and are marked as the defaults. Your previously saved appearance continues to apply. If Consolas is unavailable, the editor tries Cascadia Code, Menlo, DejaVu Sans Mono, and the browser's monospace font in that order.
 
 Changes appear immediately. Choose **Save appearance** to use them in future sessions. **Cancel**, `Esc`, or **×** restores the appearance you had when opening the dialog. **Reset appearance** previews the defaults; choose **Save appearance** to apply them.
 
@@ -313,9 +323,13 @@ These tools reuse the Markdown renderer, browser printing, and PDF.js already us
 
 ### Edit Markdown
 
-With the preview type set to **Auto**, opening a `.md` or `.markdown` file displays its Markdown preview on the right. The preview updates as you type and supports headings, lists, tables, code blocks, task lists, links, images, and mathematics. Click **Preview** or press `Ctrl + Enter` to save and refresh it.
+Opening a `.md` or `.markdown` file starts in **Visual editing**. Edit the displayed headings, paragraphs, lists, tables, and code directly. Tick task checkboxes and select a displayed equation to edit its TeX. Changes are saved as Markdown through the same autosave, drafts, and undo history used by the source editor.
 
-The Markdown editing toolbar appears above the source. Select text or place the cursor, then choose a heading level, bold, italic, strikethrough, a bullet or numbered list, a task list, a blockquote, or inline code. **Insert a link** lets you enter the display text and a web, email, or project-relative destination. **Code block** accepts code and an optional language name. The labelled **Image**, **Table**, and **New page** buttons open image insertion, table creation or pasting, and linked Markdown page creation. These buttons stay visible and wrap onto another row when the source pane is narrow. These actions edit the Markdown source and can be undone.
+Use the **Visual editing / Source** selector above the document to edit the Markdown notation. Switching modes leaves the document text unchanged. When editing a block visually, other blocks continue to use their original Markdown. Each of the two editor panes remembers its chosen mode, so the same file can be displayed in both modes at once.
+
+Visual editing starts with the preview closed. Markdown source editing and TeX editing start with it open. **Show preview / Hide preview** changes this for the current mode, and the app remembers the choice. Reopening the preview restores its previous width. With the preview type set to **Auto**, a visible preview follows the edited file and updates as you type. Click **Preview** or press `Ctrl + Enter` to save and refresh it.
+
+The Markdown editing toolbar works in both modes. Select text or place the cursor, then choose a heading level, bold, italic, strikethrough, a bullet or numbered list, a task list, a blockquote, or inline code. **Insert a link** lets you enter the display text and a web, email, or project-relative destination. **Code block** accepts code and an optional language name. In visual editing, **Insert math** adds an equation. The labelled **Image**, **Table**, and **New page** buttons open image insertion, table creation or pasting, and linked Markdown page creation. These buttons wrap onto another row in narrow panes. These actions edit the Markdown source and can be undone across mode changes.
 
 ![Local TeX Web Editor displaying Markdown source and its live preview in light mode](docs/screenshots/editor-markdown-light.png)
 
@@ -325,15 +339,17 @@ Mathematics supports `$...$`, GitHub's dollar-and-backtick syntax, `$$...$$`, fe
 
 To move from Markdown source to its preview, `Ctrl + click` a source line (`Cmd + click` on Mac), or place the cursor and click the arrow button above the editor. The corresponding passage in the preview is briefly highlighted. Double-click a paragraph or heading in the preview to move to its source line.
 
-Use **Sync scrolling** in the Markdown preview toolbar to link scrolling in both directions: scrolling the source moves the preview, and scrolling the preview moves the corresponding source view. Clear it to scroll them independently. It is enabled initially, and your choice is saved for future sessions. Each Markdown document has its own saved preview scroll position.
+In source mode, use **Sync scrolling** in the Markdown preview toolbar to link scrolling in both directions: scrolling the source moves the preview, and scrolling the preview moves the corresponding source view. Clear it to scroll them independently. It is enabled initially, and your choice is saved for future sessions. Each Markdown document has its own saved preview scroll position.
 
-Relative links in the preview can open other project documents. Returning to the PDF preview shows the last compiled PDF.
+Relative links in the preview can open other project documents. In visual editing, use `Ctrl + click` (`Cmd + click` on Mac) to follow a link. Returning to the PDF preview shows the last compiled PDF.
 
 ## Read the PDF and navigate to source
 
 The PDF scrolls continuously across pages. The app prioritizes rendering the visible page and nearby pages, so a long document does not require rendering every page into an image at once. You can select and copy PDF text and follow links inside the PDF. After following an internal reference link, use **←** above the PDF to return to the position you were reading; **→** moves forward again. `Alt + Left` and `Alt + Right` provide the same navigation from the source or preview. Source links, search results, outline entries, and SyncTeX jumps also participate in this navigation.
 
-The PDF toolbar uses one row. **＋**, **−**, **Save PDF**, and the page-number field stay visible in a narrow preview. Open **… (PDF actions)** for the zoom selector, dark display, and search. As space decreases, Back, Forward, the preview selector, and finally the previous/next page buttons move into that menu.
+The PDF toolbar uses one row. **Back**, **Forward**, **＋**, **−**, **Save PDF**, and the page-number field stay visible in a narrow preview. **… (PDF actions)** is available at every width and shows the PDF file name, the path of the TeX document compiled to produce it, and its update status. As space decreases, the zoom selector, dark display, search, preview selector, and previous/next page buttons move into that menu.
+
+Hover over a citation link in the PDF, or focus it with `Tab`, to see the title, author, and year from the project's `.bib` files. This works with citation links created by hyperref, natbib, and biblatex, in both the compiled preview and project PDF tabs. Clicking the citation still opens its destination. Press `Esc` to close the tooltip. Bibliography entries become available as the project files are read and update when their text is edited.
 
 | Action | How to use it |
 | --- | --- |
@@ -376,7 +392,7 @@ Open **Log** at the top right when you need the compilation details. The log ope
 
 ## Configure compilation
 
-The active `.tex` tab selects the document to compile. If the open file contains `\documentclass` or `\begin{document}`, clicking **Compile** builds that document and displays its PDF. Switching TeX tabs alone leaves the displayed PDF unchanged. The top toolbar shows the next compilation target, and the PDF toolbar shows the document currently displayed.
+The active `.tex` tab selects the document to compile. If the open file contains `\documentclass` or `\begin{document}`, clicking **Compile** builds that document and displays its PDF. Switching TeX tabs alone leaves the displayed PDF unchanged. The top toolbar shows the next compilation target. **… (PDF actions)** identifies the PDF on screen and the TeX document used to produce it, including when a later compilation fails and the previous PDF remains visible.
 
 When editing a chapter included with `\input`, a shared preamble, or another supporting file, compilation uses **Default main document** in Settings. To choose a parent document for an individual file, add a comment such as `% !TeX root = ../main.tex`. The path is relative to the folder containing that file.
 

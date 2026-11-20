@@ -163,11 +163,11 @@ export function createInsertTools({ api, getDocument, getProject = () => null, i
   function currentDocument() {
     const doc = getDocument();
     if (!canInsert(doc)) { onError(new Error(t('画像や表を挿入する TeX または Markdown の原稿を開いてください．'))); return null; }
-    return { path: doc.path, content: String(doc.content || ''), projectRoot: getProject()?.root, pane: doc.pane, anchor: doc.anchor, head: doc.head };
+    return { path: doc.path, content: String(doc.content || ''), projectRoot: getProject()?.root, pane: doc.pane, anchor: doc.anchor, head: doc.head, richAnchor: doc.richAnchor, richHead: doc.richHead };
   }
   function checkDocument(snapshot) {
     const current = getDocument();
-    if (!current || !snapshot || getProject()?.root !== snapshot.projectRoot || current.path !== snapshot.path || current.pane !== snapshot.pane || String(current.content || '') !== snapshot.content || current.anchor !== snapshot.anchor || current.head !== snapshot.head) {
+    if (!current || !snapshot || getProject()?.root !== snapshot.projectRoot || current.path !== snapshot.path || current.pane !== snapshot.pane || String(current.content || '') !== snapshot.content || current.anchor !== snapshot.anchor || current.head !== snapshot.head || current.richAnchor !== snapshot.richAnchor || current.richHead !== snapshot.richHead) {
       throw new Error(t('原稿や選択範囲が変わりました．挿入先を選び直して，もう一度開いてください．'));
     }
   }
