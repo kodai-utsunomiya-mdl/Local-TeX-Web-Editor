@@ -8,7 +8,8 @@ export function createFileImporter({ api, uploadFile, getProject, isBlocked = ()
   const dialog = element('dialog', { id: 'file-import-dialog', class: 'dialog import-dialog file-import-dialog', 'aria-labelledby': 'file-import-title' });
   const header = element('div', { class: 'dialog-heading' });
   const close = translated('button', '閉じる', { type: 'button', class: 'icon-button', 'aria-label': t('閉じる'), 'data-i18n-aria-label': '閉じる' }); close.textContent = '×'; close.removeAttribute('data-i18n');
-  header.append(translated('h2', 'コンピューターからファイルを追加', { id: 'file-import-title' }), close);
+  const title = translated('h2', 'コンピューターからファイルを追加', { id: 'file-import-title' });
+  header.append(title, close);
   const body = element('div', { class: 'import-body' });
   const help = translated('p', '選んだファイルをプロジェクトへコピーします．元のファイルはそのまま残ります．1 個あたり 128 MiB まで追加できます．', { class: 'field-help' });
   const folder = labelledInput('file-import-folder', '追加先のフォルダー', 'select');
@@ -158,6 +159,7 @@ export function createFileImporter({ api, uploadFile, getProject, isBlocked = ()
       generation++; previewController?.abort(); previewController = new AbortController();
       stopped = false; pendingResult = null; needsRefresh = false; attemptedPaths = new Set(); fillFolders(context.folder); clearError();
       rows = files.map(createRow); list.replaceChildren(...rows.map(row => row.node));
+      title.dataset.i18n = context.title || 'コンピューターからファイルを追加';
       translateElements(dialog); if (!dialog.open) dialog.showModal(); cancel.focus();
       const currentGeneration = generation;
       for (const row of rows) { if (generation !== currentGeneration) break; if (!row.editing && row.choice !== 'skip') await inspectRow(row, currentGeneration); }
@@ -177,6 +179,10 @@ export function createFileImporter({ api, uploadFile, getProject, isBlocked = ()
     if (isBlocked() || locked || opening || pickerContext || !getProject()?.root) return;
     pickerContext = { root: getProject().root, folder: selectedFolder, focus: document.activeElement };
     document.body.append(picker); picker.value = ''; picker.click();
+  }
+  async function openFiles(files, selectedFolder = '', { title: dialogTitle } = {}) {
+    if (isBlocked() || locked || opening || pickerContext || !getProject()?.root) return;
+    await loadFiles([...files], { root: getProject().root, folder: selectedFolder, focus: document.activeElement, title: dialogTitle });
   }
   choose.addEventListener('click', () => {
     if (uploading || completeCount()) return;
@@ -231,5 +237,5 @@ export function createFileImporter({ api, uploadFile, getProject, isBlocked = ()
     if (!dialog.open) return;
     translateElements(dialog); fillFolders(folder.input.value); updateControls();
   });
-  return { open, close: closeDialog, get busy() { return opening || uploading; }, destroy() { previewController?.abort(); uploadController?.abort(); dialog.remove(); picker.remove(); if (locked) { locked = false; end(); } } };
+  return { open, openFiles, close: closeDialog, get busy() { return opening || uploading; }, destroy() { previewController?.abort(); uploadController?.abort(); dialog.remove(); picker.remove(); if (locked) { locked = false; end(); } } };
 }

@@ -14,6 +14,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/messages"
@@ -21,25 +22,29 @@ import (
 )
 
 type ProjectFile struct {
-	Path string `json:"path"`
-	Size int64  `json:"size"`
-	Kind string `json:"kind"`
+	Path       string    `json:"path"`
+	Size       int64     `json:"size"`
+	Kind       string    `json:"kind"`
+	ModifiedAt time.Time `json:"modifiedAt"`
 }
 
 type Project struct {
-	Root        string        `json:"root"`
-	Main        string        `json:"main"`
-	Mode        string        `json:"mode"`
-	Files       []ProjectFile `json:"files"`
-	Directories []string      `json:"directories"`
+	Root                string               `json:"root"`
+	Main                string               `json:"main"`
+	Mode                string               `json:"mode"`
+	Files               []ProjectFile        `json:"files"`
+	Directories         []string             `json:"directories"`
+	DirectoryModifiedAt map[string]time.Time `json:"directoryModifiedAt"`
 }
 
 type FileDocument struct {
-	Path       string `json:"path"`
-	Content    string `json:"content"`
-	Revision   string `json:"revision"`
-	LineEnding string `json:"lineEnding"`
-	HistoryWarning string `json:"historyWarning,omitempty"`
+	Path                string               `json:"path"`
+	Content             string               `json:"content"`
+	Revision            string               `json:"revision"`
+	LineEnding          string               `json:"lineEnding"`
+	HistoryWarning      string               `json:"historyWarning,omitempty"`
+	Entry               *ProjectFile         `json:"entry,omitempty"`
+	DirectoryModifiedAt map[string]time.Time `json:"directoryModifiedAt,omitempty"`
 }
 
 type projectSettings struct {
@@ -113,7 +118,7 @@ func (a *App) openProjectLocked(rawPath string) error {
 	if !info.IsDir() {
 		return fail(http.StatusBadRequest, "ファイルが選ばれています．原稿を含むフォルダーを選んでください．")
 	}
-	files, directories, err := listProjectEntries(root)
+	files, directories, directoryModifiedAt, err := listProjectEntries(root)
 	if err != nil {
 		return err
 	}
@@ -149,13 +154,14 @@ func (a *App) openProjectLocked(rawPath string) error {
 		return messages.Errorf("プロジェクトの設定を保存できません: %w", err)
 	}
 	a.config = config
-	a.project = &Project{Root: root, Main: settings.Main, Mode: settings.Mode, Files: files, Directories: directories}
+	a.project = &Project{Root: root, Main: settings.Main, Mode: settings.Mode, Files: files, Directories: directories, DirectoryModifiedAt: directoryModifiedAt}
 	a.build = nil
 	a.lastPDF, a.lastPDFID = "", ""
 	a.lastPDFMain, a.lastPDFChanged = "", false
 	a.lastPDFMarkdownInputs = nil
 	a.pdfVersions = make(map[string]string)
 	a.pdfOrder = nil
+	a.compiledPDFs = make(map[string]CompiledPDF)
 	a.synctexVersions = make(map[string]*synctexVersion)
 	a.restoreCachedBuildLocked(*a.project)
 	return nil
@@ -225,6 +231,9 @@ func (a *App) updateSettingsLocked(texBin, main, mode *string) error {
 	}
 	if a.lastPDFID != "" && compilationChanged {
 		a.lastPDFChanged = true
+	}
+	if compilationChanged {
+		a.noteCompiledPDFSettingsChangedLocked()
 	}
 	return nil
 }
@@ -306,13 +315,14 @@ func excludedDirectory(name string) bool {
 }
 
 func listProjectFiles(root string) ([]ProjectFile, error) {
-	files, _, err := listProjectEntries(root)
+	files, _, _, err := listProjectEntries(root)
 	return files, err
 }
 
-func listProjectEntries(root string) ([]ProjectFile, []string, error) {
+func listProjectEntries(root string) ([]ProjectFile, []string, map[string]time.Time, error) {
 	files := []ProjectFile{}
 	directories := []string{}
+	directoryModifiedAt := make(map[string]time.Time)
 	visited := 0
 	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
@@ -349,13 +359,14 @@ func listProjectEntries(root string) ([]ProjectFile, []string, error) {
 			}
 			return nil
 		}
-		if entry.IsDir() {
-			directories = append(directories, relative)
-			return nil
-		}
 		info, err := entry.Info()
 		if err != nil {
 			return err
+		}
+		if entry.IsDir() {
+			directories = append(directories, relative)
+			directoryModifiedAt[relative] = info.ModTime().UTC()
+			return nil
 		}
 		regular, err := platform.IsRegularFile(path, info)
 		if err != nil {
@@ -364,18 +375,18 @@ func listProjectEntries(root string) ([]ProjectFile, []string, error) {
 		if !regular {
 			return nil
 		}
-		files = append(files, ProjectFile{Path: relative, Size: info.Size(), Kind: projectFileKind(relative)})
+		files = append(files, ProjectFile{Path: relative, Size: info.Size(), Kind: projectFileKind(relative), ModifiedAt: info.ModTime().UTC()})
 		if len(files) > 10000 {
 			return fail(http.StatusBadRequest, "ファイルが多すぎます．原稿のフォルダーを直接選んでください．")
 		}
 		return nil
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	sort.Slice(files, func(i, j int) bool { return files[i].Path < files[j].Path })
 	sort.Strings(directories)
-	return files, directories, nil
+	return files, directories, directoryModifiedAt, nil
 }
 
 func cleanRelative(raw string) (string, error) {

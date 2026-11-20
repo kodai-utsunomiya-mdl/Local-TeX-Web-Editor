@@ -225,7 +225,7 @@ func TestAssetPreviewRejectsLinkedFilesAndDirectories(t *testing.T) {
 			t.Fatalf("linked asset %s: %d %s", path, response.Code, response.Body.String())
 		}
 	}
-	files, directories, err := listProjectEntries(root)
+	files, directories, _, err := listProjectEntries(root)
 	if err != nil || len(files) != 1 || files[0].Path != "main.tex" || len(directories) != 0 {
 		t.Fatalf("linked entries appeared in project: %v %v %v", files, directories, err)
 	}

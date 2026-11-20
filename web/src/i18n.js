@@ -7,9 +7,18 @@ import { projectHomeEnglish } from './locales/project-home-en.js';
 import { pdfAppearanceEnglish } from './locales/pdf-appearance-en.js';
 import { outlineEnglish } from './locales/outline-en.js';
 import { documentToolsEnglish } from './locales/document-tools-en.js';
+import { fileSortingEnglish } from './locales/file-sorting-en.js';
+import { fileTreeDragEnglish } from './locales/file-tree-drag-en.js';
+import { fileTemplateEnglish } from './locales/file-template-en.js';
+import { editorContextMenuEnglish } from './locales/editor-context-menu-en.js';
+import { compiledPDFsEnglish } from './locales/compiled-pdfs-en.js';
+import { projectSyncEnglish } from './locales/project-sync-en.js';
 import { shortcutModifier } from './platform-keys.js';
 
-Object.assign(english, importsEnglish, writingEnglish, markdownEditingEnglish, markdownRichEnglish, projectHomeEnglish, pdfAppearanceEnglish, outlineEnglish, documentToolsEnglish);
+Object.assign(english, importsEnglish, writingEnglish, markdownEditingEnglish, markdownRichEnglish, projectHomeEnglish, pdfAppearanceEnglish, outlineEnglish, documentToolsEnglish, fileSortingEnglish, fileTreeDragEnglish, editorContextMenuEnglish, compiledPDFsEnglish);
+
+Object.assign(english, fileTemplateEnglish);
+Object.assign(english, projectSyncEnglish);
 
 let language = 'en';
 const listeners = new Set();

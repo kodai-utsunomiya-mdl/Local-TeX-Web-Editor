@@ -1,0 +1,16 @@
+export const fileTreeDragEnglish = {
+  'プロジェクトの最上位へ移動': 'Move to the project root',
+  '{source} の移動先を選んでください．': 'Choose where to move {source}.',
+  '{source} をプロジェクトの最上位へ移動': 'Move {source} to the project root',
+  '{source} を {target} の中へ移動': 'Move {source} into {target}',
+  '{source} を {target} の前へ移動': 'Move {source} before {target}',
+  '{source} を {target} の後へ移動': 'Move {source} after {target}',
+  '{source} をプロジェクトの最上位へ移動しました．': 'Moved {source} to the project root.',
+  '{source} を {target} の中へ移動しました．': 'Moved {source} into {target}.',
+  '{source} を {target} の前へ移動しました．': 'Moved {source} before {target}.',
+  '{source} を {target} の後へ移動しました．': 'Moved {source} after {target}.',
+  '移動を取り消しました．': 'Move cancelled.',
+  '移動できませんでした．': 'Could not move the item.',
+  '{source} はこの階層の先頭です．': '{source} is the first item in this folder.',
+  '{source} はこの階層の最後です．': '{source} is the last item in this folder.',
+};

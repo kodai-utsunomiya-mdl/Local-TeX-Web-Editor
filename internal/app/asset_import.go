@@ -162,8 +162,9 @@ func (a *App) assetImportHandler(w http.ResponseWriter, r *http.Request) {
 		result, err = importAsset(a.project.Root, input.Path, data)
 		if err == nil {
 			a.noteSavedSourceLocked(result.Path)
-			if files, directories, listErr := listProjectEntries(a.project.Root); listErr == nil {
+			if files, directories, directoryModifiedAt, listErr := listProjectEntries(a.project.Root); listErr == nil {
 				a.project.Files, a.project.Directories = files, directories
+				a.project.DirectoryModifiedAt = directoryModifiedAt
 			}
 		}
 	}

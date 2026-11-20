@@ -1,0 +1,17 @@
+export const fileTemplateEnglish = {
+  '最初の内容': 'Starting content',
+  '空のファイル': 'Empty file',
+  'テンプレート内のファイル': 'File in the template',
+  'テンプレートから選んだテキストファイル 1 個を，入力したパスに作成します．': 'Create the one selected text file at the path entered below.',
+  '作成する原稿の内容': 'Content of the new file',
+  'もう一度読み込む': 'Load again',
+  'テンプレート内のファイルを読み込み中…': 'Loading files in the template…',
+  '原稿の内容を読み込み中…': 'Loading the file content…',
+  'このテンプレートには編集できるテキストファイルがありません．': 'This template has no editable text files.',
+  '空のファイルを作成します．': 'Create an empty file.',
+  '原稿の先頭 {count} 文字を表示しています．作成時は全文を使います．': 'Showing the first {count} characters. The new file will contain the full text.',
+  'テンプレートの内容を読み取れませんでした．': 'Could not read the template content.',
+  'テンプレートを読み込めませんでした．空のファイルは作成できます．': 'Could not load templates. You can still create an empty file.',
+  'テンプレートの読込みが終わってから作成してください．': 'Wait for the template to finish loading before creating the file.',
+  '作成するテキストファイルを選んでください．': 'Choose the text file to create.',
+};

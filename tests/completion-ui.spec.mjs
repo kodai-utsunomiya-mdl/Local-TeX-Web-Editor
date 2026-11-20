@@ -40,7 +40,7 @@ test.beforeAll(async () => {
           parent,
           state: EditorState.create({ doc: 'Unchanged source', extensions: [
             basicSetup, EditorView.lineWrapping, completionPresentation(),
-            autocompletion({ override: [texCompletionSource(() => items)] })
+            autocompletion({ override: [texCompletionSource(() => items)], interactionDelay: 0 })
           ] })
         }));
         window.openCitationMenu = (index, bottom = false, citation = true) => {

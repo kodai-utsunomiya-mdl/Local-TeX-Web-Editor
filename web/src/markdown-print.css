@@ -3,7 +3,7 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; background: #fff; color: #202124; }
 body { padding: 20px 24px; }
-.markdown-body { margin: 0 auto; padding: 0; max-width: 178mm; min-width: 0; font-size: 11pt; line-height: 1.7; overflow-wrap: anywhere; }
+.markdown-body { margin: 0 auto; padding: 0; max-width: 178mm; min-width: 0; font-size: 11pt; line-height: 1.7; font-synthesis: weight style; overflow-wrap: anywhere; }
 .markdown-body :is(h1, h2, h3, h4, h5, h6) { break-after: avoid-page; color: #111; }
 .markdown-body :is(p, li) { orphans: 3; widows: 3; }
 .markdown-body a { color: #175f9c; }

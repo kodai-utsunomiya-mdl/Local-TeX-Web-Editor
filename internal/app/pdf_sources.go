@@ -92,6 +92,7 @@ func sourcesForPDF(root, main, pdf string, sources map[string]string) (map[strin
 // The caller holds a.mu. Markdown saved during compilation is checked against
 // that compilation's recorder once the process finishes.
 func (a *App) noteSavedSourceLocked(path string) {
+	a.noteCompiledPDFSourceChangedLocked(path)
 	if run := a.build; run != nil {
 		if isMarkdownSource(path) && run.result.Status == "running" {
 			if run.changedMarkdown == nil {

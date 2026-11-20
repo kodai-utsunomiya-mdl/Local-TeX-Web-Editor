@@ -1,5 +1,6 @@
 import MarkdownIt from 'markdown-it';
-import texmath from 'markdown-it-texmath';
+import cjkFriendly from 'markdown-it-cjk-friendly';
+import { markdownMath } from './markdown-math.js';
 import katex from 'katex';
 import { Schema } from 'prosemirror-model';
 import { schema as basicSchema, MarkdownParser, MarkdownSerializer, defaultMarkdownParser, defaultMarkdownSerializer } from 'prosemirror-markdown';
@@ -75,8 +76,8 @@ let marks = basicSchema.spec.marks
 
 export const markdownSchema = new Schema({ nodes, marks });
 
-const tokenizer = new MarkdownIt({ html: false, linkify: true, typographer: false, breaks: false }).use(texmath, {
-  engine: katex, delimiters: ['gitlab', 'dollars', 'brackets'],
+const tokenizer = new MarkdownIt({ html: false, linkify: true, typographer: false, breaks: false }).use(cjkFriendly).use(markdownMath, {
+  engine: katex,
   katexOptions: { trust: false, throwOnError: false, strict: 'ignore', maxExpand: 1000, maxSize: 20, macros: {} },
 });
 

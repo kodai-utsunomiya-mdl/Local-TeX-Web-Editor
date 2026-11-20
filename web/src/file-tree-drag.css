@@ -1,0 +1,23 @@
+.file-tree :is(.file-button[draggable="true"]:not(:disabled), .tree-directory > summary[draggable="true"]) { cursor: grab; }
+.file-tree :is(.file-button, .tree-directory > summary).file-tree-dragging { opacity: .5; cursor: grabbing; }
+.file-tree :is(.file-tree-drop-before, .file-tree-drop-after) { position: relative; overflow: visible; }
+.file-tree :is(.file-tree-drop-before, .file-tree-drop-after)::after {
+  content: ""; position: absolute; left: 2px; right: 2px; height: 2px;
+  background: var(--accent); box-shadow: 0 0 0 1px var(--surface); pointer-events: none; z-index: 2;
+}
+.file-tree .file-tree-drop-before::after { top: -1px; }
+.file-tree .file-tree-drop-after::after { bottom: -1px; }
+.file-tree :is(.file-button, .tree-directory > summary).file-tree-drop-inside {
+  color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 0 0 2px var(--accent);
+}
+.file-tree.file-tree-drop-root { background: var(--accent-soft); box-shadow: inset 0 0 0 2px var(--accent); }
+.file-tree.file-tree-drop-root::after {
+  content: attr(data-drop-label); display: block; position: sticky; bottom: 2px; margin: 10px 3px 0;
+  padding: 6px 8px; border: 1px solid var(--accent); border-radius: 4px;
+  color: var(--text); background: var(--surface); font-size: 11px; line-height: 1.5;
+  overflow-wrap: anywhere; pointer-events: none;
+}
+@media (forced-colors: active) {
+  .file-tree :is(.file-tree-drop-before, .file-tree-drop-after)::after { background: Highlight; box-shadow: none; }
+  .file-tree .file-tree-drop-inside, .file-tree.file-tree-drop-root { outline: 2px solid Highlight; outline-offset: -2px; }
+}

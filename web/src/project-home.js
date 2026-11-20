@@ -1,13 +1,20 @@
 import { t, getLanguage, onLanguageChange, translateElements } from './i18n.js';
 import { element, translated } from './import-dialog.js';
+import { projectStatusFor, recentProjectEntries } from './project-status.js';
 
 const projectName = path => String(path).replace(/[\\/]+$/, '').split(/[\\/]/).pop() || String(path);
 const uniquePaths = paths => [...new Set(paths.filter(path => typeof path === 'string' && path))];
 
 export function createProjectHome({ list, api, getMeta, getUnsavedPaths = () => [], beginAction = async () => {}, endAction = () => {},
-  onOpen, onResume, onDeleted = () => {}, onError = () => {}, onNotice = () => {}, isBlocked = () => false }) {
+  onOpen, onResume, onDeleted = () => {}, refreshStatus = async () => {}, onRecentChanged = () => {},
+  onError = () => {}, onNotice = () => {}, isBlocked = () => false }) {
   list.classList.add('project-home-list');
-  let starting = false, active = null, submitting = false, ending = false, renderedSignature = '';
+  let starting = false, active = null, submitting = false, ending = false, checking = false, removing = false, destroyed = false, renderedSignature = '';
+  const statusText = entry => entry.message || t('プロジェクトの場所を確認できません．フォルダーを選び直してください．');
+  const statusLabels = {
+    missing: 'フォルダーが見つかりません', 'not-directory': 'この場所はフォルダーではありません',
+    unavailable: 'フォルダーを読み取れません', changed: 'フォルダーの場所が変わりました',
+  };
 
   const dialog = element('dialog', { id: 'project-delete-dialog', class: 'dialog project-delete-dialog', 'aria-labelledby': 'project-delete-title', 'aria-describedby': 'project-delete-description' });
   const heading = element('div', { class: 'dialog-heading' });
@@ -39,45 +46,114 @@ export function createProjectHome({ list, api, getMeta, getUnsavedPaths = () => 
   footer.append(cancel, confirm); dialog.append(heading, body, error, footer); list.ownerDocument.body.append(dialog);
 
   function refresh() {
+    if (destroyed) return;
     const meta = getMeta() || {};
     const current = meta.project?.root || '';
-    const paths = uniquePaths([current, ...(meta.recentProjects || []).map(value => typeof value === 'string' ? value : value?.root || value?.path || '')]).slice(0, 12);
-    const blocked = Boolean(isBlocked() || starting || active || ending);
+    const entries = recentProjectEntries(meta);
+    const blocked = Boolean(isBlocked() || starting || active || ending || checking || removing);
     const running = meta.build?.status === 'running';
-    const signature = JSON.stringify([current, paths, blocked, running, getLanguage()]);
+    if (active?.inspection && projectStatusFor(meta, active.path).status !== 'available') {
+      active.inspection = null; acknowledge.checked = false; name.value = '';
+      error.textContent = statusText(projectStatusFor(meta, active.path)); error.hidden = false; updateConfirm();
+    }
+    const signature = JSON.stringify([current, entries, blocked, running, getLanguage()]);
     if (signature === renderedSignature) return;
     renderedSignature = signature;
     const focused = list.contains(list.ownerDocument.activeElement) ? list.ownerDocument.activeElement : null;
     const focusedPath = focused?.closest('[data-project-path]')?.dataset.projectPath;
     const focusedAction = focused?.dataset.action;
     const fragment = list.ownerDocument.createDocumentFragment();
-    for (const path of paths) {
-      const isCurrent = path === current;
-      const card = element('article', { class: `project-home-card${isCurrent ? ' current' : ''}`, 'data-project-path': path });
+    for (const entry of entries) {
+      const { path, current: isCurrent } = entry, available = entry.status === 'available';
+      const card = element('article', { class: `project-home-card${isCurrent ? ' current' : ''}${available ? '' : ' unavailable'}`, 'data-project-path': path, 'data-project-status': entry.status });
       const information = element('div', { class: 'project-home-information' });
       const title = element('div', { class: 'project-home-title' }); title.append(element('h3', {}, projectName(path)));
       if (isCurrent) title.append(translated('span', '編集中のプロジェクト', { class: 'project-home-current' }));
       information.append(title, element('p', { class: 'project-home-path', dir: 'auto' }, path));
+      if (!available) {
+        information.append(translated('p', statusLabels[entry.status] || statusLabels.unavailable, { class: 'project-home-status' }), element('p', { class: 'project-home-status-help' }, statusText(entry)));
+      }
       const actions = element('div', { class: 'project-home-actions' });
       const open = translated('button', isCurrent ? '編集に戻る' : '開く', { type: 'button', class: `button button-small${isCurrent ? ' button-primary' : ''}`, 'data-action': isCurrent ? 'resume' : 'open' });
       const remove = translated('button', '削除…', { type: 'button', class: 'button button-small project-home-delete', 'data-action': 'delete', 'aria-haspopup': 'dialog', 'aria-controls': dialog.id });
-      open.disabled = blocked || (!isCurrent && running); remove.disabled = blocked || running;
+      open.disabled = blocked || (!isCurrent && (running || !available)); remove.disabled = blocked || running || !available;
       if (running && !isCurrent) open.title = t('コンパイルが終わるとプロジェクトを開けます．');
       if (running) remove.title = t('コンパイルが終わるとプロジェクトを削除できます．');
-      open.addEventListener('click', () => {
-        if (isBlocked() || active || starting || ending || (!isCurrent && getMeta()?.build?.status === 'running')) return;
-        Promise.resolve().then(() => isCurrent ? onResume?.() : onOpen?.(path)).catch(onError);
-      });
+      if (!available && !isCurrent) open.title = statusText(entry);
+      if (!available) remove.title = statusText(entry);
+      open.addEventListener('click', () => { void openPath(path); });
       remove.addEventListener('click', () => { void inspect(path); });
-      actions.append(open, remove); card.append(information, actions); fragment.append(card);
+      actions.append(open, remove);
+      if (!available) {
+        const retry = translated('button', '再確認', { type: 'button', class: 'button button-small', 'data-action': 'refresh' });
+        retry.disabled = blocked;
+        retry.addEventListener('click', () => { void recheck(path); }); actions.append(retry);
+      }
+      if (!isCurrent) {
+        const forget = translated('button', '一覧から外す', { type: 'button', class: 'button button-small', 'data-action': 'forget', title: t('最近の一覧から外します．PC 上のファイルと草稿は残ります．') });
+        forget.disabled = blocked;
+        forget.addEventListener('click', () => { void forgetRecent(path); }); actions.append(forget);
+      }
+      card.append(information, actions); fragment.append(card);
     }
     list.replaceChildren(fragment);
-    const section = list.closest('#welcome-recent'); if (section) section.hidden = !paths.length;
+    const section = list.closest('#welcome-recent'); if (section) section.hidden = !entries.length;
     if (focusedPath && focusedAction) {
       const card = [...list.querySelectorAll('[data-project-path]')].find(node => node.dataset.projectPath === focusedPath);
       const control = [...(card?.querySelectorAll('[data-action]') || [])].find(node => node.dataset.action === focusedAction);
       if (control && !control.disabled) control.focus({ preventScroll: true });
     }
+  }
+
+  function busy() { return destroyed || isBlocked() || starting || active || ending || checking || removing; }
+  async function reloadStatus() {
+    await refreshStatus();
+    refresh();
+  }
+  function focusCard(path, action) {
+    if (destroyed) return;
+    const card = [...list.querySelectorAll('[data-project-path]')].find(node => node.dataset.projectPath === path);
+    const requested = card?.querySelector(`[data-action="${action}"]`);
+    const control = requested && !requested.disabled ? requested : card?.querySelector('button:not(:disabled)') || list.querySelector('button:not(:disabled)') || list.ownerDocument.getElementById('welcome-open');
+    control?.focus({ preventScroll: true });
+  }
+  async function openPath(path) {
+    if (busy()) return;
+    const entry = recentProjectEntries(getMeta()).find(value => value.path === path);
+    if (!entry || !entry.current && getMeta()?.build?.status === 'running') return;
+    if (entry.current) {
+      try { await onResume?.(); } catch (failure) { onError(failure); }
+      return;
+    }
+    starting = true; refresh();
+    try {
+      await reloadStatus();
+      const status = projectStatusFor(getMeta(), path);
+      if (status.status !== 'available') { onNotice(statusText(status)); return; }
+      await onOpen?.(path);
+    } catch (failure) {
+      onError(failure);
+      try { await reloadStatus(); } catch (refreshFailure) { onError(refreshFailure); }
+    } finally { starting = false; refresh(); }
+  }
+  async function recheck(path) {
+    if (busy()) return;
+    checking = true; refresh();
+    try { await reloadStatus(); }
+    catch (failure) { onError(failure); }
+    finally { checking = false; refresh(); focusCard(path, 'refresh'); }
+  }
+  async function forgetRecent(path) {
+    if (busy() || path === getMeta()?.project?.root) return;
+    removing = true; refresh();
+    try {
+      const result = await api('/api/project/recent', { method: 'DELETE', projectRoot: null, body: { path } });
+      await onRecentChanged(result.state);
+      onNotice(t('最近のプロジェクトの一覧から外しました．ファイルと草稿はそのままです．'));
+    } catch (failure) {
+      onError(failure);
+      try { await reloadStatus(); } catch (refreshFailure) { onError(refreshFailure); }
+    } finally { removing = false; refresh(); focusCard(path, 'forget'); }
   }
 
   function renderPaths(section, title, paths) {
@@ -117,9 +193,12 @@ export function createProjectHome({ list, api, getMeta, getUnsavedPaths = () => 
     updateConfirm();
   }
   async function inspect(path) {
-    if (isBlocked() || starting || active || ending || getMeta()?.build?.status === 'running') return;
+    if (busy() || getMeta()?.build?.status === 'running') return;
     starting = true; refresh();
     try {
+      await reloadStatus();
+      const status = projectStatusFor(getMeta(), path);
+      if (status.status !== 'available') { onNotice(statusText(status)); return; }
       const result = await beginAction();
       if (result === false) return;
       active = { path, inspection: null };
@@ -129,6 +208,7 @@ export function createProjectHome({ list, api, getMeta, getUnsavedPaths = () => 
     } catch (failure) {
       onError(failure);
       if (active) await finish();
+      try { await reloadStatus(); } catch (refreshFailure) { onError(refreshFailure); }
     } finally { starting = false; refresh(); }
   }
   function closeDialog() { if (!submitting && dialog.open) dialog.close('cancel'); }
@@ -139,9 +219,7 @@ export function createProjectHome({ list, api, getMeta, getUnsavedPaths = () => 
     catch (failure) { onError(failure); }
     finally {
       ending = false; refresh();
-      const card = [...list.querySelectorAll('[data-project-path]')].find(node => node.dataset.projectPath === path);
-      const control = card?.querySelector('[data-action="delete"]') || list.querySelector('button:not(:disabled)') || list.ownerDocument.getElementById('welcome-open');
-      if (control && !control.disabled) control.focus({ preventScroll: true });
+      focusCard(path, 'delete');
     }
   }
   async function deleteProject() {
@@ -168,7 +246,11 @@ export function createProjectHome({ list, api, getMeta, getUnsavedPaths = () => 
           message.textContent = t('確認後に内容が変わりました．最新の一覧を確認し，チェックとプロジェクト名をもう一度入力してください．'); message.hidden = false;
           focusCancel = true;
         } catch (refreshFailure) { error.textContent = String(refreshFailure.message || refreshFailure); error.hidden = false; }
-      } else { error.textContent = String(failure.message || failure); error.hidden = false; }
+      } else {
+        if ([400, 403, 404].includes(failure.status)) { active.inspection = null; acknowledge.checked = false; name.value = ''; }
+        error.textContent = String(failure.message || failure); error.hidden = false;
+      }
+      try { await reloadStatus(); } catch (refreshFailure) { onError(refreshFailure); }
     } finally { setSubmitting(false); if (focusCancel) cancel.focus({ preventScroll: true }); }
   }
   acknowledge.addEventListener('change', updateConfirm); name.addEventListener('input', updateConfirm);
@@ -182,5 +264,5 @@ export function createProjectHome({ list, api, getMeta, getUnsavedPaths = () => 
     if (active?.inspection) renderInspection(active.inspection, false);
   });
   refresh();
-  return { refresh, destroy() { stopLanguage(); if (dialog.open) dialog.close(); dialog.remove(); list.replaceChildren(); } };
+  return { refresh, destroy() { destroyed = true; stopLanguage(); if (dialog.open) dialog.close(); dialog.remove(); list.replaceChildren(); } };
 }

@@ -62,6 +62,7 @@ type buildRun struct {
 	sources         map[string]string
 	markdownInputs  map[string]bool
 	changedMarkdown map[string]bool
+	pdfName         string
 }
 
 type buildLogMessage struct {
@@ -284,12 +285,9 @@ func (a *App) finishBuild(run *buildRun, code *int, err error, pdf, pdfID string
 			run.synctex.ChangedDuringBuild = run.result.SourceChanged
 			a.synctexVersions[pdfID] = run.synctex
 		}
+		a.recordCompiledPDFLocked(project.Main, run.pdfName, pdfID, pdf, run.result.SourceChanged, run.markdownInputs)
 		a.pdfOrder = append(a.pdfOrder, pdfID)
-		for len(a.pdfOrder) > 2 {
-			delete(a.pdfVersions, a.pdfOrder[0])
-			delete(a.synctexVersions, a.pdfOrder[0])
-			a.pdfOrder = a.pdfOrder[1:]
-		}
+		a.trimPDFVersionsLocked()
 		if project.Root != "" {
 			if err := a.saveCachedBuild(project, run, pdf); err != nil {
 				a.appendMessageLocked(run, "\n[前回の PDF] 次の起動時に読み込む情報を保存できません: %v\n", err)
@@ -375,6 +373,7 @@ func (a *App) compile(run *buildRun, project Project, texBin string) {
 		a.finishBuild(run, &code, err, "", "")
 		return
 	}
+	run.pdfName = filepath.Base(pdfSource)
 	pdf, err := a.copySuccessfulPDF(project.Root, pdfSource, run.result.ID)
 	if err != nil {
 		a.finishBuild(run, &code, messages.Errorf("PDF を表示用にコピーできません: %w", err), "", "")
@@ -394,7 +393,7 @@ func (a *App) compile(run *buildRun, project Project, texBin string) {
 func (a *App) stopBuild(expectedProject ...string) error {
 	a.mu.Lock()
 	if len(expectedProject) > 0 {
-		if err := a.checkProjectLocked(expectedProject[0]); err != nil {
+		if err := a.checkProjectLocked(expectedProject[0], true); err != nil {
 			a.mu.Unlock()
 			return err
 		}

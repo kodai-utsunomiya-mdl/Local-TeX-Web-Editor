@@ -206,7 +206,7 @@ func inspectEntryTree(ctx context.Context, root, relative string) (projectEntry,
 	_, _ = fmt.Fprintf(hash, "%s\x00%d\x00%d\x00%d\n", relative, info.Mode(), info.Size(), info.ModTime().UnixNano())
 	if !info.IsDir() {
 		if info.Size() > maxAssetSize {
-			return entry, fail(http.StatusRequestEntityTooLarge, "128 MiB を超えるファイルの名前変更と削除は，OS のファイル管理画面で行ってください．")
+			return entry, fail(http.StatusRequestEntityTooLarge, "128 MiB を超えるファイルのコピー，名前変更，削除は，OS のファイル管理画面で行ってください．")
 		}
 		entry.ContentRevision, err = entryContentRevision(ctx, path, info)
 		if err != nil {
@@ -388,6 +388,7 @@ func (a *App) entryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var input struct {
+		Action   string `json:"action"`
 		Path     string `json:"path"`
 		NewPath  string `json:"newPath"`
 		Revision string `json:"revision"`
@@ -423,6 +424,14 @@ func (a *App) entryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method == http.MethodPost {
+		if input.Action == "copy" {
+			a.copyEntryLocked(w, r, input.Path, input.NewPath, input.Revision)
+			return
+		}
+		if input.Action != "" {
+			writeError(w, fail(http.StatusBadRequest, "ファイルの操作を確認してください．"))
+			return
+		}
 		clean, path, err := projectEntryPath(root, input.Path, true)
 		if err != nil {
 			writeError(w, err)

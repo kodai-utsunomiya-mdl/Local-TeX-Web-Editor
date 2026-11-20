@@ -1,6 +1,6 @@
 import { EditorState, TextSelection, NodeSelection, Selection, Plugin } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
-import { Slice } from 'prosemirror-model';
+import { Fragment, Slice } from 'prosemirror-model';
 import { baseKeymap, chainCommands, toggleMark, setBlockType, wrapIn, lift, exitCode, newlineInCode } from 'prosemirror-commands';
 import { keymap } from 'prosemirror-keymap';
 import { inputRules, InputRule, wrappingInputRule, textblockTypeInputRule, undoInputRule } from 'prosemirror-inputrules';
@@ -242,12 +242,157 @@ class ImageView {
   destroy() { this.version++; this.editor.releaseImage(this.asset); this.editor.imageViews.delete(this); }
 }
 
-function markInputRule(regexp, mark) {
-  return new InputRule(regexp, (state, match, start, end) => {
-    const from = start + match[0].length - match[1].length;
-    const text = match[2];
-    return state.tr.replaceWith(from, end, markdownSchema.text(text, [mark.create()])).removeStoredMark(mark);
-  }, { inCodeMark: false });
+function escapedAt(text, index) {
+  let backslashes = 0;
+  while (index > 0 && text[--index] === '\\') backslashes++;
+  return backslashes % 2 === 1;
+}
+
+// Defer formatting while an opening math or code delimiter is still being typed.
+// Existing inline nodes occupy one character, matching ProseMirror positions.
+function pendingInlineDelimiter(text) {
+  let closing = '', code = false;
+  for (let index = 0; index < text.length;) {
+    if (closing) {
+      if (code && text[index] === '`') {
+        const run = /^`+/.exec(text.slice(index))[0];
+        if (run === closing) { closing = ''; code = false; }
+        index += run.length;
+      } else if (!code && text.startsWith(closing, index) && !escapedAt(text, index)) {
+        index += closing.length; closing = '';
+      } else index++;
+      continue;
+    }
+    if (text.startsWith('\\(', index) || text.startsWith('\\[', index)) {
+      closing = text[index + 1] === '(' ? '\\)' : '\\]'; index += 2;
+    } else if (text[index] === '\\') index += 2;
+    else if (text[index] === '`') {
+      closing = /^`+/.exec(text.slice(index))[0]; code = true; index += closing.length;
+    } else if (text[index] === '$' && !/\s/.test(text[index + 1] || '')) {
+      const opening = text.startsWith('$`', index) ? '$`' : text.startsWith('$$', index) ? '$$' : '$';
+      closing = opening === '$`' ? '`$' : opening; index += opening.length;
+    } else index++;
+  }
+  return Boolean(closing);
+}
+
+function inlineInputContext(state, match, start, end, inserted) {
+  const from = start + match[0].length - inserted.length;
+  const $from = state.doc.resolve(from), $end = state.doc.resolve(end);
+  if (!$from.sameParent($end) || (state.storedMarks || $from.marks()).some(mark => mark.type.spec.code)) return null;
+  const before = $from.parent.textBetween(0, $from.parentOffset, '', '\ufffc') + inserted;
+  let syntax = before;
+  $from.parent.forEach((node, offset) => {
+    if (offset < $from.parentOffset && node.marks.some(mark => mark.type.spec.code)) {
+      const length = Math.min(node.nodeSize, $from.parentOffset - offset);
+      syntax = syntax.slice(0, offset) + '\ufffc'.repeat(length) + syntax.slice(offset + length);
+    }
+  });
+  return { from, start: $from.start(), before, syntax,
+    after: $end.parent.textBetween($end.parentOffset, $end.parent.content.size, '', '\ufffc') };
+}
+
+function parsedInlineCandidate(context, start) {
+  const previous = [...context.before.slice(Math.max(0, start - 2), start)].at(-1) || '';
+  const following = [...context.after.slice(0, 2)][0] || '';
+  // The surrounding characters give Markdown-it the actual emphasis and dollar
+  // boundaries. The outer text makes the input a paragraph even at line start.
+  const prefix = `a ${previous}`, suffix = `${following} z`;
+  const parsed = parseMarkdown(prefix + context.before.slice(start) + suffix);
+  const paragraph = parsed.firstChild;
+  if (parsed.childCount !== 1 || paragraph.type !== markdownSchema.nodes.paragraph || paragraph.content.size < prefix.length + suffix.length) return null;
+  return paragraph.content.cut(prefix.length, paragraph.content.size - suffix.length);
+}
+
+function mathInputRule() {
+  return new InputRule(/[^\n]*(?:\$|\\\))$/, (state, match, start, end, inserted) => {
+    const context = inlineInputContext(state, match, start, end, inserted);
+    if (!context) return null;
+    const text = context.before;
+    const opening = text.endsWith('`$') ? '$`' : text.endsWith('\\)') ? '\\(' : '$';
+    const closing = opening === '$`' ? '`$' : opening === '\\(' ? '\\)' : '$';
+    if (opening === '$' && text.endsWith('$$')) return null;
+    for (let index = Math.max(0, text.length - 500); index < text.length - opening.length - closing.length; index++) {
+      if (!text.startsWith(opening, index) || escapedAt(text, index) || pendingInlineDelimiter(context.syntax.slice(0, index))) continue;
+      if (context.syntax.slice(index) !== text.slice(index) || text.slice(index).includes('\ufffc')) continue;
+      if (opening === '$' && (text[index - 1] === '$' || text[index + 1] === '$' || text[index + 1] === '`')) continue;
+      const parsed = parsedInlineCandidate(context, index);
+      if (parsed?.childCount !== 1 || parsed.firstChild.type !== markdownSchema.nodes.math_inline || parsed.firstChild.attrs.delimiter !== opening) continue;
+      const from = context.start + index;
+      const transaction = state.tr.insertText(inserted, context.from, end);
+      const marks = state.storedMarks || transaction.doc.nodeAt(from)?.marks || [];
+      return transaction.replaceWith(from, context.start + text.length, parsed.firstChild.mark(marks)).setMeta('richUserEvent', 'input.format');
+    }
+    return null;
+  }, { inCodeMark: true });
+}
+
+function markInputRule() {
+  return new InputRule(/[^\n]*[*_~`]$/, (state, match, start, end, inserted) => {
+    const context = inlineInputContext(state, match, start, end, inserted);
+    if (!context) return null;
+    const text = context.before, closing = /([*_~`])\1*$/.exec(text)[0];
+    const types = closing[0] === '`' ? ['code'] : closing === '~~' ? ['strike']
+      : ['*', '_'].includes(closing[0]) && closing.length <= 3
+        ? closing.length === 3 ? ['em', 'strong'] : [closing.length === 2 ? 'strong' : 'em'] : [];
+    if (!types.length) return null;
+    for (let index = Math.max(0, text.length - 500); index < text.length - 2 * closing.length; index++) {
+      if (!text.startsWith(closing, index) || text[index - 1] === closing[0] || text[index + closing.length] === closing[0] || escapedAt(text, index) || pendingInlineDelimiter(context.syntax.slice(0, index))) continue;
+      if (context.syntax.slice(index) !== text.slice(index)) continue;
+      const parsed = parsedInlineCandidate(context, index);
+      if (!parsed?.childCount) continue;
+      const marks = types.map(name => parsed.firstChild.marks.find(mark => mark.type === markdownSchema.marks[name]));
+      if (marks.some(mark => !mark)) continue;
+      let allMarked = true;
+      parsed.forEach(node => { if (marks.some(mark => !mark.isInSet(node.marks))) allMarked = false; });
+      if (!allMarked) continue;
+      const from = context.start + index;
+      let transaction;
+      if (closing[0] === '`') {
+        transaction = state.tr.insertText(inserted, context.from, end);
+        const inherited = state.storedMarks || transaction.doc.nodeAt(from)?.marks || [];
+        transaction.replaceWith(from, context.start + text.length, markdownSchema.text(parsed.textBetween(0, parsed.size), [...inherited.filter(mark => mark.type !== markdownSchema.marks.code), ...marks]));
+      } else {
+        transaction = state.tr.insertText(inserted, context.from, end);
+        const to = context.start + text.length, original = transaction.doc.slice(from, to).content;
+        if (original.childCount === 1 && original.firstChild.isText) {
+          const content = [];
+          parsed.forEach(node => {
+            let combined = original.firstChild.marks;
+            for (const mark of node.marks) combined = mark.addToSet(combined);
+            content.push(node.mark(combined));
+          });
+          transaction.replaceWith(from, to, Fragment.fromArray(content));
+        } else {
+          // Earlier input rules may already have formatted part of the text or
+          // inserted an inline formula. Apply the outer mark to those nodes.
+          const closingFrom = to - closing.length;
+          transaction.delete(closingFrom, to).delete(from, from + closing.length);
+          for (const mark of marks) transaction.addMark(from, closingFrom - closing.length, mark);
+        }
+      }
+      for (const mark of marks) transaction.removeStoredMark(mark.type);
+      return transaction.setMeta('richUserEvent', 'input.format');
+    }
+    return null;
+  }, { inCodeMark: true });
+}
+
+function horizontalRuleTransaction(state, text, end) {
+  const { $from } = state.selection, { nodes } = markdownSchema;
+  if ($from.parent.type !== nodes.paragraph || end !== $from.end() || !/^ {0,3}(?:-{3,}|_{3,}|\*{3,})[ \t]*$/.test(text)) return null;
+  if ((state.storedMarks || $from.marks()).some(mark => mark.type.spec.code)) return null;
+  let code = false;
+  $from.parent.forEach(node => { if (node.marks.some(mark => mark.type.spec.code)) code = true; });
+  if (code) return null;
+  const parent = $from.node(-1), index = $from.index(-1), paragraph = nodes.paragraph.create();
+  const rule = nodes.horizontal_rule.create({ markup: text.trim() });
+  const content = parent.type === nodes.list_item && index === 0 ? [paragraph, rule, paragraph] : [rule, paragraph];
+  const replacement = Fragment.fromArray(content);
+  if (!parent.canReplace(index, index + 1, replacement)) return null;
+  const from = $from.before(), transaction = state.tr.replaceWith(from, $from.after(), replacement);
+  transaction.setSelection(TextSelection.create(transaction.doc, from + replacement.size - 1));
+  return transaction.setMeta('richUserEvent', 'input.format');
 }
 
 export class MarkdownRichEditor {
@@ -288,14 +433,15 @@ export class MarkdownRichEditor {
     this.stopLanguage = onLanguageChange(() => {
       translateElements(this.host); this.view.dom.setAttribute('aria-label', t('Markdown の直接編集')); this.updateTableTools();
     });
-    this.updateTableTools();
+    this.updateTableTools(); this.notifyStateChange();
   }
   get text() { return this.pendingExternal?.text ?? this.source.text; }
   get composing() { return this.view?.composing || [...this.embeddedViews].some(view => view.composing); }
   reportError(error) { this.options.onError?.(error); }
+  notifyStateChange() { this.options.onStateChange?.(); }
 
   plugins() {
-    const { nodes, marks } = markdownSchema;
+    const { nodes } = markdownSchema;
     const rules = [
       wrappingInputRule(/^\s*>\s$/, nodes.blockquote),
       wrappingInputRule(/^\s*([-+*])\s$/, nodes.bullet_list),
@@ -307,15 +453,19 @@ export class MarkdownRichEditor {
         if (!item) return null;
         return state.tr.delete(start, end).setNodeMarkup(item.position, undefined, { ...item.node.attrs, checked: match[1] !== ' ' });
       }),
-      markInputRule(/(?:^|\s)(\*\*([^*]+)\*\*)$/, marks.strong),
-      markInputRule(/(?:^|\s)(__([^_]+)__)$/, marks.strong),
-      markInputRule(/(?:^|\s)(\*([^*]+)\*)$/, marks.em),
-      markInputRule(/(?:^|\s)(~~([^~]+)~~)$/, marks.strike),
-      markInputRule(/(?:^|\s)(`([^`]+)`)$/, marks.code),
+      new InputRule(/^ {0,3}(?:-{3,}|_{3,}|\*{3,})[ \t]$/, (state, match, _start, end) => horizontalRuleTransaction(state, match[0], end), { inCodeMark: false }),
+      mathInputRule(),
+      markInputRule(),
     ];
+    const rulesPlugin = inputRules({ rules });
     const enter = (state, dispatch) => {
       if (isInTable(state)) { this.tab(state, dispatch, 1); return true; }
       const { $from, empty } = state.selection;
+      const rule = empty && horizontalRuleTransaction(state, $from.parent.textContent, state.selection.to);
+      if (rule) {
+        if (dispatch) dispatch(rule.setMeta(rulesPlugin, { transform: rule, from: state.selection.from, to: state.selection.to, text: '' }));
+        return true;
+      }
       const fence = empty && $from.parent.type === nodes.paragraph && $from.parentOffset === $from.parent.content.size && $from.parent.textContent.match(/^(`{3,}|~{3,})([^\s`~]*)$/);
       if (fence) {
         if (dispatch) dispatch(state.tr.delete($from.start(), $from.end()).setBlockType($from.start(), $from.start(), nodes.code_block, { params: fence[2], fence: fence[1] }));
@@ -333,7 +483,7 @@ export class MarkdownRichEditor {
       return true;
     };
     return [
-      inputRules({ rules }),
+      rulesPlugin,
       keymap({
         'Mod-b': () => this.command('bold'), 'Mod-i': () => this.command('italic'), 'Mod-Shift-x': () => this.command('strike'),
         'Mod-`': () => this.command('inlineCode'),
@@ -396,6 +546,7 @@ export class MarkdownRichEditor {
         this.options.onChange?.({ ...payload, userEvent: transaction.getMeta('richUserEvent') || (transaction.getMeta('uiEvent') === 'paste' ? 'input.paste' : 'input.type'), selection: this.sourceSelection() });
       }
       if (changed || !next.selection.eq(previous.selection)) this.options.onSelectionChange?.(this.sourceSelection());
+      this.notifyStateChange();
     } catch (error) { this.reportError(error); }
   }
 
@@ -405,7 +556,8 @@ export class MarkdownRichEditor {
     if (moved) {
       this.pendingExternal = null;
       if (this.host.contains(this.document.activeElement)) this.document.activeElement.blur();
-      this.replaceText(String(text), null);
+      const replaced = this.replaceText(String(text), null);
+      if (!replaced) this.notifyStateChange();
       for (const image of this.imageViews) image.refreshSource();
       for (const link of this.view.dom.querySelectorAll('a[data-rich-link]')) this.prepareLink(link, link.dataset.richLink);
     } else this.setText(String(text));
@@ -436,7 +588,7 @@ export class MarkdownRichEditor {
       transaction.setSelection(selectionAt(transaction.doc, anchor, head));
       this.view.updateState(this.view.state.apply(transaction));
     }
-    this.host.scrollTop = top; this.host.scrollLeft = left; this.updateTableTools();
+    this.host.scrollTop = top; this.host.scrollLeft = left; this.updateTableTools(); this.notifyStateChange();
     return true;
   }
   flushPendingText() {
@@ -454,7 +606,7 @@ export class MarkdownRichEditor {
     this.readOnly = value; this.host.classList.toggle('is-readonly', this.readOnly);
     this.view.setProps({ editable: () => !this.readOnly });
     for (const view of this.embeddedViews) view.setReadOnly(this.readOnly);
-    this.updateTableTools();
+    this.updateTableTools(); this.notifyStateChange();
   }
   focus() { if (!this.destroyed) this.view.focus(); }
   selectionSnapshot() { const { anchor, head } = this.view.state.selection; return { richAnchor: anchor, richHead: head }; }
@@ -471,7 +623,7 @@ export class MarkdownRichEditor {
     const selection = selectionAt(this.view.state.doc, this.source.positionAtSource(anchor), this.source.positionAtSource(head));
     let transaction = this.view.state.tr.setSelection(selection);
     if (scrollIntoView) transaction = transaction.scrollIntoView();
-    this.view.updateState(this.view.state.apply(transaction)); this.updateTableTools();
+    this.view.updateState(this.view.state.apply(transaction)); this.updateTableTools(); this.notifyStateChange();
   }
   insertMarkdown(text) {
     if (this.readOnly || this.destroyed) return false;
@@ -508,14 +660,18 @@ export class MarkdownRichEditor {
       this.view.dispatch(state.tr.replaceSelectionWith(node).scrollIntoView().setMeta('richUserEvent', 'input.insert')); result = true;
     } else if (name === 'math') {
       const displayMode = options.displayMode !== false;
-      const node = (displayMode ? nodes.math_block : nodes.math_inline).create({ tex: String(options.tex ?? 'x'), displayMode, delimiter: displayMode ? '$$' : '$`', equationNumber: '' });
-      const transaction = state.tr.replaceSelectionWith(node).scrollIntoView().setMeta('richUserEvent', 'input.insert');
+      if (displayMode && isInTable(state)) return false;
+      const delimiter = options.delimiter ?? (displayMode ? '$$' : '$`');
+      if (!(displayMode ? ['$$', '\\[', '```math'] : ['$`', '$', '\\(']).includes(delimiter)) throw new Error('math-delimiter');
+      const inherited = displayMode ? [] : (state.storedMarks || (state.selection.empty ? state.selection.$from.marks() : state.selection.$from.marksAcross(state.selection.$to)) || []).filter(mark => mark.type !== marks.code);
+      const node = (displayMode ? nodes.math_block : nodes.math_inline).create({ tex: String(options.tex ?? 'x'), displayMode, delimiter, equationNumber: '' }, null, inherited);
+      const transaction = state.tr.replaceSelectionWith(node, false).scrollIntoView().setMeta('richUserEvent', 'input.insert');
       let position = transaction.selection.from;
-      transaction.doc.descendants((child, offset) => { if (child === node) position = offset; });
+      transaction.doc.descendants((child, offset) => { if (child.type === node.type && child.attrs === node.attrs) position = offset; });
       transaction.setSelection(NodeSelection.create(transaction.doc, position));
       this.view.dispatch(transaction); this.focus();
       const created = [...this.embeddedViews].find(view => view instanceof MathView && view.getPos() === position);
-      if (created) created.open(true);
+      if (created) { if (options.tex == null) created.open(true); else created.close(); }
       return true;
     } else if (tableCommands[name]) result = tableCommands[name](state, dispatch);
     if (result) this.focus();

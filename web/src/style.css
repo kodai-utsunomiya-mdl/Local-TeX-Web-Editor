@@ -4,6 +4,7 @@
   background: #f4f6f8;
   font-synthesis: none;
   --surface: #ffffff;
+  --popup-shadow: 0 12px 32px #0003, 0 3px 8px #0002;
   --border: #e1e6eb;
   --border-strong: #cbd4dd;
   --muted: #758292;
@@ -105,8 +106,10 @@ h1, h2, h3, p { margin: 0; }
 .file-title { padding-left: 18px; padding-right: 9px; background: #fafbfd; }
 .file-title h2 { display: flex; align-items: center; gap: 9px; }
 .count-badge { font-size: 9px; font-weight: 450; color: #8793a0; background: #edf0f3; border: 1px solid #e8ecf0; border-radius: 4px; padding: 0 4px; line-height: 14px; }
-.file-filter-wrap { padding: 8px 9px; }
+.file-filter-wrap { display: flex; flex-direction: column; flex: 0 0 auto; gap: 6px; min-width: 0; padding: 8px 9px; }
 .file-filter-wrap input { width: 100%; border-color: #e3e8ee; font-size: 11px; padding: 8px 10px; background: #fff; }
+#file-sort { width: 100%; min-width: 0; height: 28px; padding: 3px 5px; font-size: 11px; border-color: var(--border); }
+#file-sort[hidden] { display: none; }
 .file-tree { flex: 1 1 auto; overflow: auto; padding: 1px 8px 20px; min-height: 0; scrollbar-width: thin; scrollbar-color: #c6cfd7 transparent; }
 .tree-list { list-style: none; margin: 0; padding: 0; }
 .tree-list .tree-list { padding-left: 12px; }
@@ -289,7 +292,7 @@ body.resizing * { cursor: inherit !important; user-select: none !important; }
 .conflict-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .conflict-columns label { font-size: 11px; color: #748594; min-width: 0; }
 .conflict-columns textarea { display: block; margin-top: 8px; width: 100%; height: min(39vh, 340px); resize: vertical; font: 10px/1.7 Consolas, "Yu Gothic UI", Meiryo, monospace; background: #fafcfd; color: #657687; white-space: pre; }
-.toast { position: fixed; bottom: 43px; left: 50%; transform: translateX(-50%); max-width: calc(100vw - 32px); border: 1px solid #cfe1da; border-radius: 7px; padding: 11px 18px; background: #f7fffb; color: #397966; box-shadow: 0 5px 22px #1d513b12; font-size: 12px; z-index: 20; }
+.toast { position: fixed; bottom: 43px; left: 50%; transform: translateX(-50%); max-width: min(560px, calc(100vw - 32px)); border: 1px solid #cfe1da; border-radius: 8px; padding: 12px 18px; background: #f7fffb; color: #397966; box-shadow: var(--popup-shadow); font-size: 13px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; z-index: 20; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .sidebar-collapsed .file-pane, .sidebar-collapsed .sidebar-splitter { display: none; }
 .sidebar-collapsed .workbench { --sidebar-track: 0px; --sidebar-divider: 0px; }
@@ -387,6 +390,7 @@ body.resizing * { cursor: inherit !important; user-select: none !important; }
   color: #d9e3ec;
   background: #131c25;
   --surface: #1b2632;
+  --popup-shadow: 0 14px 40px #0008, 0 4px 12px #0006;
   --text: #d9e3ec;
   --secondary: #a7bacb;
   --subtle: #17222d;
@@ -502,7 +506,25 @@ body.resizing * { cursor: inherit !important; user-select: none !important; }
 :root[data-palette] .editor-host .source-search button { background: var(--surface); color: var(--text); }
 :root[data-palette] .editor-host .source-search button[name="close"] { background: transparent; }
 :root[data-palette] .editor-host .source-search button:hover { background: var(--hover); }
-:root[data-palette] :is(.cm-tooltip, .cm-completionInfo) { color: var(--text); background: var(--surface); border-color: var(--border-strong); }
+:root[data-palette] :is(.toast, .file-context-menu, .editor-context-menu, .compiled-pdf-context-menu, .writing-menu-items, .pdf-menu, .pdf-citation-tooltip, .cm-tooltip, .cm-completionInfo),
+:root[data-palette] .pdf-view-controls[popover],
+:root[data-palette] .asset-view-controls[popover] {
+  --surface: var(--popup-surface);
+  --text: var(--popup-text);
+  --secondary: var(--popup-text);
+  --muted: var(--popup-muted);
+  --accent: var(--popup-accent);
+  --accent-soft: var(--popup-accent-soft);
+  --warning: var(--popup-warning);
+  --danger: var(--popup-danger);
+  --border-strong: var(--popup-border);
+  --border: color-mix(in srgb, var(--popup-border) 45%, var(--popup-surface));
+  color: var(--text);
+  background: var(--surface);
+  border-color: var(--border-strong);
+  box-shadow: var(--popup-shadow);
+}
+:root[data-palette] .cm-tooltip .cm-completionDetail { color: var(--muted); opacity: 1; }
 :root[data-palette] .cm-tooltip-autocomplete ul li[aria-selected] { color: var(--accent); background: var(--accent-soft); }
 :root[data-palette] .panel-splitter { background: var(--hover); }
 :root[data-palette] :is(.panel-splitter:hover, .panel-splitter.dragging, .panel-splitter:focus-visible) { background: var(--selection); }

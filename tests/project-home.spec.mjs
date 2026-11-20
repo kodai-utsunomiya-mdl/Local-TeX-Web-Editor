@@ -18,6 +18,7 @@ test.beforeAll(async () => {
         recentProjects: ['/projects/other', '/projects/current project', '/projects/other', ...Array.from({ length: 15 }, (_, index) => '/projects/project-' + index)] };
       window.requests = []; window.opened = []; window.resumes = 0; window.events = []; window.errors = []; window.notices = [];
       window.blocked = false; window.failInspection = false; window.conflictOnce = false; window.deferBegin = false; window.deferDeleted = false;
+      window.refreshCount = 0; window.nextStatuses = null; window.nextCurrentStatus = null; window.failOpen = false; window.deletedOutside = false;
       window.inspectionFor = path => ({ path, name: path.split('/').pop(), fileCount: 2, directoryCount: 1, revision: 'first',
         entries: [{ path: 'main.tex', directory: false, size: 128 }, { path: 'figures', directory: true, size: 0 }, { path: 'figures/plot.png', directory: false, size: 16 }],
         draftPaths: ['notes/draft.md'] });
@@ -26,7 +27,19 @@ test.beforeAll(async () => {
         isBlocked: () => blocked,
         beginAction: async () => { events.push('begin'); if (deferBegin) await new Promise(resolve => window.releaseBegin = resolve); blocked = true; },
         endAction: async () => { events.push('end'); blocked = false; },
-        onOpen: async path => { opened.push(path); }, onResume: () => { resumes++; },
+        refreshStatus: async () => {
+          refreshCount++;
+          if (nextStatuses) { meta.recentProjectStatuses = nextStatuses; nextStatuses = null; }
+          if (nextCurrentStatus) { meta.projectStatus = nextCurrentStatus; nextCurrentStatus = null; }
+        },
+        onRecentChanged: async state => { meta = state; },
+        onOpen: async path => {
+          if (failOpen) {
+            failOpen = false; nextStatuses = [{ path, status: 'missing', message: 'フォルダーを選び直してください．' }];
+            throw Object.assign(new Error('The folder moved before opening.'), { status: 404 });
+          }
+          opened.push(path);
+        }, onResume: () => { resumes++; },
         onDeleted: async result => {
           events.push('deleted-start'); if (deferDeleted) await new Promise(resolve => window.releaseDeleted = resolve);
           meta.project = null; meta.recentProjects = meta.recentProjects.filter(path => !result.removedProjects.includes(path)); events.push('deleted-end');
@@ -34,7 +47,14 @@ test.beforeAll(async () => {
         onError: error => errors.push(String(error.message || error)), onNotice: notice => notices.push(notice),
         api: async (endpoint, options = {}) => {
           requests.push({ endpoint, ...options }); const root = new URL(endpoint, location.origin).searchParams.get('path');
+          if (endpoint === '/api/project/recent') return { removed: true, path: options.body.path,
+            state: { ...meta, recentProjects: meta.recentProjects.filter(path => path !== options.body.path),
+              recentProjectStatuses: (meta.recentProjectStatuses || []).filter(value => value.path !== options.body.path) } };
           if (options.method !== 'DELETE') { if (failInspection) throw new Error('Inspection failed'); return inspectionFor(root); }
+          if (deletedOutside) {
+            nextCurrentStatus = { path: root, status: 'missing', message: 'フォルダーを選び直してください．' };
+            throw Object.assign(new Error('The folder was deleted outside the app.'), { status: 404 });
+          }
           if (conflictOnce) {
             conflictOnce = false;
             const project = inspectionFor(root); project.revision = 'second'; project.entries.push({ path: 'added.tex', directory: false, size: 9 }); project.fileCount++;
@@ -201,4 +221,63 @@ test('小さい画面でもロゴと長いパスを表示し，検査の失敗�
   await expect(page.locator('#project-delete-dialog')).not.toBeVisible();
   await expect(currentCard(page).locator('[data-action="delete"]')).toBeFocused();
   await expect.poll(() => page.evaluate(() => events.filter(event => event === 'end').length)).toBe(2);
+});
+
+test('外部で移動した最近のプロジェクトを案内し，一覧だけから外す', async ({ page }) => {
+  await openHome(page);
+  await page.evaluate(() => {
+    meta.recentProjectStatuses = [{ path: '/projects/other', status: 'missing', message: 'フォルダーを選び直してください．' }];
+    home.refresh();
+  });
+  const previous = page.locator('[data-project-path="/projects/other"]');
+  await expect(previous).toContainText('フォルダーが見つかりません');
+  await expect(previous.locator('[data-action="open"]')).toBeDisabled();
+  await expect(previous.locator('[data-action="delete"]')).toBeDisabled();
+  await previous.locator('[data-action="forget"]').click();
+  await expect(previous).toHaveCount(0);
+  await expect(currentCard(page).locator('[data-action="resume"]')).toBeEnabled();
+  expect(await page.evaluate(() => requests)).toEqual([{
+    endpoint: '/api/project/recent', method: 'DELETE', projectRoot: null, body: { path: '/projects/other' },
+  }]);
+  expect(await page.evaluate(() => events)).toEqual([]);
+  expect(await page.evaluate(() => meta.project.root)).toBe(currentPath);
+  expect(await page.evaluate(() => notices.at(-1))).toContain('ファイルと草稿はそのまま');
+});
+
+test('開く直前に移動したフォルダーの状態を更新し，再確認で復帰する', async ({ page }) => {
+  await openHome(page);
+  const previous = page.locator('[data-project-path="/projects/other"]');
+  await page.evaluate(() => { failOpen = true; });
+  await previous.locator('[data-action="open"]').click();
+  await expect(previous).toHaveAttribute('data-project-status', 'missing');
+  await expect(previous.locator('[data-action="open"]')).toBeDisabled();
+  expect(await page.evaluate(() => errors)).toEqual(['The folder moved before opening.']);
+  expect(await page.evaluate(() => opened)).toEqual([]);
+  await page.evaluate(() => { nextStatuses = [{ path: '/projects/other', status: 'available' }]; });
+  await previous.locator('[data-action="refresh"]').click();
+  await expect(previous).toHaveAttribute('data-project-status', 'available');
+  await expect(previous.locator('[data-action="open"]')).toBeFocused();
+  await expect(previous.locator('.project-home-status')).toHaveCount(0);
+  await previous.locator('[data-action="open"]').click();
+  expect(await page.evaluate(() => opened)).toEqual(['/projects/other']);
+});
+
+test('削除確認中にフォルダーがなくなった場合は確定を止め，編集中の本文へ戻れる', async ({ page }) => {
+  await openHome(page);
+  await currentCard(page).locator('[data-action="delete"]').click();
+  await fillConfirmation(page);
+  await page.evaluate(() => { deletedOutside = true; });
+  await page.locator('#project-delete-confirm').click();
+  await expect(page.locator('#project-delete-confirm')).toBeDisabled();
+  await expect(page.locator('#project-delete-error')).toHaveText('The folder was deleted outside the app.');
+  await expect(currentCard(page)).toHaveAttribute('data-project-status', 'missing');
+  await expect(currentCard(page).locator('.project-home-status-help')).toHaveText('フォルダーを選び直してください．');
+  await expect(page.locator('#project-delete-name')).toHaveValue('');
+  await expect(page.locator('#project-delete-acknowledge')).not.toBeChecked();
+  await page.locator('#project-delete-cancel').click();
+  await expect(currentCard(page).locator('[data-action="resume"]')).toBeFocused();
+  await expect(currentCard(page).locator('[data-action="delete"]')).toBeDisabled();
+  await currentCard(page).locator('[data-action="resume"]').click();
+  expect(await page.evaluate(() => resumes)).toBe(1);
+  expect(await page.evaluate(() => requests.filter(request => request.method === 'DELETE').length)).toBe(1);
 });
