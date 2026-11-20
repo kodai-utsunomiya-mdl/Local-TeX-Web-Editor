@@ -48,7 +48,8 @@ export async function launchLifecycleBrowser(profile) {
       if (startupError) throw startupError;
       if (!running()) throw new Error(`Chromium exited before its CDP endpoint was ready.\n${stderr}`);
       const activePort = await readFile(path.join(profile, 'DevToolsActivePort'), 'utf8').catch(error => {
-        if (error.code === 'ENOENT') return '';
+        // Windows can lock this file while Chromium writes its startup port.
+        if (error.code === 'ENOENT' || error.code === 'EBUSY') return '';
         throw error;
       });
       const port = Number(activePort.split('\n')[0]);
