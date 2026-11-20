@@ -78,6 +78,8 @@ const state = {
   activePath: '',
   projectGeneration: 0,
   projectEntriesVersion: 0,
+  statusRequestSequence: 0,
+  statusAppliedSequence: 0,
   toolsGeneration: 0,
   texPackages: null,
   openSequence: 0,
@@ -141,6 +143,7 @@ let fileTreeDrag = null;
 let compiledPDFList = null;
 let compiledPDFRenderSignature = '';
 let compiledPDFVisibleCount = 0;
+let recentRenderSignature = '';
 const editorSlots = {
   primary: { host: $('editor'), richHost: $('markdown-rich-primary'), element: $('source-pane-primary'), select: $('primary-document'), view: null, rich: null, path: '', cleanup: null },
   secondary: { host: $('editor-secondary'), richHost: $('markdown-rich-secondary'), element: $('source-pane-secondary'), select: $('secondary-document'), view: null, rich: null, path: '', cleanup: null },
@@ -268,18 +271,22 @@ function showProjectStatusNotice() {
   if (message && message !== state.projectStatusNotice && !state.homeVisible) showError(new Error(message), { label: t('プロジェクト'), run: showHome });
   state.projectStatusNotice = message;
 }
-function applyProjectStatuses(meta) {
-  if (!state.meta) return;
+function applyProjectStatuses(meta, sequence = ++state.statusRequestSequence) {
+  if (!state.meta || sequence < state.statusAppliedSequence) return false;
+  state.statusAppliedSequence = sequence;
+  const availableBefore = projectIsAvailable();
   state.meta.recentProjects = meta.recentProjects || [];
   state.meta.recentProjectStatuses = meta.recentProjectStatuses || [];
   if (meta.project?.root === state.meta.project?.root) state.meta.projectStatus = meta.projectStatus || null;
   renderRecent(); renderControls();
+  if (availableBefore !== projectIsAvailable()) scheduleAutoSave();
+  return true;
 }
 async function refreshProjectStatuses() {
   const generation = state.projectGeneration, entriesVersion = state.projectEntriesVersion;
+  const sequence = ++state.statusRequestSequence;
   const meta = await api('/api/state');
-  if (generation === state.projectGeneration) {
-    applyProjectStatuses(meta);
+  if (generation === state.projectGeneration && applyProjectStatuses(meta, sequence)) {
     if (meta.project?.root === state.meta?.project?.root && entriesVersion === state.projectEntriesVersion) applyProjectListing(meta.project);
     await refreshOpenDocuments({ force: true });
   }
@@ -1337,24 +1344,32 @@ async function resolveConflict(doc) {
 function recentPaths() {
   return (state.meta?.recentProjects || []).map(item => typeof item === 'string' ? item : item.root || item.path || '').filter(Boolean).slice(0, 12);
 }
+function renderRecentControls() {
+  const busy = !!state.folderPicker || !!state.operation || state.closed || $('project-dialog').dataset.busy === 'true';
+  for (const button of $('project-recent-list').querySelectorAll('.recent-project')) {
+    button.disabled = busy || projectStatusFor(state.meta, button.dataset.path).status !== 'available';
+  }
+}
 function renderRecent() {
   const paths = recentPaths();
   $('welcome-recent').hidden = paths.length === 0 && !state.meta?.project;
   $('project-recent').hidden = paths.length === 0;
+  const signature = JSON.stringify([paths, state.meta?.projectStatus, state.meta?.recentProjectStatuses, getLanguage()]);
+  if (signature === recentRenderSignature) { renderRecentControls(); projectHome?.refresh(); return; }
+  recentRenderSignature = signature;
   for (const id of ['project-recent-list']) {
     $(id).replaceChildren();
     for (const path of paths.slice(0, 6)) {
-      const button = document.createElement('button'); button.type = 'button'; button.className = 'recent-project'; button.title = path;
+      const button = document.createElement('button'); button.type = 'button'; button.className = 'recent-project'; button.title = path; button.dataset.path = path;
       const status = projectStatusFor(state.meta, path);
       const name = document.createElement('strong'); name.textContent = basename(path);
       const detail = document.createElement('span'); detail.textContent = status.status === 'available' ? path : `${path}\n${status.message}`; button.append(name, detail);
-      button.disabled = status.status !== 'available';
       if (status.message) button.title = `${path}\n${status.message}`;
       button.addEventListener('click', () => { showProjectDialog(); $('project-path').value = path; });
       $(id).append(button);
     }
   }
-  projectHome?.refresh();
+  renderRecentControls(); projectHome?.refresh();
 }
 function renderWorkspaceView() {
   const project = state.meta?.project;
@@ -1404,14 +1419,16 @@ async function completeProjectDeletion(result) {
   state.homeVisible = true; renderRecent(); renderWorkspaceView(); clearError();
 }
 
-async function applyMeta(meta, resetProject = false) {
-  if (state.closed) return;
+async function applyMeta(meta, resetProject = false, sequence = ++state.statusRequestSequence) {
+  if (state.closed || sequence < state.statusAppliedSequence) return false;
   if (!resetProject && state.meta?.project && meta.project?.root !== state.meta.project.root) {
     handleExternalProjectChange();
     return;
   }
+  const availableBefore = projectIsAvailable();
   if (resetProject && state.persistenceReady) { syncDrafts(); persistSession(); }
   const generation = resetProject ? ++state.projectGeneration : state.projectGeneration;
+  state.statusAppliedSequence = sequence;
   state.meta = meta;
   state.projectEntriesVersion++;
   state.texPackages = meta.texPackages || null;
@@ -1442,6 +1459,8 @@ async function applyMeta(meta, resetProject = false) {
   applyBuild(meta.build);
   if (project && resetProject) runTask(() => indexProject());
   await openInitialFile();
+  if (availableBefore !== projectIsAvailable()) scheduleAutoSave();
+  return true;
 }
 
 function showProjectDialog() {
@@ -1497,7 +1516,7 @@ function renderPickerState() {
   $('pick-project').textContent = pending ? t("選択画面を表示") : t("参照…");
   for (const id of ['project-path', 'project-tex-bin', 'open-project']) $(id).disabled = pending;
   $('pick-project').disabled = false;
-  for (const button of $('project-recent-list').querySelectorAll('button')) button.disabled = pending;
+  renderRecentControls();
 }
 function cancelPicker() {
   if (!state.folderPicker) return;
@@ -1586,8 +1605,9 @@ async function saveSettings(event) {
     savePreferences(); await sessionStore.flush();
     applyLanguage(language);
     if (languageChanged) {
+      const sequence = ++state.statusRequestSequence;
       const meta = await api('/api/state');
-      if (meta.project?.root === state.meta?.project?.root) await applyMeta(meta);
+      if (meta.project?.root === state.meta?.project?.root) await applyMeta(meta, false, sequence);
     }
     $('settings-dialog').close(); clearError(); updateAutoSaveStatus(); toast(t("設定を保存して反映しました．"));
   }
@@ -1616,9 +1636,12 @@ async function createShortcut(destination) {
 
 async function refreshFiles() {
   if (state.operation || !state.meta?.project) return;
+  const generation = state.projectGeneration, sequence = ++state.statusRequestSequence;
   const meta = await api('/api/state');
+  if (generation !== state.projectGeneration || sequence < state.statusAppliedSequence) return;
   if (meta.project?.root !== state.meta.project.root) { handleExternalProjectChange(); return; }
-  await applyMeta(meta); await refreshOpenDocuments({ force: true }); await indexProject(true); toast(t("ファイル一覧を更新しました．"));
+  if (!await applyMeta(meta, false, sequence)) return;
+  await refreshOpenDocuments({ force: true }); await indexProject(true); toast(t("ファイル一覧を更新しました．"));
 }
 
 function showNewFile(folder = '') {
@@ -1805,7 +1828,8 @@ async function createFile(event) {
     const { content } = fileTemplatePicker.getValue();
     const file = await api('/api/file', { method: 'PUT', body: { path, content, revision: '' } });
     created = makeDocument(file); state.documents.set(file.path, created);
-    const meta = await api('/api/state'); await applyMeta(meta);
+    const sequence = ++state.statusRequestSequence;
+    const meta = await api('/api/state'); await applyMeta(meta, false, sequence);
     $('new-file-dialog').close(); clearError();
   } catch (error) { $('new-file-error').textContent = error.message || String(error); $('new-file-error').hidden = false; }
   finally { setDialogBusy($('new-file-dialog'), false); setOperation(''); fileTemplatePicker.setBusy(false); }
@@ -1990,7 +2014,7 @@ function renderControls() {
   for (const control of $('markdown-editing').querySelectorAll('button, select')) control.disabled = busy;
   $('toggle-preview').disabled = state.closed;
   $('go-home').disabled = busy;
-  projectHome?.refresh(); renderWorkspaceView();
+  renderRecentControls(); projectHome?.refresh(); renderWorkspaceView();
   updateEditorModeControls(); updatePreviewVisibilityControls();
   updateNavigationControls();
   renderCompiledPDFList();
@@ -2043,9 +2067,11 @@ function handleExternalProjectChange() {
 }
 
 async function reconnect() {
+  const generation = state.projectGeneration, sequence = ++state.statusRequestSequence;
   const meta = await api('/api/state');
+  if (generation !== state.projectGeneration || sequence < state.statusAppliedSequence) return;
   if (state.meta?.project && meta.project?.root !== state.meta.project.root) { handleExternalProjectChange(); return; }
-  await applyMeta(meta, !state.meta); clearError();
+  if (await applyMeta(meta, !state.meta, sequence)) clearError();
 }
 
 async function heartbeat({ forceFiles = false } = {}) {
@@ -2057,10 +2083,11 @@ async function heartbeat({ forceFiles = false } = {}) {
   const generation = state.projectGeneration;
   const toolsGeneration = state.toolsGeneration;
   const entriesVersion = state.projectEntriesVersion;
+  const sequence = ++state.statusRequestSequence;
   try {
     const meta = await api('/api/state');
     if (state.closed || generation !== state.projectGeneration) return;
-    applyProjectStatuses(meta);
+    if (!applyProjectStatuses(meta, sequence)) return;
     if (state.meta?.project && meta.project?.root !== state.meta.project.root) { if (!state.externalProjectChanged) handleExternalProjectChange(); return; }
     if (state.operation) state.heartbeatPending = true;
     else if (entriesVersion === state.projectEntriesVersion) {
@@ -2312,9 +2339,9 @@ function updateAutoSaveStatus() { $('autosave-status').textContent = state.prefe
 function scheduleAutoSave() {
   clearTimeout(state.autoSaveTimer);
   updateAutoSaveStatus();
-  if (!state.preferences.autoSave || state.closed || !state.persistenceReady) return;
+  if (!state.preferences.autoSave || state.closed || !state.persistenceReady || !projectIsAvailable()) return;
   state.autoSaveTimer = setTimeout(() => runTask(async () => {
-    if (state.operation || isRunning() || state.externalProjectChanged || document.querySelector('dialog[open]')) return;
+    if (state.operation || isRunning() || !projectIsAvailable() || state.externalProjectChanged || document.querySelector('dialog[open]')) return;
     const generation = state.projectGeneration;
     for (const doc of state.documents.values()) {
       if (doc.saving) await doc.saving;
@@ -3231,8 +3258,9 @@ async function initialise() {
   setOperation('initialising');
   try {
     await loadPreferences();
+    const sequence = ++state.statusRequestSequence;
     const meta = await api('/api/state');
-    await applyMeta(meta, true);
+    await applyMeta(meta, true, sequence);
     if (meta.installationError) showError(new Error(meta.installationError));
     state.heartbeat = setInterval(() => runTask(heartbeat), 30000);
   } catch (error) { showError(error); }

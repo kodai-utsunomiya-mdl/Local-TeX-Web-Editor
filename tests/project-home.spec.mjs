@@ -269,7 +269,9 @@ test('削除確認中にフォルダーがなくなった場合は確定を止�
   await page.evaluate(() => { deletedOutside = true; });
   await page.locator('#project-delete-confirm').click();
   await expect(page.locator('#project-delete-confirm')).toBeDisabled();
-  await expect(page.locator('#project-delete-error')).toContainText('フォルダーを選び直してください');
+  await expect(page.locator('#project-delete-error')).toHaveText('The folder was deleted outside the app.');
+  await expect(currentCard(page)).toHaveAttribute('data-project-status', 'missing');
+  await expect(currentCard(page).locator('.project-home-status-help')).toHaveText('フォルダーを選び直してください．');
   await expect(page.locator('#project-delete-name')).toHaveValue('');
   await expect(page.locator('#project-delete-acknowledge')).not.toBeChecked();
   await page.locator('#project-delete-cancel').click();

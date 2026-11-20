@@ -49,7 +49,7 @@ test('文書ごとの PDF を選び，実際の名前で保存・コピーして
   await expect(page.getByTestId('pdf-canvas')).toHaveAttribute('data-build-id', first.pdfBuildId);
   await page.locator('#file-filter').fill('submission.pdf');
   await expect(page.locator('.compiled-pdf-button')).toHaveCount(3);
-  await expect(page.locator('.tree-empty')).toHaveCount(0);
+  await expect(page.locator('#file-tree .tree-empty')).toHaveCount(0);
   await page.locator('#file-filter').fill('second.tex');
   await expect(page.locator('.compiled-pdf-button')).toHaveCount(1);
   await page.locator('#file-filter').fill('');

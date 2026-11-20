@@ -15,6 +15,14 @@ async function syncFromComputer(page) {
 
 test('PC 上で変更した原稿を読み直し，未保存の編集がある場合は両方の内容を確認できる', async ({ page, session }, testInfo) => {
   await openProject(session); await openEditor(page, session); await setAutoSave(page, false);
+  await page.locator('#show-project').click();
+  const recent = page.locator('#project-recent-list .recent-project').first();
+  await recent.focus();
+  await recent.evaluate(element => { window.focusedRecentProject = element; });
+  await syncFromComputer(page);
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  expect(await page.evaluate(() => window.focusedRecentProject.isConnected && document.activeElement === window.focusedRecentProject)).toBe(true);
+  await page.locator('#project-dialog [data-close-dialog="project-dialog"]').last().click();
   const file = path.join(session.project, 'main.tex'), original = await readFile(file, 'utf8');
   const first = `${original}\n% first change from another editor\n`;
   await writeFile(file, first); await syncFromComputer(page);
@@ -46,13 +54,13 @@ test('PC 上で変更した原稿を読み直し，未保存の編集がある�
 });
 
 test('PC 上で削除した原稿は草稿と確認画面から作成し直せる', async ({ page, session }) => {
-  await openProject(session); await openEditor(page, session); await setAutoSave(page, false);
+  const meta = await openProject(session); await openEditor(page, session); await setAutoSave(page, false);
   const file = path.join(session.project, 'main.tex'), original = (await readFile(file, 'utf8')).replaceAll('\r\n', '\n');
   await rm(file); await syncFromComputer(page);
   await expect(page.getByTestId('file-main.tex')).toHaveCount(0);
   await expect(page.locator('#conflict-banner')).toContainText('PC 上のファイルが見つかりません');
   await expect(source(page)).toContainText('documentclass');
-  const drafts = `/api/storage?key=${encodeURIComponent(`drafts:${session.project}`)}`;
+  const drafts = `/api/storage?key=${encodeURIComponent(`drafts:${meta.project.root}`)}`;
   await expect.poll(async () => (await json(session, drafts)).value?.entries?.find(entry => entry.path === 'main.tex')?.content).toBe(original);
   await page.locator('#review-conflict').click();
   await expect(page.locator('#conflict-description')).toContainText('ファイルを作成し直します');
