@@ -27,6 +27,7 @@
   <link rel="stylesheet" href="/markdown-rich-editor.css">
   <link rel="stylesheet" href="/document-tools.css">
   <link rel="stylesheet" href="/file-actions.css">
+  <link rel="stylesheet" href="/editor-context-menu.css">
   <link rel="stylesheet" href="/file-import.css">
   <link rel="stylesheet" href="/project-home.css">
   <link rel="stylesheet" href="/katex/katex.min.css">
@@ -93,7 +94,15 @@
             <button type="button" id="refresh-files" class="icon-button" aria-label="Refresh the file list" title="Refresh the file list" data-i18n-aria-label="ファイル一覧を更新" data-i18n-title="ファイル一覧を更新">↻</button>
           </div>
         </div>
-        <div class="file-filter-wrap"><input id="file-filter" type="search" placeholder="Find files" aria-label="Find files" autocomplete="off" spellcheck="false" data-i18n-placeholder="ファイルを検索" data-i18n-aria-label="ファイルを検索"></div>
+        <div class="file-filter-wrap">
+          <input id="file-filter" type="search" placeholder="Find files" aria-label="Find files" autocomplete="off" spellcheck="false" data-i18n-placeholder="ファイルを検索" data-i18n-aria-label="ファイルを検索">
+          <select id="file-sort" data-testid="file-sort" aria-label="File sort order" title="Show folders first and sort within each folder." data-i18n-aria-label="ファイルの並び順" data-i18n-title="フォルダーを先に表示し，各階層で並び替えます．">
+            <option value="name-asc" data-i18n="名前 (昇順)">Name (A to Z)</option>
+            <option value="name-desc" data-i18n="名前 (降順)">Name (Z to A)</option>
+            <option value="modified-desc" data-i18n="更新日時 (新しい順)">Date modified (newest first)</option>
+            <option value="modified-asc" data-i18n="更新日時 (古い順)">Date modified (oldest first)</option>
+          </select>
+        </div>
         <nav id="file-tree" class="file-tree" aria-label="Files" data-i18n-aria-label="ファイル一覧"></nav>
         <nav id="outline-tree" data-testid="outline-tree" class="outline-tree" aria-label="Source outline" hidden data-i18n-aria-label="原稿のアウトライン"></nav>
         <div class="file-footer"><span class="local-dot" aria-hidden="true"></span><span id="project-root" title=""></span></div>
@@ -265,7 +274,7 @@
       <p id="store-installation-note" class="field-help" hidden data-i18n="このアプリのインストールと更新は Windows が管理しています．スタートメニューから起動できます．">Windows manages installation and updates for this app. Open it from the Start menu.</p>
       <section class="application-details" aria-label="About the app" data-i18n-aria-label="アプリの情報"><dl><div><dt><span data-i18n="アプリのバージョン">App version</span></dt><dd id="application-version"></dd></div><div><dt><span data-i18n="起動中の実行ファイル">Running executable</span></dt><dd id="application-executable"></dd></div></dl></section>
       <p id="settings-error" class="form-error" role="alert" hidden></p>
-      <div class="dialog-actions"><button type="button" class="button" data-close-dialog="settings-dialog"><span data-i18n="キャンセル">Cancel</span></button><button type="submit" id="save-settings" class="button button-primary"><span data-i18n="設定を保存">Save settings</span></button></div>
+      <div class="dialog-actions"><button type="button" class="button" data-close-dialog="settings-dialog"><span data-i18n="キャンセル">Cancel</span></button><button type="submit" id="save-settings" class="button button-primary"><span data-i18n="設定を保存して反映">Save and apply settings</span></button></div>
     </form>
   </dialog>
 

@@ -86,9 +86,9 @@ export function registerInterfaceWorkflowTests({ test, openProject, openEditor, 
     };
 
     await page.getByTestId('settings-button').click();
-    await expectLanguage('ja', '編集とコンパイルの設定', '設定を保存');
+    await expectLanguage('ja', '編集とコンパイルの設定', '設定を保存して反映');
     await language.selectOption('en');
-    await expectLanguage('en', 'Editing and compilation settings', 'Save settings');
+    await expectLanguage('en', 'Editing and compilation settings', 'Save and apply settings');
     expect(await savedLanguage()).toBe('ja');
     await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
     await expect(dialog).not.toBeVisible();
@@ -97,9 +97,9 @@ export function registerInterfaceWorkflowTests({ test, openProject, openEditor, 
     expect(await savedLanguage()).toBe('ja');
 
     await page.getByTestId('settings-button').click();
-    await expectLanguage('ja', '編集とコンパイルの設定', '設定を保存');
+    await expectLanguage('ja', '編集とコンパイルの設定', '設定を保存して反映');
     await language.selectOption('en');
-    await expectLanguage('en', 'Editing and compilation settings', 'Save settings');
+    await expectLanguage('en', 'Editing and compilation settings', 'Save and apply settings');
     // Move focus away from the native select before using Escape to close
     // the dialog, so the key cannot merely dismiss the select's popup.
     await page.locator('#editor-font-size').focus();
@@ -110,7 +110,7 @@ export function registerInterfaceWorkflowTests({ test, openProject, openEditor, 
 
     await page.getByTestId('settings-button').click();
     await language.selectOption('en');
-    await expectLanguage('en', 'Editing and compilation settings', 'Save settings');
+    await expectLanguage('en', 'Editing and compilation settings', 'Save and apply settings');
     await page.screenshot({ path: testInfo.outputPath('settings-language-before-saving.png') });
     await page.locator('#save-settings').click();
     await expect(dialog).not.toBeVisible();
@@ -119,9 +119,9 @@ export function registerInterfaceWorkflowTests({ test, openProject, openEditor, 
     await expect(source(page)).toBeVisible();
     await expect(page.getByTestId('settings-button')).toHaveAccessibleName('Settings');
     await page.getByTestId('settings-button').click();
-    await expectLanguage('en', 'Editing and compilation settings', 'Save settings');
+    await expectLanguage('en', 'Editing and compilation settings', 'Save and apply settings');
     await language.selectOption('ja');
-    await expectLanguage('ja', '編集とコンパイルの設定', '設定を保存');
+    await expectLanguage('ja', '編集とコンパイルの設定', '設定を保存して反映');
     expect(await savedLanguage()).toBe('en');
     await page.locator('#editor-font-size').focus();
     await page.keyboard.press('Escape');

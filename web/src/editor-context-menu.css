@@ -1,0 +1,5 @@
+.editor-context-menu { position: fixed; z-index: 1200; min-width: 210px; max-width: min(310px, calc(100vw - 12px)); max-height: calc(100dvh - 12px); overflow-y: auto; padding: 6px; border: 1px solid var(--border-strong); border-radius: 8px; color: var(--text); background: var(--surface); box-shadow: 0 8px 28px #0004; }
+.editor-context-menu button { display: block; width: 100%; min-height: 34px; padding: 7px 11px; border: 0; border-radius: 4px; background: transparent; color: inherit; text-align: left; font-size: 12px; }
+.editor-context-menu button:hover, .editor-context-menu button:focus { background: var(--accent-soft); outline: none; }
+.editor-context-menu button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.editor-context-menu-hint { margin: 5px 0 0; padding: 9px 11px 5px; border-top: 1px solid var(--border); color: var(--muted); font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }

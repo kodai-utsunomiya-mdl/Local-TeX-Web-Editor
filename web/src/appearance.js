@@ -194,6 +194,14 @@ export function resolveAppearance(value, systemDark = false) {
     colors[name] = readableColor(mix(color, colors.text, .15), [colors.surface, colors[`${name}-bg`]]);
     colors[`${name}-border`] = mix(colors.surface, colors[name], .4);
   }
+  const popup = mix(colors.surface, textOn(colors.surface), luminance(colors.surface) < .18 ? .14 : .04);
+  colors['popup-surface'] = popup;
+  colors['popup-accent-soft'] = tintedBackground(popup, colors.accent, .12);
+  const popupBackgrounds = [popup, colors['popup-accent-soft']];
+  for (const name of ['text', 'muted', 'accent', 'warning', 'danger']) {
+    colors[`popup-${name}`] = readableColor(colors[name], popupBackgrounds);
+  }
+  colors['popup-border'] = readableColor(colors['border-strong'], [colors.surface, popup], 3);
   colors['line-highlight'] = colors.accent + (theme === 'dark' ? '14' : '0d');
   return { ...appearance, theme, colors, fontFamily: fonts[appearance.editorFont] };
 }

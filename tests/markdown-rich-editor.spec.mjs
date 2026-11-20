@@ -16,7 +16,7 @@ test.beforeAll(async () => {
         import { history, undo, redo, isolateHistory } from '@codemirror/commands';
         import { setLanguage } from './i18n.js';
         setLanguage('ja');
-        window.richChanges = []; window.richSelections = []; window.richErrors = []; window.richLinks = []; window.revokedImages = [];
+        window.richChanges = []; window.richSelections = []; window.richErrors = []; window.richLinks = []; window.revokedImages = []; window.richStateChanges = 0;
         const revoke = URL.revokeObjectURL.bind(URL); URL.revokeObjectURL = url => { revokedImages.push(url); revoke(url); };
         let canonical;
         const applySource = transaction => {
@@ -26,7 +26,7 @@ test.beforeAll(async () => {
         };
         window.openRich = (text, path = 'notes/main.md', projectRoot = '/project/原稿') => {
           window.rich?.destroy();
-          richChanges.length = richSelections.length = richErrors.length = richLinks.length = 0;
+          richChanges.length = richSelections.length = richErrors.length = richLinks.length = 0; richStateChanges = 0;
           canonical = EditorState.create({ doc: text, extensions: [history()] });
           window.rich = new MarkdownRichEditor({ host: document.getElementById('rich-host'), text, path, projectRoot, token: 'rich-test-token',
             onChange: change => {
@@ -37,6 +37,7 @@ test.beforeAll(async () => {
               rich.setText(canonical.doc.toString(), transaction.changes);
             },
             onSelectionChange: selection => { richSelections.push(selection); canonical = canonical.update({ selection }).state; },
+            onStateChange: () => { richStateChanges++; },
             onUndo: () => undo({ state: canonical, dispatch: applySource }), onRedo: () => redo({ state: canonical, dispatch: applySource }),
             onFind: () => { window.findRequested = true; },
             onOpenFile: (path, options) => richLinks.push({ path, ...options }), onError: error => richErrors.push(String(error.message || error)),
@@ -259,4 +260,104 @@ test('画像を上書きした後，同じ画像の表示をまとめて更新�
   await expect(first).toHaveAttribute('src', /^blob:/);
   await expect(second).toHaveAttribute('src', await first.getAttribute('src'));
   await checkErrors(page);
+});
+
+
+test('横線を Enter と Space で確定して続きへ進み，入力規則を取り消せる', async ({ page }) => {
+  await openEditor(page, '');
+  await page.locator('.markdown-rich-document').click(); await page.keyboard.type('---');
+  await expect(page.locator('.markdown-rich-document hr')).toHaveCount(0);
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.markdown-rich-document hr')).toHaveCount(1);
+  expect(await page.evaluate(() => rich.view.state.selection.$from.parent.type.name)).toBe('paragraph');
+  await page.keyboard.press('Backspace');
+  await expect(page.locator('.markdown-rich-document hr')).toHaveCount(0);
+  await expect(page.locator('.markdown-rich-document p')).toHaveText('---');
+  await page.keyboard.press('Space');
+  await expect(page.locator('.markdown-rich-document hr')).toHaveCount(1);
+  await page.keyboard.type('After');
+  await expect(page.locator('.markdown-rich-document p')).toHaveText('After');
+  expect(await page.evaluate(() => sourceText())).toBe('---\n\nAfter');
+  await checkErrors(page);
+});
+
+test('日本語に接した数式を入力した区切りで変換し，原稿の Undo と Redo で戻す', async ({ page }) => {
+  await openEditor(page, '日本語の後');
+  for (const notation of ['$x$', '$`x_1`$', '\\(x^2\\)']) {
+    await page.evaluate(() => { openRich('日本語の後'); rich.selectSource(3); rich.focus(); });
+    await page.keyboard.type(notation.slice(0, -1));
+    await expect(page.locator('.rich-math-inline')).toHaveCount(0);
+    const before = await page.evaluate(() => sourceText());
+    await page.keyboard.type(notation.slice(-1));
+    await expect(page.locator('.rich-math-inline .katex')).toHaveCount(1);
+    expect(await page.evaluate(() => sourceText())).toBe(`日本語${notation}の後`);
+    await page.keyboard.press('Control+z');
+    await expect(page.locator('.rich-math-inline')).toHaveCount(0);
+    expect(await page.evaluate(() => sourceText())).toBe(before);
+    await page.keyboard.press('Control+Shift+Z');
+    await expect(page.locator('.rich-math-inline .katex')).toHaveCount(1);
+    expect(await page.evaluate(() => sourceText())).toBe(`日本語${notation}の後`);
+    await checkErrors(page);
+  }
+});
+
+test('日本語に続く装飾を変換し，コードとエスケープした数式を文字として編集する', async ({ page }) => {
+  await openEditor(page, '日本語');
+  for (const [notation, selector] of [['**太字**', 'strong'], ['*斜体*', 'em'], ['~~取消~~', 's'], ['`コード`', 'code']]) {
+    await page.evaluate(() => { openRich('日本語'); rich.selectSource(3); rich.focus(); });
+    await page.keyboard.type(notation);
+    await expect(page.locator(`.markdown-rich-document ${selector}`)).toHaveCount(1);
+    expect(await page.evaluate(() => sourceText())).toBe(`日本語${notation}`);
+    await checkErrors(page);
+  }
+  await page.evaluate(() => { openRich(''); rich.focus(); });
+  await page.keyboard.type('`$x$ **bold**`');
+  await expect(page.locator('.markdown-rich-document code')).toHaveText('$x$ **bold**');
+  await expect(page.locator('.rich-math-inline')).toHaveCount(0);
+  await page.evaluate(() => { openRich(''); rich.focus(); });
+  await page.keyboard.type('\\$x$');
+  await expect(page.locator('.markdown-rich-document p')).toHaveText('\\$x$');
+  await expect(page.locator('.rich-math-inline')).toHaveCount(0);
+  await checkErrors(page);
+});
+
+test('IME の確定後に数式を変換し，ツールバーへ storedMarks と外部状態の変更を通知する', async ({ page }) => {
+  await openEditor(page, '');
+  await page.locator('.markdown-rich-document').click();
+  await page.evaluate(() => {
+    rich.view.dom.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true, data: '' }));
+    rich.view.dispatch(rich.view.state.tr.insertText('日本語$`x`$'));
+  });
+  await expect(page.locator('.rich-math-inline')).toHaveCount(0);
+  await expect(page.locator('.markdown-rich-document p')).toHaveText('日本語$`x`$');
+  await page.evaluate(() => rich.view.dom.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, data: '日本語$`x`$' })));
+  await expect(page.locator('.rich-math-inline .katex')).toHaveCount(1);
+  expect(await page.evaluate(() => sourceText())).toBe('日本語$`x`$');
+  expect(await page.evaluate(() => {
+    openRich('Text');
+    const before = richStateChanges; rich.command('bold');
+    return richStateChanges > before && rich.view.state.storedMarks?.some(mark => mark.type.name === 'strong');
+  })).toBe(true);
+  expect(await page.evaluate(() => {
+    const before = richStateChanges; rich.setText('External'); rich.selectSource(2); rich.setReadOnly(true);
+    return richStateChanges >= before + 3;
+  })).toBe(true);
+  await checkErrors(page);
+});
+
+test('指定した区切りで数式を挿入し，渡された TeX は表示状態で示す', async ({ page }) => {
+  await openEditor(page, '');
+  for (const [displayMode, delimiter] of [[false, '$`'], [false, '$'], [false, '\\('], [true, '$$'], [true, '\\[']]) {
+    await page.evaluate(({ displayMode, delimiter }) => { openRich(''); rich.command('math', { tex: 'x_1', displayMode, delimiter }); }, { displayMode, delimiter });
+    await expect(page.locator('.rich-math .katex')).toHaveCount(1);
+    await expect(page.locator('.rich-math-input:visible')).toHaveCount(0);
+    expect(await page.evaluate(() => rich.view.state.selection.node.attrs.delimiter)).toBe(delimiter);
+    await page.locator('.rich-math-preview').click();
+    await expect(page.locator('.rich-math-input:visible')).toHaveCount(1);
+    await page.evaluate(() => rich.command('math', { tex: 'y^2', displayMode: false, delimiter: '$`' }));
+    await expect(page.locator('.rich-math')).toHaveCount(1);
+    await expect(page.locator('.rich-math-input:visible')).toHaveCount(0);
+    expect(await page.evaluate(() => sourceText())).toBe('$`y^2`$');
+    await checkErrors(page);
+  }
 });

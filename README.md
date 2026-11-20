@@ -4,11 +4,11 @@ English | [日本語](README.ja.md) · [Website and guide](https://kodai-utsunom
 
 [![Get the free Windows app from Microsoft Store](docs/download-store.svg)](https://apps.microsoft.com/detail/9P6QF32N19HG)
 &nbsp;&nbsp;
-[![Download Windows ZIP](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.9/local-tex-web-editor-0.1.9-windows-x64.zip)
+[![Download Windows ZIP](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.10/local-tex-web-editor-0.1.10-windows-x64.zip)
 &nbsp;&nbsp;
-[![Download for macOS](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.9/local-tex-web-editor-0.1.9-macos-universal.zip)
+[![Download for macOS](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.10/local-tex-web-editor-0.1.10-macos-universal.zip)
 
-**v0.1.9** · [All downloads and release notes](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [Requirements](#requirements) · [App size](#app-files-and-storage) · [Get started](#download-and-launch)
+**v0.1.10** · [All downloads and release notes](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [Requirements](#requirements) · [App size](#app-files-and-storage) · [Get started](#download-and-launch)
 
 Edit TeX documents in your browser on Windows or macOS, and compile them with TeX Live on your computer. The editor and PDF preview appear in the same window. Launching the app opens a `localhost` page in your default browser. Markdown editing and preview are also supported.
 
@@ -122,7 +122,7 @@ Microsoft Store manages installation and app updates. TeX Live is installed sepa
 #### ZIP download
 
 1. Open [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) and select the latest version.
-2. Under **Assets**, download `local-tex-web-editor-0.1.9-windows-x64.zip`. The **Source code** archives contain the files for development.
+2. Under **Assets**, download `local-tex-web-editor-0.1.10-windows-x64.zip`. The **Source code** archives contain the files for development.
 3. Extract the ZIP and double-click `local-tex-web-editor.exe`.
 4. In the browser window, choose your project folder. You can also enter its path.
 5. If TeX Live is not found automatically, open Settings and select the folder containing `latexmk.exe`, for example `C:\texlive\2025\bin\windows`.
@@ -132,7 +132,7 @@ The Windows executable in the ZIP download does not have a code signature. If Sm
 
 ### macOS
 
-1. Under **Assets** in [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases), download `local-tex-web-editor-0.1.9-macos-universal.zip`. The same ZIP supports Apple Silicon and Intel.
+1. Under **Assets** in [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases), download `local-tex-web-editor-0.1.10-macos-universal.zip`. The same ZIP supports Apple Silicon and Intel.
 2. Extract the ZIP and move `Local TeX Web Editor.app` to **Applications**.
 3. Open **Local TeX Web Editor** from Finder or Spotlight. The editor opens in your browser.
 4. Open your project folder. If TeX is not found automatically, select `/Library/TeX/texbin` in Settings.
@@ -176,7 +176,7 @@ Launching the `.exe` from a new ZIP updates the installed copy and the Start men
 
 ## Edit documents
 
-The interface starts in **English**. In **Settings → Language / 言語設定**, select **English** or **日本語** to see the interface change immediately. **Save** uses the selected language for future sessions; **Cancel** or `Esc` returns to the saved language. The label always shows both languages. Documents, PDFs, and Markdown content are displayed as written.
+The interface starts in **English**. In **Settings → Language / 言語設定**, select **English** or **日本語** to see the interface change immediately. **Save and apply settings** uses the selected language for future sessions; **Cancel** or `Esc` returns to the saved language. The label always shows both languages. Documents, PDFs, and Markdown content are displayed as written.
 
 Open `.tex`, `.bib`, Markdown, Python, JavaScript, and other supported text files from the file list on the left. Each file opens in a tab, and you can drag tabs to change their order. Use a mouse wheel, horizontal trackpad gesture, or touch to move through a long tab strip. **Close all tabs** above the editor offers Save, Discard, or Cancel when there are unsaved edits. The next session restores the open tabs and their order, including a strip with no open tabs. Settings lets you choose an editor font size from 8 to 40 px; the default is 14 px. The font size is saved for future sessions.
 
@@ -199,7 +199,7 @@ Selected text has a visible background in both themes, including selections on t
 | View two source documents | Click **Open two source editors**, then choose a document above each editor |
 | Compare earlier text | Open **Editing tools → Document history** |
 | Inspect a citation or reference | Open **Editing tools → References and citations** to find definitions and uses |
-| Insert an image or table | Use **Editing tools → Insert an image** or **Insert a table** |
+| Insert an image or table | Right-click in the manuscript, or use **Editing tools → Insert an image** or **Insert a table** |
 | Change the editor font size | Use `Ctrl + wheel` over the editor, pinch on a touchpad, or use two fingers on a touchscreen. Settings reflects the new size |
 | Save | Press `Ctrl + S` for the current file or `Ctrl + Shift + S` for all open files |
 | Compile | Press `Ctrl + Enter` or click **Compile**. The app saves the files and compiles the TeX document selected by the active editor tab |
@@ -220,6 +220,8 @@ Click the **TeX logo** to open Home and manage the current and recent projects. 
 Right-click a file, folder, or the empty area of the file list to create a file or folder at that location, or choose **Add files from your computer…** to select existing files. The same file picker is available beside the **＋** button. Selected files are copied into the project; choose the destination folder and review any existing filenames. For each conflict, choose to replace the file, add a copy under another name, or skip it. Files with open tabs or saved drafts must be closed or reviewed before replacement. Multiple files can be selected, with a limit of **128 MiB per file**. The **＋** button continues to accept a project-relative path for a new file.
 
 The context menu also offers relative and full path copying, renaming, and **Delete…**. From the keyboard, focus the entry and press `Shift + F10` or the context-menu key. Use the arrow keys to select an action, `F2` to rename, and `Delete` to open the deletion confirmation. A folder's confirmation shows its contents and unsaved documents, and can delete the folder together with those contents. Renaming updates the open tabs and their editing state, including unsaved text. References written inside other documents remain as written, so update those links when needed.
+
+Use the sorting control below **Find files** to sort by name in either direction, or put the newest or oldest items first. Folders appear before files at each level, and filtering uses the same order. Modification times come from the operating system for each file or folder. Saving updates the order immediately; refreshing the file list or returning to the tab picks up changes from other applications. The selected order is saved for the next session.
 
 Program and configuration files can be edited with the same saving, search, drafts, and history tools. Syntax highlighting covers Python, JavaScript/TypeScript, C/C++, Java, Kotlin, C#, Go, Rust, R, Ruby, shell, PowerShell, HTML, CSS, XML, SQL, JSON, YAML, TOML, and Lua. Other supported text formats open as plain text. `.ipynb` opens as JSON text. The editor does not run these programs.
 
@@ -287,6 +289,8 @@ Open **Settings → Appearance** to choose **System**, **Light**, or **Dark** mo
 
 Use the color picker or enter a hexadecimal color code to choose the background, text, and accent colors. Light and dark modes save their colors independently. Clearing a code returns that color to the selected scheme. The selected colors also apply to dialogs, completion popups, notifications, and compilation and draft status messages.
 
+Notifications and floating menus use their own background and border colors with a visible shadow. Their text colors follow the chosen background in light and dark modes, including custom colors.
+
 The initial appearance uses **System** mode, the **Gray** color scheme, and **Consolas** for the editor. Gray and Consolas appear first in their lists and are marked as the defaults. Your previously saved appearance continues to apply. If Consolas is unavailable, the editor tries Cascadia Code, Menlo, DejaVu Sans Mono, and the browser's monospace font in that order.
 
 Changes appear immediately. Choose **Save appearance** to use them in future sessions. **Cancel**, `Esc`, or **×** restores the appearance you had when opening the dialog. **Reset appearance** previews the defaults; choose **Save appearance** to apply them.
@@ -329,7 +333,13 @@ Use the **Visual editing / Source** selector above the document to edit the Mark
 
 Visual editing starts with the preview closed. Markdown source editing and TeX editing start with it open. **Show preview / Hide preview** changes this for the current mode, and the app remembers the choice. Reopening the preview restores its previous width. With the preview type set to **Auto**, a visible preview follows the edited file and updates as you type. Click **Preview** or press `Ctrl + Enter` to save and refresh it.
 
-The Markdown editing toolbar works in both modes. Select text or place the cursor, then choose a heading level, bold, italic, strikethrough, a bullet or numbered list, a task list, a blockquote, or inline code. **Insert a link** lets you enter the display text and a web, email, or project-relative destination. **Code block** accepts code and an optional language name. In visual editing, **Insert math** adds an equation. The labelled **Image**, **Table**, and **New page** buttons open image insertion, table creation or pasting, and linked Markdown page creation. These buttons wrap onto another row in narrow panes. These actions edit the Markdown source and can be undone across mode changes.
+The Markdown editing toolbar works in both modes. Select text or place the cursor, then choose a heading level, bold, italic, strikethrough, a bullet or numbered list, a task list, a blockquote, or inline code. In visual editing, buttons show the formatting at the cursor and the formatting selected for the next characters. A selection containing both formatted and plain text shows a mixed state. **Insert a link** lets you enter the display text and a web, email, or project-relative destination. **Code block** accepts code and an optional language name. Image insertion, table creation or pasting, and linked Markdown page creation use icon buttons; hover over an icon to read its name. These actions edit the Markdown source and can be undone across mode changes.
+
+Right-click in a TeX or Markdown manuscript to insert an image or table at the clicked position or into the current selection. Markdown also offers linked pages, links, math, and code blocks in either editing mode. Press `Shift + F10` to open the menu at the cursor, or use `Shift + right-click` to open the browser menu for copy and paste.
+
+**Insert math** opens a dialog in either editing mode. Choose inline or display math, enter the TeX, and check the rendered equation and the Markdown that will be inserted. Inline math uses GitHub's ``$`…`$`` format by default; `$…$` and `\(…\)` are also available. The dialog remembers the chosen form while the editor is open. GitHub documents the backtick form in [Writing mathematical expressions](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/writing-mathematical-expressions).
+
+In visual editing, type an inline equation with its closing delimiter to render it within the paragraph. A line containing `---` becomes a horizontal rule when followed by `Enter` or a space. Markdown shortcuts also work next to Japanese text. Japanese italic and strikethrough text appears in visual editing, preview, and printing, including combinations of formatting and text next to punctuation. Code blocks and inline code display their contents as code.
 
 ![Local TeX Web Editor displaying Markdown source and its live preview in light mode](docs/screenshots/editor-markdown-light.png)
 
@@ -412,12 +422,12 @@ The app does not impose a compilation time limit. Use the stop button to stop a 
 
 ## App files and storage
 
-The **v0.1.9** files have the sizes below, rounded to the nearest MB (1 MB = 1,000,000 bytes). The Assets section of the [release](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) shows each download's size.
+The **v0.1.10** files have the sizes below, rounded to the nearest MB (1 MB = 1,000,000 bytes). The Assets section of the [release](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) shows each download's size.
 
 | Platform | ZIP download | App after extraction |
 | --- | ---: | ---: |
-| Windows x64 | About **8 MB** | About **17 MB** (`.exe`) |
-| macOS, Apple Silicon + Intel | About **15 MB** | About **34 MB** (`.app`) |
+| Windows x64 | About **8 MB** | About **18 MB** (`.exe`) |
+| macOS, Apple Silicon + Intel | About **16 MB** | About **35 MB** (`.app`) |
 
 The ZIP also includes the README files, screenshots, and licenses. The macOS app contains both CPU versions. The Windows ZIP and macOS download buttons above link to the current release files.
 
@@ -455,7 +465,7 @@ go build -o bin/local-tex-web-editor.exe ./cmd/local-tex-editor
 Build a Windows distribution executable:
 
 ```sh
-go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.9" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
+go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.10" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
 ```
 
 `build:windows-resources` generates Windows x64 resources from the bundled ICO. The executable embeds nine icon sizes from 16 to 256 px.
@@ -471,7 +481,7 @@ npx playwright install chromium
 node scripts/build-macos.mjs
 ```
 
-This creates `dist/local-tex-web-editor-0.1.9-macos-universal.zip` with an app supporting Apple Silicon and Intel, the English and Japanese READMEs, and license files.
+This creates `dist/local-tex-web-editor-0.1.10-macos-universal.zip` with an app supporting Apple Silicon and Intel, the English and Japanese READMEs, and license files.
 
 Command-line options:
 

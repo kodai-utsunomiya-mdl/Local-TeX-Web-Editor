@@ -1,6 +1,6 @@
 {
   "name": "local-tex-web-editor",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "private": true,
   "type": "module",
   "description": "A local LaTeX editor with a browser interface, TeX Live compilation, PDF and Markdown previews",
@@ -26,6 +26,7 @@
     "dompurify": "3.4.18",
     "katex": "0.19.1",
     "markdown-it": "15.0.3",
+    "markdown-it-cjk-friendly": "3.0.0",
     "markdown-it-texmath": "1.0.0",
     "pdfjs-dist": "6.5.438",
     "prosemirror-commands": "1.7.2",

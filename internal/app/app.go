@@ -290,9 +290,10 @@ func (a *App) stateLocked(refresh bool, language ...string) State {
 		selected = language[0]
 	}
 	if refresh && a.project != nil {
-		if files, directories, err := listProjectEntries(a.project.Root); err == nil {
+		if files, directories, directoryModifiedAt, err := listProjectEntries(a.project.Root); err == nil {
 			a.project.Files = files
 			a.project.Directories = directories
+			a.project.DirectoryModifiedAt = directoryModifiedAt
 		}
 	}
 	executable, _ := os.Executable()
@@ -311,6 +312,10 @@ func (a *App) stateLocked(refresh bool, language ...string) State {
 		copy := *a.project
 		copy.Files = append([]ProjectFile{}, copy.Files...)
 		copy.Directories = append([]string{}, copy.Directories...)
+		copy.DirectoryModifiedAt = make(map[string]time.Time, len(a.project.DirectoryModifiedAt))
+		for path, modifiedAt := range a.project.DirectoryModifiedAt {
+			copy.DirectoryModifiedAt[path] = modifiedAt
+		}
 		result.Project = &copy
 	}
 	tool, bin, err := findLatexmk(a.config.TexBin)
@@ -424,9 +429,18 @@ func (a *App) fileHandler(w http.ResponseWriter, r *http.Request) {
 			if document.Revision != input.Revision {
 				a.noteSavedSourceLocked(document.Path)
 			}
-			if files, directories, listErr := listProjectEntries(a.project.Root); listErr == nil {
+			if files, directories, directoryModifiedAt, listErr := listProjectEntries(a.project.Root); listErr == nil {
 				a.project.Files = files
 				a.project.Directories = directories
+				a.project.DirectoryModifiedAt = directoryModifiedAt
+				document.DirectoryModifiedAt = directoryModifiedAt
+				for _, file := range files {
+					if file.Path == document.Path {
+						entry := file
+						document.Entry = &entry
+						break
+					}
+				}
 			}
 		}
 	}

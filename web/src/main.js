@@ -21,6 +21,7 @@ import { createProjectSearch, replaceProjectDocuments } from './project-search.j
 import { createEditHistory } from './edit-history.js';
 import { createReferenceTools } from './reference-tools.js';
 import { createInsertTools } from './insert-tools.js';
+import { createEditorContextMenu } from './editor-context-menu.js';
 import { createDocumentTools } from './document-tools.js';
 import { createTemplateManager } from './template-manager.js';
 import { createLogIssues } from './log-issues.js';
@@ -28,6 +29,7 @@ import { createMarkdownEditing } from './markdown-editing.js';
 import { MarkdownRichEditor } from './markdown-rich-editor.js';
 import { createProjectHome } from './project-home.js';
 import { createFileImporter } from './file-import.js';
+import { buildFileTree, fileModificationTime, normalizeFileSort, projectListingSignature } from './file-sorting.js';
 import { completionPresentation } from './completion-ui.js';
 import { createTeXCompletionSource } from './tex-completion.js';
 import { sourceFolding, revealSourceRange } from './source-folding.js';
@@ -70,6 +72,7 @@ const state = {
   synchronizingEditors: false,
   activePath: '',
   projectGeneration: 0,
+  projectEntriesVersion: 0,
   toolsGeneration: 0,
   texPackages: null,
   openSequence: 0,
@@ -85,7 +88,7 @@ const state = {
   connectionError: false,
   externalProjectChanged: false,
   reportedBuild: '',
-  preferences: { autoSave: true, theme: null, appearance: normalizeAppearance(), editorFontSize: 14, language: getLanguage(), panelLayout: normalizePanelLayout(), markdownEditorModes: { primary: 'rich', secondary: 'rich' }, previewVisibility: { rich: false, markdown: true, source: true }, markdownScrollSync: true, texCompletion: true, automaticCompletion: true, pdfDarkMode: false },
+  preferences: { autoSave: true, theme: null, appearance: normalizeAppearance(), editorFontSize: 14, language: getLanguage(), panelLayout: normalizePanelLayout(), fileSort: 'name-asc', markdownEditorModes: { primary: 'rich', secondary: 'rich' }, previewVisibility: { rich: false, markdown: true, source: true }, markdownScrollSync: true, texCompletion: true, automaticCompletion: true, pdfDarkMode: false },
   previewContext: '',
   homeVisible: false,
   theme: 'light',
@@ -121,6 +124,7 @@ let documentHistory = null;
 let templateManager = null;
 let logIssues = null;
 let markdownEditing = null;
+let editorContextMenu = null;
 let projectHome = null;
 let outlineTree = null;
 const editorSlots = {
@@ -363,6 +367,7 @@ function isRunning() { return state.build?.status === 'running'; }
 
 function setOperation(operation) {
   state.operation = operation;
+  if (operation) editorContextMenu?.close();
   for (const doc of state.documents.values()) applyDocumentTransaction(doc, doc.state.update({ effects: readOnly.reconfigure([EditorState.readOnly.of(!!operation), EditorView.editable.of(!operation)]) }));
   renderControls();
   if (!operation) {
@@ -537,6 +542,7 @@ function ensureRichEditor(slot, name) {
       if (slot.view.state.doc.toString() !== text) slot.rich.setText(slot.view.state.doc.toString());
     },
     onSelectionChange: selection => synchronizeRichSelection(name, selection),
+    onStateChange: () => { if (name === state.activePane && editorMode(name) === 'rich') markdownEditing?.update(); },
     onUndo: () => applyRichHistory(slot, undo), onRedo: () => applyRichHistory(slot, redo),
     onFind: () => { activateEditorPane(name); setMarkdownEditorMode('source'); openSourceSearchPanel(slot.view); },
     onPaste: event => { activateEditorPane(name); return insertTools?.handlePaste(event) || false; },
@@ -856,51 +862,48 @@ function renderTabs() {
 function renderTree() {
   const project = state.meta?.project;
   const filter = $('file-filter').value.trim().toLocaleLowerCase();
-  const files = (project?.files || []).filter(file => file.path.toLocaleLowerCase().includes(filter));
-  const directories = (project?.directories || []).filter(path => !filter || path.toLocaleLowerCase().includes(filter));
+  const tree = buildFileTree(project, { sort: state.preferences.fileSort, filter, locale: getLanguage() });
+  $('file-sort').value = state.preferences.fileSort;
   const treeElement = $('file-tree'); const scroll = treeElement.scrollTop;
+  const focused = treeElement.contains(document.activeElement) ? document.activeElement.closest('[data-path]') : null;
+  const focusedPath = focused?.dataset.path;
+  const focusedFolder = focused?.classList.contains('tree-directory');
+  const dateFormat = new Intl.DateTimeFormat(getLanguage(), { dateStyle: 'medium', timeStyle: 'medium' });
+  const entryTitle = entry => {
+    const time = fileModificationTime(entry.modifiedAt);
+    return time === null ? entry.path : `${entry.path}\n${t('更新日時: {value0}', { value0: dateFormat.format(time) })}`;
+  };
   $('file-count').textContent = String(project?.files?.length || 0);
   treeElement.replaceChildren(); state.treeButtons.clear();
-  if (!files.length && !directories.length) {
+  if (!tree.files.length && !tree.directories.length) {
     const empty = document.createElement('p'); empty.className = 'tree-empty';
     empty.textContent = filter ? t("一致するファイルやフォルダーがありません．") : t("ファイルがありません．＋ からテキストファイルを作成できます．");
-    treeElement.append(empty); return;
+    treeElement.append(empty); if (focusedPath) treeElement.focus({ preventScroll: true }); return;
   }
-  const tree = { directories: new Map(), files: [] };
-  function directory(parts) {
-    let node = tree;
-    for (const part of parts) {
-      if (!part) continue;
-      if (!node.directories.has(part)) node.directories.set(part, { directories: new Map(), files: [] });
-      node = node.directories.get(part);
-    }
-    return node;
-  }
-  for (const path of directories) directory(path.split('/'));
-  for (const file of files) { const parts = file.path.split('/'); directory(parts.slice(0, -1)).files.push(file); }
-  function appendNode(node, parent, prefix = '') {
+  function appendNode(node, parent) {
     const list = document.createElement('ul'); list.className = 'tree-list'; parent.append(list);
-    for (const [name, child] of [...node.directories.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+    for (const child of node.directories) {
       const item = document.createElement('li'); const details = document.createElement('details'); details.className = 'tree-directory';
-      const path = prefix + name;
+      const { path, name } = child;
       details.dataset.testid = 'tree-folder'; details.dataset.path = path;
       details.open = !!filter || (state.directoryState.has(path) ? state.directoryState.get(path) : state.activePath.startsWith(path + '/'));
       const summary = document.createElement('summary'); summary.setAttribute('aria-label', t("{value0} フォルダー", { value0: path }));
+      summary.title = entryTitle(child); summary.dataset.modifiedAt = child.modifiedAt || '';
       summary.setAttribute('aria-haspopup', 'menu'); summary.setAttribute('aria-keyshortcuts', 'Shift+F10 F2 Delete');
       const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       icon.classList.add('button-icon', 'folder-icon'); icon.setAttribute('viewBox', '0 0 24 24'); icon.setAttribute('aria-hidden', 'true');
       const outline = document.createElementNS('http://www.w3.org/2000/svg', 'path'); outline.setAttribute('d', 'M2 6h7l2 2h11v12H2ZM2 6V4h7l2 2h9v2'); icon.append(outline);
       const label = document.createElement('span'); label.className = 'folder-name'; label.textContent = name;
       summary.append(icon, label); details.append(summary);
-      appendNode(child, details, path + '/');
-      if (!child.files.length && !child.directories.size) { const empty = document.createElement('p'); empty.className = 'folder-empty'; empty.textContent = t("空のフォルダー"); details.append(empty); }
+      appendNode(child, details);
+      if (!child.files.length && !child.directories.length) { const empty = document.createElement('p'); empty.className = 'folder-empty'; empty.textContent = t("空のフォルダー"); details.append(empty); }
       details.addEventListener('toggle', () => { if (!filter && details.isConnected) { state.directoryState.set(path, details.open); scheduleSession(); } });
       item.append(details); list.append(item);
     }
-    for (const file of node.files.sort((a, b) => a.path.localeCompare(b.path))) {
+    for (const file of node.files) {
       const item = document.createElement('li'); const button = document.createElement('button');
       button.type = 'button'; button.className = `file-button${file.path === state.activePath ? ' active' : ''}`;
-      button.dataset.testid = `file-${file.path}`; button.dataset.path = file.path; button.dataset.kind = fileKind(file); button.title = file.path; button.disabled = !!state.operation;
+      button.dataset.testid = `file-${file.path}`; button.dataset.path = file.path; button.dataset.kind = fileKind(file); button.dataset.modifiedAt = file.modifiedAt || ''; button.title = entryTitle(file); button.disabled = !!state.operation;
       button.setAttribute('aria-current', String(file.path === state.activePath));
       button.setAttribute('aria-haspopup', 'menu'); button.setAttribute('aria-keyshortcuts', 'Shift+F10 F2 Delete');
       const type = document.createElement('span'); type.className = 'file-type'; type.setAttribute('aria-hidden', 'true');
@@ -912,6 +915,19 @@ function renderTree() {
     }
   }
   appendNode(tree, treeElement); treeElement.scrollTop = scroll;
+  if (focusedPath) {
+    const target = focusedFolder ? treeElement.querySelector(`.tree-directory[data-path="${CSS.escape(focusedPath)}"] > summary`) : state.treeButtons.get(focusedPath);
+    (target || treeElement).focus({ preventScroll: true });
+  }
+}
+
+function applyProjectListing(project) {
+  const current = state.meta?.project;
+  if (!current || project?.root !== current.root || projectListingSignature(current) === projectListingSignature(project)) return;
+  current.files = project.files || []; current.directories = project.directories || [];
+  current.directoryModifiedAt = project.directoryModifiedAt || {};
+  state.projectEntriesVersion++;
+  renderTree(); renderPaneSelectors();
 }
 
 function updateDocumentIndicators(doc) {
@@ -946,6 +962,14 @@ async function saveDocument(doc) {
       doc.lineEnding = result.lineEnding || doc.lineEnding;
       doc.savedDoc = snapshot;
       doc.conflict = null;
+      state.projectEntriesVersion++;
+      if (result.entry && state.meta?.project) {
+        const project = state.meta.project;
+        const files = project.files.some(file => file.path === result.entry.path)
+          ? project.files.map(file => file.path === result.entry.path ? result.entry : file)
+          : [...project.files, result.entry];
+        applyProjectListing({ ...project, files, directoryModifiedAt: result.directoryModifiedAt || project.directoryModifiedAt });
+      }
       if (result.historyWarning) toast(result.historyWarning);
       if (state.build) {
         if (!isMarkdown(doc.path)) state.build.sourceChanged = true;
@@ -1219,6 +1243,7 @@ async function applyMeta(meta, resetProject = false) {
   if (resetProject && state.persistenceReady) { syncDrafts(); persistSession(); }
   const generation = resetProject ? ++state.projectGeneration : state.projectGeneration;
   state.meta = meta;
+  state.projectEntriesVersion++;
   state.texPackages = meta.texPackages || null;
   state.externalProjectChanged = false;
   if (resetProject) {
@@ -1394,7 +1419,7 @@ async function saveSettings(event) {
       const meta = await api('/api/state');
       if (meta.project?.root === state.meta?.project?.root) await applyMeta(meta);
     }
-    $('settings-dialog').close(); clearError(); updateAutoSaveStatus(); toast(t("設定を保存しました．"));
+    $('settings-dialog').close(); clearError(); updateAutoSaveStatus(); toast(t("設定を保存して反映しました．"));
   }
   catch (error) { $('settings-error').textContent = error.message || String(error); $('settings-error').hidden = false; }
   finally { setDialogBusy($('settings-dialog'), false); setOperation(''); }
@@ -1716,6 +1741,7 @@ function renderControls() {
   $('shutdown-button').disabled = busy;
   $('new-file').disabled = busy || !project;
   $('import-files').disabled = busy || !project || running;
+  $('file-sort').disabled = busy || !project;
   $('close-all-tabs').disabled = busy || !state.tabOrder.length;
   $('refresh-files').disabled = busy || !project;
   $('download-pdf').disabled = !state.build?.pdfReady || state.closed;
@@ -1777,10 +1803,13 @@ async function heartbeat() {
   state.heartbeatPending = false;
   const generation = state.projectGeneration;
   const toolsGeneration = state.toolsGeneration;
+  const entriesVersion = state.projectEntriesVersion;
   try {
     const meta = await api('/api/state');
     if (state.closed || generation !== state.projectGeneration) return;
     if (state.meta?.project && meta.project?.root !== state.meta.project.root) { if (!state.externalProjectChanged) handleExternalProjectChange(); return; }
+    if (state.operation) state.heartbeatPending = true;
+    else if (entriesVersion === state.projectEntriesVersion) applyProjectListing(meta.project);
     if (toolsGeneration === state.toolsGeneration) updateTools(meta);
     if (!isRunning() && meta.build) applyBuild(meta.build);
   } catch (error) { if ($('app-error').hidden) showError(error); }
@@ -1999,6 +2028,7 @@ async function loadPreferences() {
     state.preferences.theme = state.preferences.appearance.mode === 'system' ? null : state.preferences.appearance.mode;
     state.preferences.editorFontSize = preferences.editorFontSize;
     state.preferences.panelLayout = normalizePanelLayout(preferences.panelLayout);
+    state.preferences.fileSort = normalizeFileSort(preferences.fileSort);
     for (const name of ['primary', 'secondary']) state.preferences.markdownEditorModes[name] = preferences.markdownEditorModes?.[name] === 'source' ? 'source' : 'rich';
     for (const name of ['rich', 'markdown', 'source']) if (typeof preferences.previewVisibility?.[name] === 'boolean') state.preferences.previewVisibility[name] = preferences.previewVisibility[name];
     state.previewContext = '';
@@ -2422,6 +2452,7 @@ function setSidebar(mode) {
   state.sidebar = mode;
   const outline = mode === 'outline';
   $('file-tree').hidden = outline; $('outline-tree').hidden = !outline;
+  $('file-sort').hidden = outline;
   $('files-tab').classList.toggle('selected', !outline); $('outline-tab').classList.toggle('selected', outline);
   $('files-tab').setAttribute('aria-selected', String(!outline)); $('outline-tab').setAttribute('aria-selected', String(outline));
   $('file-filter').placeholder = outline ? t("見出しを検索") : t("ファイルを検索");
@@ -2611,6 +2642,35 @@ markdownEditing = createMarkdownEditing({
   onImage: () => openWritingTool(() => insertTools.openImage()),
   onTable: () => openWritingTool(() => insertTools.openTable()),
   onNewPage: () => openWritingTool(() => documentTools.openMarkdownPage()),
+  onError: showError,
+});
+editorContextMenu = createEditorContextMenu({
+  root: $('editor-pane'),
+  isBlocked: () => !!state.operation || state.closed || state.homeVisible || state.externalProjectChanged || !!document.querySelector('dialog[open]'),
+  getEditor: target => {
+    if (!(target instanceof Element) || target.closest('input, textarea, select, .rich-code-heading, .rich-table-tools, .rich-math-editor')) return null;
+    for (const [pane, slot] of visibleEditorSlots()) {
+      const kind = editorMode(pane), rich = kind === 'rich' ? slot.rich : null;
+      if (kind === 'rich' && !rich) continue;
+      const view = rich?.view || slot.view, content = rich ? view.dom : view.contentDOM;
+      if (!content.contains(target) || rich?.readOnly || rich?.composing || view.state.readOnly) continue;
+      const path = slot.path, projectRoot = state.meta?.project?.root;
+      return { kind, view, path, pane, scrollRoot: rich ? slot.richHost : view.scrollDOM,
+        activate: () => { state.lastSurface = 'source'; activateEditorPane(pane); },
+        isCurrent: () => slot.path === path && state.meta?.project?.root === projectRoot && editorMode(pane) === kind &&
+          (pane === 'primary' || state.splitEditors) && (kind === 'rich' ? slot.rich?.view === view : slot.view === view),
+      };
+    }
+    return null;
+  },
+  actions: {
+    image: () => openWritingTool(() => insertTools.openImage()),
+    table: () => openWritingTool(() => insertTools.openTable()),
+    page: () => openWritingTool(() => documentTools.openMarkdownPage()),
+    link: () => markdownEditing.openLink(),
+    math: () => markdownEditing.openMath(),
+    code: () => markdownEditing.openCode(),
+  },
   onError: showError,
 });
 const fileImporter = createFileImporter({
@@ -2812,6 +2872,10 @@ $('project-form').addEventListener('submit', event => { runTask(() => openProjec
 $('settings-form').addEventListener('submit', event => { runTask(() => saveSettings(event)); event.preventDefault(); });
 $('new-file-form').addEventListener('submit', event => { runTask(() => createFile(event)); event.preventDefault(); });
 $('file-filter').addEventListener('input', () => { renderTree(); renderOutline(); });
+$('file-sort').addEventListener('change', () => {
+  state.preferences.fileSort = normalizeFileSort($('file-sort').value);
+  renderTree(); savePreferences();
+});
 for (const button of document.querySelectorAll('[data-close-dialog]')) button.addEventListener('click', () => {
   const dialog = $(button.dataset.closeDialog); if (dialog.dataset.busy !== 'true') dialog.close();
 });

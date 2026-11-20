@@ -1,8 +1,9 @@
 import { t, getLanguage, onLanguageChange } from './i18n.js';
 import MarkdownIt from 'markdown-it';
+import cjkFriendly from 'markdown-it-cjk-friendly';
 import createDOMPurify from 'dompurify';
 import katex from 'katex';
-import texmath from 'markdown-it-texmath';
+import { markdownMath } from './markdown-math.js';
 
 const markdownExtensions = /\.(?:md|markdown)$/i;
 const imageData = /^data:image\/(?:png|jpeg|gif|webp|avif);base64,[a-z\d+/=\s]+$/i;
@@ -52,11 +53,10 @@ function sourceAttributes(token) {
 }
 
 function makeParser() {
-  const parser = new MarkdownIt({ html: false, linkify: true, typographer: false, breaks: false });
+  const parser = new MarkdownIt({ html: false, linkify: true, typographer: false, breaks: false }).use(cjkFriendly);
   const mathOptions = { trust: false, throwOnError: false, strict: 'ignore', maxExpand: 1000, maxSize: 20, macros: {} };
-  parser.use(texmath, {
+  parser.use(markdownMath, {
     engine: katex,
-    delimiters: ['gitlab', 'dollars', 'brackets'],
     katexOptions: mathOptions,
   });
   const renderMath = (content, displayMode) => {

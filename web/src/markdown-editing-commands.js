@@ -1,3 +1,5 @@
+import { MarkdownSource } from './markdown-rich-document.js';
+
 function sourceSelection(document) {
   const content = String(document.content || '');
   const clamp = value => Math.max(0, Math.min(content.length, Number.isInteger(value) ? value : 0));
@@ -130,6 +132,83 @@ function fencedCode(document, { language = '', placeholder = 'code', code } = {}
   return edit(from, to, insert, from + opening.length, from + opening.length + selected.length);
 }
 
+export function markdownMathSource(tex, { displayMode = false, delimiter = '$`' } = {}) {
+  const value = String(tex ?? '').replace(/\r\n?/g, '\n').trim();
+  if (!value) throw new Error('math-empty');
+  if (displayMode) return `$$\n${value}\n$$`;
+  if (!['$`', '$', '\\('].includes(delimiter)) throw new Error('math-delimiter');
+  const closing = { '$`': '`$', '$': '$', '\\(': '\\)' }[delimiter];
+  if (value.includes('\n')) throw new Error('math-line');
+  return delimiter + value + closing;
+}
+
+export function selectedMarkdownMath(document) {
+  const { content, from, to } = sourceSelection(document);
+  if (from === to) return null;
+  const selection = content.slice(from, to);
+  const selectedFrom = from + /^\s*/.exec(selection)[0].length;
+  const selectedTo = to - /\s*$/.exec(selection)[0].length;
+  let parsed;
+  const escaped = position => {
+    let count = 0;
+    while (position > 0 && content[--position] === '\\') count++;
+    return count % 2 === 1;
+  };
+  function enclosingMath(start, end, opening, closing, displayMode) {
+    const closingStart = end - closing.length;
+    const texStart = start + opening.length;
+    if (start < 0 || end > content.length || texStart >= closingStart || content.slice(start, texStart) !== opening || content.slice(closingStart, end) !== closing || escaped(start) || escaped(closingStart)) return null;
+    if (opening.startsWith('$')) {
+      // Adjacent inline equations also have two dollars in a row. Use the
+      // document's math nodes to find which expression owns each delimiter.
+      parsed ||= new MarkdownSource(content);
+      let found = false;
+      parsed.doc.descendants((node, position) => {
+        if (!['math_inline', 'math_block'].includes(node.type.name) || node.attrs.delimiter !== opening) return;
+        const nodeFrom = parsed.sourceOffsetAt(position);
+        let nodeTo = parsed.sourceOffsetAt(position + node.nodeSize);
+        if (node.type.name === 'math_block') while (nodeTo > nodeFrom && /\s/.test(content[nodeTo - 1])) nodeTo--;
+        if (nodeFrom === start && nodeTo === end) found = true;
+      });
+      if (!found) return null;
+    }
+    for (let index = content.indexOf(closing, texStart); index >= 0 && index < closingStart; index = content.indexOf(closing, index + closing.length)) {
+      if (!escaped(index)) return null;
+    }
+    const tex = content.slice(texStart, closingStart).trim();
+    if (!displayMode && /\r|\n/.test(tex)) return null;
+    return { from: start, to: end, tex, displayMode, delimiter: opening };
+  }
+  for (const [opening, closing, displayMode] of [['$$', '$$', true], ['\\[', '\\]', true], ['$`', '`$', false], ['\\(', '\\)', false], ['$', '$', false]]) {
+    const whole = enclosingMath(selectedFrom, selectedTo, opening, closing, displayMode);
+    if (whole) return whole;
+    let before = from, after = to;
+    if (displayMode) {
+      while (before > 0 && /\s/.test(content[before - 1])) before--;
+      while (after < content.length && /\s/.test(content[after])) after++;
+    }
+    const surrounding = enclosingMath(before - opening.length, after + closing.length, opening, closing, displayMode);
+    if (surrounding) return surrounding;
+  }
+  return null;
+}
+
+function markdownMath(document, options) {
+  const selection = sourceSelection(document), existing = selectedMarkdownMath(document);
+  const { content } = selection;
+  const { from, to } = existing || selection;
+  const tex = String(options.tex ?? existing?.tex ?? content.slice(from, to)).replace(/\r\n?/g, '\n').trim();
+  const source = markdownMathSource(tex, options);
+  if (!options.displayMode) {
+    const start = from + (options.delimiter || '$`').length;
+    return edit(from, to, source, start, start + tex.length);
+  }
+  const prefix = from === 0 ? '' : content[from - 1] === '\n' ? (from > 1 && content[from - 2] === '\n' ? '' : '\n') : '\n\n';
+  const suffix = to === content.length ? '\n' : content[to] === '\n' ? (content[to + 1] === '\n' ? '' : '\n') : '\n\n';
+  const start = from + prefix.length + 3;
+  return edit(from, to, prefix + source + suffix, start, start + tex.length);
+}
+
 export function markdownEdit(document, command, options = {}) {
   switch (command) {
     case 'bold': return wrapped(document, '**', options.placeholder || 'text');
@@ -139,6 +218,7 @@ export function markdownEdit(document, command, options = {}) {
     case 'heading': return linesWithPrefix(document, command, options.level);
     case 'bullet': case 'ordered': case 'task': case 'quote': return linesWithPrefix(document, command);
     case 'codeBlock': return fencedCode(document, options);
+    case 'math': return markdownMath(document, options);
     case 'link': return markdownLink(document, options);
     default: throw new Error('unknown-markdown-command');
   }

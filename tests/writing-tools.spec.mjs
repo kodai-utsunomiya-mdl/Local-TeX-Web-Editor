@@ -112,15 +112,18 @@ test('狭い幅でも Markdown の各操作を選べて，コードブロック�
   await page.setViewportSize({ width: 320, height: 640 });
   await openTools(page);
   const toolbar = page.locator('#markdown-tools');
-  for (const [name, label] of [['画像を挿入', '画像'], ['表を挿入', '表'], ['新しい Markdown ページ', '新規ページ']]) {
-    await expect(toolbar.getByRole('button', { name, exact: true })).toContainText(label);
+  for (const name of ['画像を挿入', '表を挿入', '新しい Markdown ページ']) {
+    const control = toolbar.getByRole('button', { name, exact: true });
+    await expect(control).toHaveText('');
+    await expect(control).toHaveAttribute('title', name);
+    await expect(control.locator('svg')).toHaveCount(1);
   }
   const size = await toolbar.evaluate(node => ({ width: node.clientWidth, scrollWidth: node.scrollWidth }));
   expect(size.scrollWidth).toBeLessThanOrEqual(size.width + 1);
   const bounds = await toolbar.locator('button:visible, select:visible').evaluateAll(nodes => nodes.map(node => {
     const rect = node.getBoundingClientRect(); return { left: rect.left, right: rect.right, width: rect.width, height: rect.height };
   }));
-  expect(bounds.length).toBe(14);
+  expect(bounds.length).toBe(15);
   for (const bound of bounds) {
     expect(bound.left).toBeGreaterThanOrEqual(0);
     expect(bound.right).toBeLessThanOrEqual(320);

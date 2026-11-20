@@ -72,7 +72,7 @@ export function createEditHistory({ api, getActiveDocument, replaceEditorText })
   function translate() {
     title.textContent = tr('編集履歴', 'Edit history'); close.setAttribute('aria-label', tr('閉じる', 'Close'));
     description.textContent = documentSnapshot ? tr(`${documentSnapshot.path} の以前の内容を，現在の原稿と見比べて戻せます．`, `Compare earlier versions of ${documentSnapshot.path} with the current document and restore selected changes.`) : '';
-    settingsTitle.textContent = tr('履歴の設定', 'History settings'); enabledText.textContent = tr('編集履歴を記録する', 'Record edit history'); daysText.textContent = tr('保存する日数', 'Days to keep'); capacityText.textContent = tr('合計容量 (MiB)', 'Total storage (MiB)'); saveSettings.textContent = tr('設定を保存', 'Save settings');
+    settingsTitle.textContent = tr('履歴の設定', 'History settings'); enabledText.textContent = tr('編集履歴を記録する', 'Record edit history'); daysText.textContent = tr('保存する日数', 'Days to keep'); capacityText.textContent = tr('合計容量 (MiB)', 'Total storage (MiB)'); saveSettings.textContent = tr('設定を保存して反映', 'Save and apply settings');
     limits.textContent = tr('保存前の原稿を，1 分以上の間隔で圧縮して記録します．1 ファイルにつき最大 50 版，全体で最大 2000 版です．2 MiB を超える原稿は対象外です．期間や容量を超えた古い版は削除されます．オフにすると新しい版の記録を停止します．', 'The previous saved text is compressed at intervals of at least one minute. Limits: 50 versions per file, 2000 versions overall, and 2 MiB per document. Older versions are removed when age or storage limits are reached. Turning this off stops new records.');
     label.placeholder = tr('版の名前 (任意)', 'Version name (optional)'); label.setAttribute('aria-label', label.placeholder);
     record.textContent = tr('現在の内容を記録', 'Record current text');
@@ -171,7 +171,7 @@ export function createEditHistory({ api, getActiveDocument, replaceEditorText })
     event.preventDefault();
     if (busy) return;
     busy = true; updateSelection();
-    try { await api('/api/history/settings', { method: 'PUT', projectRoot: documentSnapshot.projectRoot, body: { enabled: enabled.checked, days: Number(days.value), maxBytes: Number(capacity.value) * 1048576 } }); await refresh(); status.classList.remove('form-error'); status.textContent = tr('履歴の設定を保存しました．', 'History settings saved.'); }
+    try { await api('/api/history/settings', { method: 'PUT', projectRoot: documentSnapshot.projectRoot, body: { enabled: enabled.checked, days: Number(days.value), maxBytes: Number(capacity.value) * 1048576 } }); await refresh(); status.classList.remove('form-error'); status.textContent = tr('履歴の設定を保存して反映しました．', 'History settings saved and applied.'); }
     catch (error) { showError(error); }
     finally { busy = false; updateSelection(); }
   });

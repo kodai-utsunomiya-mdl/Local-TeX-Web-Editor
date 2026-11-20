@@ -6,15 +6,24 @@
 .markdown-edit-group { display: flex; align-items: center; flex-wrap: wrap; gap: 3px; min-width: 0; }
 .markdown-edit-group + .markdown-edit-group { padding-left: 8px; border-left: 1px solid var(--border-strong); }
 .markdown-edit-button { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 32px; width: 32px; height: 31px; padding: 0; border: 1px solid transparent; border-radius: 5px; background: transparent; color: var(--text); font: 13px/1.2 ui-monospace, monospace; white-space: nowrap; cursor: pointer; }
-.markdown-edit-labelled { flex: 0 0 auto; width: auto; gap: 5px; padding-inline: 6px; font-family: inherit; font-size: 12px; }
-.markdown-edit-labelled svg { flex: 0 0 16px; }
+.markdown-edit-button svg { flex: 0 0 16px; }
 .markdown-edit-button:hover { background: var(--hover); border-color: var(--border-strong); }
+.markdown-edit-button[aria-pressed="true"], .markdown-edit-button[aria-pressed="mixed"] { background: var(--accent-soft); border-color: var(--accent); color: var(--text); }
+.markdown-edit-button[aria-pressed="true"] { box-shadow: inset 0 -2px 0 var(--accent); }
+.markdown-edit-button[aria-pressed="mixed"] { border-style: dashed; }
 .markdown-edit-button:focus-visible, .markdown-heading-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .markdown-edit-bold { font-weight: 800; }
 .markdown-edit-italic { font-family: Georgia, serif; font-style: italic; font-size: 16px; }
 .markdown-edit-strike { text-decoration: line-through; }
 .markdown-editing .markdown-heading-select { width: 67px; height: 31px; font-size: 11px; padding: 4px 5px; }
+.markdown-math-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; }
+.markdown-math-options .import-field { margin-bottom: 6px; }
+.markdown-math-options select { width: 100%; }
+#markdown-math-dialog textarea { font-family: var(--editor-font-family, ui-monospace, monospace); }
+.markdown-math-preview { min-height: 58px; padding: 12px; overflow: auto; border: 1px solid var(--border); border-radius: 5px; background: var(--surface); color: var(--text); }
+.markdown-math-preview .katex-display { margin: 0; }
 @media (max-width: 480px) {
   .markdown-editing { gap: 5px; padding-inline: 6px; }
   .markdown-edit-group + .markdown-edit-group { padding-left: 5px; }
+  .markdown-math-options { grid-template-columns: minmax(0, 1fr); gap: 0; }
 }

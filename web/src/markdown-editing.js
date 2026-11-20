@@ -1,6 +1,9 @@
+import katex from 'katex';
+import { isInTable } from 'prosemirror-tables';
 import { t, onLanguageChange, translateElements } from './i18n.js';
 import { createImportDialog, element, labelledInput, translated } from './import-dialog.js';
-import { markdownEdit, sameMarkdownSelection } from './markdown-editing-commands.js';
+import { markdownEdit, markdownMathSource, selectedMarkdownMath, sameMarkdownSelection } from './markdown-editing-commands.js';
+import { markdownFormattingState } from './markdown-toolbar-state.js';
 
 const isMarkdown = path => /\.(md|markdown)$/i.test(path || '');
 
@@ -23,7 +26,11 @@ export function createMarkdownEditing({ container, getDocument, applyEdit, getRi
   container.setAttribute('role', 'toolbar');
   container.setAttribute('aria-label', t('Markdown の編集'));
   container.setAttribute('data-i18n-aria-label', 'Markdown の編集');
-  let linkDocument = null, codeDocument = null;
+  let linkDocument = null, codeDocument = null, mathDocument = null;
+  let mathPreference = { displayMode: false, delimiter: '$`' };
+  let mathInTable = false;
+  let lastFormattingState = null, formattingState = null;
+  const formattingButtons = new Map();
   const snapshot = () => {
     const document = getDocument();
     if (!document || !isMarkdown(document.path)) throw new Error(t('編集する Markdown の原稿を開いてください．'));
@@ -32,6 +39,9 @@ export function createMarkdownEditing({ container, getDocument, applyEdit, getRi
   function commandError(error) {
     if (error.message === 'link-url') return new Error(t('リンク先には http・https・mailto の URL，またはプロジェクト内の相対パスを入力してください．'));
     if (error.message === 'code-language') return new Error(t('言語の名前は空白や backtick を含めずに入力してください．'));
+    if (error.message === 'math-empty') return new Error(t('数式の TeX を入力してください．'));
+    if (error.message === 'math-line') return new Error(t('行内数式は 1 行で入力してください．複数行では「独立した数式」を選んでください．'));
+    if (error.message === 'math-delimiter') return new Error(t('数式の記法を選び直してください．'));
     return error;
   }
   async function apply(command, options, document = snapshot()) {
@@ -52,12 +62,14 @@ export function createMarkdownEditing({ container, getDocument, applyEdit, getRi
   function button(key, caption, action, className = '') {
     const button = element('button', { type: 'button', class: `markdown-edit-button ${className}`.trim(), title: t(key), 'aria-label': t(key), 'data-i18n-title': key, 'data-i18n-aria-label': key });
     button.append(typeof caption === 'string' ? element('span', { 'aria-hidden': 'true' }, caption) : caption);
+    button.addEventListener('mousedown', event => event.preventDefault());
     button.addEventListener('click', action);
     return button;
   }
-  function insertionButton(key, label, icon, action) {
-    const control = button(key, insertionIcon(icon), action, 'markdown-edit-labelled');
-    control.append(translated('span', label));
+  function formattingButton(command, key, caption, action, className = '') {
+    const control = button(key, caption, action, className);
+    control.dataset.markdownCommand = command;
+    formattingButtons.set(command, control);
     return control;
   }
   const heading = element('select', { class: 'markdown-heading-select', 'aria-label': t('見出しの種類'), 'data-i18n-aria-label': '見出しの種類', title: t('見出しの種類'), 'data-i18n-title': '見出しの種類' });
@@ -66,20 +78,20 @@ export function createMarkdownEditing({ container, getDocument, applyEdit, getRi
   heading.addEventListener('change', () => run('heading', { level: Number(heading.value) }));
   const formatting = element('div', { class: 'markdown-edit-group' });
   formatting.append(heading,
-    button('太字', 'B', () => run('bold', { placeholder: t('文字') }), 'markdown-edit-bold'),
-    button('斜体', 'I', () => run('italic', { placeholder: t('文字') }), 'markdown-edit-italic'),
-    button('取消線', 'S', () => run('strike', { placeholder: t('文字') }), 'markdown-edit-strike'));
+    formattingButton('bold', '太字', 'B', () => run('bold', { placeholder: t('文字') }), 'markdown-edit-bold'),
+    formattingButton('italic', '斜体', 'I', () => run('italic', { placeholder: t('文字') }), 'markdown-edit-italic'),
+    formattingButton('strike', '取消線', 'S', () => run('strike', { placeholder: t('文字') }), 'markdown-edit-strike'));
   const blocks = element('div', { class: 'markdown-edit-group' });
-  blocks.append(button('箇条書き', '•', () => run('bullet')), button('番号付きリスト', '1.', () => run('ordered')), button('チェックリスト', '☑', () => run('task')), button('引用', '❝', () => run('quote')));
+  blocks.append(formattingButton('bullet', '箇条書き', '•', () => run('bullet')), formattingButton('ordered', '番号付きリスト', '1.', () => run('ordered')), formattingButton('task', 'チェックリスト', '☑', () => run('task')), formattingButton('quote', '引用', '❝', () => run('quote')));
   const insertions = element('div', { class: 'markdown-edit-group' });
-  const math = button('数式を挿入', '∑', () => run('math', { displayMode: true }));
-  math.hidden = true;
-  insertions.append(button('行内コード', '<>', () => run('inlineCode', { placeholder: t('コード') })), button('コードブロック', '{ }', () => openCode()), math, button('リンクを挿入', '↗', () => openLink()));
+  const mathButton = button('数式を挿入', '∑', () => openMath());
+  mathButton.dataset.markdownCommand = 'math';
+  insertions.append(formattingButton('inlineCode', '行内コード', '<>', () => run('inlineCode', { placeholder: t('コード') })), formattingButton('codeBlock', 'コードブロック', '{ }', () => openCode()), mathButton, button('リンクを挿入', '↗', () => openLink()));
   const files = element('div', { class: 'markdown-edit-group' });
   files.append(
-    insertionButton('画像を挿入', '画像', 'image', onImage),
-    insertionButton('表を挿入', '表', 'table', onTable),
-    insertionButton('新しい Markdown ページ', '新規ページ', 'page', onNewPage));
+    button('画像を挿入', insertionIcon('image'), onImage),
+    button('表を挿入', insertionIcon('table'), onTable),
+    button('新しい Markdown ページ', insertionIcon('page'), onNewPage));
   container.replaceChildren(formatting, blocks, insertions, files);
 
   const link = createImportDialog('markdown-link-dialog', 'リンクを挿入');
@@ -137,11 +149,91 @@ export function createMarkdownEditing({ container, getDocument, applyEdit, getRi
     } catch (error) { onError(error); }
   }
 
+  const mathDialog = createImportDialog('markdown-math-dialog', '数式を挿入');
+  const mathPlacement = labelledInput('markdown-math-placement', '数式の配置', 'select');
+  const mathDisplayOption = translated('option', '独立した数式', { value: 'display' });
+  mathPlacement.input.append(translated('option', '行内数式', { value: 'inline' }), mathDisplayOption);
+  const mathDelimiter = labelledInput('markdown-math-delimiter', '行内数式の記法', 'select');
+  mathDelimiter.input.append(translated('option', 'GitHub の形式 ($`...`$)', { value: '$`' }), element('option', { value: '$' }, '$...$'), element('option', { value: '\\(' }, '\\(...\\)'));
+  const mathOptions = element('div', { class: 'markdown-math-options' });
+  mathOptions.append(mathPlacement.group, mathDelimiter.group);
+  const mathDisplayHelp = translated('p', '独立した数式は $$ で囲んで挿入します．', { class: 'field-help' });
+  const mathTableHelp = translated('p', '表のセルではインライン数式を使います．', { class: 'field-help', id: 'markdown-math-table-help', hidden: '' });
+  const mathInput = labelledInput('markdown-math-input', '数式の TeX', 'textarea', { rows: '4', spellcheck: 'false', placeholder: 'e^{i\\pi} + 1 = 0' });
+  const mathPreview = labelledInput('markdown-math-source', '挿入する Markdown', 'textarea', { rows: '3', readonly: '', spellcheck: 'false' });
+  const mathRendered = element('div', { class: 'markdown-math-preview', role: 'group', 'aria-label': t('数式のプレビュー'), 'data-i18n-aria-label': '数式のプレビュー' });
+  const mathRenderGroup = element('div', { class: 'import-field' });
+  mathRenderGroup.append(translated('p', '数式のプレビュー', { class: 'field-label' }), mathRendered);
+  const mathInsert = translated('button', '数式を挿入', { class: 'button button-primary', type: 'button', id: 'markdown-math-confirm' });
+  const mathCancel = translated('button', 'キャンセル', { class: 'button', type: 'button' });
+  mathDialog.body.append(mathOptions, mathDisplayHelp, mathTableHelp, mathInput.group, mathRenderGroup, mathPreview.group);
+  mathDialog.footer.append(mathCancel, mathInsert);
+  mathCancel.onclick = () => mathDialog.close();
+  mathDialog.dialog.addEventListener('close', () => { if (mathDocument) focusDocument(mathDocument); });
+  function mathValues() {
+    const displayMode = !mathInTable && mathPlacement.input.value === 'display';
+    return { tex: mathInput.input.value.replace(/\r\n?/g, '\n').trim(), displayMode, delimiter: displayMode ? '$$' : mathDelimiter.input.value };
+  }
+  function updateMath() {
+    if (mathInTable) mathPlacement.input.value = 'inline';
+    mathDisplayOption.disabled = mathInTable;
+    mathTableHelp.hidden = !mathInTable;
+    if (mathInTable) mathPlacement.input.setAttribute('aria-describedby', mathTableHelp.id);
+    else mathPlacement.input.removeAttribute('aria-describedby');
+    const values = mathValues();
+    mathDelimiter.group.hidden = values.displayMode;
+    mathDisplayHelp.hidden = !values.displayMode;
+    mathDialog.clearError();
+    mathRendered.replaceChildren();
+    try {
+      mathPreview.input.value = markdownMathSource(values.tex, values);
+      mathInsert.disabled = false;
+      katex.render(values.tex, mathRendered, { displayMode: values.displayMode, trust: false, throwOnError: false, strict: 'ignore', maxExpand: 1000, maxSize: 20, macros: {} });
+    } catch (error) {
+      mathPreview.input.value = ''; mathInsert.disabled = true;
+      if (values.tex) mathDialog.showError(commandError(error));
+    }
+  }
+  mathInput.input.addEventListener('input', updateMath);
+  for (const input of [mathPlacement.input, mathDelimiter.input]) input.addEventListener('change', () => {
+    mathPreference = { displayMode: mathInTable ? mathPreference.displayMode : mathPlacement.input.value === 'display', delimiter: mathDelimiter.input.value };
+    updateMath();
+  });
+  mathInsert.onclick = () => mathDialog.run(async () => {
+    const values = mathValues();
+    try { markdownMathSource(values.tex, values); } catch (error) { throw commandError(error); }
+    await apply('math', values, mathDocument);
+    return true;
+  }).then(done => { if (done) mathDialog.dialog.close(); });
+  function openMath() {
+    try {
+      mathDocument = snapshot();
+      const rich = getRichEditor();
+      mathInTable = Boolean(rich && isInTable(rich.view.state));
+      const from = Math.min(mathDocument.anchor, mathDocument.head), to = Math.max(mathDocument.anchor, mathDocument.head);
+      const selected = (rich?.selectedText() ?? mathDocument.content.slice(from, to)).trim();
+      const selectedNode = rich?.view.state.selection.node;
+      const existing = ['math_inline', 'math_block'].includes(selectedNode?.type.name) ? selectedNode.attrs : rich ? null : selectedMarkdownMath(mathDocument);
+      mathPlacement.input.value = !mathInTable && (existing?.displayMode ?? mathPreference.displayMode) ? 'display' : 'inline';
+      mathDelimiter.input.value = existing && !existing.displayMode && ['$`', '$', '\\('].includes(existing.delimiter) ? existing.delimiter : mathPreference.delimiter;
+      mathInput.input.value = existing?.tex ?? selected;
+      mathDialog.open(); updateMath(); mathInput.input.focus(); mathInput.input.select();
+    } catch (error) { onError(error); }
+  }
+
   function update() {
     const document = getDocument();
     container.hidden = !document || !isMarkdown(document.path);
     const rich = getRichEditor();
-    math.hidden = !rich;
+    const currentState = rich?.view.state || null;
+    if (currentState !== lastFormattingState) {
+      lastFormattingState = currentState;
+      formattingState = currentState ? markdownFormattingState(currentState) : null;
+    }
+    for (const [command, control] of formattingButtons) {
+      if (formattingState) control.setAttribute('aria-pressed', String(formattingState[command]));
+      else control.removeAttribute('aria-pressed');
+    }
     if (!container.hidden) {
       const position = Math.min(document.anchor, document.head);
       const start = position === 0 ? 0 : document.content.lastIndexOf('\n', position - 1) + 1;
@@ -149,7 +241,7 @@ export function createMarkdownEditing({ container, getDocument, applyEdit, getRi
       heading.value = String(rich ? rich.headingLevel() : match?.[1].length || 0);
     }
   }
-  const stopLanguage = onLanguageChange(() => { translateElements(container); update(); });
+  const stopLanguage = onLanguageChange(() => { translateElements(container); translateElements(mathDialog.dialog); if (mathDialog.dialog.open) updateMath(); update(); });
   update();
-  return { update, openLink, openCode, destroy() { stopLanguage(); link.destroy(); code.destroy(); container.replaceChildren(); } };
+  return { update, openLink, openCode, openMath, destroy() { stopLanguage(); link.destroy(); code.destroy(); mathDialog.destroy(); container.replaceChildren(); } };
 }

@@ -1803,8 +1803,9 @@ test('ライトとダークのカラーコードを保存し，入力の取消�
     dark: { background: '#12212c', foreground: '#ddeeff', accent: '#ffe08a' },
   };
   await expect.poll(async () => (await json(session, '/api/storage?key=preferences')).value?.appearance?.customColors).toEqual(customColors);
-  await expect(page.locator('#toast')).toHaveCSS('background-color', 'rgb(18, 33, 44)');
+  await expect(page.locator('#toast')).not.toHaveCSS('background-color', 'rgb(18, 33, 44)');
   await expect(page.locator('#toast')).toHaveCSS('color', 'rgb(221, 238, 255)');
+  await expect(page.locator('#toast')).not.toHaveCSS('box-shadow', 'none');
   await expect(page.locator('.status-bar')).toHaveCSS('background-color', 'rgb(18, 33, 44)');
   await closeSettings(page);
 
@@ -1837,6 +1838,14 @@ test('ライトとダークのカラーコードを保存し，入力の取消�
   await page.locator('#save-appearance').click();
   await expect.poll(async () => (await json(session, '/api/storage?key=preferences')).value?.appearance?.customColors).toEqual({ light: customColors.light });
   await closeSettings(page);
+  await page.locator('#refresh-files').click();
+  await expect(page.locator('#toast')).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath('notification-dark.png') });
+  await page.getByTestId('theme-toggle').click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await page.locator('#refresh-files').click();
+  await expect(page.locator('#toast')).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath('notification-light.png') });
   expect(errors).toEqual([]);
 });
 

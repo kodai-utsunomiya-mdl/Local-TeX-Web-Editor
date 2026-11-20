@@ -42,12 +42,16 @@ test('各配色とアクセントで本文，補足，ボタン，選択部分�
     for (const [foreground, background, minimum] of [
       ['text', 'surface', 7], ['secondary', 'subtle', 4.5], ['muted', 'subtle', 4.5],
       ['accent', 'surface', 4.5], ['accent', 'accent-soft', 4.5], ['text', 'selection', 4.5],
+      ['popup-text', 'popup-surface', 4.5], ['popup-muted', 'popup-surface', 4.5],
+      ['popup-text', 'popup-accent-soft', 4.5], ['popup-accent', 'popup-accent-soft', 4.5],
+      ['popup-border', 'surface', 3], ['popup-border', 'popup-surface', 3],
     ]) {
       assert.ok(contrast(colors[foreground], colors[background]) >= minimum, `${mode}, ${palette}, ${accent}: ${foreground} on ${background}`);
     }
     assert.ok(contrast('#ffffff', colors['accent-button']) >= 4.5, `${mode}, ${accent}: button`);
     assert.ok(contrast('#ffffff', colors['accent-dark']) >= 4.5, `${mode}, ${accent}: button hover`);
     assert.match(colors['line-highlight'], /^#[a-f\d]{8}$/i);
+    assert.notEqual(colors['popup-surface'], colors.surface);
     for (const status of ['success', 'warning', 'danger']) {
       assert.ok(contrast(colors[status], colors[`${status}-bg`]) >= 4.5, `${mode}, ${palette}: ${status}`);
       assert.ok(contrast(colors[status], colors.surface) >= 4.5, `${mode}, ${palette}: ${status} on surface`);
@@ -86,5 +90,10 @@ test('指定した背景色に合わせて補足，通知，警告の文字色�
     }
     assert.ok(contrast(colors['accent-on-button'], colors['accent-button']) >= 4.5);
     assert.notEqual(colors.hover, colors.surface);
+    assert.notEqual(colors['popup-surface'], colors.surface);
+    for (const key of ['popup-text', 'popup-muted', 'popup-accent', 'popup-warning', 'popup-danger']) {
+      for (const surface of ['popup-surface', 'popup-accent-soft']) assert.ok(contrast(colors[key], colors[surface]) >= 4.5, `${background}: ${key} on ${surface}`);
+    }
+    for (const surface of ['surface', 'popup-surface']) assert.ok(contrast(colors['popup-border'], colors[surface]) >= 3, `${background}: popup border on ${surface}`);
   }
 });

@@ -7,9 +7,11 @@ import { projectHomeEnglish } from './locales/project-home-en.js';
 import { pdfAppearanceEnglish } from './locales/pdf-appearance-en.js';
 import { outlineEnglish } from './locales/outline-en.js';
 import { documentToolsEnglish } from './locales/document-tools-en.js';
+import { fileSortingEnglish } from './locales/file-sorting-en.js';
+import { editorContextMenuEnglish } from './locales/editor-context-menu-en.js';
 import { shortcutModifier } from './platform-keys.js';
 
-Object.assign(english, importsEnglish, writingEnglish, markdownEditingEnglish, markdownRichEnglish, projectHomeEnglish, pdfAppearanceEnglish, outlineEnglish, documentToolsEnglish);
+Object.assign(english, importsEnglish, writingEnglish, markdownEditingEnglish, markdownRichEnglish, projectHomeEnglish, pdfAppearanceEnglish, outlineEnglish, documentToolsEnglish, fileSortingEnglish, editorContextMenuEnglish);
 
 let language = 'en';
 const listeners = new Set();
