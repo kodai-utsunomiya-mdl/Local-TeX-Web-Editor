@@ -5,9 +5,14 @@ const labels = {
   newFile: ['ここに新規ファイルを作成', 'New file here'], newFolder: ['ここに新規フォルダーを作成', 'New folder here'],
   importFiles: ['コンピューターからファイルを追加…', 'Add files from your computer…'],
   rename: ['名前を変更', 'Rename'], remove: ['削除…', 'Delete…'],
+  duplicate: ['コピーを作成…', 'Create a copy…'], copy: ['コピーを作成', 'Create a copy'],
   relative: ['相対パスをコピー', 'Copy relative path'], absolute: ['絶対パスをコピー', 'Copy full path'],
   cancel: ['キャンセル', 'Cancel'], close: ['閉じる', 'Close'], create: ['作成', 'Create'], delete: ['削除', 'Delete'],
   path: ['プロジェクト内のパス', 'Path in the project'],
+  copyPath: ['コピー先のプロジェクト内のパス', 'Destination path in the project'],
+  copyTitle: ['ファイルやフォルダーのコピーを作成', 'Create a copy of a file or folder'],
+  copyHelp: ['保存済みの内容をコピーします．名前や保存先を変更できます．元のファイルはそのまま残ります．', 'Copy the saved contents. You can change the name or destination folder. The original stays in place.'],
+  copyDirty: ['次のファイルには未保存の編集があります．コピーには保存済みの内容を使います:', 'These files have unsaved edits. Their copies will use the saved contents:'],
   renameTitle: ['ファイルやフォルダーの名前を変更', 'Rename a file or folder'],
   renameHelp: ['既存のフォルダーへの移動もできます．原稿内のリンクや参照先は，変更後のパスに合わせて編集してください．', 'You can also move this item to an existing folder. Update links and references in your documents to use the new path.'],
   folderTitle: ['フォルダーを作成', 'Create a folder'], folderHelp: ['既存のフォルダー内に，新しいフォルダーを作成します．', 'Create a new folder inside an existing folder.'],
@@ -20,6 +25,7 @@ const labels = {
   dirty: ['次の未保存の本文と草稿も削除します:', 'The following unsaved text and drafts will also be removed:'],
   copied: ['パスをコピーしました．', 'Path copied.'], created: ['フォルダーを作成しました．', 'Folder created.'],
   renamed: ['名前を変更しました．', 'Item renamed.'], removed: ['削除しました．', 'Item deleted.'],
+  duplicated: ['コピーを作成しました．', 'Copy created.'],
   stale: ['開いているファイルがディスク上で変更されています．本文とディスクの内容を確認し，ファイルを開き直してから操作してください．', 'An open file has changed on disk. Check your text and the file on disk, then reopen it before continuing.'],
   occupied: ['変更先に開いているファイルや未保存の草稿があります．別の名前を指定するか，そのタブと草稿の内容を確認してから操作してください．', 'The destination has an open file or an unsaved draft. Choose another name, or review that tab and its drafts before continuing.'],
 };
@@ -49,7 +55,26 @@ export function absoluteProjectPath(root, relative) {
   return root.replace(/[\\/]$/, '') + (windows ? '\\' : '/') + relative.replaceAll('/', windows ? '\\' : '/');
 }
 
-export function createFileActions({ tree, getProject, isBlocked, begin, end, inspectOpenDocuments, checkDestination, getUnsavedPaths, api, onChanged, onNewFile, onImportFiles = null, onError, onNotice }) {
+export function suggestEntryCopyPath(entry, paths, { platform = '' } = {}) {
+  const normalize = value => {
+    const normalized = String(value).replaceAll('\\', '/').normalize('NFC');
+    return platform === 'windows' || platform === 'darwin' ? normalized.toLocaleLowerCase('en-US') : normalized;
+  };
+  const occupied = new Set();
+  for (const value of paths) {
+    const path = normalize(value); occupied.add(path);
+    for (let end = path.lastIndexOf('/'); end > 0; end = path.lastIndexOf('/', end - 1)) occupied.add(path.slice(0, end));
+  }
+  const slash = entry.path.lastIndexOf('/'), parent = entry.path.slice(0, slash + 1), name = entry.path.slice(slash + 1);
+  const dot = entry.directory ? -1 : name.lastIndexOf('.');
+  const stem = dot > 0 ? name.slice(0, dot) : name, extension = dot > 0 ? name.slice(dot) : '';
+  for (let number = 1; ; number++) {
+    const candidate = `${parent}${stem}-copy${number > 1 ? `-${number}` : ''}${extension}`;
+    if (!occupied.has(normalize(candidate))) return candidate;
+  }
+}
+
+export function createFileActions({ tree, getProject, getCopyPath, isBlocked, begin, end, inspectOpenDocuments, checkDestination, getUnsavedPaths, api, onChanged, onNewFile, onImportFiles = null, onError, onNotice }) {
   const menu = make('div', 'file-context-menu'); menu.id = 'file-context-menu'; menu.role = 'menu'; menu.hidden = true;
   const dialog = make('dialog', 'dialog file-action-dialog'); dialog.id = 'file-action-dialog'; dialog.setAttribute('aria-labelledby', 'file-action-title');
   const form = make('form');
@@ -75,12 +100,12 @@ export function createFileActions({ tree, getProject, isBlocked, begin, end, ins
     if (returnFocus?.isConnected) { returnFocus.setAttribute('aria-expanded', 'false'); if (restore) returnFocus.focus(); }
   }
   function language() {
-    menu.ariaLabel = text('menu'); close.ariaLabel = text('close'); cancel.textContent = text('cancel'); label.textContent = text('path');
+    menu.ariaLabel = text('menu'); close.ariaLabel = text('close'); cancel.textContent = text('cancel'); label.textContent = text(action === 'copy' ? 'copyPath' : 'path');
     if (!dialog.open && !action) return;
-    title.textContent = text(action === 'rename' ? 'renameTitle' : action === 'delete' ? 'deleteTitle' : 'folderTitle');
-    help.textContent = text(action === 'rename' ? 'renameHelp' : action === 'delete' ? entry.directory ? 'deleteFolderHelp' : 'deleteHelp' : 'folderHelp');
-    submit.textContent = text(action === 'rename' ? 'rename' : action === 'delete' ? 'delete' : 'create');
-    contents.replaceChildren(); contents.hidden = action !== 'delete' || !entry?.directory;
+    title.textContent = text(action === 'copy' ? 'copyTitle' : action === 'rename' ? 'renameTitle' : action === 'delete' ? 'deleteTitle' : 'folderTitle');
+    help.textContent = text(action === 'copy' ? 'copyHelp' : action === 'rename' ? 'renameHelp' : action === 'delete' ? entry.directory ? 'deleteFolderHelp' : 'deleteHelp' : 'folderHelp');
+    submit.textContent = text(action === 'copy' ? 'copy' : action === 'rename' ? 'rename' : action === 'delete' ? 'delete' : 'create');
+    contents.replaceChildren(); contents.hidden = !['delete', 'copy'].includes(action) || !entry?.directory;
     if (!contents.hidden) {
       contents.append(make('h3', '', text('contents')));
       contents.append(make('p', 'file-action-counts', entry.empty ? text('empty') : text('counts').replace('{files}', entry.fileCount).replace('{folders}', entry.directoryCount)));
@@ -90,10 +115,10 @@ export function createFileActions({ tree, getProject, isBlocked, begin, end, ins
         contents.append(list);
       }
     }
-    const paths = action === 'delete' ? getUnsavedPaths(entry) : [];
+    const paths = ['delete', 'copy'].includes(action) ? getUnsavedPaths(entry) : [];
     dirty.replaceChildren(); dirty.hidden = !paths.length;
     if (paths.length) {
-      dirty.append(make('p', '', text('dirty')));
+      dirty.append(make('p', '', text(action === 'copy' ? 'copyDirty' : 'dirty')));
       const list = make('ul'); for (const path of paths) list.append(make('li', '', path)); dirty.append(list);
     }
   }
@@ -119,15 +144,16 @@ export function createFileActions({ tree, getProject, isBlocked, begin, end, ins
       if (kind !== 'folder') await inspectOpenDocuments(entry, kind);
       error.hidden = true; current.textContent = target.path || projectRoot;
       input.hidden = label.hidden = kind === 'delete'; input.required = kind !== 'delete';
-      input.value = kind === 'rename' ? target.path : (target.path ? `${target.path}/` : '');
+      input.value = kind === 'copy' ? getCopyPath(entry) : kind === 'rename' ? target.path : (target.path ? `${target.path}/` : '');
       submit.classList.toggle('button-stop', kind === 'delete'); submit.classList.toggle('button-primary', kind !== 'delete');
       language(); dialog.showModal();
       if (kind === 'delete') cancel.focus();
       else {
         input.focus();
-        const start = kind === 'rename' ? input.value.lastIndexOf('/') + 1 : input.value.length;
+        const named = kind === 'rename' || kind === 'copy';
+        const start = named ? input.value.lastIndexOf('/') + 1 : input.value.length;
         const dot = input.value.lastIndexOf('.');
-        input.setSelectionRange(start, kind === 'rename' && !entry.directory && dot > start ? dot : input.value.length);
+        input.setSelectionRange(start, named && !entry.directory && dot > start ? dot : input.value.length);
       }
     } catch (err) { action = ''; release(); throw err; }
   }
@@ -140,16 +166,16 @@ export function createFileActions({ tree, getProject, isBlocked, begin, end, ins
       let reviewRequired = false;
       try {
         const method = action === 'rename' ? 'PATCH' : action === 'delete' ? 'DELETE' : 'POST';
-        const body = action === 'folder' ? { path: input.value.trim() } : { path: entry.path, revision: entry.revision, ...(action === 'rename' ? { newPath: input.value.trim() } : {}) };
+        const body = action === 'folder' ? { path: input.value.trim() } : { path: entry.path, revision: entry.revision, ...(['rename', 'copy'].includes(action) ? { newPath: input.value.trim() } : {}), ...(action === 'copy' ? { action: 'copy' } : {}) };
         if (action !== 'delete') checkDestination(body.newPath || body.path, action === 'rename' ? entry : null);
-        const result = await api('/api/entry', { method, body, projectRoot, timeout: 60000 });
+        const result = await api('/api/entry', { method, body, projectRoot, timeout: action === 'copy' ? 120000 : 60000 });
         const finish = await onChanged(result);
-        const message = text(action === 'folder' ? 'created' : action === 'delete' ? 'removed' : 'renamed');
+        const message = text(action === 'copy' ? 'duplicated' : action === 'folder' ? 'created' : action === 'delete' ? 'removed' : 'renamed');
         returnFocus = [...tree.querySelectorAll('.file-button, .tree-directory')].find(node => node.dataset.path === result.path) || tree;
         if (returnFocus.matches('.tree-directory')) returnFocus = returnFocus.querySelector('summary');
         finishDialog(); await finish?.(); onNotice(result.historyWarning || message);
       } catch (err) {
-        if (action === 'delete' && err?.data?.reviewRequired && err.data.entry?.path === entry.path) {
+        if (['delete', 'copy'].includes(action) && err?.data?.reviewRequired && err.data.entry?.path === entry.path) {
           entry = err.data.entry; language(); reviewRequired = true;
         }
         error.textContent = err?.message || String(err); error.hidden = false;
@@ -185,7 +211,7 @@ export function createFileActions({ tree, getProject, isBlocked, begin, end, ins
     separator();
     if (target.path) item('relative', async () => { await navigator.clipboard.writeText(target.path); onNotice(text('copied')); });
     item('absolute', async () => { await navigator.clipboard.writeText(absoluteProjectPath(getProject().root, target.path)); onNotice(text('copied')); });
-    if (target.path) { separator(); item('rename', () => openDialog('rename', target)); item('remove', () => openDialog('delete', target), true); }
+    if (target.path) { separator(); item('duplicate', () => openDialog('copy', target)); item('rename', () => openDialog('rename', target)); item('remove', () => openDialog('delete', target), true); }
     menu.hidden = false;
     const rect = menu.getBoundingClientRect();
     menu.style.left = `${Math.max(6, Math.min(x, innerWidth - rect.width - 6))}px`;

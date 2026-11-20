@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test';
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { test as editorTest, json, openProject, openEditor, setAutoSave } from './editor-fixtures.mjs';
 
@@ -198,4 +198,71 @@ test('ホームで Markdown の草稿を開くと，直接編集で保存した�
   await expect(page.locator('#markdown-rich-primary .ProseMirror p').filter({ hasText: 'Paragraph 96 ' })).toBeInViewport();
   await page.keyboard.insertText('Resumed here. ');
   await expect(page.locator('#markdown-rich-primary .ProseMirror p').filter({ hasText: 'Paragraph 96 ' })).toHaveText('Resumed here. Paragraph 96 of the recovered manuscript.');
+});
+
+test('外部で移動した最近のプロジェクトを表示し，原稿と草稿を残して一覧から外す', async ({ page, session }) => {
+  const previous = path.join(session.temp, 'Project moved outside the app');
+  await mkdir(previous);
+  await writeFile(path.join(previous, 'notes.md'), '# Keep the moved document\n');
+  const prior = await json(session, '/api/project/open', { method: 'POST', data: { path: previous } });
+  const previousRoot = prior.project.root;
+  await json(session, '/api/storage', { method: 'PUT', data: {
+    key: `drafts:${previousRoot}`, value: { entries: [{ path: 'notes.md', content: '# Keep the saved draft\n' }] },
+  } });
+  const current = await openProject(session);
+  await openEditor(page, session);
+  const moved = previousRoot + ' moved';
+  await rename(previousRoot, moved);
+  await openHome(page);
+  const previousCard = card(page, previousRoot);
+  await expect(previousCard).toHaveAttribute('data-project-status', 'missing');
+  await expect(previousCard).toContainText('Folder not found');
+  await expect(previousCard.locator('[data-action="open"]')).toBeDisabled();
+  await expect(previousCard.locator('[data-action="delete"]')).toBeDisabled();
+  await previousCard.locator('[data-action="forget"]').click();
+  await expect(previousCard).toHaveCount(0);
+  expect(await readFile(path.join(moved, 'notes.md'), 'utf8')).toBe('# Keep the moved document\n');
+  expect((await json(session, storageURL('drafts', previousRoot))).value.entries[0].content).toBe('# Keep the saved draft\n');
+  expect((await json(session, '/api/state')).project.root).toBe(current.project.root);
+  await page.reload();
+  await openHome(page);
+  await expect(card(page, previousRoot)).toHaveCount(0);
+});
+
+test('現在のフォルダーの移動を再確認し，本文を編集したまま元の場所で保存を再開する', async ({ page, session }) => {
+  const opened = await openProject(session);
+  const root = opened.project.root, moved = root + ' moved';
+  const original = await readFile(path.join(root, 'main.tex'), 'utf8');
+  await openEditor(page, session);
+  await setAutoSave(page, false);
+  const text = '% Work remains in the editor while the folder is unavailable';
+  await replaceSource(page, text);
+  await openHome(page);
+  await rename(root, moved);
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  const current = card(page, root);
+  await expect(current).toHaveAttribute('data-project-status', 'missing');
+  await expect(current.locator('[data-action="delete"]')).toBeDisabled();
+  await current.locator('[data-action="resume"]').click();
+  await expect(source(page)).toHaveText(text);
+  await expect(page.locator('#save-button')).toBeDisabled();
+  await expect(page.locator('#compile-button')).toBeDisabled();
+  await source(page).click();
+  await page.keyboard.press(`${modifier}+End`);
+  await page.keyboard.insertText('\n% Continued while disconnected');
+  const edited = text + '\n% Continued while disconnected';
+  await expect(source(page)).toHaveText(edited);
+  await openHome(page);
+  expect(await exists(root)).toBe(false);
+  expect(await readFile(path.join(moved, 'main.tex'), 'utf8')).toBe(original);
+  await expect.poll(async () => (await json(session, storageURL('drafts', root))).value?.entries.some(entry => entry.content === edited)).toBe(true);
+  await rename(moved, root);
+  await current.locator('[data-action="refresh"]').click();
+  await expect(current).toHaveAttribute('data-project-status', 'available');
+  await expect(current.locator('[data-action="delete"]')).toBeEnabled();
+  await current.locator('[data-action="resume"]').click();
+  await expect(source(page)).toHaveText(edited);
+  await expect(page.locator('#save-button')).toBeEnabled();
+  await page.locator('#save-button').click();
+  await expect.poll(() => readFile(path.join(root, 'main.tex'), 'utf8')).toBe(edited);
 });

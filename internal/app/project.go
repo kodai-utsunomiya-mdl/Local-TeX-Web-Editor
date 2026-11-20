@@ -161,6 +161,7 @@ func (a *App) openProjectLocked(rawPath string) error {
 	a.lastPDFMarkdownInputs = nil
 	a.pdfVersions = make(map[string]string)
 	a.pdfOrder = nil
+	a.compiledPDFs = make(map[string]CompiledPDF)
 	a.synctexVersions = make(map[string]*synctexVersion)
 	a.restoreCachedBuildLocked(*a.project)
 	return nil
@@ -230,6 +231,9 @@ func (a *App) updateSettingsLocked(texBin, main, mode *string) error {
 	}
 	if a.lastPDFID != "" && compilationChanged {
 		a.lastPDFChanged = true
+	}
+	if compilationChanged {
+		a.noteCompiledPDFSettingsChangedLocked()
 	}
 	return nil
 }

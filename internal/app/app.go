@@ -56,6 +56,7 @@ type App struct {
 	lastPDFMarkdownInputs map[string]bool
 	pdfVersions           map[string]string
 	pdfOrder              []string
+	compiledPDFs          map[string]CompiledPDF
 	synctexVersions       map[string]*synctexVersion
 	synctexSlots          chan struct{}
 
@@ -78,8 +79,11 @@ type State struct {
 	SynctexInstallCommands []string                  `json:"synctexInstallCommands"`
 	ShortcutsSupported     bool                      `json:"shortcutsSupported"`
 	Project                *Project                  `json:"project"`
+	ProjectStatus          *ProjectStatus            `json:"projectStatus"`
 	RecentProjects         []string                  `json:"recentProjects"`
+	RecentProjectStatuses  []ProjectStatus           `json:"recentProjectStatuses"`
 	Build                  *Build                    `json:"build"`
+	CompiledPDFs           []CompiledPDF             `json:"compiledPDFs"`
 }
 
 type apiError struct {
@@ -122,7 +126,7 @@ func New(options Options) (*App, error) {
 		return nil, messages.Errorf("設定フォルダーを作成できません: %w", err)
 	}
 	a := &App{
-		options: options, packageIdentity: identity, pdfVersions: make(map[string]string),
+		options: options, packageIdentity: identity, pdfVersions: make(map[string]string), compiledPDFs: make(map[string]CompiledPDF),
 		synctexVersions: make(map[string]*synctexVersion), synctexSlots: make(chan struct{}, 2),
 		browserEnd: make(chan struct{}),
 	}
@@ -171,6 +175,7 @@ func (a *App) Handler() http.Handler {
 	mux.HandleFunc("/api/state", a.stateHandler)
 	mux.HandleFunc("/api/session", a.browserSessionHandler)
 	mux.HandleFunc("/api/project/open", a.openHandler)
+	mux.HandleFunc("/api/project/recent", a.recentProjectHandler)
 	mux.HandleFunc("/api/project/delete", a.projectDeleteHandler)
 	mux.HandleFunc("/api/project/pick", a.pickHandler)
 	mux.HandleFunc("/api/settings", a.settingsHandler)
@@ -185,6 +190,7 @@ func (a *App) Handler() http.Handler {
 	mux.HandleFunc("/api/assets/import", a.assetImportHandler)
 	mux.HandleFunc("/api/files/import", a.fileImportHandler)
 	mux.HandleFunc("/api/templates", a.templatesHandler)
+	mux.HandleFunc("/api/templates/files", a.fileTemplateHandler)
 	mux.HandleFunc("/api/templates/create-project", a.templateProjectHandler)
 	mux.HandleFunc("/api/asset", a.assetHandler)
 	mux.HandleFunc("/api/build", a.buildHandler)
@@ -289,13 +295,7 @@ func (a *App) stateLocked(refresh bool, language ...string) State {
 	if len(language) > 0 {
 		selected = language[0]
 	}
-	if refresh && a.project != nil {
-		if files, directories, directoryModifiedAt, err := listProjectEntries(a.project.Root); err == nil {
-			a.project.Files = files
-			a.project.Directories = directories
-			a.project.DirectoryModifiedAt = directoryModifiedAt
-		}
-	}
+	projectStatus := a.refreshProjectStatusLocked(refresh, selected)
 	executable, _ := os.Executable()
 	if executable != "" {
 		executable, _ = filepath.Abs(executable)
@@ -306,7 +306,8 @@ func (a *App) stateLocked(refresh bool, language ...string) State {
 		ExecutablePath:  executable, InstallationError: messages.ErrorText(selected, a.options.InstallationError),
 		ShortcutsSupported: runtime.GOOS == "windows" && a.packageIdentity == nil,
 		TexBin:             a.config.TexBin, RecentProjects: append([]string{}, a.config.RecentProjects...),
-		Build: a.buildSnapshotLocked(selected),
+		Build: a.buildSnapshotLocked(selected), CompiledPDFs: a.compiledPDFSnapshotLocked(),
+		ProjectStatus: projectStatus, RecentProjectStatuses: a.recentProjectStatusesLocked(projectStatus, selected),
 	}
 	if a.project != nil {
 		copy := *a.project
@@ -385,7 +386,7 @@ func (a *App) settingsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.mu.Lock()
-	err := a.checkProjectLocked(r.Header.Get("X-Project-Root"))
+	err := a.checkProjectLocked(r.Header.Get("X-Project-Root"), true)
 	if err == nil {
 		err = a.updateSettingsLocked(input.TexBin, input.Main, input.Mode)
 	}
@@ -475,7 +476,7 @@ func (a *App) buildHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.mu.Lock()
-	if err := a.checkProjectLocked(r.Header.Get("X-Project-Root")); err != nil {
+	if err := a.checkProjectLocked(r.Header.Get("X-Project-Root"), true); err != nil {
 		a.mu.Unlock()
 		writeError(w, err)
 		return
@@ -504,7 +505,7 @@ func (a *App) pdfHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.mu.Lock()
-	if err := a.checkProjectLocked(r.Header.Get("X-Project-Root")); err != nil {
+	if err := a.checkProjectLocked(r.Header.Get("X-Project-Root"), true); err != nil {
 		a.mu.Unlock()
 		writeError(w, err)
 		return
@@ -552,16 +553,19 @@ func (a *App) shutdownHandler(w http.ResponseWriter, r *http.Request) {
 	}()
 }
 
-func (a *App) checkProjectLocked(expected string) error {
-	if expected == "" {
-		return nil
+func (a *App) checkProjectLocked(expected string, allowUnavailable ...bool) error {
+	if expected != "" {
+		path, err := url.PathUnescape(expected)
+		if err != nil {
+			return fail(http.StatusBadRequest, "プロジェクトのパスを読み取れません．")
+		}
+		if a.project == nil || !samePath(a.project.Root, path) {
+			return fail(http.StatusConflict, "別の画面でプロジェクトが切り替わりました．編集中の内容を確認してから，この画面を開き直してください．")
+		}
 	}
-	path, err := url.PathUnescape(expected)
-	if err != nil {
-		return fail(http.StatusBadRequest, "プロジェクトのパスを読み取れません．")
-	}
-	if a.project == nil || !samePath(a.project.Root, path) {
-		return fail(http.StatusConflict, "別の画面でプロジェクトが切り替わりました．編集中の内容を確認してから，この画面を開き直してください．")
+	if a.project != nil && !(len(allowUnavailable) > 0 && allowUnavailable[0]) {
+		_, err := inspectProjectFolder(a.project.Root)
+		return err
 	}
 	return nil
 }

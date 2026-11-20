@@ -385,6 +385,35 @@ test('画像を開くと PDF の配色ボタンを隠し，PDF へ戻ると選�
   expect(await page.evaluate(() => window.errors)).toEqual([]);
 });
 
+test('別の PDF の読み込みに失敗した場合は前の PDF とその位置が残り，再表示で選んだ PDF を読み直せる', async ({ page }) => {
+  await openHarness(page, 'pdf');
+  await expect.poll(() => page.evaluate(() => window.preview.ready)).toBe(true);
+  await page.evaluate(() => window.preview.goToPage(2));
+  const previous = await page.evaluate(() => window.preview.getViewState());
+  let available = false;
+  await page.route(`${origin}/api/pdf?build=build-two`, route => route.fulfill(available
+    ? { contentType: 'application/pdf', body: linkedPDF(5) }
+    : { status: 410, contentType: 'application/json', body: JSON.stringify({ error: 'PDF temporarily unavailable' }) }));
+  expect(await page.evaluate(() => window.preview.load('build-two', 'project', 'second.tex'))).toBe(false);
+  expect(await page.evaluate(() => ({
+    requested: window.preview.requestedBuildId, build: window.preview.buildId,
+    main: window.preview.documentMain, ready: window.preview.ready, retry: window.preview.lastRequest,
+  }))).toEqual({ requested: 'build-one', build: 'build-one', main: 'main.tex', ready: true,
+    retry: { buildId: 'build-two', projectRoot: 'project', main: 'second.tex' } });
+  expect(await page.evaluate(() => window.preview.getViewState())).toEqual(previous);
+  await expect(page.locator('#pdf-pages')).toHaveText('3');
+  await expect(page.locator('#pdf-loading')).toBeHidden();
+  expect(await page.evaluate(() => window.errors.length)).toBe(1);
+  available = true;
+  await page.evaluate(() => window.preview.retry());
+  await expect.poll(() => page.evaluate(() => window.preview.ready && window.preview.buildId)).toBe('build-two');
+  expect(await page.evaluate(() => window.preview.requestedBuildId)).toBe('build-two');
+  expect(await page.evaluate(() => window.preview.documentMain)).toBe('second.tex');
+  await expect(page.locator('#pdf-pages')).toHaveText('5');
+  await expect(page.getByTestId('pdf-canvas')).toHaveAttribute('data-build-id', 'build-two');
+  expect(await page.evaluate(() => window.errors.length)).toBe(1);
+});
+
 test('再コンパイル後にページが減った PDF へ以前の位置を戻すと，最後のページが開く', async ({ page }) => {
   await openHarness(page, 'pdf');
   await expect.poll(() => page.evaluate(() => window.preview.ready)).toBe(true);

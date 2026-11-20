@@ -61,7 +61,9 @@ Search and replace across the project, compare local edit history, inspect citat
 
 Paste images, create or paste tables, and start from built-in or custom templates. Markdown opens in visual editing for headings, text, tables, tasks, and equations. Switch to source notation, show or hide the preview, and synchronize source and preview scrolling. Create linked Markdown pages, save Markdown as PDF using browser printing, or extract PDF text to TXT.
 
-Manage project files from the context menu, copy multiple files from your computer, and edit Python, JavaScript and other program files. The TeX logo opens Home with current and recent projects. Review a project's contents and enter its name before deleting it. Close all tabs together. The local app keeps running while the browser tab sleeps; use Quit to stop it.
+Manage project files from the context menu and copy multiple files from your computer. Create copies of files or folders from their saved contents while continuing to edit the originals. Sort by name or date, drag entries into a manual order, or drop onto a folder to move them. New files can start empty or use one previewed text file from a built-in or custom template. Each TeX document's latest successful PDF appears in the file list with its output name and TeX path; open it, save it, or copy it into the project.
+
+Edit Python, JavaScript and other program files. Home checks current and recent folders and explains missing locations; remove an entry while leaving its files and drafts in place. Open documents without unsaved edits load external changes. Documents being edited offer a comparison; a deleted file's text and draft stay available for review. The TeX logo opens Home with current and recent projects. Review a project's contents and enter its name before deleting it. Close all tabs together. The local app keeps running while the browser tab sleeps; use Quit to stop it.
 
 Preview English or Japanese immediately in Settings, adjust panes and appearance, and use autosave and local drafts. Documents, history and templates stay on your PC.
 
@@ -74,7 +76,7 @@ Enter each line as one feature, without adding a bullet character to the Store f
 
 ```text
 Compile local TeX projects with your installed TeX Live and latexmk
-Read PDFs with continuous scrolling, search, selection and zoom
+Read PDFs with continuous scrolling, search and zoom, or open each TeX document's latest compiled PDF
 Move between corresponding source and PDF positions with SyncTeX
 Edit rendered Markdown directly or switch to source and preview
 Search project text, review replacements, and include unsaved edits
@@ -84,11 +86,11 @@ Find citation and reference definitions and uses, and preview key renames
 Use two source editors and restore open tabs and their order
 Filter compilation errors and warnings by category
 Import images, paste tables, or create and edit a new table
-Create projects from built-in templates or add your own
+Create projects or individual files from built-in or custom templates, with a preview for new files
 Format Markdown and synchronize source and preview scrolling in both directions
 Create a Markdown page and insert a relative link to it
 Print Markdown to PDF and extract PDF text to a TXT file
-Manage project files with a context menu and edit Python and other code files
+Copy project files and folders, sort by name or date, drag to arrange or move, and edit Python and other code
 Use autosave and local drafts, and resume after the browser tab sleeps
 Preview English or Japanese, and choose colors and the editor font
 Complete TeX commands and environments, fold source, and browse the outline
@@ -121,16 +123,18 @@ Document-specific TeX packages, fonts and bibliography tools
 ```text
 Version 0.1.10
 
-- Insert inline or display equations in both Markdown editing modes, with rendered TeX and Markdown previews.
-- Choose GitHub's backtick math syntax, dollar delimiters, or parentheses for inline equations. GitHub's syntax is the initial choice.
-- Type inline math with its closing delimiter to render it. Enter or Space after --- creates a horizontal rule.
-- See active formatting on toolbar buttons, including formatting chosen before typing and mixed selections.
-- Use compact icons for images, tables, and new pages, with names available on hover.
-- Display Japanese italic and strikethrough text correctly, including combined formatting next to punctuation.
-- Right-click in TeX or Markdown to insert images and tables. Markdown also offers equations, links, code blocks, and linked pages.
-- Sort files and folders by name or modification time in either direction. The chosen order is saved and follows file updates.
-- Read notifications and floating menus with stronger backgrounds, borders, and shadows in light and dark modes.
-- Save and apply settings explicitly using the renamed button in editing and history settings.
+- Insert inline or display math in both Markdown modes, with rendered TeX and source previews. Choose GitHub, dollar, or parenthesis notation.
+- Type inline equations to render them; Enter or Space after --- creates a horizontal rule.
+- See active formatting, including choices made before typing and mixed selections. Japanese italics and strikethrough display correctly.
+- Insert images, tables, and linked pages from icons. Right-click TeX or Markdown for insertion tools at that position.
+- Copy a project file or folder's saved contents while continuing to edit the original.
+- Sort by name or date, or drag into manual order. Alt + Up/Down also reorders entries. Drop onto a folder's center to move; existing names stop the move.
+- Create an empty file or preview one text file from a built-in or custom template. The context menu sets the initial destination.
+- Find each TeX document's latest successful PDF by its output name and TeX path. Open it, save it, or copy it into the project.
+- Read notifications and menus with clearer backgrounds, borders, shadows, and text in light and dark modes.
+- Save and apply settings using the renamed button.
+- Refresh recent folders and explain missing locations; remove list entries while keeping files and drafts.
+- Load external changes into unedited documents, compare edited versions, and review open text if a file was deleted.
 ```
 
 ## 日本語の掲載内容
@@ -158,7 +162,11 @@ PNG・JPEG・PDF を 8 MiB まで取り込み，表計算ソフトからコピ�
 
 新しい Markdown ページを作り，現在の文書にリンクを挿入できます．Markdown はブラウザの印刷画面から PDF に保存でき，PDF の文字はページ順に取り出して TXT に保存できます．
 
-ファイル一覧の右クリックで作成，名前の変更，削除，パスのコピーを行えます．コンピューターから複数のファイルを選んでプロジェクトへコピーする操作もあります．TeX のロゴからホームへ移り，現在と最近使ったプロジェクトを管理できます．プロジェクトの削除には，中身の確認と名前の入力が必要です．Python，JavaScript などのプログラムも編集でき，すべてのタブをまとめて閉じる操作もあります．ブラウザのタブが休止してもアプリは動作を続け，終了ボタンで終了します．
+ファイル一覧の右クリックで作成，コピー，名前の変更，削除，パスのコピーを行えます．ファイルやフォルダーのコピーには保存済みの内容を使い，元の原稿を引き続き編集できます．コンピューターから複数のファイルを選んで追加する操作もあります．名前順・日時順・手動の順序を選べ，ドラッグで並び替え，フォルダーの中央へのドロップで移動できます．新規ファイルは空で作るか，標準・ユーザーのテンプレートからテキストファイルを 1 個選び，内容を確認して作れます．
+
+各 TeX 文書の最新のコンパイル成功結果を，実際の PDF 名と TeX のパス付きで一覧に表示します．プレビューへ開く，PC へ保存する，プロジェクトへコピーする操作を選べます．
+
+TeX のロゴからホームへ移り，現在と最近使ったプロジェクトを管理できます．フォルダーの状態を読み直し，見つからない場合は案内を表示します．一覧から外しても原稿と草稿は残ります．未保存の編集がない原稿には外部で変更された本文を読み込み，編集中の場合は内容を比較できます．外部で削除されたファイルも本文と草稿を残して確認できます．プロジェクトの削除には，中身の確認と名前の入力が必要です．Python，JavaScript などのプログラムも編集でき，すべてのタブをまとめて閉じる操作もあります．ブラウザのタブが休止してもアプリは動作を続け，終了ボタンで終了します．
 
 英語・日本語は選択直後に表示を切り替えられ，配色，フォント，各欄の大きさを選べます．原稿，設定，草稿，履歴，テンプレートは PC に保存します．
 
@@ -173,7 +181,7 @@ MIT ライセンスで公開されている無料のアプリです．アプリ�
 
 ```text
 導入済みの TeX Live と latexmk で PC の原稿をコンパイル
-PDF の連続スクロール，文字の検索・選択，拡大・縮小
+PDF の連続スクロール，文字の検索・選択，拡大・縮小と，TeX 文書ごとの最新の PDF の一覧
 SyncTeX による原稿と PDF の対応位置への相互移動
 Markdown を表示した形で直接編集し，ソースとプレビューにも切替
 未保存の内容も含めてプロジェクト全体を検索し，選んだ箇所を置換
@@ -183,11 +191,11 @@ Markdown を表示した形で直接編集し，ソースとプレビューに�
 原稿を二つ並べ，開いていたタブと並び順を復元
 コンパイルのエラーと警告を種類で絞り込み
 画像の取り込み，コピーした表の挿入，新しい表の作成と編集
-標準のテンプレートから作成し，自分のテンプレートも追加
+標準・ユーザーのテンプレートからプロジェクトやファイルを作成し，新規ファイルの内容をプレビュー
 Markdown の装飾と，原稿・プレビューの両方向のスクロール同期
 Markdown のページを作成し，現在の文書へ相対リンクを挿入
 Markdown を PDF に保存し，PDF の文字を TXT として保存
-右クリックでファイルを操作し，Python などのプログラムを編集
+ファイルやフォルダーをコピーし，名前順・日時順・手動で並べ，ドラッグで移動し，コードも編集
 自動保存と草稿を使い，ブラウザのタブが休止した後も作業を再開
 日本語・英語を選択直後に確認し，配色と原稿のフォントを選択
 TeX のコマンドと環境を補完し，原稿を折りたたんでアウトラインを確認
@@ -220,16 +228,18 @@ TeX のコンパイルには latexmk を含む TeX Live
 ```text
 バージョン 0.1.10
 
-・Markdown の両方の編集モードで，インライン数式と独立した数式を挿入できる．数式と Markdown の記述を確認して挿入する．
-・インライン数式は GitHub 向けのバッククォート付き，ドル記号，丸括弧の 3 形式から選べる．初期値は GitHub 向けの形式とした．
-・直接編集では数式の閉じ記号まで入力すると数式を表示する．--- の後に Enter または Space を押すと水平線になる．
-・書式ボタンに現在の装飾を表示する．文字を入力する前に選んだ装飾や，複数の書式を含む範囲にも対応する．
-・画像，表，新規ページはアイコンで表示し，カーソルを合わせると名前が分かる．
-・日本語の斜体と取り消し線を表示し，装飾の組み合わせや句読点に接した記法も読み取れるようにした．
-・TeX と Markdown の原稿で右クリックすると，画像や表を挿入できる．Markdown では数式，リンク，コードブロック，リンク付きの新規ページも選べる．
-・ファイルとフォルダーを名前や更新日時で並び替えられる．昇順と降順を選べ，設定と更新後の並び順にも反映する．
-・通知やメニューの背景，境界線，影を調整し，ライトとダークで読みやすくした．
-・設定の実行ボタンを「設定を保存して反映」に変更した．編集・コンパイルの設定と履歴の設定で表記を揃えた．
+・Markdown の両モードでインライン数式と独立した数式を挿入できる．TeX の表示と原文を確認し，GitHub 向け，ドル記号，丸括弧の記法を選べる．
+・直接編集で行内数式を入力すると式へ変換する．--- の後の Enter や Space で横線になる．
+・現在の装飾，入力前に選んだ装飾，一部だけ装飾した範囲をボタンに表示する．日本語の斜体と取り消し線にも対応する．
+・画像，表，新規ページをアイコンから挿入できる．TeX や Markdown の右クリックでも挿入メニューを開ける．
+・ファイルやフォルダーの保存済みの内容をコピーし，元の原稿を引き続き編集できる．
+・名前順，日時順，手動の順序を選べる．ドラッグや Alt + 上下矢印で並び替え，フォルダーの中央へのドロップで移動する．移動先に同名の項目がある場合は止める．
+・空のファイルか，標準・ユーザーのテンプレートのテキストファイルを 1 個選び，プレビューして作成できる．右クリックした場所を最初の作成先にする．
+・各 TeX 文書の最新のコンパイル成功結果を，実際の PDF 名と TeX のパス付きで一覧に表示する．開く，保存，プロジェクトへのコピーを選べる．
+・通知とメニューの背景，枠，影，文字色を調整し，ライトとダークで読みやすくした．
+・設定画面の実行ボタンを「設定を保存して反映」に変更した．
+・最近のフォルダーを読み直し，見つからない場所を案内する．一覧から外しても原稿と草稿は残る．
+・未保存の編集がない原稿には外部の変更を読み込み，編集中の場合は内容を比較する．外部で削除されたファイルも本文と草稿を残して確認できる．
 ```
 
 ## Images and captions

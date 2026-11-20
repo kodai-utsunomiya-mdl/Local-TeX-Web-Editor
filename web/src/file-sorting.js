@@ -1,4 +1,4 @@
-const orders = new Set(['name-asc', 'name-desc', 'modified-desc', 'modified-asc']);
+const orders = new Set(['name-asc', 'name-desc', 'modified-desc', 'modified-asc', 'manual']);
 
 export function normalizeFileSort(value) {
   return orders.has(value) ? value : 'name-asc';
@@ -19,7 +19,14 @@ export function projectListingSignature(project) {
   return JSON.stringify([project?.root, project?.files, project?.directories, project?.directoryModifiedAt]);
 }
 
-export function buildFileTree(project, { sort = 'name-asc', filter = '', locale = 'en' } = {}) {
+export function normalizeFileOrder(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return Object.fromEntries(Object.entries(value).filter(([, paths]) => Array.isArray(paths)).map(([parent, paths]) => [parent, [...new Set(paths.filter(path => typeof path === 'string' && path && parentPath(path) === parent))]]));
+}
+
+const parentPath = path => path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
+
+export function buildFileTree(project, { sort = 'name-asc', filter = '', locale = 'en', fileOrder = {} } = {}) {
   sort = normalizeFileSort(sort);
   const query = String(filter).trim().toLocaleLowerCase();
   const matches = path => !query || path.toLocaleLowerCase().includes(query);
@@ -55,10 +62,45 @@ export function buildFileTree(project, { sort = 'name-asc', filter = '', locale 
     const parts = file.path.split('/');
     directory(parts.slice(0, -1)).files.push({ ...file, name: parts.at(-1) });
   }
-  const sorted = current => ({
-    path: current.path, name: current.name, modifiedAt: current.modifiedAt,
-    directories: [...current.directories.values()].sort(compare).map(sorted),
-    files: current.files.sort(compare),
-  });
+  const sorted = current => {
+    const directories = [...current.directories.values()].sort(sort === 'manual' ? compareNames : compare).map(sorted);
+    const files = current.files.sort(sort === 'manual' ? compareNames : compare);
+    const entries = [...directories, ...files];
+    if (sort === 'manual') {
+      const paths = Array.isArray(fileOrder[current.path]) ? fileOrder[current.path] : [];
+      const rank = new Map(paths.map((path, index) => [path, index]));
+      entries.sort((a, b) => (rank.get(a.path) ?? Infinity) - (rank.get(b.path) ?? Infinity) || 0);
+    }
+    return { path: current.path, name: current.name, directory: true, modifiedAt: current.modifiedAt, directories, files, entries };
+  };
   return sorted(root);
+}
+
+export function captureFileOrder(project, options = {}) {
+  const result = [];
+  function visit(node) {
+    result.push([node.path, node.entries.map(entry => entry.path)]);
+    for (const directory of node.directories) visit(directory);
+  }
+  visit(buildFileTree(project, options));
+  return Object.fromEntries(result);
+}
+
+export function mapFileOrder(order, from, to, directory, removed = false) {
+  const map = path => path === from || directory && path.startsWith(`${from}/`)
+    ? removed ? null : to + path.slice(from.length) : path;
+  return normalizeFileOrder(Object.fromEntries(Object.entries(order).flatMap(([parent, paths]) => {
+    const nextParent = map(parent);
+    return nextParent === null ? [] : [[nextParent, paths.map(map).filter(path => path !== null)]];
+  })));
+}
+
+export function placeInFileOrder(order, path, { parent = parentPath(path), anchor = '', after = false } = {}) {
+  const result = { ...normalizeFileOrder(order) };
+  for (const [folder, paths] of Object.entries(result)) result[folder] = paths.filter(candidate => candidate !== path);
+  const siblings = Array.isArray(result[parent]) ? result[parent] : [];
+  const index = anchor ? siblings.indexOf(anchor) : -1;
+  siblings.splice(index < 0 ? siblings.length : index + Number(after), 0, path);
+  Object.defineProperty(result, parent, { value: siblings, enumerable: true, writable: true, configurable: true });
+  return result;
 }

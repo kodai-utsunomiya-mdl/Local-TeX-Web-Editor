@@ -338,13 +338,15 @@ func (a *App) historyHandler(w http.ResponseWriter, r *http.Request) {
 		if err := readJSON(w, r, &input); err != nil { writeError(w, err); return }
 	}
 	a.mu.Lock()
-	err := a.checkProjectLocked(r.Header.Get("X-Project-Root"))
+	err := a.checkProjectLocked(r.Header.Get("X-Project-Root"), r.Method == http.MethodGet)
 	root := ""
 	if a.project != nil { root = a.project.Root }
 	a.mu.Unlock()
 	if err != nil { writeError(w, err); return }
 	if root == "" { writeError(w, fail(http.StatusBadRequest, "原稿フォルダーを開いてください．")); return }
-	clean, _, err := projectFilePath(root, input.Path, true)
+	clean, err := cleanRelative(input.Path)
+	if err == nil && !isTextFile(clean) { err = fail(http.StatusUnsupportedMediaType, "この種類のファイルはテキストとして編集できません．") }
+	if err == nil && r.Method != http.MethodGet { clean, _, err = projectFilePath(root, clean, true) }
 	if err != nil { writeError(w, err); return }
 	editHistoryMu.Lock()
 	defer editHistoryMu.Unlock()

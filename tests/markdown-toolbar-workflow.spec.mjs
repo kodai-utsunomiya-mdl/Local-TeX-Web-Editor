@@ -1,6 +1,7 @@
 import { expect } from '@playwright/test';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { parseMarkdown } from '../web/src/markdown-rich-document.js';
 import { test as editorTest, openProject, openEditor, setAutoSave } from './editor-fixtures.mjs';
 
 const modifier = process.platform === 'darwin' ? 'Meta' : 'Control';
@@ -161,6 +162,7 @@ test('ソースで数式の記法を変更でき，プレビューと前回選�
   await page.screenshot({ path: testInfo.outputPath('markdown-math-dialog-narrow.png') });
   await confirmMath(page).click();
   await expect(mathDialog(page)).toBeHidden();
+  await page.setViewportSize({ width: 1600, height: 1000 });
   const expected = 'Before \n\n$$\nx + y\n+ z\n$$\n\n after.\n';
   await expect.poll(() => sourceText(page)).toBe(expected);
   await source(page).press(`${modifier}+s`);
@@ -176,7 +178,6 @@ test('ソースで数式の記法を変更でき，プレビューと前回選�
   await expect(mathDialog(page)).toBeHidden();
   await expect.poll(() => sourceText(page)).toBe(expected);
 
-  await page.setViewportSize({ width: 1600, height: 1000 });
   await mode(page).selectOption('rich');
   await button(page, 'math').click();
   await expect(mathPlacement(page)).toHaveValue('inline');
@@ -227,7 +228,11 @@ test('直接編集で選んだ TeX を数式にし，既存の式を各記法と
   await expect(rich(page).getByText('Next paragraph.', { exact: true })).toBeVisible();
   await mode(page).selectOption('source');
   const savedText = await sourceText(page);
-  expect(savedText).toContain(`$$\n${displayTeX}\n$$`);
+  const savedDocument = parseMarkdown(savedText);
+  expect(savedDocument.childCount).toBe(2);
+  expect(savedDocument.firstChild.type.name).toBe('math_block');
+  expect(savedDocument.firstChild.attrs.tex.trim()).toBe(displayTeX);
+  expect(savedDocument.lastChild.textContent).toBe('Next paragraph.');
   await source(page).press(`${modifier}+s`);
   await expect.poll(() => readFile(file, 'utf8')).toBe(savedText);
 });

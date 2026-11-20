@@ -27,6 +27,9 @@
   <link rel="stylesheet" href="/markdown-rich-editor.css">
   <link rel="stylesheet" href="/document-tools.css">
   <link rel="stylesheet" href="/file-actions.css">
+  <link rel="stylesheet" href="/file-tree-drag.css">
+  <link rel="stylesheet" href="/file-template-picker.css">
+  <link rel="stylesheet" href="/compiled-pdfs.css">
   <link rel="stylesheet" href="/editor-context-menu.css">
   <link rel="stylesheet" href="/file-import.css">
   <link rel="stylesheet" href="/project-home.css">
@@ -96,11 +99,12 @@
         </div>
         <div class="file-filter-wrap">
           <input id="file-filter" type="search" placeholder="Find files" aria-label="Find files" autocomplete="off" spellcheck="false" data-i18n-placeholder="ファイルを検索" data-i18n-aria-label="ファイルを検索">
-          <select id="file-sort" data-testid="file-sort" aria-label="File sort order" title="Show folders first and sort within each folder." data-i18n-aria-label="ファイルの並び順" data-i18n-title="フォルダーを先に表示し，各階層で並び替えます．">
+          <select id="file-sort" data-testid="file-sort" aria-label="File sort order" title="Choose names, modification dates, or your manual order." data-i18n-aria-label="ファイルの並び順" data-i18n-title="名前順・更新日時順・手動の並び順を選べます．">
             <option value="name-asc" data-i18n="名前 (昇順)">Name (A to Z)</option>
             <option value="name-desc" data-i18n="名前 (降順)">Name (Z to A)</option>
             <option value="modified-desc" data-i18n="更新日時 (新しい順)">Date modified (newest first)</option>
             <option value="modified-asc" data-i18n="更新日時 (古い順)">Date modified (oldest first)</option>
+            <option value="manual" data-i18n="手動の並び順">Manual order</option>
           </select>
         </div>
         <nav id="file-tree" class="file-tree" aria-label="Files" data-i18n-aria-label="ファイル一覧"></nav>
@@ -311,6 +315,7 @@ E = mc^2
   <dialog id="new-file-dialog" class="dialog" aria-labelledby="new-file-title">
     <form id="new-file-form">
       <div class="dialog-heading"><h2 id="new-file-title"><span data-i18n="ファイルを追加">Add a file</span></h2><button type="button" class="icon-button" data-close-dialog="new-file-dialog" aria-label="Close" data-i18n-aria-label="閉じる">×</button></div>
+      <section id="new-file-template-picker"></section>
       <label class="field-label" for="new-file-path"><span data-i18n="プロジェクト内のパス">Path within the project</span></label>
       <input id="new-file-path" type="text" placeholder="sections/introduction.tex" autocomplete="off" spellcheck="false" aria-describedby="new-file-help new-file-location-help" required>
       <p id="new-file-help" class="field-help"><span data-i18n=".tex，.bib などのテキストファイルを作成できます．">Create a text file such as .tex or .bib.</span></p>

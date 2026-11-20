@@ -506,7 +506,7 @@ body.resizing * { cursor: inherit !important; user-select: none !important; }
 :root[data-palette] .editor-host .source-search button { background: var(--surface); color: var(--text); }
 :root[data-palette] .editor-host .source-search button[name="close"] { background: transparent; }
 :root[data-palette] .editor-host .source-search button:hover { background: var(--hover); }
-:root[data-palette] :is(.toast, .file-context-menu, .editor-context-menu, .writing-menu-items, .pdf-menu, .pdf-citation-tooltip, .cm-tooltip, .cm-completionInfo),
+:root[data-palette] :is(.toast, .file-context-menu, .editor-context-menu, .compiled-pdf-context-menu, .writing-menu-items, .pdf-menu, .pdf-citation-tooltip, .cm-tooltip, .cm-completionInfo),
 :root[data-palette] .pdf-view-controls[popover],
 :root[data-palette] .asset-view-controls[popover] {
   --surface: var(--popup-surface);

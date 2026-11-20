@@ -270,6 +270,8 @@ export class PDFViewer {
     } catch (error) {
       if (generation !== this.generation || cancelled(error)) return;
       if (task && task !== this.document?.loadingTask) await task.destroy().catch(() => {});
+      if (generation !== this.generation) return;
+      if (this.document && this.requestedBuildId !== this.buildId) this.requestedBuildId = this.buildId;
       this.elements.loading.hidden = true;
       if (!this.document) {
         this.emptyError = error;

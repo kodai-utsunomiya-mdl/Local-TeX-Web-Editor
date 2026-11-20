@@ -24,18 +24,22 @@ import { createInsertTools } from './insert-tools.js';
 import { createEditorContextMenu } from './editor-context-menu.js';
 import { createDocumentTools } from './document-tools.js';
 import { createTemplateManager } from './template-manager.js';
+import { createFileTemplatePicker } from './file-template-picker.js';
 import { createLogIssues } from './log-issues.js';
 import { createMarkdownEditing } from './markdown-editing.js';
 import { MarkdownRichEditor } from './markdown-rich-editor.js';
 import { createProjectHome } from './project-home.js';
+import { projectStatusFor } from './project-status.js';
 import { createFileImporter } from './file-import.js';
-import { buildFileTree, fileModificationTime, normalizeFileSort, projectListingSignature } from './file-sorting.js';
+import { createFileTreeDrag } from './file-tree-drag.js';
+import { createCompiledPDFList } from './compiled-pdfs.js';
+import { buildFileTree, captureFileOrder, fileModificationTime, mapFileOrder, normalizeFileOrder, normalizeFileSort, placeInFileOrder, projectListingSignature } from './file-sorting.js';
 import { completionPresentation } from './completion-ui.js';
 import { createTeXCompletionSource } from './tex-completion.js';
 import { sourceFolding, revealSourceRange } from './source-folding.js';
 import { createOutlineTree } from './outline-tree.js';
 import { programLanguage } from './program-language.js';
-import { createFileActions, fileActionText, fileDestinationConflict, entryContains, mapEntryPath } from './file-actions.js';
+import { createFileActions, fileActionText, fileDestinationConflict, entryContains, mapEntryPath, suggestEntryCopyPath } from './file-actions.js';
 import { tags } from '@lezer/highlight';
 import { SessionStore } from './session-store.js';
 import { BrowserSession } from './browser-session.js';
@@ -59,6 +63,7 @@ const state = {
   assets: new Map(),
   tabOrder: [],
   directoryState: new Map(),
+  fileOrder: {},
   folderPicker: null,
   pendingFiles: new Map(),
   treeButtons: new Map(),
@@ -78,15 +83,19 @@ const state = {
   openSequence: 0,
   operation: '',
   build: null,
+  previewPDF: null,
   fullLog: '',
   pollTimer: null,
   polling: false,
   heartbeat: null,
   heartbeatPending: false,
+  fileSyncInProgress: false,
+  forceFileSync: false,
   closed: false,
   connected: false,
   connectionError: false,
   externalProjectChanged: false,
+  projectStatusNotice: '',
   reportedBuild: '',
   preferences: { autoSave: true, theme: null, appearance: normalizeAppearance(), editorFontSize: 14, language: getLanguage(), panelLayout: normalizePanelLayout(), fileSort: 'name-asc', markdownEditorModes: { primary: 'rich', secondary: 'rich' }, previewVisibility: { rich: false, markdown: true, source: true }, markdownScrollSync: true, texCompletion: true, automaticCompletion: true, pdfDarkMode: false },
   previewContext: '',
@@ -122,11 +131,16 @@ let referenceTools = null;
 let projectSearch = null;
 let documentHistory = null;
 let templateManager = null;
+let fileTemplatePicker = null;
 let logIssues = null;
 let markdownEditing = null;
 let editorContextMenu = null;
 let projectHome = null;
 let outlineTree = null;
+let fileTreeDrag = null;
+let compiledPDFList = null;
+let compiledPDFRenderSignature = '';
+let compiledPDFVisibleCount = 0;
 const editorSlots = {
   primary: { host: $('editor'), richHost: $('markdown-rich-primary'), element: $('source-pane-primary'), select: $('primary-document'), view: null, rich: null, path: '', cleanup: null },
   secondary: { host: $('editor-secondary'), richHost: $('markdown-rich-secondary'), element: $('source-pane-secondary'), select: $('secondary-document'), view: null, rich: null, path: '', cleanup: null },
@@ -236,7 +250,7 @@ function runTask(fn) { Promise.resolve().then(fn).catch(error => { if (!error?.s
 function onClick(id, fn) { $(id).addEventListener('click', () => runTask(fn)); }
 function normalise(text) { return (text || '').replace(/\r\n?/g, '\n'); }
 function basename(path) { return path.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || path; }
-function isDirty(doc) { return !!doc && !doc.state.doc.eq(doc.savedDoc); }
+function isDirty(doc) { return !!doc && (!!doc.diskMissing || !doc.state.doc.eq(doc.savedDoc)); }
 function dirtyDocuments() { return [...state.documents.values()].filter(isDirty); }
 function activeDocument() { return state.documents.get(state.activePath); }
 function documentText(doc) {
@@ -244,12 +258,90 @@ function documentText(doc) {
   return doc.textSnapshot;
 }
 function isMarkdown(path) { return /\.(md|markdown)$/i.test(path || ''); }
-function sourceAffectsPDF(path) {
+function projectIsAvailable() { return !!state.meta?.project && (!state.meta.projectStatus || state.meta.projectStatus.status === 'available'); }
+function assertProjectAvailable() {
+  if (!projectIsAvailable()) throw new Error(state.meta?.projectStatus?.message || t('プロジェクトの場所を確認できません．フォルダーを選び直してください．'));
+}
+function showProjectStatusNotice() {
+  const message = state.meta?.project && !projectIsAvailable() ? state.meta.projectStatus?.message || '' : '';
+  if (!message && state.projectStatusNotice && $('error-text').textContent === state.projectStatusNotice) clearError();
+  if (message && message !== state.projectStatusNotice && !state.homeVisible) showError(new Error(message), { label: t('プロジェクト'), run: showHome });
+  state.projectStatusNotice = message;
+}
+function applyProjectStatuses(meta) {
+  if (!state.meta) return;
+  state.meta.recentProjects = meta.recentProjects || [];
+  state.meta.recentProjectStatuses = meta.recentProjectStatuses || [];
+  if (meta.project?.root === state.meta.project?.root) state.meta.projectStatus = meta.projectStatus || null;
+  renderRecent(); renderControls();
+}
+async function refreshProjectStatuses() {
+  const generation = state.projectGeneration, entriesVersion = state.projectEntriesVersion;
+  const meta = await api('/api/state');
+  if (generation === state.projectGeneration) {
+    applyProjectStatuses(meta);
+    if (meta.project?.root === state.meta?.project?.root && entriesVersion === state.projectEntriesVersion) applyProjectListing(meta.project);
+    await refreshOpenDocuments({ force: true });
+  }
+  return meta;
+}
+function fileDiskSignature(file) { return file ? JSON.stringify([file.kind, file.size, file.modifiedAt]) : 'missing'; }
+function currentCompiledPDF() {
+  const id = viewer.requestedBuildId || viewer.buildId;
+  return (state.meta?.compiledPDFs || []).find(entry => entry.buildId === id) ||
+    (state.previewPDF?.buildId === id ? state.previewPDF : null);
+}
+function compiledPDFFromBuild(build) {
+  if (!build?.pdfReady || !build.pdfBuildId) return null;
+  return (state.meta?.compiledPDFs || []).find(entry => entry.buildId === build.pdfBuildId) || {
+    buildId: build.pdfBuildId, main: build.pdfMain || state.meta?.project?.main || '', name: '',
+    sourceChanged: build.pdfSourceChanged ?? build.sourceChanged, synctexReady: build.synctexReady,
+    markdownInputs: build.pdfMarkdownInputs,
+  };
+}
+async function loadCompiledPDF(entry) {
+  if (!entry || !state.meta?.project || state.closed) return;
+  const generation = state.projectGeneration, previous = currentCompiledPDF();
+  state.previewPDF = entry;
+  const loading = viewer.load(entry.buildId, state.meta.project.root, entry.main);
+  const requestGeneration = viewer.generation;
+  updatePreviewNote(); renderControls();
+  const loaded = await loading;
+  if (generation !== state.projectGeneration || requestGeneration !== viewer.generation) return;
+  if (!loaded && previous?.buildId === viewer.buildId) state.previewPDF = previous;
+  updatePreviewNote(); renderControls();
+}
+async function openCompiledPDF(entry) {
+  await navigate(async () => {
+    setPreviewChoice('pdf'); setPreviewVisible(true); state.lastSurface = 'pdf';
+    await loadCompiledPDF(entry); scheduleSession();
+    await afterNavigationFrame();
+  });
+}
+function renderCompiledPDFList() {
+  if (!compiledPDFList) return 0;
+  const options = { entries: state.meta?.compiledPDFs || [], activeBuildId: viewer.requestedBuildId || viewer.buildId,
+    filter: $('file-filter').value.trim(), sort: state.preferences.fileSort };
+  const signature = JSON.stringify([options, getLanguage(), !!state.operation, state.closed, state.externalProjectChanged, isRunning()]);
+  if (signature !== compiledPDFRenderSignature) {
+    compiledPDFRenderSignature = signature;
+    compiledPDFVisibleCount = compiledPDFList.render(options);
+  }
+  return compiledPDFVisibleCount;
+}
+function sourceAffectsPDF(path, inputs = currentCompiledPDF()?.markdownInputs ?? state.build?.pdfMarkdownInputs) {
   if (!isMarkdown(path)) return true;
-  const inputs = state.build?.pdfMarkdownInputs;
   if (!Array.isArray(inputs)) return true;
   const normalisePath = value => state.meta?.platform === 'windows' ? value.toLowerCase() : value;
   return inputs.some(input => normalisePath(input) === normalisePath(path));
+}
+function markPDFSourceChanged(path) {
+  if (state.build) {
+    if (!isMarkdown(path)) state.build.sourceChanged = true;
+    if (state.build.pdfReady && sourceAffectsPDF(path, state.build.pdfMarkdownInputs)) state.build.pdfSourceChanged = true;
+  }
+  for (const entry of state.meta?.compiledPDFs || []) if (sourceAffectsPDF(path, entry.markdownInputs)) entry.sourceChanged = true;
+  if (state.previewPDF && sourceAffectsPDF(path, state.previewPDF.markdownInputs)) state.previewPDF.sourceChanged = true;
 }
 function currentCompileTarget() {
   const doc = activeDocument();
@@ -367,7 +459,7 @@ function isRunning() { return state.build?.status === 'running'; }
 
 function setOperation(operation) {
   state.operation = operation;
-  if (operation) editorContextMenu?.close();
+  if (operation) { editorContextMenu?.close(); fileTreeDrag?.cancel(); }
   for (const doc of state.documents.values()) applyDocumentTransaction(doc, doc.state.update({ effects: readOnly.reconfigure([EditorState.readOnly.of(!!operation), EditorView.editable.of(!operation)]) }));
   renderControls();
   if (!operation) {
@@ -464,7 +556,8 @@ function makeEditorState(path, content) {
 
 function makeDocument(file) {
   const editorState = makeEditorState(file.path, file.content);
-  return { path: file.path, revision: file.revision, lineEnding: file.lineEnding || 'lf', state: editorState, savedDoc: editorState.doc, saving: null, conflict: null, draftId: crypto.randomUUID(), visited: false };
+  return { path: file.path, revision: file.revision, lineEnding: file.lineEnding || 'lf', state: editorState, savedDoc: editorState.doc, saving: null, conflict: null, diskMissing: !!file.missing,
+    diskSignature: fileDiskSignature(file.entry || state.meta?.project?.files?.find(entry => entry.path === file.path)), draftId: crypto.randomUUID(), visited: false };
 }
 
 function slotForView(view) { return Object.entries(editorSlots).find(([, slot]) => slot.view === view)?.[0]; }
@@ -862,34 +955,40 @@ function renderTabs() {
 function renderTree() {
   const project = state.meta?.project;
   const filter = $('file-filter').value.trim().toLocaleLowerCase();
-  const tree = buildFileTree(project, { sort: state.preferences.fileSort, filter, locale: getLanguage() });
+  const tree = buildFileTree(project, { sort: state.preferences.fileSort, filter, locale: getLanguage(), fileOrder: state.fileOrder });
   $('file-sort').value = state.preferences.fileSort;
   const treeElement = $('file-tree'); const scroll = treeElement.scrollTop;
   const focused = treeElement.contains(document.activeElement) ? document.activeElement.closest('[data-path]') : null;
   const focusedPath = focused?.dataset.path;
   const focusedFolder = focused?.classList.contains('tree-directory');
+  const focusedCompiled = treeElement.contains(document.activeElement) ? document.activeElement.closest('.compiled-pdf-button')?.dataset.buildId : '';
   const dateFormat = new Intl.DateTimeFormat(getLanguage(), { dateStyle: 'medium', timeStyle: 'medium' });
   const entryTitle = entry => {
     const time = fileModificationTime(entry.modifiedAt);
     return time === null ? entry.path : `${entry.path}\n${t('更新日時: {value0}', { value0: dateFormat.format(time) })}`;
   };
-  $('file-count').textContent = String(project?.files?.length || 0);
+  $('file-count').textContent = String((project?.files?.length || 0) + (state.meta?.compiledPDFs?.length || 0));
   treeElement.replaceChildren(); state.treeButtons.clear();
-  if (!tree.files.length && !tree.directories.length) {
+  const compiledCount = renderCompiledPDFList();
+  if (!tree.files.length && !tree.directories.length && !compiledCount) {
     const empty = document.createElement('p'); empty.className = 'tree-empty';
     empty.textContent = filter ? t("一致するファイルやフォルダーがありません．") : t("ファイルがありません．＋ からテキストファイルを作成できます．");
-    treeElement.append(empty); if (focusedPath) treeElement.focus({ preventScroll: true }); return;
+    treeElement.append(empty);
+    if (compiledPDFList) treeElement.append(compiledPDFList.element);
+    if (focusedPath || focusedCompiled) treeElement.focus({ preventScroll: true }); return;
   }
   function appendNode(node, parent) {
     const list = document.createElement('ul'); list.className = 'tree-list'; parent.append(list);
+    const items = new Map();
     for (const child of node.directories) {
       const item = document.createElement('li'); const details = document.createElement('details'); details.className = 'tree-directory';
       const { path, name } = child;
       details.dataset.testid = 'tree-folder'; details.dataset.path = path;
       details.open = !!filter || (state.directoryState.has(path) ? state.directoryState.get(path) : state.activePath.startsWith(path + '/'));
       const summary = document.createElement('summary'); summary.setAttribute('aria-label', t("{value0} フォルダー", { value0: path }));
+      summary.draggable = true;
       summary.title = entryTitle(child); summary.dataset.modifiedAt = child.modifiedAt || '';
-      summary.setAttribute('aria-haspopup', 'menu'); summary.setAttribute('aria-keyshortcuts', 'Shift+F10 F2 Delete');
+      summary.setAttribute('aria-haspopup', 'menu'); summary.setAttribute('aria-keyshortcuts', 'Shift+F10 F2 Delete Alt+ArrowUp Alt+ArrowDown');
       const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       icon.classList.add('button-icon', 'folder-icon'); icon.setAttribute('viewBox', '0 0 24 24'); icon.setAttribute('aria-hidden', 'true');
       const outline = document.createElementNS('http://www.w3.org/2000/svg', 'path'); outline.setAttribute('d', 'M2 6h7l2 2h11v12H2ZM2 6V4h7l2 2h9v2'); icon.append(outline);
@@ -898,36 +997,94 @@ function renderTree() {
       appendNode(child, details);
       if (!child.files.length && !child.directories.length) { const empty = document.createElement('p'); empty.className = 'folder-empty'; empty.textContent = t("空のフォルダー"); details.append(empty); }
       details.addEventListener('toggle', () => { if (!filter && details.isConnected) { state.directoryState.set(path, details.open); scheduleSession(); } });
-      item.append(details); list.append(item);
+      item.append(details); items.set(path, item);
     }
     for (const file of node.files) {
       const item = document.createElement('li'); const button = document.createElement('button');
       button.type = 'button'; button.className = `file-button${file.path === state.activePath ? ' active' : ''}`;
+      button.draggable = true;
       button.dataset.testid = `file-${file.path}`; button.dataset.path = file.path; button.dataset.kind = fileKind(file); button.dataset.modifiedAt = file.modifiedAt || ''; button.title = entryTitle(file); button.disabled = !!state.operation;
       button.setAttribute('aria-current', String(file.path === state.activePath));
-      button.setAttribute('aria-haspopup', 'menu'); button.setAttribute('aria-keyshortcuts', 'Shift+F10 F2 Delete');
+      button.setAttribute('aria-haspopup', 'menu'); button.setAttribute('aria-keyshortcuts', 'Shift+F10 F2 Delete Alt+ArrowUp Alt+ArrowDown');
       const type = document.createElement('span'); type.className = 'file-type'; type.setAttribute('aria-hidden', 'true');
       type.textContent = basename(file.path).includes('.') ? file.path.split('.').pop().slice(0, 4) : fileKind(file) === 'text' ? 'txt' : 'file';
       const name = document.createElement('span'); name.className = 'file-name'; name.textContent = basename(file.path);
       const dirty = document.createElement('span'); dirty.className = 'file-unsaved'; dirty.hidden = !isDirty(state.documents.get(file.path));
       button.append(type, name, dirty); button.addEventListener('click', () => runTask(() => openFile(file.path)));
-      item.append(button); list.append(item); state.treeButtons.set(file.path, button);
+      item.append(button); items.set(file.path, item); state.treeButtons.set(file.path, button);
     }
+    list.append(...node.entries.map(entry => items.get(entry.path)));
   }
-  appendNode(tree, treeElement); treeElement.scrollTop = scroll;
+  if (tree.entries.length) appendNode(tree, treeElement);
+  if (compiledPDFList) treeElement.append(compiledPDFList.element);
+  treeElement.scrollTop = scroll;
   if (focusedPath) {
     const target = focusedFolder ? treeElement.querySelector(`.tree-directory[data-path="${CSS.escape(focusedPath)}"] > summary`) : state.treeButtons.get(focusedPath);
     (target || treeElement).focus({ preventScroll: true });
+  } else if (focusedCompiled) {
+    (treeElement.querySelector(`.compiled-pdf-button[data-build-id="${CSS.escape(focusedCompiled)}"]`) || treeElement).focus({ preventScroll: true });
   }
 }
 
 function applyProjectListing(project) {
   const current = state.meta?.project;
-  if (!current || project?.root !== current.root || projectListingSignature(current) === projectListingSignature(project)) return;
+  if (!current || project?.root !== current.root) return;
+  const listingChanged = projectListingSignature(current) !== projectListingSignature(project);
+  const settingsChanged = current.main !== project.main || current.mode !== project.mode;
+  if (!listingChanged && !settingsChanged) return;
+  current.main = project.main; current.mode = project.mode;
   current.files = project.files || []; current.directories = project.directories || [];
   current.directoryModifiedAt = project.directoryModifiedAt || {};
   state.projectEntriesVersion++;
-  renderTree(); renderPaneSelectors();
+  if (listingChanged) { renderTree(); renderPaneSelectors(); }
+  if (settingsChanged) renderControls();
+}
+
+async function refreshOpenDocuments({ force = false } = {}) {
+  if (state.fileSyncInProgress || state.operation || state.closed || state.externalProjectChanged || !projectIsAvailable() || document.querySelector('dialog[open]')) return;
+  const root = state.meta.project.root, generation = state.projectGeneration;
+  const files = new Map(state.meta.project.files.map(file => [file.path, file]));
+  const docs = [...state.documents.values()].filter(doc => !doc.saving && (force || doc.diskMissing && files.has(doc.path) || doc.diskSignature !== fileDiskSignature(files.get(doc.path))));
+  if (!docs.length) return;
+  state.fileSyncInProgress = true;
+  let next = 0, updated = 0;
+  try {
+    const results = await Promise.allSettled([0, 1].map(async () => {
+      while (next < docs.length) {
+        if (state.operation || state.closed || generation !== state.projectGeneration) { state.heartbeatPending = true; return; }
+        const doc = docs[next++], path = doc.path, revision = doc.revision;
+        let remote;
+        try { remote = await api(`/api/file?path=${encodeURIComponent(path)}`, { projectRoot: root }); }
+        catch (error) { if (error.status !== 404) throw error; remote = { path, missing: true, revision: '', content: '' }; }
+        if (state.closed || generation !== state.projectGeneration || state.documents.get(path) !== doc || doc.saving || doc.revision !== revision) continue;
+        if (state.operation || visibleEditorSlots(path).some(([, slot]) => slot.view.composing || slot.rich?.composing)) { state.heartbeatPending = true; continue; }
+        doc.diskSignature = fileDiskSignature(files.get(path));
+        if (remote.missing) {
+          doc.diskMissing = true;
+          doc.conflict = new APIError(t('PC 上のファイルが見つかりません．編集画面の内容から作成し直す場合は，「内容を確認」を開いてください．'), 409);
+        } else if (remote.revision === doc.revision) {
+          doc.diskMissing = false; doc.conflict = null;
+        } else {
+          const content = normalise(remote.content), matchesEditor = doc.state.doc.toString() === content;
+          if (!doc.state.doc.eq(doc.savedDoc) && !matchesEditor) {
+            doc.conflict = new APIError(t('ディスクの内容が変更されました．編集中の内容を確認して保存してください．'), 409);
+            doc.diskMissing = false;
+          } else {
+            doc.revision = remote.revision; doc.lineEnding = remote.lineEnding || 'lf'; doc.diskMissing = false; doc.conflict = null;
+            const transaction = doc.state.update({ changes: changedText(doc.state.doc.toString(), content), annotations: isolateHistory.of('full') });
+            doc.savedDoc = transaction.state.doc; applyDocumentTransaction(doc, transaction);
+            updateIndex(path, content); updated++;
+          }
+          markPDFSourceChanged(path);
+        }
+        updateDocumentIndicators(doc);
+      }
+    }));
+    if (generation !== state.projectGeneration || state.closed) return;
+    for (const result of results) if (result.status === 'rejected') showError(result.reason);
+    syncDrafts(); updatePreviewNote();
+    if (updated) toast(t('{count} 個の原稿を PC 上の内容に更新しました．', { count: updated }));
+  } finally { state.fileSyncInProgress = false; }
 }
 
 function updateDocumentIndicators(doc) {
@@ -941,6 +1098,9 @@ function updateDocumentIndicators(doc) {
     $('save-status').classList.toggle('dirty', dirty && !doc.conflict);
     $('save-status').classList.toggle('error', !!doc.conflict);
     $('conflict-banner').hidden = !doc.conflict;
+    const conflictNote = $('conflict-banner').querySelector('[data-i18n]');
+    conflictNote.dataset.i18n = doc.diskMissing ? 'PC 上のファイルが見つかりません．編集画面の内容から作成し直す場合は，「内容を確認」を開いてください．' : 'ディスクの内容が変更されました．編集中の内容を確認して保存してください．';
+    conflictNote.textContent = t(conflictNote.dataset.i18n);
     document.title = `${dirty ? '● ' : ''}${basename(doc.path)} — Local TeX Web Editor`;
   }
   renderControls();
@@ -949,6 +1109,7 @@ function updateDocumentIndicators(doc) {
 async function saveDocument(doc) {
   if (doc.saving) return doc.saving;
   if (!isDirty(doc)) return true;
+  assertProjectAvailable();
   const snapshot = doc.state.doc;
   const generation = state.projectGeneration;
   const preceding = state.saveQueue;
@@ -961,7 +1122,8 @@ async function saveDocument(doc) {
       doc.revision = result.revision;
       doc.lineEnding = result.lineEnding || doc.lineEnding;
       doc.savedDoc = snapshot;
-      doc.conflict = null;
+      doc.conflict = null; doc.diskMissing = false;
+      doc.diskSignature = fileDiskSignature(result.entry || state.meta?.project?.files?.find(entry => entry.path === doc.path));
       state.projectEntriesVersion++;
       if (result.entry && state.meta?.project) {
         const project = state.meta.project;
@@ -971,10 +1133,7 @@ async function saveDocument(doc) {
         applyProjectListing({ ...project, files, directoryModifiedAt: result.directoryModifiedAt || project.directoryModifiedAt });
       }
       if (result.historyWarning) toast(result.historyWarning);
-      if (state.build) {
-        if (!isMarkdown(doc.path)) state.build.sourceChanged = true;
-        if (state.build.pdfReady && sourceAffectsPDF(doc.path)) state.build.pdfSourceChanged = true;
-      }
+      markPDFSourceChanged(doc.path);
       updatePreviewNote();
       syncDrafts();
       return true;
@@ -1137,10 +1296,16 @@ async function removeOpenFile(path) {
 
 async function resolveConflict(doc) {
   if (!doc || state.operation) return;
-  const remote = await api(`/api/file?path=${encodeURIComponent(doc.path)}`);
-  $('conflict-description').textContent = t("{value0} は，読み込んだ後にディスクの内容が変更されました．保存する内容を選んでください．", { value0: doc.path });
+  const root = state.meta?.project?.root, generation = state.projectGeneration, path = doc.path;
+  const current = () => root === state.meta?.project?.root && generation === state.projectGeneration && state.documents.get(path) === doc && !state.externalProjectChanged && !state.closed;
+  const remote = await diskForDraft(doc);
+  if (!current() || state.operation) return;
+  $('conflict-description').textContent = remote.missing
+    ? t('「{path}」が PC 上に見つかりません．「編集中の内容で保存」を押すと，表示中の内容でファイルを作成し直します．', { path: doc.path })
+    : t("{value0} は，読み込んだ後にディスクの内容が変更されました．保存する内容を選んでください．", { value0: doc.path });
   $('disk-content').value = remote.content;
   $('editing-content').value = doc.state.doc.toString();
+  $('conflict-use-disk').disabled = !!remote.missing;
   const dialog = $('conflict-dialog');
   const choice = await new Promise(resolve => {
     let done = false;
@@ -1151,16 +1316,17 @@ async function resolveConflict(doc) {
     $('conflict-overwrite').onclick = () => finish('overwrite');
     dialog.addEventListener('close', close); dialog.showModal();
   });
-  if (choice === 'cancel') return;
+  if (choice === 'cancel' || !current()) return;
   if (choice === 'disk') {
     const content = normalise(remote.content);
-    doc.revision = remote.revision; doc.lineEnding = remote.lineEnding || 'lf'; doc.conflict = null;
+    doc.revision = remote.revision; doc.lineEnding = remote.lineEnding || 'lf'; doc.conflict = null; doc.diskMissing = false;
     const transaction = doc.state.update({ changes: { from: 0, to: doc.state.doc.length, insert: content } });
     doc.savedDoc = transaction.state.doc;
     applyDocumentTransaction(doc, transaction);
     clearError(); updateDocumentIndicators(doc); updatePreviewNote(); syncDrafts(); toast(t("ディスクの内容を読み込みました．"));
   } else {
     doc.revision = remote.revision;
+    doc.diskMissing = !!remote.missing;
     doc.savedDoc = EditorState.create({ doc: normalise(remote.content) }).doc;
     await saveDocument(doc);
     doc.conflict = null;
@@ -1179,8 +1345,11 @@ function renderRecent() {
     $(id).replaceChildren();
     for (const path of paths.slice(0, 6)) {
       const button = document.createElement('button'); button.type = 'button'; button.className = 'recent-project'; button.title = path;
+      const status = projectStatusFor(state.meta, path);
       const name = document.createElement('strong'); name.textContent = basename(path);
-      const detail = document.createElement('span'); detail.textContent = path; button.append(name, detail);
+      const detail = document.createElement('span'); detail.textContent = status.status === 'available' ? path : `${path}\n${status.message}`; button.append(name, detail);
+      button.disabled = status.status !== 'available';
+      if (status.message) button.title = `${path}\n${status.message}`;
       button.addEventListener('click', () => { showProjectDialog(); $('project-path').value = path; });
       $(id).append(button);
     }
@@ -1200,6 +1369,7 @@ function renderWorkspaceView() {
 }
 function showHome() {
   if (state.operation || state.closed) return;
+  runTask(refreshProjectStatuses);
   if (state.homeVisible) { $('home-title').focus(); return; }
   rememberEditorPosition(); syncDrafts(); persistSession();
   state.homeVisible = true;
@@ -1253,13 +1423,13 @@ async function applyMeta(meta, resetProject = false) {
     state.persistenceReady = false; state.initialFilePending = !!meta.project; state.session = null; state.drafts = { entries: [] }; state.recoverySelection = null;
     state.texIndex.clear(); state.completionItems = { citations: [], labels: [] }; state.indexError = ''; state.indexing = false;
     clearTimeout(state.pollTimer); state.pollTimer = null;
-    state.documents.clear(); state.assets.clear(); state.tabOrder = []; state.directoryState.clear(); state.pendingFiles.clear(); state.activePath = ''; ++state.openSequence;
+    state.documents.clear(); state.assets.clear(); state.tabOrder = []; state.directoryState.clear(); state.fileOrder = {}; state.pendingFiles.clear(); state.activePath = ''; ++state.openSequence;
     assetPreview.hide(); markdownPreview.reset();
     state.previewMode = 'pdf'; state.previewChoice = 'auto'; state.lastMarkdownPath = '';
     $('pdf-preview').hidden = false; $('markdown-preview-panel').hidden = true;
     destroyEditors(); $('editor').hidden = true; $('editor-empty').hidden = false;
     $('conflict-banner').hidden = true; $('file-filter').value = ''; $('save-status').textContent = ''; $('active-filename').textContent = t("原稿");
-    navigationHistory?.clear(); state.build = null; state.reportedBuild = ''; await viewer.reset();
+    navigationHistory?.clear(); state.build = null; state.previewPDF = null; state.reportedBuild = ''; await viewer.reset();
   }
   if (generation !== state.projectGeneration) return;
   const project = meta.project;
@@ -1448,12 +1618,13 @@ async function refreshFiles() {
   if (state.operation || !state.meta?.project) return;
   const meta = await api('/api/state');
   if (meta.project?.root !== state.meta.project.root) { handleExternalProjectChange(); return; }
-  await applyMeta(meta); await indexProject(true); toast(t("ファイル一覧を更新しました．"));
+  await applyMeta(meta); await refreshOpenDocuments({ force: true }); await indexProject(true); toast(t("ファイル一覧を更新しました．"));
 }
 
 function showNewFile(folder = '') {
-  if (!state.meta?.project || state.operation || state.closed) return;
+  if (!projectIsAvailable() || state.operation || state.closed) return;
   $('new-file-path').value = folder ? `${folder}/` : '';
+  fileTemplatePicker.reset({ folder });
   $('new-file-error').hidden = true; $('new-file-dialog').showModal(); $('new-file-path').focus();
   $('new-file-path').setSelectionRange($('new-file-path').value.length, $('new-file-path').value.length);
 }
@@ -1482,7 +1653,7 @@ async function applyImportedFile(result) {
   await applyMeta(result.state);
   if (state.build && paths.length) {
     state.build.sourceChanged = true;
-    if (state.build.pdfReady && paths.some(sourceAffectsPDF)) state.build.pdfSourceChanged = true;
+    if (state.build.pdfReady && paths.some(path => sourceAffectsPDF(path, state.build.pdfMarkdownInputs))) state.build.pdfSourceChanged = true;
   }
   for (const [, slot] of visibleEditorSlots()) for (const path of paths) slot.rich?.refreshImages(path, { caseInsensitive: state.meta?.platform === 'windows' });
   markdownPreview.refresh();
@@ -1491,6 +1662,7 @@ async function applyImportedFile(result) {
 }
 
 async function inspectOpenDocuments(entry, action) {
+  if (action === 'copy') return;
   for (const doc of state.documents.values()) {
     if (!entryContains(entry, doc.path)) continue;
     const listed = entry.directory && Array.isArray(entry.entries) ? entry.entries.find(item => item.path === doc.path && !item.directory) : null;
@@ -1500,14 +1672,58 @@ async function inspectOpenDocuments(entry, action) {
   }
 }
 
+function openProjectPaths() {
+  return [...state.documents.keys(), ...state.assets.keys(), ...state.tabOrder, ...state.pendingFiles.keys(), ...(state.drafts.entries || []).map(draft => draft.path)];
+}
+
 function assertNewFilePathAvailable(path, sourceEntry = null) {
-  const candidates = [...state.documents.keys(), ...state.assets.keys(), ...state.tabOrder, ...state.pendingFiles.keys(), ...(state.drafts.entries || []).map(draft => draft.path)];
+  const candidates = openProjectPaths();
   const conflict = fileDestinationConflict(path, candidates, { source: sourceEntry, platform: state.meta?.platform });
   if (conflict) throw new Error(`${conflict}\n${fileActionText('occupied')}`);
 }
 
+async function handleFileDrop({ source, target, placement }) {
+  const project = state.meta?.project;
+  if (!projectIsAvailable() || state.operation || state.closed || state.externalProjectChanged || isRunning()) return false;
+  const parentOf = path => path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
+  const parent = placement === 'root' ? '' : placement === 'inside' ? target.path : parentOf(target.path);
+  if (source.directory && (parent === source.path || parent.startsWith(`${source.path}/`))) throw new Error(t('フォルダーをその中へ移動することはできません．'));
+  const path = parent ? `${parent}/${basename(source.path)}` : basename(source.path);
+  const move = path !== source.path;
+  if (!move && (source.path === target.path || ['inside', 'root'].includes(placement))) return false;
+  let order = captureFileOrder(project, { sort: state.preferences.fileSort, locale: getLanguage(), fileOrder: state.fileOrder });
+  let finish = null;
+  if (move) {
+    await beginFileAction();
+    try {
+      const entry = await api(`/api/entry?path=${encodeURIComponent(source.path)}`, { projectRoot: project.root, timeout: 60000 });
+      await inspectOpenDocuments(entry, 'rename');
+      assertNewFilePathAvailable(path, entry);
+      const result = await api('/api/entry', { method: 'PATCH', projectRoot: project.root, body: { path: entry.path, newPath: path, revision: entry.revision }, timeout: 60000 });
+      order = mapFileOrder(order, entry.path, result.path, entry.directory);
+      finish = await applyEntryChange(result);
+      for (let end = result.path.lastIndexOf('/'); end > 0; end = result.path.lastIndexOf('/', end - 1)) state.directoryState.set(result.path.slice(0, end), true);
+    } finally { setOperation(''); }
+  }
+  order = captureFileOrder(state.meta.project, { sort: 'manual', locale: getLanguage(), fileOrder: order });
+  state.fileOrder = placeInFileOrder(order, path, { parent, anchor: ['before', 'after'].includes(placement) ? target.path : '', after: placement === 'after' });
+  state.preferences.fileSort = 'manual'; savePreferences(); persistSession(); renderTree();
+  await finish?.();
+  const focused = source.directory ? $('file-tree').querySelector(`.tree-directory[data-path="${CSS.escape(path)}"] > summary`) : state.treeButtons.get(path);
+  focused?.focus({ preventScroll: true });
+  toast(move ? t('「{path}」へ移動しました．', { path }) : t('ファイル一覧の順番を変更しました．'));
+  return true;
+}
+
 async function applyEntryChange(result) {
   const { oldPath, path, directory, removed } = result;
+  if (result.copied) {
+    if (directory) state.directoryState.set(path, true);
+    for (let end = path.lastIndexOf('/'); end > 0; end = path.lastIndexOf('/', end - 1)) state.directoryState.set(path.slice(0, end), true);
+    const importedPaths = directory ? result.state.project.files.filter(file => entryContains({ path, directory }, file.path)).map(file => file.path) : [path];
+    await applyImportedFile({ ...result, importedPaths });
+    return directory ? undefined : () => openFile(path);
+  }
   if (!oldPath) { await applyMeta(result.state); persistSession(); return; }
   rememberEditorPosition(); ++state.projectGeneration;
   state.pendingFiles.clear(); clearTimeout(state.outlineTimer);
@@ -1535,6 +1751,7 @@ async function applyEntryChange(result) {
   state.tabOrder = state.tabOrder.map(mapped).filter(Boolean);
   state.lastMarkdownPath = mapped(state.lastMarkdownPath);
   state.directoryState = new Map([...state.directoryState].map(([key, value]) => [mapped(key), value]).filter(([key]) => key));
+  state.fileOrder = mapFileOrder(state.fileOrder, oldPath, path, directory, removed);
   if (state.session) state.session.positions = Object.fromEntries(Object.entries(state.session.positions || {}).map(([key, value]) => [mapped(key), value]).filter(([key]) => key));
   state.drafts = { version: 1, updatedAt: Date.now(), entries: (state.drafts.entries || []).filter(item => !removed || !affected(item.path)).map(item => ({ ...item, path: mapped(item.path) })) };
   sessionStore.write(`drafts:${state.meta.project.root}`, state.drafts, 0);
@@ -1579,18 +1796,19 @@ async function applyEntryChange(result) {
 }
 
 async function createFile(event) {
-  event.preventDefault(); if (state.operation) return;
+  event.preventDefault(); if (state.operation || !projectIsAvailable()) return;
   const path = $('new-file-path').value.trim().replace(/\\/g, '/'); if (!path) return;
-  setOperation('creating'); setDialogBusy($('new-file-dialog'), true); $('new-file-error').hidden = true;
+  setOperation('creating'); setDialogBusy($('new-file-dialog'), true); fileTemplatePicker.setBusy(true); $('new-file-error').hidden = true;
   let created = null;
   try {
     assertNewFilePathAvailable(path);
-    const file = await api('/api/file', { method: 'PUT', body: { path, content: '', revision: '' } });
+    const { content } = fileTemplatePicker.getValue();
+    const file = await api('/api/file', { method: 'PUT', body: { path, content, revision: '' } });
     created = makeDocument(file); state.documents.set(file.path, created);
     const meta = await api('/api/state'); await applyMeta(meta);
     $('new-file-dialog').close(); clearError();
   } catch (error) { $('new-file-error').textContent = error.message || String(error); $('new-file-error').hidden = false; }
-  finally { setDialogBusy($('new-file-dialog'), false); setOperation(''); }
+  finally { setDialogBusy($('new-file-dialog'), false); setOperation(''); fileTemplatePicker.setBusy(false); }
   if (created) selectDocument(created);
 }
 
@@ -1608,21 +1826,24 @@ function updateElapsed() {
 
 function updatePreviewNote() {
   const build = state.build;
+  const pdf = currentCompiledPDF();
   updatePDFDetails();
   const note = $('pdf-note'); const label = $('pdf-state');
   note.hidden = true; note.classList.remove('error'); label.classList.remove('stale');
-  if (!build?.pdfReady) { label.textContent = t('コンパイル前'); return; }
-  if (build.status === 'failed') { note.textContent = t("最新のコンパイルに失敗しました．前回成功した PDF を表示しています．"); note.classList.add('error'); label.textContent = t("前回の PDF"); }
-  else if (build.status === 'cancelled') { note.textContent = t("コンパイルを停止しました．前回成功した PDF を表示しています．"); label.textContent = t("前回の PDF"); }
-  else if (build.status === 'running') { note.textContent = t("コンパイル中です．完了すると PDF が更新されます．"); label.textContent = t("更新待ち"); }
-  else if ((build.pdfSourceChanged ?? build.sourceChanged) || dirtyDocuments().some(doc => sourceAffectsPDF(doc.path))) { note.textContent = t("原稿に変更があります．最新の内容を確認するにはコンパイルしてください．"); label.textContent = t("原稿に変更あり"); }
-  else { label.textContent = viewer.hasRendered && viewer.buildId === build.pdfBuildId ? t("更新済み") : t("読み込み中"); return; }
+  if (!pdf) { label.textContent = t('コンパイル前'); return; }
+  const relevantBuild = build && (build.pdfBuildId === pdf.buildId || build.main === pdf.main);
+  if (relevantBuild && build.status === 'failed') { note.textContent = t("最新のコンパイルに失敗しました．前回成功した PDF を表示しています．"); note.classList.add('error'); label.textContent = t("前回の PDF"); }
+  else if (relevantBuild && build.status === 'cancelled') { note.textContent = t("コンパイルを停止しました．前回成功した PDF を表示しています．"); label.textContent = t("前回の PDF"); }
+  else if (relevantBuild && build.status === 'running') { note.textContent = t("コンパイル中です．完了すると PDF が更新されます．"); label.textContent = t("更新待ち"); }
+  else if (pdf.sourceChanged || dirtyDocuments().some(doc => sourceAffectsPDF(doc.path))) { note.textContent = t("原稿に変更があります．最新の内容を確認するにはコンパイルしてください．"); label.textContent = t("原稿に変更あり"); }
+  else { label.textContent = viewer.hasRendered && viewer.buildId === pdf.buildId ? t("更新済み") : t("読み込み中"); return; }
   note.hidden = false; label.classList.add('stale');
 }
 
 function updatePDFDetails() {
-  const main = viewer.document ? viewer.documentMain : (state.build?.pdfReady ? state.build.pdfMain || state.meta?.project?.main : '') || '';
-  $('pdf-name').textContent = main ? basename(main).replace(/\.tex$/i, '') + '.pdf' : '—';
+  const pdf = currentCompiledPDF();
+  const main = pdf?.main || '';
+  $('pdf-name').textContent = pdf?.name || (main ? basename(main).replace(/\.tex$/i, '') + '.pdf' : '—');
   $('pdf-document').textContent = main || '—';
 }
 
@@ -1636,8 +1857,8 @@ function applyBuild(build) {
     if (build.pdfBuildId && build.pdfBuildId === state.build.pdfBuildId && state.build.pdfSourceChanged) build = { ...build, pdfSourceChanged: true };
   }
   const previouslyRunning = isRunning();
+  const previousPDF = state.build?.pdfBuildId;
   state.build = build || null;
-  const pdfMain = build?.pdfMain || (build?.pdfReady ? state.meta?.project?.main : '') || '';
   const labels = { running: t("コンパイル中"), success: t("コンパイル完了"), failed: t("コンパイル失敗"), cancelled: t("停止しました") };
   $('build-status').textContent = labels[build?.status] || t("コンパイル前");
   $('build-status').dataset.status = build?.status || 'idle';
@@ -1655,13 +1876,21 @@ function applyBuild(build) {
       state.reportedBuild = `${build.id}:failed`; setLogVisible(true);
       showError(new Error(build.error || t("コンパイルに失敗しました (終了コード {value0})．ログを確認してください．", { value0: build.exitCode ?? t("不明") })));
     }
-    if (build.pdfReady && build.pdfBuildId && state.meta?.project) viewer.load(build.pdfBuildId, state.meta.project.root, pdfMain).catch(error => showError(error));
     if (build.status === 'running') schedulePoll(650);
     else { clearTimeout(state.pollTimer); state.pollTimer = null; }
   } else {
     state.fullLog = ''; $('build-log').textContent = t("コンパイルすると，ここにコマンドとログが表示されます．"); $('log-meta').textContent = '';
     renderLogLocations();
-    if (viewer.document || viewer.loadingTask) viewer.reset().catch(error => showError(error));
+  }
+  let nextPDF = null;
+  if (!viewer.requestedBuildId && !viewer.buildId) {
+    const entries = state.meta?.compiledPDFs || [];
+    nextPDF = entries.find(entry => entry.main === state.session?.pdf?.main) || compiledPDFFromBuild(build) ||
+      [...entries].sort((a, b) => Date.parse(b.modifiedAt) - Date.parse(a.modifiedAt))[0];
+  } else if (build?.pdfReady && build.pdfBuildId !== previousPDF) nextPDF = compiledPDFFromBuild(build);
+  if (nextPDF) loadCompiledPDF(nextPDF).catch(showError);
+  else if (!build?.pdfReady && !state.meta?.compiledPDFs?.length && (viewer.document || viewer.loadingTask)) {
+    state.previewPDF = null; viewer.reset().catch(showError);
   }
   updatePreviewNote(); renderControls();
   updateAutoSaveStatus();
@@ -1689,7 +1918,7 @@ async function pollBuild() {
 }
 
 async function startBuild() {
-  if (state.operation || isRunning() || !state.meta?.project || state.closed) return;
+  if (state.operation || isRunning() || !projectIsAvailable() || state.closed) return;
   if (state.editor?.composing) return;
   const doc = activeDocument();
   const useMarkdown = !!doc && isMarkdown(doc.path);
@@ -1714,12 +1943,14 @@ async function stopBuild() {
 
 function renderControls() {
   const project = state.meta?.project;
+  const available = projectIsAvailable();
   const busy = !!state.operation || state.closed;
   const doc = activeDocument();
   const running = isRunning();
   const useMarkdown = !!doc && isMarkdown(doc.path);
   const main = currentCompileTarget();
-  $('compile-button').disabled = busy || running || !project || (!useMarkdown && !main) || state.externalProjectChanged;
+  const pdf = currentCompiledPDF();
+  $('compile-button').disabled = busy || running || !available || (!useMarkdown && !main) || state.externalProjectChanged;
   $('compile-label').textContent = ['compiling', 'previewing'].includes(state.operation) ? t("保存しています…") : running ? t("コンパイル中") : useMarkdown ? t("プレビュー") : t("コンパイル");
   $('compile-button').title = useMarkdown ? t("保存して Markdown のプレビューを更新 ({value0}+Enter)", { value0: shortcutModifier }) : t("保存して {value0} をコンパイル ({value1}+Enter)", { value0: main || t("原稿"), value1: shortcutModifier });
   $('main-document-label').textContent = useMarkdown ? `${doc.path} · Markdown` : project ? `${main || t("原稿を選択")} · ${modeLabels[project.mode] || project.mode}` : t("原稿を選択");
@@ -1727,24 +1958,24 @@ function renderControls() {
   $('compile-icon').classList.toggle('spinning', running || state.operation === 'compiling');
   $('compile-icon').textContent = running || state.operation === 'compiling' ? '' : '▶';
   $('stop-button').hidden = !running; $('stop-button').disabled = busy || !running;
-  $('save-button').disabled = busy || !doc || !!doc.saving || !isDirty(doc) || state.externalProjectChanged;
+  $('save-button').disabled = busy || !available || !doc || !!doc.saving || !isDirty(doc) || state.externalProjectChanged;
   $('find-button').disabled = !doc || state.closed;
   const missingSynctex = state.meta && typeof state.meta.synctex === 'string' && !state.meta.synctex;
   $('synctex-forward').disabled = busy || state.syncing || !doc || !project || state.externalProjectChanged ||
-    (!useMarkdown && (!(viewer.ready || (state.previewMode === 'markdown' && viewer.document)) || !state.build?.synctexReady || missingSynctex));
-  $('synctex-forward').title = useMarkdown ? t("カーソル位置を Markdown で表示 ({value0}+クリックでも移動)", { value0: shortcutModifier }) : missingSynctex ? t("SyncTeX が見つかりません．設定に導入の手順があります．") : state.build?.synctexReady ? t("カーソル位置を PDF で表示 ({value0}+クリックでも移動)", { value0: shortcutModifier }) : t("SyncTeX を使うには，このアプリで PDF をコンパイルしてください．");
+    (!useMarkdown && (!(viewer.ready || (state.previewMode === 'markdown' && viewer.document)) || !pdf?.synctexReady || missingSynctex));
+  $('synctex-forward').title = useMarkdown ? t("カーソル位置を Markdown で表示 ({value0}+クリックでも移動)", { value0: shortcutModifier }) : missingSynctex ? t("SyncTeX が見つかりません．設定に導入の手順があります．") : pdf?.synctexReady ? t("カーソル位置を PDF で表示 ({value0}+クリックでも移動)", { value0: shortcutModifier }) : t("SyncTeX を使うには，このアプリで PDF をコンパイルしてください．");
   $('synctex-forward').setAttribute('aria-label', t(useMarkdown ? 'Markdown のプレビューの位置へ移動' : 'PDF の位置へ移動'));
   $('main-document').disabled = busy || !project || running;
   $('settings-button').disabled = busy || running;
   $('show-project').disabled = busy || running;
   $('welcome-open').disabled = busy;
   $('shutdown-button').disabled = busy;
-  $('new-file').disabled = busy || !project;
-  $('import-files').disabled = busy || !project || running;
+  $('new-file').disabled = busy || !available;
+  $('import-files').disabled = busy || !available || running;
   $('file-sort').disabled = busy || !project;
   $('close-all-tabs').disabled = busy || !state.tabOrder.length;
   $('refresh-files').disabled = busy || !project;
-  $('download-pdf').disabled = !state.build?.pdfReady || state.closed;
+  $('download-pdf').disabled = !pdf || state.closed;
   $('copy-log').disabled = !state.fullLog;
   $('theme-toggle').disabled = state.closed;
   $('help-button').disabled = state.closed;
@@ -1762,18 +1993,39 @@ function renderControls() {
   projectHome?.refresh(); renderWorkspaceView();
   updateEditorModeControls(); updatePreviewVisibilityControls();
   updateNavigationControls();
+  renderCompiledPDFList();
+  showProjectStatusNotice();
+  if (fileTemplatePicker) $('create-file').disabled = busy || !available || !fileTemplatePicker.getState().ready;
   for (const button of state.treeButtons.values()) button.disabled = busy;
   for (const tab of state.tabElements.values()) { tab.button.disabled = busy; tab.close.disabled = busy; }
 }
 
-async function downloadPDF() {
-  const build = state.build; if (!build?.pdfReady) return;
-  const project = state.meta.project;
-  const response = await fetch(`/api/pdf?build=${encodeURIComponent(build.pdfBuildId)}`, { headers: { 'X-Local-Token': token, 'X-Project-Root': encodeURIComponent(project.root), 'Accept-Language': getLanguage() }, cache: 'no-store' });
+async function fetchCompiledPDF(entry, projectRoot) {
+  const response = await fetch(`/api/pdf?build=${encodeURIComponent(entry.buildId)}`, { headers: { 'X-Local-Token': token, 'X-Project-Root': encodeURIComponent(projectRoot), 'Accept-Language': getLanguage() }, cache: 'no-store' });
   if (!response.ok) { const text = await response.text(); let message = text; try { message = JSON.parse(text).error || text; } catch { /* A non-JSON error is still displayed. */ } throw new APIError(t("PDF を取得できませんでした．{value0}", { value0: message }), response.status); }
-  const blob = await response.blob(); const url = URL.createObjectURL(blob);
-  const link = document.createElement('a'); link.href = url; link.download = basename(build.pdfMain || project.main).replace(/\.tex$/i, '') + '.pdf'; link.click();
+  return response.blob();
+}
+function compiledPDFFileName(entry) { return entry.name || basename(entry.main).replace(/\.tex$/i, '') + '.pdf'; }
+async function downloadPDF(entry = currentCompiledPDF()) {
+  if (!entry || !state.meta?.project || state.closed) return;
+  const blob = await fetchCompiledPDF(entry, state.meta.project.root); const url = URL.createObjectURL(blob);
+  const link = document.createElement('a'); link.href = url; link.download = compiledPDFFileName(entry); link.click();
   setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+async function copyCompiledPDF(entry) {
+  if (state.operation || isRunning() || state.closed || !state.meta?.project) return;
+  assertProjectAvailable();
+  const projectRoot = state.meta.project.root;
+  let file;
+  setOperation('copying');
+  try {
+    const blob = await fetchCompiledPDF(entry, projectRoot);
+    file = new File([blob], compiledPDFFileName(entry), { type: 'application/pdf', lastModified: Date.parse(entry.modifiedAt) || Date.now() });
+  } finally { setOperation(''); }
+  if (state.meta?.project?.root !== projectRoot || state.closed) return;
+  const parent = entry.main.includes('/') ? entry.main.slice(0, entry.main.lastIndexOf('/')) : '';
+  const folder = state.meta.project.directories?.includes(parent) ? parent : '';
+  await fileImporter.openFiles([file], folder, { title: 'PDF をプロジェクトへコピー' });
 }
 
 async function copyLog() {
@@ -1796,8 +2048,9 @@ async function reconnect() {
   await applyMeta(meta, !state.meta); clearError();
 }
 
-async function heartbeat() {
+async function heartbeat({ forceFiles = false } = {}) {
   if (state.closed) return;
+  state.forceFileSync ||= forceFiles;
   // Returning to the tab during a save still needs a refresh when that save ends.
   if (state.operation) { state.heartbeatPending = true; return; }
   state.heartbeatPending = false;
@@ -1807,11 +2060,22 @@ async function heartbeat() {
   try {
     const meta = await api('/api/state');
     if (state.closed || generation !== state.projectGeneration) return;
+    applyProjectStatuses(meta);
     if (state.meta?.project && meta.project?.root !== state.meta.project.root) { if (!state.externalProjectChanged) handleExternalProjectChange(); return; }
     if (state.operation) state.heartbeatPending = true;
-    else if (entriesVersion === state.projectEntriesVersion) applyProjectListing(meta.project);
+    else if (entriesVersion === state.projectEntriesVersion) {
+      const compiledChanged = JSON.stringify(state.meta?.compiledPDFs || []) !== JSON.stringify(meta.compiledPDFs || []);
+      if (state.meta) state.meta.compiledPDFs = meta.compiledPDFs || [];
+      applyProjectListing(meta.project);
+      if (compiledChanged) { renderTree(); updatePreviewNote(); }
+    }
     if (toolsGeneration === state.toolsGeneration) updateTools(meta);
     if (!isRunning() && meta.build) applyBuild(meta.build);
+    const force = state.forceFileSync;
+    if (!state.operation && !document.querySelector('dialog[open]') && !state.fileSyncInProgress) {
+      state.forceFileSync = false;
+      await refreshOpenDocuments({ force });
+    }
   } catch (error) { if ($('app-error').hidden) showError(error); }
 }
 
@@ -2181,7 +2445,7 @@ function persistSession() {
     positions[doc.path] = { anchor: selection.anchor, head: selection.head, scrollTop: doc.path === state.activePath && state.editor ? state.editor.scrollDOM.scrollTop : doc.scrollTop ?? positions[doc.path]?.scrollTop ?? 0,
       richScrollTop: doc.path === state.activePath && activeRichEditor() ? editorSlots[state.activePane].richHost.scrollTop : doc.richScrollTop ?? positions[doc.path]?.richScrollTop ?? 0 };
   }
-  state.session = { version: 2, updatedAt: Date.now(), activePath: state.activePath, tabs: [...state.tabOrder], workspace: captureSourceWorkspace(), positions, pdf: viewer.getViewState(), pdfPositions: viewer.getPositions(), previewChoice: state.previewChoice, lastMarkdownPath: state.lastMarkdownPath, sidebar: state.sidebar, directories: Object.fromEntries(state.directoryState) };
+  state.session = { version: 2, updatedAt: Date.now(), activePath: state.activePath, tabs: [...state.tabOrder], workspace: captureSourceWorkspace(), positions, pdf: viewer.getViewState(), pdfPositions: viewer.getPositions(), previewChoice: state.previewChoice, lastMarkdownPath: state.lastMarkdownPath, sidebar: state.sidebar, directories: Object.fromEntries(state.directoryState), fileOrder: state.fileOrder };
   sessionStore.write(`session:${state.meta.project.root}`, state.session, 0);
 }
 async function loadProjectSession(root, generation) {
@@ -2200,6 +2464,7 @@ async function loadProjectSession(root, generation) {
   }
   if (generation !== state.projectGeneration) return;
   state.directoryState = new Map(Object.entries(state.session?.directories || {}).filter(([, value]) => typeof value === 'boolean'));
+  state.fileOrder = normalizeFileOrder(state.session?.fileOrder);
   state.drafts = { version: 1, entries: Array.isArray(drafts?.entries) ? drafts.entries.filter(entry => typeof entry?.id === 'string' && typeof entry.path === 'string' && typeof entry.content === 'string' && typeof entry.baseRevision === 'string') : [] };
   state.persistenceReady = true;
   viewer.restorePosition(state.session?.pdf, state.session?.pdfPositions);
@@ -2288,7 +2553,11 @@ async function restoreNavigationLocation(location) {
   if (location.previewChoice) setPreviewChoice(location.previewChoice);
   if (typeof location.previewOpen === 'boolean') setPreviewVisible(location.previewOpen);
   switchView(!!location.previewVisible);
-  if (location.pdf?.main && viewer.documentMain !== location.pdf.main && location.pdf.buildId) await viewer.load(location.pdf.buildId, state.meta.project.root, location.pdf.main);
+  if (location.pdf?.main && viewer.documentMain !== location.pdf.main) {
+    const entry = (state.meta.compiledPDFs || []).find(item => item.main === location.pdf.main);
+    if (entry) await loadCompiledPDF(entry);
+    else if (location.pdf.buildId) await loadCompiledPDF({ buildId: location.pdf.buildId, main: location.pdf.main, synctexReady: true });
+  }
   if (generation !== state.projectGeneration) return false;
   const restoredPDF = location.pdf ? await viewer.applyViewState(location.pdf) : false;
   if (generation !== state.projectGeneration) return false;
@@ -2352,10 +2621,7 @@ async function applyProjectReplacements(changes) {
         }
         updateIndex(result.path, result.content, false);
         if (result.historyWarning) toast(result.historyWarning);
-        if (state.build) {
-          if (!isMarkdown(result.path)) state.build.sourceChanged = true;
-          if (state.build.pdfReady && sourceAffectsPDF(result.path)) state.build.pdfSourceChanged = true;
-        }
+        markPDFSourceChanged(result.path);
       }
       rebuildIndex(); updatePreviewNote(); syncDrafts();
     });
@@ -2635,6 +2901,10 @@ documentTools = createDocumentTools({
   insertText: insertSourceText, refreshProject: refreshFiles, openFile, focusDocument: focusSourceDocument, onError: showError,
 });
 templateManager = createTemplateManager({ api, getProject: () => state.meta?.project, saveAll, openProject: openCreatedProject, onError: showError });
+fileTemplatePicker = createFileTemplatePicker({
+  host: $('new-file-template-picker'), pathInput: $('new-file-path'), api,
+  onChange: ({ ready }) => { $('create-file').disabled = !ready || !!state.operation || state.closed || !projectIsAvailable(); },
+});
 logIssues = createLogIssues({ container: $('log-locations'), onOpen: (path, line) => runTask(() => navigate(() => goToSource(path, line))) });
 markdownEditing = createMarkdownEditing({
   container: $('markdown-editing'), getDocument: currentDocumentSnapshot, applyEdit: applyMarkdownEdit, focusDocument: focusSourceDocument,
@@ -2675,16 +2945,26 @@ editorContextMenu = createEditorContextMenu({
 });
 const fileImporter = createFileImporter({
   api, uploadFile: uploadProjectFile, getProject: () => state.meta?.project,
-  isBlocked: () => !!state.operation || state.closed || state.externalProjectChanged || isRunning() || !!document.querySelector('dialog[open]'),
+  isBlocked: () => !!state.operation || state.closed || !projectIsAvailable() || state.externalProjectChanged || isRunning() || !!document.querySelector('dialog[open]'),
   begin: beginFileAction, end: () => setOperation(''), checkDestination: assertNewFilePathAvailable,
   onImported: applyImportedFile, onError: showError, onNotice: toast,
 });
+compiledPDFList = createCompiledPDFList({
+  onOpen: openCompiledPDF, onDownload: downloadPDF, onCopy: copyCompiledPDF, onError: showError,
+  isBlocked: () => !!state.operation || state.closed || state.externalProjectChanged || isRunning() || !!document.querySelector('dialog[open]'),
+});
 createFileActions({
   tree: $('file-tree'), getProject: () => state.meta?.project,
-  isBlocked: () => !!state.operation || state.closed || state.externalProjectChanged || isRunning() || !!document.querySelector('dialog[open]'),
+  isBlocked: () => !!state.operation || state.closed || !projectIsAvailable() || state.externalProjectChanged || isRunning() || !!document.querySelector('dialog[open]'),
   begin: beginFileAction, end: () => setOperation(''), inspectOpenDocuments, checkDestination: assertNewFilePathAvailable, api,
+  getCopyPath: entry => suggestEntryCopyPath(entry, [...(state.meta?.project?.files || []).map(file => file.path), ...(state.meta?.project?.directories || []), ...openProjectPaths()], { platform: state.meta?.platform }),
   getUnsavedPaths: entry => [...new Set([...state.documents.values()].filter(doc => isDirty(doc) && entryContains(entry, doc.path)).map(doc => doc.path).concat((state.drafts.entries || []).filter(draft => entryContains(entry, draft.path)).map(draft => draft.path)))],
   onChanged: applyEntryChange, onNewFile: showNewFile, onImportFiles: folder => fileImporter.open(folder), onError: showError, onNotice: toast,
+});
+fileTreeDrag = createFileTreeDrag({
+  tree: $('file-tree'), getProjectRoot: () => state.meta?.project?.root || '',
+  isBlocked: () => !!state.operation || state.closed || !projectIsAvailable() || state.externalProjectChanged || isRunning() || !!document.querySelector('dialog[open]'),
+  onDrop: handleFileDrop, onError: showError,
 });
 projectHome = createProjectHome({
   list: $('welcome-recent-list'), api,
@@ -2693,7 +2973,8 @@ projectHome = createProjectHome({
     ...dirtyDocuments().map(doc => doc.path), ...(state.drafts.entries || []).map(draft => draft.path),
   ])] : [],
   beginAction: beginProjectDeletion, endAction: () => setOperation(''),
-  onOpen: path => runTask(() => path === state.meta?.project?.root ? resumeProject() : openCreatedProject(path)),
+  onOpen: path => path === state.meta?.project?.root ? resumeProject() : openCreatedProject(path),
+  refreshStatus: refreshProjectStatuses, onRecentChanged: applyProjectStatuses,
   onResume: resumeProject, onDeleted: completeProjectDeletion,
   onError: showError, onNotice: toast, isBlocked: () => !!state.operation || state.closed,
 });
@@ -2933,10 +3214,11 @@ function resumeBrowserSession(replaceConnection = false) {
   if (replaceConnection) browserSession.resume();
   else browserSession.start();
   runTask(() => sessionStore.resume());
-  runTask(heartbeat); scheduleAutoSave();
+  runTask(() => heartbeat({ forceFiles: true })); scheduleAutoSave();
 }
 window.addEventListener('pagehide', pauseBrowserSession);
 window.addEventListener('pageshow', () => resumeBrowserSession());
+window.addEventListener('focus', () => { if (state.persistenceReady) runTask(() => heartbeat({ forceFiles: true })); });
 document.addEventListener('freeze', pauseBrowserSession);
 document.addEventListener('resume', () => resumeBrowserSession(true));
 document.addEventListener('visibilitychange', () => {

@@ -20,6 +20,7 @@ type cachedBuild struct {
 	Format         int               `json:"format"`
 	ID             string            `json:"id"`
 	Main           string            `json:"main"`
+	Name           string            `json:"name,omitempty"`
 	Mode           string            `json:"mode"`
 	StartedAt      string            `json:"startedAt"`
 	FinishedAt     string            `json:"finishedAt"`
@@ -38,7 +39,7 @@ func (a *App) projectCacheDirectory(root string) string {
 func (a *App) saveCachedBuild(project Project, run *buildRun, pdf string) error {
 	a.cacheMu.Lock()
 	defer a.cacheMu.Unlock()
-	value := cachedBuild{Format: 1, ID: run.result.ID, Main: project.Main, Mode: project.Mode,
+	value := cachedBuild{Format: 1, ID: run.result.ID, Main: project.Main, Name: compiledPDFName(run.pdfName), Mode: project.Mode,
 		StartedAt: run.result.StartedAt, FinishedAt: run.result.FinishedAt,
 		Changed: run.result.SourceChanged, Sources: run.sources, MarkdownInputs: markdownInputList(run.markdownInputs), SyncTeX: run.synctex}
 	data, err := json.Marshal(value)
@@ -120,19 +121,21 @@ func (a *App) restoreCachedBuildLocked(project Project) {
 		}
 	}
 	sort.Sort(sort.Reverse(sort.StringSlice(names)))
+	sourceRevisions := make(map[string]cachedSourceRevision)
 	for _, name := range names {
-		if len(a.pdfOrder) >= 2 {
-			break
-		}
 		data, err := readCacheFile(filepath.Join(directory, name), maxTextSize)
 		if err != nil {
 			continue
 		}
 		var value cachedBuild
-		if json.Unmarshal(data, &value) != nil || value.Format != 1 || value.ID == "" || name != "pdf-"+value.ID+".json" || value.Mode != project.Mode {
+		if json.Unmarshal(data, &value) != nil || value.Format != 1 || value.ID == "" || name != "pdf-"+value.ID+".json" || !validMode(value.Mode) {
 			continue
 		}
 		if main, err := cleanRelative(value.Main); err != nil || main != value.Main || !strings.EqualFold(filepath.Ext(main), ".tex") {
+			continue
+		}
+		_, listed := a.compiledPDFs[compiledPDFKey(value.Main)]
+		if listed && len(a.pdfOrder) >= 2 {
 			continue
 		}
 		pdf := strings.TrimSuffix(filepath.Join(directory, name), ".json") + ".pdf"
@@ -140,7 +143,9 @@ func (a *App) restoreCachedBuildLocked(project Project) {
 			continue
 		}
 		a.pdfVersions[value.ID] = pdf
-		a.pdfOrder = append([]string{value.ID}, a.pdfOrder...)
+		if len(a.pdfOrder) < 2 {
+			a.pdfOrder = append([]string{value.ID}, a.pdfOrder...)
+		}
 		if sync := value.SyncTeX; sync != nil && sync.ID == value.ID {
 			syncPath := strings.TrimSuffix(pdf, ".pdf") + ".synctex.gz"
 			info, err := os.Lstat(syncPath)
@@ -166,6 +171,11 @@ func (a *App) restoreCachedBuildLocked(project Project) {
 				}
 			}
 		}
+		changed := value.Changed || value.Mode != project.Mode || cachedSourcesChanged(project.Root, value.Sources, sourceRevisions)
+		inputs := markdownInputSet(value.MarkdownInputs)
+		if !listed {
+			a.recordCompiledPDFLocked(value.Main, value.Name, value.ID, pdf, changed, inputs)
+		}
 		if a.lastPDF != "" {
 			continue
 		}
@@ -178,34 +188,44 @@ func (a *App) restoreCachedBuildLocked(project Project) {
 		if finished.IsZero() || finished.Before(started) {
 			finished = started
 		}
-		changed := value.Changed || cachedSourcesChanged(project.Root, value.Sources)
 		a.lastPDFMain, a.lastPDFChanged = value.Main, changed
-		a.lastPDFMarkdownInputs = markdownInputSet(value.MarkdownInputs)
+		a.lastPDFMarkdownInputs = inputs
 		compiledProject := project
 		compiledProject.Main, compiledProject.Mode = value.Main, value.Mode
 		code := 0
-		a.build = &buildRun{started: started, finished: finished, project: compiledProject, sources: value.Sources, markdownInputs: a.lastPDFMarkdownInputs, synctex: a.synctexVersions[value.ID],
+		a.build = &buildRun{started: started, finished: finished, project: compiledProject, sources: value.Sources, markdownInputs: a.lastPDFMarkdownInputs, synctex: a.synctexVersions[value.ID], pdfName: compiledPDFName(value.Name),
 			result: Build{ID: value.ID, Main: value.Main, Status: "success", ExitCode: &code, StartedAt: started.UTC().Format(time.RFC3339Nano),
 				FinishedAt: finished.UTC().Format(time.RFC3339Nano), SourceChanged: changed, Restored: true}}
 		a.appendMessageLocked(a.build, "[前回の PDF] このプロジェクトで最後に成功した PDF を読み込みました．\n")
 	}
 }
 
-func cachedSourcesChanged(root string, sources map[string]string) bool {
+type cachedSourceRevision struct {
+	revision string
+	size     int64
+	valid    bool
+}
+
+func cachedSourcesChanged(root string, sources map[string]string, checked map[string]cachedSourceRevision) bool {
 	if len(sources) == 0 {
 		return true
 	}
 	remaining := int64(128 << 20)
 	for relative, previous := range sources {
-		_, path, err := projectFilePath(root, relative, false)
-		if err != nil {
+		current, exists := checked[relative]
+		if !exists {
+			_, path, err := projectFilePath(root, relative, false)
+			if err == nil {
+				if data, err := readBytes(path); err == nil {
+					current = cachedSourceRevision{revision: revision(data), size: int64(len(data)), valid: true}
+				}
+			}
+			checked[relative] = current
+		}
+		if !current.valid || current.size > remaining || current.revision != previous {
 			return true
 		}
-		data, err := readBytes(path)
-		if err != nil || int64(len(data)) > remaining || revision(data) != previous {
-			return true
-		}
-		remaining -= int64(len(data))
+		remaining -= current.size
 	}
 	return false
 }

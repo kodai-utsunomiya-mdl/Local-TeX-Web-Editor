@@ -215,13 +215,21 @@ Changing the font size or theme leaves the document content and compiled PDF unc
 
 Click the **TeX logo** to open Home and manage the current and recent projects. **Return to editing** brings you back to the same editor, including unsaved text, tabs, and cursor positions. Each project card shows its name and full folder path.
 
+The app checks the folders again when you open Home or return to the browser window. A card explains when a folder was moved, deleted, or cannot be read. Use **Check again** after reconnecting a drive or restoring a folder, or choose its new location from the project picker. **Remove from recent** removes a list entry and leaves the project files, settings, and drafts on your computer. If the current folder is unavailable, you can continue editing its open text and recording drafts; saving project files and compiling resume when the folder is available again. Saved PDF previews remain available.
+
 **Delete…** on a project card opens a review of all files and folders, including hidden items and saved drafts. To delete the folder from your computer, tick the acknowledgment and type its exact project name, then choose **Delete project**. If a file or draft changes after the review, the app updates the list and asks you to review it again. Deleting a project removes its saved drafts and recent-project entry as well.
 
 Right-click a file, folder, or the empty area of the file list to create a file or folder at that location, or choose **Add files from your computer…** to select existing files. The same file picker is available beside the **＋** button. Selected files are copied into the project; choose the destination folder and review any existing filenames. For each conflict, choose to replace the file, add a copy under another name, or skip it. Files with open tabs or saved drafts must be closed or reviewed before replacement. Multiple files can be selected, with a limit of **128 MiB per file**. The **＋** button continues to accept a project-relative path for a new file.
 
 The context menu also offers relative and full path copying, renaming, and **Delete…**. From the keyboard, focus the entry and press `Shift + F10` or the context-menu key. Use the arrow keys to select an action, `F2` to rename, and `Delete` to open the deletion confirmation. A folder's confirmation shows its contents and unsaved documents, and can delete the folder together with those contents. Renaming updates the open tabs and their editing state, including unsaved text. References written inside other documents remain as written, so update those links when needed.
 
-Use the sorting control below **Find files** to sort by name in either direction, or put the newest or oldest items first. Folders appear before files at each level, and filtering uses the same order. Modification times come from the operating system for each file or folder. Saving updates the order immediately; refreshing the file list or returning to the tab picks up changes from other applications. The selected order is saved for the next session.
+Choose **Create a copy…** to copy a file or a folder within the project. Review the destination path and any files with unsaved edits before creating the copy. Copies use the contents saved on disk; the original tabs remain available with their unsaved edits. Choose a different destination if that name already exists.
+
+The new-file dialog lets you start with an empty file or choose a built-in or custom template. For a template with several files, select one text file and review its contents before creating the new file. The destination starts in the folder selected from the context menu; you can edit the project-relative path before creating it.
+
+Use the sorting control below **Find files** to sort by name in either direction, put the newest or oldest items first, or choose a manual order. Name and date sorting place folders before files at each level, and filtering uses the selected order. Modification times come from the operating system for each file or folder. Saving updates the order immediately; refreshing the file list or returning to the tab picks up changes from other applications. The selected order is saved for the next session.
+
+Drag an entry between other entries to arrange it manually; the list switches to **Manual order** automatically. `Alt + Up` and `Alt + Down` move the focused entry within the list. Drop an entry onto the center of a folder to move it into that folder. Moving updates open tabs and unsaved edits and stops if the destination already contains that name. Use the sorting control to return to name or date order.
 
 Program and configuration files can be edited with the same saving, search, drafts, and history tools. Syntax highlighting covers Python, JavaScript/TypeScript, C/C++, Java, Kotlin, C#, Go, Rust, R, Ruby, shell, PowerShell, HTML, CSS, XML, SQL, JSON, YAML, TOML, and Lua. Other supported text formats open as plain text. `.ipynb` opens as JSON text. The editor does not run these programs.
 
@@ -311,6 +319,8 @@ Autosave is enabled initially. The app saves the source file when typing pauses.
 
 Drafts are recorded on your computer in addition to saving the project files. If a draft is available when you reopen the app, choose **Review drafts**, compare it with the file, and select **Open draft in the editor**. If another application changes a source file, the app lets you compare the disk version with your edits and choose what to save.
 
+The app also checks open documents for changes on disk during its regular refresh and when you return to the browser window. A document with no unsaved edits loads the new text. A document being edited shows **Review changes** so you can compare both versions. If a file was deleted outside the app, its open text and draft remain available; the comparison dialog lets you confirm creating the file again from the editor's contents.
+
 The next session opens the previous project and restores all open tabs in their order, the two-editor layout when used, source cursor and scroll positions, the PDF page, and the zoom level. The last successfully compiled PDF is available immediately for reading.
 
 ### Create a linked Markdown page
@@ -354,6 +364,8 @@ In source mode, use **Sync scrolling** in the Markdown preview toolbar to link s
 Relative links in the preview can open other project documents. In visual editing, use `Ctrl + click` (`Cmd + click` on Mac) to follow a link. Returning to the PDF preview shows the last compiled PDF.
 
 ## Read the PDF and navigate to source
+
+The file list includes **Compiled PDFs**, with the latest successful result for each TeX document. Each entry shows the actual PDF name and the path of the TeX document used to compile it. Select an entry to open it in the PDF preview while leaving the manuscript tabs in place. Its context menu offers **Open**, **Save PDF**, and **Copy into project…**. Copying lets you choose a project destination and review any existing name. The list is available again when you reopen the project; a failed compilation leaves its previous successful PDF available.
 
 The PDF scrolls continuously across pages. The app prioritizes rendering the visible page and nearby pages, so a long document does not require rendering every page into an image at once. You can select and copy PDF text and follow links inside the PDF. After following an internal reference link, use **←** above the PDF to return to the position you were reading; **→** moves forward again. `Alt + Left` and `Alt + Right` provide the same navigation from the source or preview. Source links, search results, outline entries, and SyncTeX jumps also participate in this navigation.
 
