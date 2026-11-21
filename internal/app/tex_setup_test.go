@@ -32,7 +32,8 @@ func fakeTeXSetup(t *testing.T) (*App, string, *atomic.Int32) {
 	sum := sha256.Sum256(archive)
 	requests := &atomic.Int32{}
 	a.texSetupHooks = &texSetupHooks{
-		archive: texSetupArchive{URL: "https://example.invalid/tinytex.exe", Filename: "tinytex.exe", SHA256: hex.EncodeToString(sum[:]), Bytes: int64(len(archive))},
+		archive:       texSetupArchive{URL: "https://example.invalid/tinytex.exe", Filename: "tinytex.exe", SHA256: hex.EncodeToString(sum[:]), Bytes: int64(len(archive))},
+		defaultParent: filepath.Join(t.TempDir(), "default-tex"),
 		client: &http.Client{Transport: texSetupTransport(func(request *http.Request) (*http.Response, error) {
 			requests.Add(1)
 			return &http.Response{StatusCode: http.StatusOK, ContentLength: int64(len(archive)), Body: io.NopCloser(bytes.NewReader(archive)), Header: make(http.Header)}, nil
@@ -148,6 +149,82 @@ func TestTeXSetupInstallsRecordsAndReusesTheEnvironment(t *testing.T) {
 	again := waitTeXSetupForTest(t, restarted, "succeeded")
 	if again.Directory != state.Directory || requests.Load() != 1 {
 		t.Fatal("a completed environment was downloaded again")
+	}
+}
+
+func TestTeXSetupCreatesTheDefaultParentShownInTheReview(t *testing.T) {
+	for _, explicit := range []bool{false, true} {
+		name := "use the default without a parent field"
+		if explicit {
+			name = "send the parent shown in the review"
+		}
+		t.Run(name, func(t *testing.T) {
+			a, _, requests := fakeTeXSetup(t)
+			plan := texSetupStateForTest(t, a).Install
+			if _, err := os.Stat(plan.Parent); !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("default parent should start absent: %v", err)
+			}
+			input := texSetupInput{Operation: "install"}
+			if explicit {
+				input.Parent = plan.Parent
+			}
+			denied := apiRequest(a, http.MethodPost, "/api/tex/setup", input, nil)
+			if denied.Code != http.StatusBadRequest {
+				t.Fatalf("setup without consent: %d %s", denied.Code, denied.Body.String())
+			}
+			if _, err := os.Stat(plan.Parent); !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("reviewing the destination created the parent: %v", err)
+			}
+			input.Consent = true
+			startTeXSetupForTest(t, a, input)
+			state := waitTeXSetupForTest(t, a, "succeeded")
+			info, err := os.Stat(plan.Parent)
+			if err != nil || !info.IsDir() || !samePath(state.Parent, plan.Parent) || !state.Managed || requests.Load() != 1 {
+				t.Fatalf("setup did not create and use the reviewed destination: state=%+v error=%v requests=%d", state, err, requests.Load())
+			}
+		})
+	}
+}
+
+func TestTeXSetupRequiresAnExistingCustomParent(t *testing.T) {
+	a, parent, requests := fakeTeXSetup(t)
+	missing := filepath.Join(parent, "new-parent")
+	startTeXSetupForTest(t, a, texSetupInput{Consent: true, Operation: "install", Parent: missing})
+	state := waitTeXSetupForTest(t, a, "failed")
+	if state.Error == "" || requests.Load() != 0 {
+		t.Fatalf("setup used a missing custom parent: %+v requests=%d", state, requests.Load())
+	}
+	if _, err := os.Stat(missing); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("setup created a custom parent without selecting an existing folder: %v", err)
+	}
+}
+
+func TestTeXSetupRejectsLinkedDefaultAndCustomParents(t *testing.T) {
+	for _, useDefault := range []bool{false, true} {
+		name := "custom parent"
+		if useDefault {
+			name = "default parent"
+		}
+		t.Run(name, func(t *testing.T) {
+			a, parent, requests := fakeTeXSetup(t)
+			linked := filepath.Join(parent, "linked-parent")
+			if useDefault {
+				linked = texSetupStateForTest(t, a).Install.Parent
+			}
+			outside := t.TempDir()
+			if err := os.Symlink(outside, linked); err != nil {
+				t.Skipf("symlinks unavailable: %v", err)
+			}
+			startTeXSetupForTest(t, a, texSetupInput{Consent: true, Operation: "install", Parent: linked})
+			state := waitTeXSetupForTest(t, a, "failed")
+			if state.Error == "" || requests.Load() != 0 {
+				t.Fatalf("setup used a linked parent: %+v requests=%d", state, requests.Load())
+			}
+			entries, err := os.ReadDir(outside)
+			if err != nil || len(entries) != 0 {
+				t.Fatalf("setup wrote into the linked directory: %v %v", entries, err)
+			}
+		})
 	}
 }
 

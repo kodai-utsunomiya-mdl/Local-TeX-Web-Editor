@@ -1,6 +1,6 @@
 .settings-reset-section { display: grid; gap: 12px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
 .settings-reset-section h3, .settings-reset-section p { margin: 0; }
-.settings-reset-section > button { justify-self: start; }
+.settings-reset-section > button { justify-self: start; max-width: 100%; white-space: normal; }
 .settings-reset-dialog { width: min(660px, calc(100vw - 32px)); }
 .settings-reset-dialog .import-body { display: grid; gap: 16px; }
 .settings-reset-dialog .import-body > p { margin: 0; }
@@ -17,3 +17,4 @@
 .settings-reset-downloads { display: grid; gap: 10px; padding-left: 22px; overflow-wrap: anywhere; }
 .settings-reset-dialog > .field-help { margin: 16px 0; }
 .settings-reset-dialog > .dialog-actions { margin-top: 24px; gap: 12px; }
+.settings-reset-dialog .dialog-actions { flex-wrap: wrap; }
