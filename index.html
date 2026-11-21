@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Local TeX Web Editor — TeX and Markdown in your browser</title>
-  <meta name="description" content="A free TeX and Markdown editor for Windows and macOS. Edit Markdown visually, add inline equations, sort project files, and compile with local TeX Live.">
+  <meta name="description" content="A free TeX and Markdown editor for Windows and macOS. Install TeX from the app or use an existing installation, manage packages, and read PDFs beside your manuscript.">
   <meta name="theme-color" content="#f7f8f5">
   <link rel="canonical" href="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/">
   <link rel="alternate" hreflang="en" href="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/">
@@ -13,7 +13,7 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Local TeX Web Editor">
   <meta property="og:title" content="Local TeX Web Editor">
-  <meta property="og:description" content="Edit Markdown directly, insert inline equations with a preview, and sort files by name or modification date. Compile TeX on your computer and read the PDF beside your manuscript.">
+  <meta property="og:description" content="Edit TeX and Markdown in your browser. Set up TeX from the app, manage the selected installation and its packages, and compile documents on your computer.">
   <meta property="og:url" content="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/">
   <meta property="og:image" content="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/assets/social-preview.png">
   <meta property="og:image:type" content="image/png">
@@ -24,7 +24,7 @@
   <meta property="og:locale:alternate" content="ja_JP">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Local TeX Web Editor">
-  <meta name="twitter:description" content="Edit Markdown directly, insert inline equations with a preview, and sort files by name or modification date. Compile TeX on your computer and read the PDF beside your manuscript.">
+  <meta name="twitter:description" content="Edit TeX and Markdown in your browser. Set up TeX from the app, manage the selected installation and its packages, and compile documents on your computer.">
   <meta name="twitter:image" content="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/assets/social-preview.png">
   <meta name="twitter:image:alt" content="Local TeX Web Editor's icon and name beside its TeX source editor and PDF preview">
   <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
@@ -63,18 +63,18 @@
             <span><span class="download-label">Get it from Microsoft Store</span><small>Windows x64 · Free · Store updates</small></span>
             <span class="download-arrow" aria-hidden="true">↗</span>
           </a>
-          <a class="download" href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.11/local-tex-web-editor-0.1.11-windows-x64.zip">
+          <a class="download" href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.12/local-tex-web-editor-0.1.12-windows-x64.zip">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 4.4 10.7 3v8.2H2zm9.7-1.6L22 1.2v10H11.7zM2 12.3h8.7v8.2L2 19.1zm9.7 0H22v10l-10.3-1.6z"/></svg>
-            <span><span class="download-label">Download the Windows ZIP</span><small>v0.1.11 · x64 · ZIP</small></span>
+            <span><span class="download-label">Download the Windows ZIP</span><small>v0.1.12 · x64 · ZIP</small></span>
             <span class="download-arrow" aria-hidden="true">↓</span>
           </a>
-          <a class="download" href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.11/local-tex-web-editor-0.1.11-macos-universal.zip">
+          <a class="download" href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.12/local-tex-web-editor-0.1.12-macos-universal.zip">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="13" rx="1.4"/><path d="M8 21h8M12 16v5M3 12.5h18"/></svg>
-            <span><span class="download-label">Download for macOS</span><small>v0.1.11 · Apple Silicon + Intel · ZIP</small></span>
+            <span><span class="download-label">Download for macOS</span><small>v0.1.12 · Apple Silicon + Intel · ZIP</small></span>
             <span class="download-arrow" aria-hidden="true">↓</span>
           </a>
-          <p class="release-note"><span class="version-badge">v0.1.11</span> <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.11">Release notes and downloads</a></p>
-          <p class="store-release-note">The ZIP downloads are v0.1.11. The Microsoft Store update becomes available after Store review and publication.</p>
+          <p class="release-note"><span class="version-badge">v0.1.12</span> <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.12">Release notes and downloads</a></p>
+          <p class="store-release-note">The ZIP downloads are v0.1.12. The Microsoft Store update becomes available after Store review and publication.</p>
         </div>
       </div>
 
@@ -93,9 +93,10 @@
       <nav class="contents" aria-label="On this page">
         <p>On this page</p>
         <ul>
-          <li><a href="#whats-new">New in v0.1.11</a></li>
+          <li><a href="#whats-new">New in v0.1.12</a></li>
           <li><a href="#requirements">Requirements &amp; size</a></li>
           <li><a href="#get-started">Get started</a></li>
+          <li><a href="#tex">Set up &amp; manage TeX</a></li>
           <li><a href="#editing">Editing &amp; preview</a></li>
           <li><a href="#writing">Search, compare &amp; reuse</a></li>
           <li><a href="#updates">Updates &amp; help</a></li>
@@ -103,18 +104,19 @@
       </nav>
       <div class="guide">
         <section id="whats-new" aria-labelledby="whats-new-title">
-          <h2 id="whats-new-title">New in v0.1.11</h2>
-          <p>Resize text while editing Markdown directly, and remove compiled PDFs you no longer need.</p>
+          <h2 id="whats-new-title">New in v0.1.12</h2>
+          <p>Install TeX from the app and manage packages in the installation you use for compilation.</p>
           <ul class="release-highlights">
-            <li><strong>Resize text in Visual editing.</strong> Pinch on a trackpad or touchscreen, or use <kbd>Ctrl</kbd> + wheel (<kbd>Cmd</kbd> + wheel also works on Mac). Visual editing and Source share the 8–40 px text size in Settings. Both panes update, and the chosen size carries over to the next session.</li>
-            <li><strong>Delete a compiled PDF.</strong> Right-click an entry in <strong>Compiled PDFs</strong> and choose <strong>Delete…</strong>. Review its PDF name, TeX document, and file count before deleting that document's build output and cached results. Your source files and PDFs saved or copied as ordinary files stay in place. Compile again to create a new result.</li>
+            <li><strong>Install TeX from Home or Settings.</strong> Review the TinyTeX download, destination and packages, then follow the progress and log. Setup includes Japanese typesetting, bibliography tools and SyncTeX. You can stop, retry, or continue editing Markdown while it runs.</li>
+            <li><strong>Manage the selected TeX installation.</strong> Search installed packages and review additions or removals. This works with TeX installed by the app and existing TeX Live, MacTeX and TinyTeX installations.</li>
+            <li><strong>Review an entire environment before removing it.</strong> Check its actual folder, contents and size. The app explains the removal method and its effect on other editors using the same TeX.</li>
           </ul>
-          <p class="small-note">See the <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.11">v0.1.11 release notes</a> for the complete changes.</p>
+          <p class="small-note">See the <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.12">v0.1.12 release notes</a> for the complete changes.</p>
         </section>
 
         <section id="requirements" aria-labelledby="requirements-title">
           <h2 id="requirements-title">Requirements and app size</h2>
-          <p>Use a current version of Chrome or Edge. For TeX compilation, install TeX Live separately with the programs and packages your documents need. If your project already compiles in another editor, choose that same TeX installation. Markdown editing and preview work without TeX Live.</p>
+          <p>Use a current version of Chrome or Edge. For TeX compilation, use <strong>Set up TeX…</strong> in the app or select an existing TeX Live installation. If your project already compiles in another editor, choose that same TeX folder. Markdown editing and preview work without TeX.</p>
           <div class="table-scroll">
             <table class="requirements-table">
               <thead><tr><th scope="col">Platform</th><th scope="col">Operating system</th><th scope="col">Example TeX folder</th></tr></thead>
@@ -137,9 +139,9 @@
           </div>
           <p class="small-note">Sizes are rounded to the nearest MB; see the <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.11">v0.1.11 release assets</a> for each download's size. 1 MB = 1,000,000 bytes. TeX Live, documents, drafts, edit history, templates and compilation files use additional space. The app includes its editor and PDF viewer; it runs without installing Python, Node.js, Go or VS Code.</p>
           <details>
-            <summary>Starting with a smaller TeX installation</summary>
+            <summary>Install TeX yourself with a smaller package selection</summary>
             <p>On Windows, the <a href="https://tug.org/texlive/acquire-netinstall.html">TeX Live installer</a> lets you choose a smaller installation scheme. On Mac, <a href="https://tug.org/mactex/morepackages.html">BasicTeX</a> provides a small starting point. Add <code>latexmk</code>, <code>synctex</code> and packages needed by your documents.</p>
-            <p>In the app, <strong>Settings → Add TeX packages</strong> prepares commands for adding packages or finding a package from a missing file name. See the <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/blob/main/README.md#start-with-a-smaller-tex-installation">TeX installation guide in the README</a>.</p>
+            <p>Select that installation in Settings, then use <strong>Manage TeX…</strong> to add packages. <strong>Add TeX packages</strong> also prepares commands for your terminal and searches for the package that supplies a missing file. See <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/blob/main/README.md#manual-installation-options">Manual installation options</a> in the README.</p>
           </details>
         </section>
 
@@ -151,13 +153,13 @@
               <p><strong>Windows (Microsoft Store):</strong> install the app from <a href="https://apps.microsoft.com/detail/9P6QF32N19HG">Microsoft Store</a>, then open <strong>Local TeX Web Editor</strong> from the Start menu.</p>
               <p><strong>Windows (ZIP):</strong> extract the ZIP and double-click <code>local-tex-web-editor.exe</code>.</p>
               <p><strong>Mac:</strong> extract the ZIP, move <code>Local TeX Web Editor.app</code> to Applications, then open it from Finder or Spotlight.</p>
-              <p class="file-note">The editor opens in your default browser. TeX Live is installed separately for TeX compilation.</p>
+              <p class="file-note">The editor opens in your default browser. Home and Settings offer <strong>Set up TeX…</strong> when you want to install the tools for compilation.</p>
             </li>
             <li>
               <h3>Open your project folder</h3>
               <p>Choose the folder containing your <code>.tex</code> and <code>.bib</code> files, images and project settings. To use an Overleaf project, download its source ZIP and extract it first.</p>
               <p>For a new project, choose <strong>Create from a template</strong> on Home, select a template, and choose a parent folder and a new folder name.</p>
-              <p>If TeX Live is not found automatically, select its program folder in <strong>Settings</strong>, then choose <strong>Save and apply settings</strong>.</p>
+              <p>For a new TeX installation, open <strong>Set up TeX…</strong> from Home or Settings and review the download before starting. Successful setup selects the installed environment. To use an existing installation, select its program folder in <strong>Settings</strong> and choose <strong>Save and apply settings</strong>.</p>
             </li>
             <li>
               <h3>Open a TeX document and compile</h3>
@@ -183,6 +185,30 @@
             <p>The local app keeps running when its browser tab sleeps, is discarded, or closes. Returning to the tab reconnects to the same local address. Launching the same version again opens the existing editor.</p>
             <p>To finish, choose <strong>Quit</strong> in the app and follow the save prompt. This stops the local app and its background work.</p>
           </div>
+        </section>
+
+        <section id="tex" aria-labelledby="tex-title">
+          <h2 id="tex-title">Set up and manage TeX</h2>
+          <div class="usage-block">
+            <h3>Install TeX from the app</h3>
+            <p>Open <strong>Home → Set up TeX…</strong> or <strong>Settings → Set up TeX…</strong>. Review the official <a href="https://github.com/rstudio/tinytex-releases/releases/tag/v2026.11">TinyTeX v2026.11</a> download, packages, estimated size and destination, then choose <strong>Download and install</strong>. You can change the destination before starting. The app installs in your user folder with your normal permissions.</p>
+            <p>The download bar shows the completed amount and total size. Extraction, package installation and compilation checks show the current stage and log. Choose <strong>Close and continue editing</strong> to work on Markdown, and reopen progress from the indicator at the bottom of the screen. <strong>Stop setup</strong> stops the operation. After a failed or stopped attempt, you can retry; the previous TeX selection remains available.</p>
+            <p>The initial selection includes pdfLaTeX, upLaTeX, XeLaTeX, LuaLaTeX, <code>latexmk</code>, SyncTeX, Japanese classes and fonts, bibliography tools, and common mathematics, figures and theorem packages. Successful setup selects the new environment without restarting the app.</p>
+            <p>For the standard selection, allow about 250 MB of downloads on Windows or 300 MB on Mac, about 1 GB installed, and about 2 GB of free space during setup. Package updates can change these estimates. Setup and later package downloads use an internet connection. The app checks the TinyTeX archive's SHA-256 before extraction. Project documents stay on your computer; the <a href="privacy/">privacy policy</a> explains download requests and stored data.</p>
+          </div>
+          <div class="usage-block">
+            <h3>Manage packages in the selected installation</h3>
+            <p>Open <strong>Settings → Manage TeX…</strong> to see the actual TeX folder and installed packages. Search the list, then use <strong>Review packages to add…</strong> to enter TeX Live package names. You can also download a package again when its files need replacing.</p>
+            <p>To remove packages, select them and choose <strong>Remove selected packages…</strong>. Review the proposed changes and dependency information, then choose <strong>Remove the displayed packages</strong>. The app checks the package database again before proceeding.</p>
+            <p>This screen works with TeX installed by the app and existing TeX Live, MacTeX and TinyTeX. Existing installations use their configured repository. When a CTAN year mismatch occurs, the app can retry with the installed TeX Live year's archive. Custom repositories use their existing settings.</p>
+            <p>The Windows ZIP and Mac editions request operating system approval when a shared installation needs administrator access. The Microsoft Store edition can open its existing official TeX management tool for that installation. After changing packages there, refresh the list in the editor.</p>
+          </div>
+          <details>
+            <summary>Remove an entire TeX environment</summary>
+            <p>In <strong>Manage TeX…</strong>, choose <strong>Remove the entire TeX environment…</strong>. Review the actual folder, file count, size and effect on other applications. To start removal inside the app, select the acknowledgment and enter the displayed folder name.</p>
+            <p>For TeX installed by the app, additional files beyond its recorded installation stop removal for review. Existing installations use the official Windows uninstaller or the operating system's Trash or Recycle Bin. For a shared installation requiring administrator access, the Store edition opens <strong>Uninstall in Windows Settings…</strong>; choose removal in Windows and refresh the environment afterward.</p>
+            <p>Other editors using the same environment will need another TeX installation or the restored environment. Keep manuscripts and personal files in their project folders. See the <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/blob/main/README.md#manage-tex-packages-and-installations">README's TeX management instructions</a> for the available operations.</p>
+          </details>
         </section>
 
         <section id="editing" aria-labelledby="editing-title">
@@ -295,12 +321,12 @@
           <h2 id="updates-title">Updates and help</h2>
           <p>Click the app's <strong>? (Help)</strong> button or press <kbd>F1</kbd> for the user guide, keyboard shortcuts, release notes, and troubleshooting steps. Help also opens the compilation log, Settings, and the update page for your edition.</p>
           <p>Use Microsoft Store to update the Windows Store edition. New versions become available after Store review and publication. Launch the updated app from the Start menu.</p>
-          <p>For the Windows ZIP edition and macOS, download updates from <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.11">GitHub Releases</a>. On Windows, extract the new ZIP and run its <code>.exe</code>; follow the prompt if an older version is running. On Mac, save your work, quit the app and replace the copy in Applications.</p>
+          <p>For the Windows ZIP edition and macOS, download updates from <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.12">GitHub Releases</a>. On Windows, extract the new ZIP and run its <code>.exe</code>; follow the prompt if an older version is running. On Mac, save your work, quit the app and replace the copy in Applications.</p>
           <p>App updates use the same settings and drafts for each edition. The first Store launch copies valid settings and drafts from an existing Windows ZIP installation. Your documents stay in their project folders.</p>
           <p>Use the app's <strong>Quit</strong> action to finish a session. Closing browser tabs leaves the local app running so you can reopen the editor later.</p>
           <p>For a problem or suggestion, choose <strong>Open GitHub Issues</strong> in Help. Under <strong>About the app</strong>, use <strong>Copy environment information</strong> to copy the app version, operating system, architecture, edition, and available TeX programs. Include the steps to reproduce a problem; a short log excerpt or a small sample project can help explain a compilation problem.</p>
           <ul class="reading-links">
-            <li><a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.11">Downloads and release notes</a></li>
+            <li><a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.12">Downloads and release notes</a></li>
             <li><a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/issues">Report an issue</a></li>
             <li><a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/blob/main/README.md">Full README</a></li>
           </ul>
