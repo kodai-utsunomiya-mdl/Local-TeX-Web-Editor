@@ -33,6 +33,7 @@ import { projectStatusFor } from './project-status.js';
 import { createFileImporter } from './file-import.js';
 import { createFileTreeDrag } from './file-tree-drag.js';
 import { createCompiledPDFList } from './compiled-pdfs.js';
+import { createCompiledPDFDeletion } from './compiled-pdf-deletion.js';
 import { buildFileTree, captureFileOrder, fileModificationTime, mapFileOrder, normalizeFileOrder, normalizeFileSort, placeInFileOrder, projectListingSignature } from './file-sorting.js';
 import { completionPresentation } from './completion-ui.js';
 import { createTeXCompletionSource } from './tex-completion.js';
@@ -626,11 +627,20 @@ function synchronizeRichSelection(name, selection) {
   if (current.anchor !== anchor || current.head !== head) slot.view.dispatch({ selection: { anchor, head }, annotations: Transaction.addToHistory.of(false) });
   if (name === state.activePane) updateCursor();
 }
+function anyEditorComposing() {
+  return visibleEditorSlots().some(([name, slot]) => editorMode(name) === 'rich' ? slot.rich?.composing : slot.view.composing);
+}
 function ensureRichEditor(slot, name) {
   if (!slot.view || !isMarkdown(slot.path) || editorMode(name) !== 'rich') return;
   const properties = { text: slot.view.state.doc.toString(), path: slot.path, projectRoot: state.meta?.project?.root };
   if (slot.rich) { slot.rich.setDocument(properties); return; }
   slot.rich = new MarkdownRichEditor({ host: slot.richHost, ...properties, token,
+    zoom: {
+      getSize: () => state.preferences.editorFontSize,
+      isActive: () => editorMode(name) === 'rich' && !!state.documents.get(slot.path) && !state.closed && !state.homeVisible,
+      isComposing: anyEditorComposing,
+      onSize: (size, origin) => { if (applyEditorFontSize(size, origin, name)) savePreferences(650); },
+    },
     onFocus: () => { state.lastSurface = 'source'; activateEditorPane(name); },
     onChange: ({ text, changes, beforeText, userEvent, selection }) => {
       const doc = state.documents.get(slot.path);
@@ -779,8 +789,9 @@ function createEditorView(slot, name, editorState) {
   }, { passive: true });
   slot.cleanup = attachEditorZoom(view, {
     getSize: () => state.preferences.editorFontSize,
-    isActive: () => slot.view === view && !!state.documents.get(slot.path) && !state.closed,
-    onSize: (size, origin) => { activateEditorPane(name); if (applyEditorFontSize(size, origin)) savePreferences(650); },
+    isActive: () => slot.view === view && editorMode(name) !== 'rich' && !!state.documents.get(slot.path) && !state.closed && !state.homeVisible,
+    isComposing: anyEditorComposing,
+    onSize: (size, origin) => { if (applyEditorFontSize(size, origin, name)) savePreferences(650); },
   });
   return view;
 }
@@ -1456,7 +1467,7 @@ async function applyMeta(meta, resetProject = false, sequence = ++state.statusRe
   $('project-root').textContent = project?.root || ''; $('project-root').title = project?.root || '';
   updateApplicationDetails(meta);
   renderRecent(); renderTree(); renderTabs(); renderControls(); updateCursor(); renderOutline(); renderRecovery();
-  applyBuild(meta.build);
+  applyBuild(meta.build, { compiledSnapshot: true });
   if (project && resetProject) runTask(() => indexProject());
   await openInitialFile();
   if (availableBefore !== projectIsAvailable()) scheduleAutoSave();
@@ -1871,7 +1882,7 @@ function updatePDFDetails() {
   $('pdf-document').textContent = main || '—';
 }
 
-function applyBuild(build) {
+function applyBuild(build, { compiledSnapshot = false } = {}) {
   if (state.closed) return;
   if (build && state.build) {
     if (build.id === state.build.id && state.build.status !== 'running' && build.status === 'running') return;
@@ -1906,16 +1917,39 @@ function applyBuild(build) {
     state.fullLog = ''; $('build-log').textContent = t("コンパイルすると，ここにコマンドとログが表示されます．"); $('log-meta').textContent = '';
     renderLogLocations();
   }
+  const entries = state.meta?.compiledPDFs || [];
+  const currentID = viewer.requestedBuildId || viewer.buildId;
+  const currentMain = currentCompiledPDF()?.main || viewer.documentMain;
+  const missingCurrentPDF = compiledSnapshot && currentID && currentMain && !entries.some(entry => entry.main === currentMain);
+  if (compiledSnapshot) {
+    const available = new Set(entries.map(entry => entry.main));
+    navigationHistory?.mapEntries(location => !location.pdf?.main || available.has(location.pdf.main) ? location :
+      location.surface === 'pdf' ? null : { ...location, pdf: null });
+    if (state.session?.pdf?.main && !available.has(state.session.pdf.main)) state.session.pdf = null;
+    if (state.session?.pdfPositions) for (const main of Object.keys(state.session.pdfPositions)) if (!available.has(main)) delete state.session.pdfPositions[main];
+  }
   let nextPDF = null;
-  if (!viewer.requestedBuildId && !viewer.buildId) {
-    const entries = state.meta?.compiledPDFs || [];
-    nextPDF = entries.find(entry => entry.main === state.session?.pdf?.main) || compiledPDFFromBuild(build) ||
+  // Deleting the latest build changes pdfBuildId to a remaining document. Only
+  // a newly completed compilation should move away from another open PDF.
+  if (build?.pdfReady && build.status === 'success' && build.id === build.pdfBuildId && build.pdfBuildId !== previousPDF) nextPDF = compiledPDFFromBuild(build);
+  if (missingCurrentPDF) {
+    nextPDF = compiledPDFFromBuild(build) || [...entries].sort((a, b) => Date.parse(b.modifiedAt) - Date.parse(a.modifiedAt))[0];
+  } else if (!currentID) {
+    nextPDF = entries.find(entry => entry.main === state.session?.pdf?.main) || nextPDF || compiledPDFFromBuild(build) ||
       [...entries].sort((a, b) => Date.parse(b.modifiedAt) - Date.parse(a.modifiedAt))[0];
-  } else if (build?.pdfReady && build.pdfBuildId !== previousPDF) nextPDF = compiledPDFFromBuild(build);
+  } else if (compiledSnapshot && !entries.some(entry => entry.buildId === currentID)) {
+    nextPDF ||= entries.find(entry => entry.main === currentMain);
+  }
+  if (missingCurrentPDF) {
+    state.previewPDF = null;
+    const positions = Object.fromEntries(Object.entries(viewer.getPositions()).filter(([main]) => entries.some(entry => entry.main === main)));
+    viewer.reset().catch(showError); viewer.restorePosition(null, positions);
+  }
   if (nextPDF) loadCompiledPDF(nextPDF).catch(showError);
   else if (!build?.pdfReady && !state.meta?.compiledPDFs?.length && (viewer.document || viewer.loadingTask)) {
     state.previewPDF = null; viewer.reset().catch(showError);
   }
+  if (compiledSnapshot) { viewer.forgetMissingDocuments(entries.map(entry => entry.main)); scheduleSession(); }
   updatePreviewNote(); renderControls();
   updateAutoSaveStatus();
   if (previouslyRunning && !isRunning()) { scheduleAutoSave(); runTask(heartbeat); }
@@ -1930,10 +1964,12 @@ async function pollBuild() {
   if (state.polling || state.closed || !state.meta?.project) return;
   state.polling = true;
   const generation = state.projectGeneration;
+  const entriesVersion = state.projectEntriesVersion;
   const expectedId = state.build?.id;
   try {
     const build = await api('/api/build');
     if (state.closed || generation !== state.projectGeneration) return;
+    if (entriesVersion !== state.projectEntriesVersion) { if (isRunning()) schedulePoll(650); return; }
     if (expectedId && state.build?.id !== expectedId && build?.id !== state.build?.id) return;
     applyBuild(build);
   }
@@ -2089,15 +2125,17 @@ async function heartbeat({ forceFiles = false } = {}) {
     if (state.closed || generation !== state.projectGeneration) return;
     if (!applyProjectStatuses(meta, sequence)) return;
     if (state.meta?.project && meta.project?.root !== state.meta.project.root) { if (!state.externalProjectChanged) handleExternalProjectChange(); return; }
+    let compiledSnapshot = false;
     if (state.operation) state.heartbeatPending = true;
     else if (entriesVersion === state.projectEntriesVersion) {
       const compiledChanged = JSON.stringify(state.meta?.compiledPDFs || []) !== JSON.stringify(meta.compiledPDFs || []);
       if (state.meta) state.meta.compiledPDFs = meta.compiledPDFs || [];
+      compiledSnapshot = true;
       applyProjectListing(meta.project);
       if (compiledChanged) { renderTree(); updatePreviewNote(); }
     }
     if (toolsGeneration === state.toolsGeneration) updateTools(meta);
-    if (!isRunning() && meta.build) applyBuild(meta.build);
+    if (!isRunning()) applyBuild(meta.build, { compiledSnapshot });
     const force = state.forceFileSync;
     if (!state.operation && !document.querySelector('dialog[open]') && !state.fileSyncInProgress) {
       state.forceFileSync = false;
@@ -2297,15 +2335,18 @@ function changePDFDarkMode(enabled) {
   applyPDFDarkMode(enabled);
   savePreferences();
 }
-function applyEditorFontSize(value, origin = null) {
+function applyEditorFontSize(value, origin = null, pane = state.activePane) {
   const size = Number.isFinite(value) ? Math.min(40, Math.max(8, Math.round(value * 10) / 10)) : 14;
   const changed = state.preferences.editorFontSize !== size;
   if (!changed && document.documentElement.style.getPropertyValue('--editor-font-size') === `${size}px`) return false;
-  const restore = prepareEditorResize(activeDocument() ? state.editor : null, origin);
+  const restore = visibleEditorSlots().map(([name, slot]) => {
+    const point = name === pane ? origin : null;
+    return editorMode(name) === 'rich' ? slot.rich?.prepareResize(point) : prepareEditorResize(slot.view, point);
+  });
   state.preferences.editorFontSize = size;
   document.documentElement.style.setProperty('--editor-font-size', `${size}px`);
   $('editor-font-size').value = String(size);
-  restore();
+  for (const apply of restore) apply?.();
   return changed;
 }
 async function loadPreferences() {
@@ -2583,7 +2624,7 @@ async function restoreNavigationLocation(location) {
   if (location.pdf?.main && viewer.documentMain !== location.pdf.main) {
     const entry = (state.meta.compiledPDFs || []).find(item => item.main === location.pdf.main);
     if (entry) await loadCompiledPDF(entry);
-    else if (location.pdf.buildId) await loadCompiledPDF({ buildId: location.pdf.buildId, main: location.pdf.main, synctexReady: true });
+    else return false;
   }
   if (generation !== state.projectGeneration) return false;
   const restoredPDF = location.pdf ? await viewer.applyViewState(location.pdf) : false;
@@ -2977,8 +3018,16 @@ const fileImporter = createFileImporter({
   onImported: applyImportedFile, onError: showError, onNotice: toast,
 });
 compiledPDFList = createCompiledPDFList({
-  onOpen: openCompiledPDF, onDownload: downloadPDF, onCopy: copyCompiledPDF, onError: showError,
+  onOpen: openCompiledPDF, onDownload: downloadPDF, onCopy: copyCompiledPDF, onDelete: entry => compiledPDFDeletion.open(entry), onError: showError,
   isBlocked: () => !!state.operation || state.closed || state.externalProjectChanged || isRunning() || !!document.querySelector('dialog[open]'),
+});
+const compiledPDFDeletion = createCompiledPDFDeletion({
+  api, getProjectRoot: () => state.meta?.project?.root,
+  isBlocked: () => !!state.operation || state.closed || state.externalProjectChanged || isRunning() || !!document.querySelector('dialog[open]'),
+  begin: () => { assertProjectAvailable(); setOperation('deleting'); }, end: () => setOperation(''),
+  onChanged: async result => { await applyMeta(result.state); clearError(); scheduleSession(); },
+  onState: meta => applyMeta(meta), onNotice: toast,
+  getFallbackFocus: () => $('file-tree').querySelector('.compiled-pdf-button[aria-current="true"]') || $('file-tree'),
 });
 createFileActions({
   tree: $('file-tree'), getProject: () => state.meta?.project,

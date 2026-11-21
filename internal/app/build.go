@@ -281,6 +281,10 @@ func (a *App) finishBuild(run *buildRun, code *int, err error, pdf, pdfID string
 		a.lastPDFMain, a.lastPDFChanged = project.Main, run.result.SourceChanged
 		a.lastPDFMarkdownInputs = run.markdownInputs
 		a.pdfVersions[pdfID] = pdf
+		if a.pdfMains == nil {
+			a.pdfMains = make(map[string]string)
+		}
+		a.pdfMains[pdfID] = project.Main
 		if run.synctex != nil {
 			run.synctex.ChangedDuringBuild = run.result.SourceChanged
 			a.synctexVersions[pdfID] = run.synctex

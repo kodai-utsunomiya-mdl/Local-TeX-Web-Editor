@@ -14,3 +14,12 @@
 .compiled-pdf-context-menu button { display: block; width: 100%; min-height: 34px; padding: 7px 11px; border: 0; border-radius: 4px; color: inherit; background: transparent; text-align: left; font-size: 12px; }
 .compiled-pdf-context-menu button:not(:disabled):hover, .compiled-pdf-context-menu button:focus { background: var(--accent-soft); outline: none; }
 .compiled-pdf-context-menu button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.compiled-pdf-context-menu button.danger { color: var(--danger); }
+.compiled-pdf-delete-body { display: flex; flex-direction: column; gap: 14px; padding: 20px 24px; }
+.compiled-pdf-delete-body p { margin: 0; line-height: 1.7; }
+.compiled-pdf-delete-name { font-weight: 600; overflow-wrap: anywhere; }
+.compiled-pdf-delete-source { color: var(--secondary); overflow-wrap: anywhere; }
+.compiled-pdf-delete-entries { color: var(--secondary); font-size: 12px; }
+.compiled-pdf-delete-entries summary { cursor: pointer; padding: 5px 0; }
+.compiled-pdf-delete-entries ul { max-height: 180px; overflow: auto; margin: 8px 0 0; padding: 0 0 0 21px; }
+.compiled-pdf-delete-entries li { padding: 3px 0; overflow-wrap: anywhere; }

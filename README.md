@@ -4,11 +4,11 @@ English | [日本語](README.ja.md) · [Website and guide](https://kodai-utsunom
 
 [![Get the free Windows app from Microsoft Store](docs/download-store.svg)](https://apps.microsoft.com/detail/9P6QF32N19HG)
 &nbsp;&nbsp;
-[![Download Windows ZIP](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.10/local-tex-web-editor-0.1.10-windows-x64.zip)
+[![Download Windows ZIP](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.11/local-tex-web-editor-0.1.11-windows-x64.zip)
 &nbsp;&nbsp;
-[![Download for macOS](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.10/local-tex-web-editor-0.1.10-macos-universal.zip)
+[![Download for macOS](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.11/local-tex-web-editor-0.1.11-macos-universal.zip)
 
-**v0.1.10** · [All downloads and release notes](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [Requirements](#requirements) · [App size](#app-files-and-storage) · [Get started](#download-and-launch)
+**v0.1.11** · [All downloads and release notes](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [Requirements](#requirements) · [App size](#app-files-and-storage) · [Get started](#download-and-launch)
 
 Edit TeX documents in your browser on Windows or macOS, and compile them with TeX Live on your computer. The editor and PDF preview appear in the same window. Launching the app opens a `localhost` page in your default browser. Markdown editing and preview are also supported.
 
@@ -122,7 +122,7 @@ Microsoft Store manages installation and app updates. TeX Live is installed sepa
 #### ZIP download
 
 1. Open [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) and select the latest version.
-2. Under **Assets**, download `local-tex-web-editor-0.1.10-windows-x64.zip`. The **Source code** archives contain the files for development.
+2. Under **Assets**, download `local-tex-web-editor-0.1.11-windows-x64.zip`. The **Source code** archives contain the files for development.
 3. Extract the ZIP and double-click `local-tex-web-editor.exe`.
 4. In the browser window, choose your project folder. You can also enter its path.
 5. If TeX Live is not found automatically, open Settings and select the folder containing `latexmk.exe`, for example `C:\texlive\2025\bin\windows`.
@@ -132,7 +132,7 @@ The Windows executable in the ZIP download does not have a code signature. If Sm
 
 ### macOS
 
-1. Under **Assets** in [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases), download `local-tex-web-editor-0.1.10-macos-universal.zip`. The same ZIP supports Apple Silicon and Intel.
+1. Under **Assets** in [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases), download `local-tex-web-editor-0.1.11-macos-universal.zip`. The same ZIP supports Apple Silicon and Intel.
 2. Extract the ZIP and move `Local TeX Web Editor.app` to **Applications**.
 3. Open **Local TeX Web Editor** from Finder or Spotlight. The editor opens in your browser.
 4. Open your project folder. If TeX is not found automatically, select `/Library/TeX/texbin` in Settings.
@@ -200,12 +200,12 @@ Selected text has a visible background in both themes, including selections on t
 | Compare earlier text | Open **Editing tools → Document history** |
 | Inspect a citation or reference | Open **Editing tools → References and citations** to find definitions and uses |
 | Insert an image or table | Right-click in the manuscript, or use **Editing tools → Insert an image** or **Insert a table** |
-| Change the editor font size | Use `Ctrl + wheel` over the editor, pinch on a touchpad, or use two fingers on a touchscreen. Settings reflects the new size |
+| Change the editor font size | In source or Markdown visual editing, use `Ctrl + wheel`, pinch on a touchpad, or pinch with two fingers on a touchscreen. Both editor panes and Settings use the new size, which is saved for future sessions |
 | Save | Press `Ctrl + S` for the current file or `Ctrl + Shift + S` for all open files |
 | Compile | Press `Ctrl + Enter` or click **Compile**. The app saves the files and compiles the TeX document selected by the active editor tab |
 | Review errors and warnings | Open **Log**, choose a category, and click an item with a file name and line number to open the source |
 
-On Mac, use `Cmd` in place of `Ctrl` for saving, searching, compiling, and the SyncTeX click action. Zoom with `Ctrl + wheel` or a trackpad pinch.
+On Mac, use `Cmd` in place of `Ctrl` for saving, searching, compiling, and the SyncTeX click action. Change the editor text size with `Ctrl + wheel`, `Cmd + wheel`, or a trackpad pinch.
 
 The search and replacement fields accept newlines and TeX backslashes as entered. Press `Enter` for the next match, `Shift + Enter` for the previous match, and `Ctrl + Enter` to insert a newline in a field. A checkbox enables regular expressions. Close the search panel with its **×** button or press `Esc` while a search field has focus.
 
@@ -341,6 +341,8 @@ Opening a `.md` or `.markdown` file starts in **Visual editing**. Edit the displ
 
 Use the **Visual editing / Source** selector above the document to edit the Markdown notation. Switching modes leaves the document text unchanged. When editing a block visually, other blocks continue to use their original Markdown. Each of the two editor panes remembers its chosen mode, so the same file can be displayed in both modes at once.
 
+To change the text size in Visual editing, use `Ctrl + wheel` (`Cmd + wheel` also works on Mac), a trackpad pinch, or a two-finger pinch on a touchscreen. Visual editing and source editors share the 8–40 px size shown in Settings, including when two panes are open. The app saves the chosen size for the next session.
+
 Visual editing starts with the preview closed. Markdown source editing and TeX editing start with it open. **Show preview / Hide preview** changes this for the current mode, and the app remembers the choice. Reopening the preview restores its previous width. With the preview type set to **Auto**, a visible preview follows the edited file and updates as you type. Click **Preview** or press `Ctrl + Enter` to save and refresh it.
 
 The Markdown editing toolbar works in both modes. Select text or place the cursor, then choose a heading level, bold, italic, strikethrough, a bullet or numbered list, a task list, a blockquote, or inline code. In visual editing, buttons show the formatting at the cursor and the formatting selected for the next characters. A selection containing both formatted and plain text shows a mixed state. **Insert a link** lets you enter the display text and a web, email, or project-relative destination. **Code block** accepts code and an optional language name. Image insertion, table creation or pasting, and linked Markdown page creation use icon buttons; hover over an icon to read its name. These actions edit the Markdown source and can be undone across mode changes.
@@ -365,7 +367,9 @@ Relative links in the preview can open other project documents. In visual editin
 
 ## Read the PDF and navigate to source
 
-The file list includes **Compiled PDFs**, with the latest successful result for each TeX document. Each entry shows the actual PDF name and the path of the TeX document used to compile it. Select an entry to open it in the PDF preview while leaving the manuscript tabs in place. Its context menu offers **Open**, **Save PDF**, and **Copy into project…**. Copying lets you choose a project destination and review any existing name. The list is available again when you reopen the project; a failed compilation leaves its previous successful PDF available.
+The file list includes **Compiled PDFs**, with the latest successful result for each TeX document. Each entry shows the actual PDF name and the path of the TeX document used to compile it. Select an entry to open it in the PDF preview while leaving the manuscript tabs in place. Its context menu offers **Open**, **Save PDF**, **Copy into project…**, and **Delete…**. Copying lets you choose a project destination and review any existing name. The list is available again when you reopen the project; a failed compilation leaves its previous successful PDF available.
+
+To remove a compiled result, right-click its entry, choose **Delete…**, review the TeX document and the number of files, and choose **Delete**. This removes that document's stored PDF previews and SyncTeX data, including earlier versions, together with its compilation output and auxiliary files under `.local-tex-editor/build`. The TeX source and PDFs saved or copied as ordinary files stay in place. If the displayed result is deleted, the preview opens the most recent remaining PDF or becomes empty when none remain. Compile the TeX document again to create a new PDF and return it to the list.
 
 The PDF scrolls continuously across pages. The app prioritizes rendering the visible page and nearby pages, so a long document does not require rendering every page into an image at once. You can select and copy PDF text and follow links inside the PDF. After following an internal reference link, use **←** above the PDF to return to the position you were reading; **→** moves forward again. `Alt + Left` and `Alt + Right` provide the same navigation from the source or preview. Source links, search results, outline entries, and SyncTeX jumps also participate in this navigation.
 
@@ -434,7 +438,7 @@ The app does not impose a compilation time limit. Use the stop button to stop a 
 
 ## App files and storage
 
-The **v0.1.10** files have the sizes below, rounded to the nearest MB (1 MB = 1,000,000 bytes). The Assets section of the [release](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) shows each download's size.
+The **v0.1.11** files have the sizes below, rounded to the nearest MB (1 MB = 1,000,000 bytes). The Assets section of the [release](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) shows each download's size.
 
 | Platform | ZIP download | App after extraction |
 | --- | ---: | ---: |
@@ -477,7 +481,7 @@ go build -o bin/local-tex-web-editor.exe ./cmd/local-tex-editor
 Build a Windows distribution executable:
 
 ```sh
-go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.10" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
+go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.11" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
 ```
 
 `build:windows-resources` generates Windows x64 resources from the bundled ICO. The executable embeds nine icon sizes from 16 to 256 px.
@@ -493,7 +497,7 @@ npx playwright install chromium
 node scripts/build-macos.mjs
 ```
 
-This creates `dist/local-tex-web-editor-0.1.10-macos-universal.zip` with an app supporting Apple Silicon and Intel, the English and Japanese READMEs, and license files.
+This creates `dist/local-tex-web-editor-0.1.11-macos-universal.zip` with an app supporting Apple Silicon and Intel, the English and Japanese READMEs, and license files.
 
 Command-line options:
 

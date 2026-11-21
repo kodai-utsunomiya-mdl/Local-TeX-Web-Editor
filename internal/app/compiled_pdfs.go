@@ -82,6 +82,7 @@ func (a *App) trimPDFVersionsLocked() {
 	for id := range a.pdfVersions {
 		if !keep[id] {
 			delete(a.pdfVersions, id)
+			delete(a.pdfMains, id)
 			delete(a.synctexVersions, id)
 		}
 	}

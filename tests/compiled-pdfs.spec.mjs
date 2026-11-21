@@ -27,7 +27,7 @@ test.beforeAll(async () => {
         if (window.compiledFail === name) throw new Error('Cannot complete ' + name);
         window.compiledActions.push({ action: name, buildId: entry.buildId, main: entry.main });
       };
-      const component = createCompiledPDFList({ onOpen: action('open'), onDownload: action('download'), onCopy: action('copy'),
+      const component = createCompiledPDFList({ onOpen: action('open'), onDownload: action('download'), onCopy: action('copy'), onDelete: action('delete'),
         isBlocked: () => window.compiledBlocked, onError: error => { window.compiledError = error.message; } });
       const tree = document.querySelector('#file-tree');
       tree.addEventListener('contextmenu', () => { window.treeContextEvents++; });
@@ -85,14 +85,14 @@ test('PDF 名とコンパイル元を 2 行で表示し，検索と表示言語�
   await expect(row(page, 'old').locator('.compiled-pdf-name')).toHaveText('PDF from 旧版の原稿.tex');
 });
 
-test('クリックと独自のメニューから対象の PDF を開き，保存とコピーを選べる', async ({ page }) => {
+test('クリックと独自のメニューから対象の PDF を開き，保存，コピー，削除を選べる', async ({ page }) => {
   await openList(page);
   const target = row(page, 'second');
   await target.click();
   await expect.poll(() => page.evaluate(() => window.compiledActions)).toEqual([{ action: 'open', buildId: 'second', main: entries[0].main }]);
   await target.click({ button: 'right' });
   await expect(menu(page)).toBeVisible();
-  await expect(menu(page).getByRole('menuitem')).toHaveText(['開く', 'PDF を保存', 'プロジェクトへコピー…']);
+  await expect(menu(page).getByRole('menuitem')).toHaveText(['開く', 'PDF を保存', 'プロジェクトへコピー…', '削除…']);
   await expect(menu(page).getByRole('menuitem', { name: '開く', exact: true })).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(menu(page)).toBeHidden();
@@ -105,6 +105,9 @@ test('クリックと独自のメニューから対象の PDF を開き，保存
   await target.click({ button: 'right' });
   await menu(page).getByRole('menuitem', { name: 'プロジェクトへコピー…', exact: true }).click();
   await expect.poll(() => page.evaluate(() => window.compiledActions.at(-1))).toEqual({ action: 'copy', buildId: 'second', main: entries[0].main });
+  await target.click({ button: 'right' });
+  await menu(page).getByRole('menuitem', { name: '削除…', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.compiledActions.at(-1))).toEqual({ action: 'delete', buildId: 'second', main: entries[0].main });
   expect(await page.evaluate(() => window.treeContextEvents)).toBe(0);
   await expect(menu(page)).toBeHidden();
 });

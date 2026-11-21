@@ -55,6 +55,7 @@ type App struct {
 	lastPDFChanged        bool
 	lastPDFMarkdownInputs map[string]bool
 	pdfVersions           map[string]string
+	pdfMains              map[string]string
 	pdfOrder              []string
 	compiledPDFs          map[string]CompiledPDF
 	synctexVersions       map[string]*synctexVersion
@@ -126,7 +127,7 @@ func New(options Options) (*App, error) {
 		return nil, messages.Errorf("設定フォルダーを作成できません: %w", err)
 	}
 	a := &App{
-		options: options, packageIdentity: identity, pdfVersions: make(map[string]string), compiledPDFs: make(map[string]CompiledPDF),
+		options: options, packageIdentity: identity, pdfVersions: make(map[string]string), pdfMains: make(map[string]string), compiledPDFs: make(map[string]CompiledPDF),
 		synctexVersions: make(map[string]*synctexVersion), synctexSlots: make(chan struct{}, 2),
 		browserEnd: make(chan struct{}),
 	}
@@ -196,6 +197,7 @@ func (a *App) Handler() http.Handler {
 	mux.HandleFunc("/api/build", a.buildHandler)
 	mux.HandleFunc("/api/build/stop", a.stopHandler)
 	mux.HandleFunc("/api/pdf", a.pdfHandler)
+	mux.HandleFunc("/api/pdf/delete", a.compiledPDFDeleteHandler)
 	mux.HandleFunc("/api/synctex/forward", a.forwardSyncHandler)
 	mux.HandleFunc("/api/synctex/inverse", a.inverseSyncHandler)
 	mux.HandleFunc("/api/shutdown", a.shutdownHandler)

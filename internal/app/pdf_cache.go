@@ -143,6 +143,10 @@ func (a *App) restoreCachedBuildLocked(project Project) {
 			continue
 		}
 		a.pdfVersions[value.ID] = pdf
+		if a.pdfMains == nil {
+			a.pdfMains = make(map[string]string)
+		}
+		a.pdfMains[value.ID] = value.Main
 		if len(a.pdfOrder) < 2 {
 			a.pdfOrder = append([]string{value.ID}, a.pdfOrder...)
 		}

@@ -24,7 +24,7 @@ async function menu(page, main, action) {
   await page.locator(`.compiled-pdf-context-menu [data-action="${action}"]`).click();
 }
 
-test('文書ごとの PDF を選び，実際の名前で保存・コピーして，再起動後も選んだ文書を開ける', async ({ page, context, session }, testInfo) => {
+test('文書ごとの PDF を保存・コピー・削除し，再起動と再コンパイルに反映する', async ({ page, context, session }, testInfo) => {
   test.setTimeout(240_000);
   await page.setViewportSize({ width: 1600, height: 1000 });
   const rc = await readFile(path.join(session.project, 'latexmkrc'), 'utf8');
@@ -90,4 +90,55 @@ test('文書ごとの PDF を選び，実際の名前で保存・コピーして
   await expect(reopened.getByTestId('pdf-canvas')).toHaveAttribute('data-ready', 'true');
   await expect(row(reopened, 'main.tex')).toHaveAttribute('aria-current', 'true');
   await expect(reopened.getByTestId('file-submission.pdf')).toBeVisible();
+
+  const deletion = reopened.locator('#compiled-pdf-delete-dialog');
+  await menu(reopened, 'third.tex', 'delete');
+  await expect(deletion).toBeVisible();
+  await expect(deletion.locator('.compiled-pdf-delete-name')).toHaveText('submission.pdf');
+  await expect(deletion.locator('.compiled-pdf-delete-source')).toHaveText('コンパイル元: third.tex');
+  await expect(deletion.getByRole('button', { name: 'キャンセル', exact: true })).toBeFocused();
+  await deletion.getByRole('button', { name: 'キャンセル', exact: true }).click();
+  await expect(deletion).toBeHidden();
+  expect((await request(session, `/api/pdf?build=${third.pdfBuildId}`)).ok).toBe(true);
+
+  await menu(reopened, 'third.tex', 'delete');
+  await deletion.locator('summary').click();
+  await expect(deletion.locator('li').first()).toBeVisible();
+  await reopened.screenshot({ path: testInfo.outputPath('delete-compiled-pdf.png') });
+  await deletion.getByRole('button', { name: '削除', exact: true }).click();
+  await expect(deletion).toBeHidden();
+  await expect(row(reopened, 'third.tex')).toHaveCount(0);
+  await expect(reopened.getByTestId('pdf-canvas')).toHaveAttribute('data-build-id', first.pdfBuildId);
+  expect((await request(session, `/api/pdf?build=${third.pdfBuildId}`)).status).toBe(410);
+  expect(await readFile(path.join(session.project, 'submission.pdf'))).toEqual(thirdBytes);
+  await expect(reopened.getByTestId('file-third.tex')).toBeVisible();
+
+  await menu(reopened, 'main.tex', 'delete');
+  await deletion.getByRole('button', { name: '削除', exact: true }).click();
+  await expect(deletion).toBeHidden();
+  await expect(row(reopened, 'main.tex')).toHaveCount(0);
+  await expect(reopened.getByTestId('pdf-canvas')).toHaveAttribute('data-build-id', second.pdfBuildId);
+  await expect(reopened.getByTestId('pdf-canvas')).toHaveAttribute('data-ready', 'true');
+
+  const observer = await context.newPage(); await openEditor(observer, session);
+  await expect(observer.getByTestId('pdf-canvas')).toHaveAttribute('data-build-id', second.pdfBuildId);
+  await menu(reopened, 'second.tex', 'delete');
+  await deletion.getByRole('button', { name: '削除', exact: true }).click();
+  await expect(deletion).toBeHidden();
+  await expect(reopened.locator('.compiled-pdf-button')).toHaveCount(0);
+  await expect(reopened.locator('#pdf-empty')).toBeVisible();
+  await observer.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  await expect(observer.locator('.compiled-pdf-button')).toHaveCount(0);
+  await expect(observer.locator('#pdf-empty')).toBeVisible();
+  await expect.poll(async () => (await json(session, key)).value?.pdf).toBe(null);
+  await expect.poll(async () => (await json(session, key)).value?.pdfPositions).toEqual({});
+  await observer.close(); await reopened.close(); await session.restart();
+  const empty = await context.newPage(); await openEditor(empty, session);
+  await expect(empty.locator('.compiled-pdf-button')).toHaveCount(0);
+  await expect(empty.locator('#pdf-empty')).toBeVisible();
+  await expect(empty.getByTestId('file-submission.pdf')).toBeVisible();
+  const rebuilt = await compile(empty, session, 'main.tex');
+  expect(rebuilt.pdfBuildId).not.toBe(first.pdfBuildId);
+  await expect(empty.locator('.compiled-pdf-button')).toHaveCount(1);
+  expect(await readFile(path.join(session.project, 'submission.pdf'))).toEqual(thirdBytes);
 });

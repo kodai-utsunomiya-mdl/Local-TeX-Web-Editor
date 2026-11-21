@@ -159,6 +159,12 @@ export class PDFViewer {
     this.positions = new Map(Object.entries(positions || {}).filter(([, value]) => value && typeof value === 'object').slice(-128));
   }
 
+  forgetMissingDocuments(mains) {
+    const available = new Set(mains);
+    for (const main of this.positions.keys()) if (!available.has(main)) this.positions.delete(main);
+    if (this.initialPosition?.main && !available.has(this.initialPosition.main)) this.initialPosition = null;
+  }
+
   getViewState() {
     if (!this.document) return this.initialPosition;
     if (!this.ready) return this.pendingPosition ? { ...this.pendingPosition, main: this.documentMain, buildId: this.buildId } : this.initialPosition;

@@ -4,4 +4,12 @@ export const compiledPDFsEnglish = {
   '{main} の PDF': 'PDF from {main}',
   'コンパイル元: {main}': 'Compiled from: {main}',
   'プロジェクトへコピー…': 'Copy into project…',
+  '削除…': 'Delete…',
+  'コンパイルした PDF を削除しますか？': 'Delete this compiled PDF?',
+  'この TeX のコンパイル結果と補助ファイル，過去の結果を含む表示用の PDF を削除します．再コンパイルすると，PDF を作成できます．': 'Delete the build output and auxiliary files for this TeX document, along with cached PDFs from its previous builds. Compile the document again to create a new PDF.',
+  '原稿と，通常のファイルとして保存・コピーした PDF はそのままです．': 'Your source files and PDFs saved or copied as ordinary files stay in place.',
+  '削除するファイル: {count} 個': 'Files to delete: {count}',
+  'コンパイル結果': 'Build output',
+  '表示用キャッシュ': 'Preview cache',
+  'コンパイルした PDF を削除しました．': 'Compiled PDF deleted.',
 };

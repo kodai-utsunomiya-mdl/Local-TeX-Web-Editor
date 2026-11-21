@@ -32,7 +32,7 @@ export function visibleCompiledPDFs(entries, { filter = '', sort = 'name-asc', l
   });
 }
 
-export function createCompiledPDFList({ onOpen, onDownload, onCopy, isBlocked = () => false, onError = () => {} }) {
+export function createCompiledPDFList({ onOpen, onDownload, onCopy, onDelete, isBlocked = () => false, onError = () => {} }) {
   const document = globalThis.document, window = document.defaultView;
   const make = (tag, className, text) => {
     const element = document.createElement(tag);
@@ -50,6 +50,7 @@ export function createCompiledPDFList({ onOpen, onDownload, onCopy, isBlocked = 
     { id: 'open', label: '開く', callback: onOpen },
     { id: 'download', label: 'PDF を保存', callback: onDownload },
     { id: 'copy', label: 'プロジェクトへコピー…', callback: onCopy },
+    { id: 'delete', label: '削除…', callback: onDelete },
   ];
   const listeners = [];
   const listen = (target, name, callback, options) => {
@@ -89,7 +90,7 @@ export function createCompiledPDFList({ onOpen, onDownload, onCopy, isBlocked = 
     button.setAttribute('aria-expanded', 'true');
     menu.setAttribute('aria-label', compiledPDFName(entry)); menu.replaceChildren();
     for (const { id, label, callback } of actions) {
-      const item = make('button', '', t(label));
+      const item = make('button', id === 'delete' ? 'danger' : '', t(label));
       item.type = 'button'; item.role = 'menuitem'; item.tabIndex = -1; item.dataset.action = id;
       item.disabled = typeof callback !== 'function';
       item.addEventListener('click', () => perform(callback, key)); menu.append(item);
