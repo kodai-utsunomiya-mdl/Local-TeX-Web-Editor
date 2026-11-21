@@ -509,7 +509,7 @@ Store 版で共用の TeX を使う場合は，このボタンから公式の Te
 
 ## アプリとデータの保存先
 
-次の表は **v0.1.13** の配布ファイルの実測値である．1 MB = 1,000,000 bytes とし，MB 単位に丸めている．現在の配布ファイルの容量は，[Release](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) の Assets で確認できる．
+次の表は **v0.1.14** の配布ファイルの実測値である．1 MB = 1,000,000 bytes とし，MB 単位に丸めている．現在の配布ファイルの容量は，[Release](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) の Assets で確認できる．
 
 | 対応環境 | ダウンロードする ZIP | 展開後のアプリ本体 |
 | --- | ---: | ---: |

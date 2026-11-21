@@ -509,7 +509,7 @@ The app does not impose a compilation time limit. Use the stop button to stop a 
 
 ## App files and storage
 
-The table below records the measured **v0.1.13** files, rounded to the nearest MB (1 MB = 1,000,000 bytes). The Assets section of the [current release](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) shows each current download's size.
+The table below records the measured **v0.1.14** files, rounded to the nearest MB (1 MB = 1,000,000 bytes). The Assets section of the [current release](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) shows each current download's size.
 
 | Platform | ZIP download | App after extraction |
 | --- | ---: | ---: |
