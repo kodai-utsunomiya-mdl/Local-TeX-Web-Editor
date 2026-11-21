@@ -72,11 +72,12 @@ async function compile(api, main, output, name = path.parse(main).name) {
 export async function inspectPDF(data, name, output, { research = false } = {}) {
   const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs');
   const resources = path.join(repository, 'node_modules/pdfjs-dist');
+  // PDF.js requires a trailing slash; Node accepts it in Windows file paths too.
   const loading = getDocument({
     data: new Uint8Array(data), useSystemFonts: false, fontExtraProperties: true,
-    cMapUrl: path.join(resources, 'cmaps') + path.sep, cMapPacked: true,
-    standardFontDataUrl: path.join(resources, 'standard_fonts') + path.sep,
-    wasmUrl: path.join(resources, 'wasm') + path.sep,
+    cMapUrl: path.join(resources, 'cmaps') + '/', cMapPacked: true,
+    standardFontDataUrl: path.join(resources, 'standard_fonts') + '/',
+    wasmUrl: path.join(resources, 'wasm') + '/',
   });
   const document = await loading.promise;
   try {
