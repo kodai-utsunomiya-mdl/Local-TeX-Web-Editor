@@ -23,7 +23,7 @@ await mkdir(output, { recursive: true });
 await cp(path.join(root, 'tests/fixtures/japanese'), project, { recursive: true });
 await writeFile(path.join(project, 'notes.md'), [
   '# Research notes', '',
-  'Keep derivations and reading notes beside the paper. Changes in this file appear in the preview as you type.', '',
+  'Keep derivations and reading notes beside the paper.', '',
   '## Regularized least squares', '',
   'For a design matrix $`X`$ and observations $`y`$, consider', '',
   '$$', '\\mathcal{L}(w) = \\frac{1}{2n}\\|Xw-y\\|^2 + \\frac{\\lambda}{2}\\|w\\|^2.', '$$', '',
@@ -332,11 +332,38 @@ $\widehat w$ & Estimated coefficient vector \\
   const preview = page.getByTestId('markdown-document');
   await expect(preview.getByRole('heading', { name: 'Research notes', exact: true })).toBeVisible();
   await expect(preview.locator('.katex')).toHaveCount(4);
+  await page.locator('#markdown-editor-mode').selectOption('rich');
+  const rich = page.locator('#markdown-rich-primary .ProseMirror');
+  await expect(rich).toBeVisible();
+  await expect(editor).toBeHidden();
+  if (await page.locator('#toggle-preview').getAttribute('aria-pressed') === 'true') await page.locator('#toggle-preview').click();
+  await expect(page.locator('#toggle-preview')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#pdf-pane')).toBeHidden();
   if (await page.locator('html').getAttribute('data-theme') !== 'light') await page.getByTestId('theme-toggle').click();
+  const paragraphText = 'Keep derivations and reading notes beside the paper.';
+  const addition = ' Each run uses the same training and validation split.';
+  const paragraph = rich.locator('p').filter({ hasText: paragraphText }).first();
+  await paragraph.click();
+  await page.keyboard.press('End');
+  await page.keyboard.insertText(addition);
+  await expect(paragraph).toHaveText(paragraphText + addition);
+  await page.keyboard.press('Control+s');
+  await waitFor(() => readFile(path.join(project, 'notes.md'), 'utf8'), value => value.includes(paragraphText + addition), 'The visual editor did not save the edited Markdown paragraph.');
   await expect(page.locator('#save-status')).toHaveText('Saved');
+  await page.keyboard.press('Control+Shift+ArrowLeft');
+  await page.keyboard.press('Control+Shift+ArrowLeft');
+  await expect(rich).toBeFocused();
+  await expect.poll(() => page.evaluate(() => getSelection()?.toString().trim() || '')).not.toBe('');
+  await page.locator('#markdown-rich-primary').evaluate(element => { element.scrollTop = 0; });
+  await expect(page.locator('#markdown-editor-mode')).toHaveValue('rich');
+  await expect(rich.getByRole('heading', { name: 'Research notes', exact: true })).toBeInViewport({ ratio: 1 });
+  await expect(rich.locator('.katex')).toHaveCount(4);
+  await expect(rich.locator('.rich-task-checkbox')).toHaveCount(3);
+  await expect(rich.locator('table')).toBeInViewport({ ratio: 1 });
+  await page.evaluate(async () => { await document.fonts.ready; });
   await expect(page.locator('#app-error')).toBeHidden();
   await expect(page.locator('#toast')).toBeHidden();
-  await page.screenshot({ path: path.join(output, 'editor-markdown-light.png') });
+  await page.screenshot({ path: path.join(output, 'editor-markdown-light.png'), caret: 'initial' });
   await waitFor(async () => readdir(path.join(identity.configDir, 'ui-state')).catch(error => {
     if (error.code === 'ENOENT') return [];
     throw error;
@@ -355,7 +382,7 @@ $\widehat w$ & Estimated coefficient vector \\
   await writeFile(path.join(output, 'result.json'), JSON.stringify({
     version, packageVersion: identity.packageVersion, architecture: process.arch,
     packageIdentity: initial.packageIdentity,
-    checks: ['package-identity', 'package-localstate', 'store-shortcuts', 'optional-tex-setup', 'thesis-preambles', 'external-source-save', 'japanese-tex', 'bibliography', 'synctex', 'synctex-ui', 'pdf', 'active-document', 'markdown', 'shutdown'],
+    checks: ['package-identity', 'package-localstate', 'store-shortcuts', 'optional-tex-setup', 'thesis-preambles', 'external-source-save', 'japanese-tex', 'bibliography', 'synctex', 'synctex-ui', 'pdf', 'active-document', 'markdown', 'markdown-direct-editing-save', 'shutdown'],
     texSetup: { release: setup.release, directory: setup.directory, checks: [...setup.checks, ...removed.checks] },
   }, null, 2));
   passed = true;

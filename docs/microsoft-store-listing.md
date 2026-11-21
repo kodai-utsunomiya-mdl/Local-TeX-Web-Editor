@@ -125,13 +125,11 @@ About 2 GB free for initial TeX setup; extra packages may need more space
 ### What's new
 
 ```text
-Version 0.1.13
+Version 0.1.14
 
-- Set up TeX and Manage TeX appear together on Home and in Settings. Explanations and buttons have more space, and the buttons wrap on smaller screens.
-- Add packages and SyncTeX through the app's review screens. Shared installations use their official management tool when needed.
-- Reset settings and remembered information from Settings. Review file counts and sizes, and optionally include drafts, history, custom templates or preview caches.
-- Project documents and installed TeX remain available after a reset. Other open tabs offer downloads of unsaved documents before reloading.
-- Follow the illustrated TeX setup guide from Home through installation and the first compilation.
+- TeX setup has more space between the current environment and the progress or completion message.
+- The Markdown screenshot shows direct editing, with rendered headings, equations, task checkboxes and a table.
+- The illustrated setup guide has clearer spacing and includes the Windows SmartScreen startup steps.
 ```
 
 ## 日本語の掲載内容
@@ -227,13 +225,11 @@ TeX の導入と追加パッケージの取得にはインターネット接続
 ### このバージョンの最新情報
 
 ```text
-バージョン 0.1.13
+バージョン 0.1.14
 
-・ホームと設定に「TeX をセットアップ…」と「TeX を管理…」を並べた．説明とボタン，ボタン同士の余白を広げ，狭い画面では折り返す．
-・パッケージと SyncTeX の追加をアプリの確認画面から進める．共用環境で必要な場合は公式の管理ツールを開く．
-・設定と記憶した情報を設定画面から初期化できる．ファイル数と容量を確認し，草稿，編集履歴，自作テンプレート，プレビューのキャッシュも個別に選べる．
-・初期化後もプロジェクトの原稿と導入済みの TeX を使える．別のタブは未保存の原稿をダウンロードしてから開き直せる．
-・実際の画面を使った導入ガイドで，ホームから TeX の導入と最初のコンパイルまで順番に確認できる．
+・TeX のセットアップで，現在の環境の枠と，進行中・完了時のメッセージの間に余白を設けた．
+・Markdown の掲載画像を，見出し，数式，チェック項目，表を表示して本文を直接編集する画面へ更新した．
+・画面付きの導入ガイドの文章の間隔を整え，Windows の SmartScreen が表示された場合の操作を追記した．
 ```
 
 ## Images and captions
@@ -243,7 +239,7 @@ Use the **1600 × 1000** PNG screenshots captured from the installed MSIX by `sc
 | Image | English caption | 日本語の説明 |
 | --- | --- | --- |
 | `editor-tex-dark.png` | Edit TeX source and read the compiled PDF side by side in dark mode. | ダークモードで TeX の原稿とコンパイルした PDF を並べて表示． |
-| `editor-markdown-light.png` | Preview Markdown mathematics, a task list and a table while editing in light mode. | ライトモードで Markdown を編集し，数式，チェック項目，表をプレビュー． |
+| `editor-markdown-light.png` | Edit rendered Markdown directly in light mode, with headings, equations, task checkboxes and a table. | ライトモードで Markdown の本文を直接編集する画面．見出し，数式，チェック項目，表を表示． |
 | `editor-tex-management.png` | See the selected TeX installation and search installed packages before adding or removing them. | 選択中の TeX の保存先と導入済みのパッケージを確認し，検索して追加・削除へ進める管理画面． |
 | `tex-setup-home.png` | Open TeX setup from Home. | ホームから TeX のセットアップを開く． |
 | `tex-setup-plan.png` | Review the tools and packages included in TeX setup. | 導入するプログラムとパッケージを確認する． |
@@ -275,7 +271,7 @@ Sample project: https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/down
 1. Launch Local TeX Web Editor and use Open to select that folder.
 2. Open notes.md. It starts in Visual editing with the preview closed. Edit a rendered sentence and save with Ctrl+S. Switch to Source to edit the Markdown notation and use the separate preview. Show preview / Hide preview controls its visibility.
 3. Open Settings, switch Language between English and Japanese, and change the theme. These changes do not alter document contents.
-4. To test the new setup in version 0.1.13, open Home or Settings > Set up TeX…. Review TinyTeX v2026.11, the packages, about 250 MB of downloads and the destination under the app's LocalState folder. Choose Download and install. Allow about 2 GB of free space and an internet connection. Follow the progress log; Close and continue editing allows editing while setup continues. On a disposable first attempt, Stop setup and confirm that it can be started again.
+4. To test the new setup in version 0.1.14, open Home or Settings > Set up TeX…. Review TinyTeX v2026.11, the packages, about 250 MB of downloads and the destination under the app's LocalState folder. Choose Download and install. Allow about 2 GB of free space and an internet connection. Follow the progress log; Close and continue editing allows editing while setup continues. On a disposable first attempt, Stop setup and confirm that it can be started again.
 5. After setup succeeds, the app selects the new environment. Choose pdfLaTeX as the compilation mode for the sample. An existing TeX installation can also be selected in Settings, for example C:\texlive\2026\bin\windows.
 6. Open main.tex, set the preview to Auto, and click Compile. A PDF appears on the right.
 7. Double-click a sentence in the PDF to open its source line. Ctrl-click that source line to navigate back to the PDF.
@@ -318,7 +314,7 @@ Local TeX Web Editor は，ブラウザを画面として使う Windows のデ�
 1. アプリを起動し，Open からそのフォルダーを選びます．
 2. notes.md を開きます．初期状態は「直接編集」で，プレビューは閉じています．表示された文章を編集し，Ctrl + S で保存します．「ソース」へ切り替えると Markdown の記法とプレビューを使えます．「プレビューを表示 / プレビューを閉じる」で表示を変更できます．
 3. Settings の Language で英語と日本語を切り替え，テーマも変更します．原稿の内容は変わりません．
-4. v0.1.13 のセットアップを確認するため，ホームまたは「設定 → TeX をセットアップ…」を開きます．TinyTeX v2026.11，パッケージ，約 250 MB のダウンロード，アプリの LocalState 内の導入先を確認し，「ダウンロードしてインストール」を選びます．インターネット接続と約 2 GB の空き容量が必要です．進捗とログを確認し，「閉じて編集を続ける」で導入中も編集できます．試験用の最初の操作では「セットアップを停止」も試し，再度開始できることを確認します．
+4. v0.1.14 のセットアップを確認するため，ホームまたは「設定 → TeX をセットアップ…」を開きます．TinyTeX v2026.11，パッケージ，約 250 MB のダウンロード，アプリの LocalState 内の導入先を確認し，「ダウンロードしてインストール」を選びます．インターネット接続と約 2 GB の空き容量が必要です．進捗とログを確認し，「閉じて編集を続ける」で導入中も編集できます．試験用の最初の操作では「セットアップを停止」も試し，再度開始できることを確認します．
 5. 導入が成功すると，新しい環境が選ばれます．このサンプルのコンパイル方法には pdfLaTeX を選びます．設定で C:\texlive\2026\bin\windows などの既存の TeX を選ぶこともできます．
 6. main.tex を開き，プレビューを Auto にして Compile を押します．右側に PDF が表示されます．
 7. PDF の文章をダブルクリックして原稿の行へ移動し，その行を Ctrl + クリックして PDF へ移動します．

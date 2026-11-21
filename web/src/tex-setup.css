@@ -20,6 +20,7 @@
 .tex-setup-dialog .path-field input { width: 100%; min-width: 0; }
 .tex-setup-dialog .path-field button { flex: 0 0 auto; }
 .tex-setup-path { overflow-wrap: anywhere; font-family: var(--editor-font, ui-monospace, monospace); }
+#tex-setup-progress-panel { margin-top: 18px; }
 #tex-setup-stage { font-weight: 600; }
 #tex-setup-progress { width: 100%; height: 12px; accent-color: var(--accent); }
 .tex-setup-log { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 10px; }
