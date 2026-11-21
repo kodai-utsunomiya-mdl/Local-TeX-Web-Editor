@@ -20,7 +20,9 @@ const iconPath = await sourceFile('internal/branding/app-icon.svg', 'assets/app-
 const screenshotPath = await sourceFile('docs/screenshots/editor-tex-dark.png', 'assets/editor-tex-dark.png');
 const icon = (await readFile(iconPath)).toString('base64');
 const screenshot = await readFile(screenshotPath);
-assert.equal(screenshot.readUInt32BE(16) * 5, screenshot.readUInt32BE(20) * 8, 'The source screenshot must have an 8:5 aspect ratio.');
+const screenshotWidth = screenshot.readUInt32BE(16);
+const screenshotHeight = screenshot.readUInt32BE(20);
+assert.equal(screenshotWidth * 5, screenshotHeight * 8, 'The source screenshot must have an 8:5 aspect ratio.');
 const html = `<!doctype html>
 <html lang="en">
 <head>
@@ -49,7 +51,7 @@ const html = `<!doctype html>
       <p class="details">Windows · macOS<br>TeX · Markdown</p>
     </section>
     <figure>
-      <img class="editor" src="data:image/png;base64,${screenshot.toString('base64')}" alt="TeX source and its compiled PDF in Local TeX Web Editor" width="1440" height="900">
+      <img class="editor" src="data:image/png;base64,${screenshot.toString('base64')}" alt="TeX source and its compiled PDF in Local TeX Web Editor" width="${screenshotWidth}" height="${screenshotHeight}">
     </figure>
   </main>
 </body>
