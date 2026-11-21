@@ -70,7 +70,24 @@ try {
       if (layout.missingAnchors.length) errors.push(`Missing sections: ${layout.missingAnchors.join(', ')}`);
       if (!layout.title.includes('Local TeX Web Editor')) errors.push('The page title does not identify the app.');
       await page.screenshot({ path: path.join(output, `${route.name}-${size.name}.png`), fullPage: true });
-      results.push({ page: route.name, language, viewport: size.name, ...layout, errors });
+      const sectionScreenshots = [];
+      if (route.name === 'en' || route.name === 'ja') {
+        const steps = page.locator('.setup-steps > li');
+        const count = await steps.count();
+        if (count !== 6) errors.push(`Expected 6 setup steps, got ${count}.`);
+        const captureSection = async (locator, name) => {
+          await locator.screenshot({
+            path: path.join(output, name),
+            style: '.site-header { visibility: hidden !important; }',
+          });
+          sectionScreenshots.push(name);
+        };
+        for (let index = 0; index < count; index++) {
+          await captureSection(steps.nth(index), `${route.name}-${size.name}-setup-${index + 1}.png`);
+        }
+        await captureSection(page.locator('#settings-reset'), `${route.name}-${size.name}-settings-reset.png`);
+      }
+      results.push({ page: route.name, language, viewport: size.name, ...layout, sectionScreenshots, errors });
       await context.close();
     }
   }

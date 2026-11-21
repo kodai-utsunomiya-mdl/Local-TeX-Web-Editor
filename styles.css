@@ -120,6 +120,8 @@ details p:last-child { margin-bottom: 0; }
 .setup-steps > li > h4 { min-height: 30px; margin: 0 0 .85rem; padding-left: 46px; font-size: 1.05rem; line-height: 1.45; font-weight: 650; }
 .setup-steps > li > p { margin-bottom: .8rem; }
 .setup-steps .screenshot { margin-top: 1.2rem; }
+.setup-dialog-shot { max-width: 800px; margin-inline: auto; }
+.setup-dialog-shot img { aspect-ratio: 4 / 5; object-fit: cover; object-position: center; }
 .reading-links { display: flex; flex-wrap: wrap; gap: .6rem 1.5rem; margin-top: 1.2rem; padding: 0; list-style: none; font-size: .91rem; }
 .site-footer { padding: 25px 0 30px; border-top: 1px solid var(--line); }
 .footer-inner { display: flex; align-items: baseline; justify-content: space-between; gap: 1.5rem; color: var(--muted); font-size: .8rem; }

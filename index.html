@@ -133,7 +133,7 @@
               <thead><tr><th scope="col">v0.1.13</th><th scope="col">ZIP download</th><th scope="col">App after extraction</th></tr></thead>
               <tbody>
                 <tr><th scope="row">Windows x64</th><td>About 9 MB</td><td>About 18 MB</td></tr>
-                <tr><th scope="row">macOS, both CPUs</th><td>About 16 MB</td><td>About 36 MB</td></tr>
+                <tr><th scope="row">macOS, both CPUs</th><td>About 17 MB</td><td>About 36 MB</td></tr>
               </tbody>
             </table>
           </div>
@@ -220,7 +220,7 @@
                 <h4>Review the programs and packages</h4>
                 <p><strong>Current TeX environment</strong> shows the tools found on your computer. Under <strong>What will be installed</strong>, review TinyTeX and the package list. The standard selection includes <code>latexmk</code>, SyncTeX, Japanese typesetting, mathematics, figures, theorems and bibliography tools.</p>
                 <p>This screen is the review step. The download starts when you choose <strong>Download and install</strong> after checking the destination in the next step.</p>
-                <figure class="screenshot secondary-shot">
+                <figure class="screenshot secondary-shot setup-dialog-shot">
                   <a href="assets/tex-setup-plan.png" aria-label="Open the TeX programs and packages review at full size">
                     <img src="assets/tex-setup-plan.png" width="1600" height="1000" alt="The upper part of Set up TeX, showing the current programs and the TinyTeX packages to install." loading="lazy" decoding="async">
                   </a>
@@ -231,7 +231,7 @@
                 <h4>Check the download and choose the destination</h4>
                 <p>Scroll down inside the setup dialog to <strong>Download sources</strong> and <strong>Parent folder for installation</strong>. The app uses the official <a href="https://github.com/rstudio/tinytex-releases/releases/tag/v2026.11">TinyTeX v2026.11</a> archive and TeX Live packages. Use the proposed parent folder, or choose <strong>Browse…</strong> to select another location. The app creates its TeX folder inside that parent folder with your normal user permissions.</p>
                 <p>Allow about 250 MB of downloads on Windows or 300 MB on Mac, about 1 GB installed, and about 2 GB of free space during setup. The version and additional packages can change these estimates. Check the displayed location, then choose <strong>Download and install</strong>.</p>
-                <figure class="screenshot secondary-shot">
+                <figure class="screenshot secondary-shot setup-dialog-shot">
                   <a href="assets/tex-setup-location.png" aria-label="Open the TeX download sources, size and destination at full size">
                     <img src="assets/tex-setup-location.png" width="1600" height="1000" alt="The lower part of Set up TeX, with download sources, size estimates, the parent folder and the Download and install button." loading="lazy" decoding="async">
                   </a>
@@ -242,7 +242,7 @@
                 <h4>Follow the progress or continue editing</h4>
                 <p>The app shows the download amount, then the current stage as it extracts files, adds packages and checks the available programs. Expand <strong>Setup log</strong> to read the details.</p>
                 <p><strong>Close and continue editing</strong> lets you edit and save Markdown while setup runs. Return through <strong>View setup progress</strong> on Home or in Settings, or the status indicator at the bottom of the editor. To interrupt the installation, choose <strong>Stop setup</strong>. After a stopped or failed attempt, <strong>Review and try again…</strong> reopens the setup review.</p>
-                <figure class="screenshot secondary-shot">
+                <figure class="screenshot secondary-shot setup-dialog-shot">
                   <a href="assets/tex-setup-progress.png" aria-label="Open the TeX setup progress at full size">
                     <img src="assets/tex-setup-progress.png" width="1600" height="1000" alt="TeX setup in progress, with the current stage, installation location, log and controls for stopping setup or continuing to edit." loading="lazy" decoding="async">
                   </a>
@@ -253,7 +253,7 @@
                 <h4>Check that TeX setup is complete</h4>
                 <p>Wait for <strong>TeX setup is complete.</strong> The app selects the installed environment and checks its programs, so you can compile immediately. The destination and setup log remain available on this screen.</p>
                 <p>When you started from Home without a project, click <strong>Create a sample…</strong> to open <strong>Start from a template</strong>. To use an existing project, click <strong>Close</strong>.</p>
-                <figure class="screenshot secondary-shot">
+                <figure class="screenshot secondary-shot setup-dialog-shot">
                   <a href="assets/tex-setup-complete.png" aria-label="Open the completed TeX setup at full size">
                     <img src="assets/tex-setup-complete.png" width="1600" height="1000" alt="The completed TeX setup, showing the completion message, installation location and the next available actions." loading="lazy" decoding="async">
                   </a>

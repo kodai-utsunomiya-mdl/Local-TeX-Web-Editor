@@ -133,7 +133,7 @@
               <thead><tr><th scope="col">v0.1.13</th><th scope="col">ZIP の容量</th><th scope="col">展開後のアプリ本体</th></tr></thead>
               <tbody>
                 <tr><th scope="row">Windows x64</th><td>約 9 MB</td><td>約 18 MB</td></tr>
-                <tr><th scope="row">macOS，両 CPU 共通</th><td>約 16 MB</td><td>約 36 MB</td></tr>
+                <tr><th scope="row">macOS，両 CPU 共通</th><td>約 17 MB</td><td>約 36 MB</td></tr>
               </tbody>
             </table>
           </div>
@@ -220,7 +220,7 @@
                 <h4>現在のプログラムと導入する内容を確認する</h4>
                 <p><strong>Current TeX environment (現在の TeX)</strong>には，PC で見つかったプログラムを表示します．<strong>What will be installed (インストールするもの)</strong>で，TinyTeX と追加するパッケージを確認します．標準の構成には <code>latexmk</code>，SyncTeX，日本語の組版，数式，図，定理，文献処理などのパッケージが含まれます．</p>
                 <p>この画面では導入する内容を確認します．次の手順で保存先を確認し，<strong>Download and install (ダウンロードしてインストール)</strong>を押すと取得が始まります．</p>
-                <figure class="screenshot secondary-shot">
+                <figure class="screenshot secondary-shot setup-dialog-shot">
                   <a href="../assets/tex-setup-plan.png" aria-label="TeX のプログラムと導入するパッケージの画面を元のサイズで開く">
                     <img src="../assets/tex-setup-plan.png" width="1600" height="1000" alt="Set up TeX の上部．現在のプログラムと，新しく導入する TinyTeX のパッケージ一覧が見える．" loading="lazy" decoding="async">
                   </a>
@@ -231,7 +231,7 @@
                 <h4>取得元と保存先を確認して開始する</h4>
                 <p>セットアップの画面内を下へスクロールし，<strong>Download sources (ダウンロードの取得元)</strong>と<strong>Parent folder for installation (インストール先の親フォルダー)</strong>を確認します．公式の <a href="https://github.com/rstudio/tinytex-releases/releases/tag/v2026.11">TinyTeX v2026.11</a> と TeX Live のパッケージを使います．表示された親フォルダーを使うか，<strong>Browse… (参照…)</strong>で別の場所を選びます．その中にアプリ用の TeX フォルダーを作り，通常のユーザー権限で導入します．</p>
                 <p>標準の構成では，Windows で約 250 MB，Mac で約 300 MB のダウンロード，導入後に約 1 GB，導入中に約 2 GB の空き容量が目安です．取得する版や追加パッケージによって増減します．保存先を確認し，<strong>Download and install (ダウンロードしてインストール)</strong>を押します．</p>
-                <figure class="screenshot secondary-shot">
+                <figure class="screenshot secondary-shot setup-dialog-shot">
                   <a href="../assets/tex-setup-location.png" aria-label="TeX の取得元と容量，保存先の画面を元のサイズで開く">
                     <img src="../assets/tex-setup-location.png" width="1600" height="1000" alt="Set up TeX の下部．取得元，容量の目安，親フォルダー，Download and install のボタンが見える．" loading="lazy" decoding="async">
                   </a>
@@ -242,7 +242,7 @@
                 <h4>進捗を確認し，必要に応じて編集を続ける</h4>
                 <p>取得した容量に続き，ファイルの展開，パッケージの追加，プログラムの確認など，進んでいる段階が表示されます．<strong>Setup log (セットアップのログ)</strong>を開くと詳しい内容を読めます．</p>
                 <p><strong>Close and continue editing (閉じて編集を続ける)</strong>で，導入中も Markdown を編集して保存できます．ホームや設定の<strong>View setup progress (セットアップの進捗を見る)</strong>，または編集画面の下にある進捗表示から戻れます．中断する場合は<strong>Stop setup (セットアップを停止)</strong>を選びます．停止や失敗の後は，<strong>Review and try again… (内容を確認して再試行…)</strong>から導入内容を確認し直せます．</p>
-                <figure class="screenshot secondary-shot">
+                <figure class="screenshot secondary-shot setup-dialog-shot">
                   <a href="../assets/tex-setup-progress.png" aria-label="TeX のセットアップ中の画面を元のサイズで開く">
                     <img src="../assets/tex-setup-progress.png" width="1600" height="1000" alt="TeX のセットアップ中の画面．現在の段階，導入先，ログ，停止と編集を続けるためのボタンがある．" loading="lazy" decoding="async">
                   </a>
@@ -253,7 +253,7 @@
                 <h4>セットアップの完了を確認する</h4>
                 <p><strong>TeX setup is complete. (TeX のセットアップが完了しました．)</strong>と表示されるまで待ちます．導入した環境が選ばれ，利用するプログラムの確認が終わると，すぐにコンパイルできます．この画面で保存先とセットアップのログも確認できます．</p>
                 <p>プロジェクトを開く前にホームから導入を始めた場合は，<strong>Create a sample… (サンプルを作成…)</strong>を押して<strong>Start from a template (テンプレートから始める)</strong>を開きます．既存のプロジェクトを使う場合は，<strong>Close (閉じる)</strong>を押します．</p>
-                <figure class="screenshot secondary-shot">
+                <figure class="screenshot secondary-shot setup-dialog-shot">
                   <a href="../assets/tex-setup-complete.png" aria-label="TeX のセットアップが完了した画面を元のサイズで開く">
                     <img src="../assets/tex-setup-complete.png" width="1600" height="1000" alt="TeX のセットアップが完了した画面．完了のメッセージ，導入先，次に進むための操作が見える．" loading="lazy" decoding="async">
                   </a>
