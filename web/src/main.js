@@ -46,6 +46,8 @@ import { SessionStore } from './session-store.js';
 import { BrowserSession } from './browser-session.js';
 import { isMac, shortcutModifier } from './platform-keys.js';
 import { renderTeXPackagesHelp } from './tex-packages.js';
+import { createTeXSetup, isTeXSetupRunning, missingTeXPrograms, teXEnvironment } from './tex-setup.js';
+import { createTeXManagement } from './tex-management.js';
 import { extractTexMetadata, extractCitations, compileTarget } from './tex-tools.js';
 
 const $ = id => document.getElementById(id);
@@ -83,6 +85,7 @@ const state = {
   statusAppliedSequence: 0,
   toolsGeneration: 0,
   texPackages: null,
+  texSetupBusy: false,
   openSequence: 0,
   operation: '',
   build: null,
@@ -134,6 +137,8 @@ let referenceTools = null;
 let projectSearch = null;
 let documentHistory = null;
 let templateManager = null;
+let texSetup = null;
+let texManagement = null;
 let fileTemplatePicker = null;
 let logIssues = null;
 let markdownEditing = null;
@@ -1443,6 +1448,7 @@ async function applyMeta(meta, resetProject = false, sequence = ++state.statusRe
   state.meta = meta;
   state.projectEntriesVersion++;
   state.texPackages = meta.texPackages || null;
+  texSetup?.sync(meta.texSetup);
   state.externalProjectChanged = false;
   if (resetProject) {
     state.homeVisible = !meta.project;
@@ -1499,7 +1505,7 @@ async function openProject(event) {
   setOperation('opening'); setDialogBusy(dialog, true);
   try {
     if (!await confirmUnsaved(t("プロジェクトを切り替える前に，変更を保存しますか？"))) return;
-    if (texBin !== (state.meta?.texBin || '')) await api('/api/settings', { method: 'PUT', body: { texBin } });
+    if (!state.texSetupBusy && texBin !== (state.meta?.texBin || '')) await api('/api/settings', { method: 'PUT', body: { texBin } });
     const meta = await api('/api/project/open', { method: 'POST', body: { path } });
     await applyMeta(meta, true);
     dialog.close(); clearError();
@@ -1525,7 +1531,7 @@ function renderPickerState() {
   const pending = !!state.folderPicker;
   $('project-picker-status').hidden = !pending;
   $('pick-project').textContent = pending ? t("選択画面を表示") : t("参照…");
-  for (const id of ['project-path', 'project-tex-bin', 'open-project']) $(id).disabled = pending;
+  for (const id of ['project-path', 'project-tex-bin', 'open-project']) $(id).disabled = pending || (id === 'project-tex-bin' && state.texSetupBusy);
   $('pick-project').disabled = false;
   renderRecentControls();
 }
@@ -1541,7 +1547,12 @@ function renderToolStatus() {
   $('synctex-setup').hidden = !synctexCommands.length;
   $('synctex-setup-help').textContent = t('次のコマンドを {value0} で実行し，設定を開き直して SyncTeX のパスを確認してください．', { value0: isMac ? t('ターミナル') : 'PowerShell' });
   $('synctex-install-commands').textContent = synctexCommands.join('\n');
-  renderTeXPackagesHelp($('tex-packages-help'), state.texPackages);
+  renderTeXPackagesHelp($('tex-packages-help'), state.texPackages, {
+    managed: teXEnvironment(texSetup?.snapshot || state.meta?.texSetup).managed,
+    canInstall: teXEnvironment(texSetup?.snapshot || state.meta?.texSetup).canInstallPackages,
+    busy: state.texSetupBusy || !!state.operation || isRunning(),
+    onInstall: values => texSetup?.open({ reason: 'packages', operation: 'packages', ...values }),
+  });
 }
 function updateApplicationDetails(meta) {
   $('app-version').textContent = meta.version ? `v${meta.version}` : '';
@@ -1553,6 +1564,7 @@ function updateTools(meta) {
   for (const key of ['texBin', 'latexmk', 'toolError', 'synctex', 'synctexError']) state.meta[key] = meta[key] || '';
   state.meta.synctexInstallCommands = meta.synctexInstallCommands || [];
   state.meta.texPackages = meta.texPackages || null;
+  if (meta.texSetup) { state.meta.texSetup = meta.texSetup; texSetup?.sync(meta.texSetup); }
   state.texPackages = state.meta.texPackages;
   updateApplicationDetails(meta);
   if ($('settings-dialog').open) renderToolStatus();
@@ -1600,7 +1612,7 @@ async function saveSettings(event) {
   const language = $('language-setting').value;
   const languageChanged = language !== state.preferences.language;
   const texBin = $('tex-bin').value.trim();
-  if (texBin !== (state.meta?.texBin || '')) body.texBin = texBin;
+  if (!state.texSetupBusy && texBin !== (state.meta?.texBin || '')) body.texBin = texBin;
   const project = state.meta?.project;
   if (project && $('main-file').value !== project.main) body.main = $('main-file').value;
   if (project && $('compile-mode').value !== project.mode) body.mode = $('compile-mode').value;
@@ -1984,13 +1996,20 @@ async function startBuild() {
   const useMarkdown = !!doc && isMarkdown(doc.path);
   const main = currentCompileTarget();
   if (!useMarkdown && !main) { await showSettings(); return; }
+  if (!useMarkdown && (state.texSetupBusy || missingTeXPrograms(state.meta).length)) {
+    await texSetup?.open({ reason: 'compile', progress: state.texSetupBusy, target: { root: state.meta.project.root, main } });
+    return;
+  }
   setOperation(useMarkdown ? 'previewing' : 'compiling'); $('build-status').textContent = t("ファイルを保存しています…"); clearError();
   try {
     await saveAll();
     if (useMarkdown) { updateDocumentPreview({ immediate: true }); markdownPreview.refresh(); return; }
     const build = await api('/api/build', { method: 'POST', body: { main } });
     applyBuild(build);
-  } catch (error) { if (!error?.shown) showError(error); }
+  } catch (error) {
+    if (!error?.shown) showError(error, !useMarkdown && error.status === 503
+      ? { label: t('TeX をセットアップ…'), run: () => texSetup?.open({ reason: 'compile', target: { root: state.meta?.project?.root, main } }) } : undefined);
+  }
   finally { setOperation(''); if (!isRunning()) { const current = state.build; $('build-status').textContent = current ? ({ success: t("コンパイル完了"), failed: t("コンパイル失敗"), cancelled: t("停止しました") }[current.status] || t("コンパイル前")) : t("コンパイル前"); } }
 }
 
@@ -2010,7 +2029,7 @@ function renderControls() {
   const useMarkdown = !!doc && isMarkdown(doc.path);
   const main = currentCompileTarget();
   const pdf = currentCompiledPDF();
-  $('compile-button').disabled = busy || running || !available || (!useMarkdown && !main) || state.externalProjectChanged;
+  $('compile-button').disabled = busy || running || !available || (!useMarkdown && (!main || state.texSetupBusy)) || state.externalProjectChanged;
   $('compile-label').textContent = ['compiling', 'previewing'].includes(state.operation) ? t("保存しています…") : running ? t("コンパイル中") : useMarkdown ? t("プレビュー") : t("コンパイル");
   $('compile-button').title = useMarkdown ? t("保存して Markdown のプレビューを更新 ({value0}+Enter)", { value0: shortcutModifier }) : t("保存して {value0} をコンパイル ({value1}+Enter)", { value0: main || t("原稿"), value1: shortcutModifier });
   $('main-document-label').textContent = useMarkdown ? `${doc.path} · Markdown` : project ? `${main || t("原稿を選択")} · ${modeLabels[project.mode] || project.mode}` : t("原稿を選択");
@@ -2027,9 +2046,15 @@ function renderControls() {
   $('synctex-forward').setAttribute('aria-label', t(useMarkdown ? 'Markdown のプレビューの位置へ移動' : 'PDF の位置へ移動'));
   $('main-document').disabled = busy || !project || running;
   $('settings-button').disabled = busy || running;
+  $('settings-tex-setup').disabled = busy || running;
+  $('settings-tex-setup').firstElementChild.textContent = t(state.texSetupBusy ? 'セットアップの進捗を見る' : teXEnvironment(texSetup?.snapshot).directory || state.meta?.latexmk ? 'TeX を管理…' : 'TeX をセットアップ…');
+  $('tex-bin').disabled = busy || state.texSetupBusy;
+  $('project-tex-bin').disabled = busy || state.texSetupBusy || !!state.folderPicker;
   $('show-project').disabled = busy || running;
   $('welcome-open').disabled = busy;
-  $('shutdown-button').disabled = busy;
+  const setupCannotStop = isTeXSetupRunning(texSetup?.snapshot) && texSetup.snapshot.cancelable === false;
+  $('shutdown-button').disabled = busy || setupCannotStop;
+  $('shutdown-button').title = t(setupCannotStop ? 'TeX の処理が終わるまでお待ちください．' : 'アプリを終了する');
   $('new-file').disabled = busy || !available;
   $('import-files').disabled = busy || !available || running;
   $('file-sort').disabled = busy || !project;
@@ -2040,6 +2065,8 @@ function renderControls() {
   $('theme-toggle').disabled = state.closed;
   $('help-button').disabled = state.closed;
   help?.refresh();
+  texSetup?.update();
+  texManagement?.update();
   $('project-search-button').disabled = busy || !project;
   $('split-editors').disabled = busy || !doc;
   for (const id of ['reference-tools', 'document-history', 'insert-image', 'insert-table']) $(id).disabled = busy || !doc;
@@ -2146,6 +2173,9 @@ async function heartbeat({ forceFiles = false } = {}) {
 
 async function shutdown() {
   if (state.operation || state.closed) return;
+  if (isTeXSetupRunning(texSetup?.snapshot) && texSetup.snapshot.cancelable === false) {
+    showError(new Error(t('TeX の処理が終わるまでお待ちください．'))); return;
+  }
   setOperation('shutdown');
   try {
     if (!await confirmUnsaved(t("アプリを終了する前に，変更を保存しますか？"))) return;
@@ -2153,9 +2183,15 @@ async function shutdown() {
       const answer = await choose({ title: t("コンパイルを停止して終了しますか？"), description: t("実行中の TeX とローカルのアプリを終了します．"), primary: t("停止して終了"), secondary: '' });
       if (answer !== 'primary') return;
     }
+    if (texSetup?.busy) {
+      const answer = await choose({ title: t('TeX のセットアップを停止して終了しますか？'), description: t('実行中のセットアップとローカルのアプリを終了します．'), primary: t('停止して終了'), secondary: '' });
+      if (answer !== 'primary') return;
+    }
     syncDrafts(); persistSession(); await sessionStore.flush();
     await api('/api/shutdown', { method: 'POST', body: {}, timeout: 30000 });
     state.closed = true; ++state.projectGeneration; ++state.openSequence;
+    texSetup?.destroy();
+    texManagement?.destroy();
     browserSession.stop();
     for (const timer of [state.pollTimer, state.autoSaveTimer, state.draftTimer, state.sessionTimer, state.outlineTimer, toastTimer, lineFlashTimer]) clearTimeout(timer);
     clearInterval(state.heartbeat); state.build = null; setConnected(false);
@@ -2969,6 +3005,53 @@ documentTools = createDocumentTools({
   insertText: insertSourceText, refreshProject: refreshFiles, openFile, focusDocument: focusSourceDocument, onError: showError,
 });
 templateManager = createTemplateManager({ api, getProject: () => state.meta?.project, saveAll, openProject: openCreatedProject, onError: showError });
+texSetup = createTeXSetup({
+  api, getMeta: () => state.meta, home: $('tex-setup-home'), indicator: $('tex-setup-status'),
+  isBlocked: () => !!state.operation || state.closed || isRunning(),
+  getFallbackFocus: () => $('settings-dialog').open ? $('settings-tex-setup') : $('go-home'),
+  getCompileTarget: () => {
+    const doc = activeDocument();
+    const main = currentCompileTarget();
+    return state.meta?.project && main && !(doc && isMarkdown(doc.path))
+      ? { root: state.meta.project.root, main } : null;
+  },
+  onStateChange: (snapshot, { busy, checking }) => {
+    const wasBusy = state.texSetupBusy;
+    const changed = state.texSetupBusy !== (busy || checking) || state.meta?.texSetup?.managed !== snapshot?.managed
+      || JSON.stringify(state.meta?.texSetup?.environment) !== JSON.stringify(snapshot?.environment);
+    state.texSetupBusy = busy || checking;
+    if (state.meta && snapshot) state.meta.texSetup = snapshot;
+    if (changed && $('settings-dialog').open) renderToolStatus();
+    renderControls();
+    if (wasBusy && !state.texSetupBusy) void texManagement?.refresh();
+  },
+  onToolsChanged: async () => {
+    const generation = ++state.toolsGeneration;
+    const previousBin = state.meta?.texBin || '';
+    const meta = await api('/api/state', { projectRoot: null });
+    if (state.closed || generation !== state.toolsGeneration) return;
+    updateTools(meta);
+    for (const [dialog, field] of [['settings-dialog', 'tex-bin'], ['project-dialog', 'project-tex-bin']]) {
+      if ($(dialog).open && ($(field).value === previousBin || previousBin !== (meta.texBin || ''))) $(field).value = meta.texBin || '';
+    }
+  },
+  onCompile: async target => {
+    if (state.meta?.project?.root !== target?.root || currentCompileTarget() !== target?.main) {
+      showError(new Error(t('原稿を切り替えました．編集画面でコンパイルしてください．'))); return;
+    }
+    await startBuild();
+  },
+  onCreateSample: () => templateManager.open(), onManage: () => texManagement?.open(), onClose: scheduleAutoSave,
+});
+texManagement = createTeXManagement({
+  api, getMeta: () => state.meta, getSetup: () => texSetup.snapshot,
+  isBusy: () => state.texSetupBusy, isBlocked: () => !!state.operation || state.closed || isRunning(),
+  onInstall: () => texSetup.open({ reason: 'settings' }),
+  onAdd: values => texSetup.open({ reason: 'packages', operation: 'packages', ...values }),
+  onRemove: plan => texSetup.removePackages(plan), onUninstall: (inspection, confirmation) => texSetup.uninstall(inspection, confirmation),
+  onEnvironment: environment => texSetup.setEnvironment(environment),
+  onProgress: operation => texSetup.open({ reason: 'packages', operation, progress: true }), onClose: scheduleAutoSave,
+});
 fileTemplatePicker = createFileTemplatePicker({
   host: $('new-file-template-picker'), pathInput: $('new-file-path'), api,
   onChange: ({ ready }) => { $('create-file').disabled = !ready || !!state.operation || state.closed || !projectIsAvailable(); },
@@ -3095,6 +3178,8 @@ systemColorScheme.addEventListener('change', () => {
 onClick('show-project', showProjectDialog); onClick('welcome-open', showProjectDialog);
 onClick('go-home', showHome);
 onClick('settings-button', showSettings); onClick('main-document', showSettings);
+onClick('settings-tex-setup', () => state.texSetupBusy ? texSetup.open({ reason: 'settings', progress: true })
+  : teXEnvironment(texSetup.snapshot).directory || state.meta?.latexmk ? texManagement.open() : texSetup.open({ reason: 'settings' }));
 $('language-setting').addEventListener('change', event => {
   if ($('settings-dialog').open) applyLanguage(event.target.value, { preview: true });
 });

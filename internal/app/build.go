@@ -217,6 +217,9 @@ func (a *App) startBuild(expectedProject string, requestedMain ...string) (*Buil
 	if a.isRunningLocked() {
 		return nil, fail(http.StatusConflict, "コンパイルが実行中です．完了を待つか停止してください．")
 	}
+	if a.isTeXSetupRunningLocked() {
+		return nil, fail(http.StatusConflict, "TeX の導入が終了してからコンパイルしてください．")
+	}
 	if a.project == nil {
 		return nil, fail(http.StatusBadRequest, "原稿フォルダーを開いてください．")
 	}
@@ -446,7 +449,7 @@ func latexmkArguments(project Project) []string {
 }
 
 func commandEnvironment(bin string) []string {
-	environment := os.Environ()
+	environment := managedTeXEnvironmentForBin(os.Environ(), bin)
 	if bin == "" {
 		return environment
 	}

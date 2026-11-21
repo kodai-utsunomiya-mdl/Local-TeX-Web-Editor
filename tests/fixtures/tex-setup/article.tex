@@ -1,0 +1,17 @@
+\documentclass[10pt,dvipdfmx]{article}
+\usepackage[a4paper,top=35mm,bottom=35mm,left=30mm,right=30mm]{geometry}
+\newcommand{\documentlinespread}{1.25}\linespread{\documentlinespread}
+\usepackage[authoryear,round]{natbib}
+\setcitestyle{authoryear,round,aysep={,},yysep={,},citesep={;}}
+\input{packages}
+\newtheorem{theorem}{Theorem}[section]
+\input{theorems}
+\title{日本語の組版とパッケージの確認}
+\author{Local TeX Web Editor}
+\date{2026 年 11 月}
+\begin{document}
+\maketitle
+\tableofcontents
+\input{body}
+\bibliographystyle{plainnat}\bibliography{references}
+\end{document}

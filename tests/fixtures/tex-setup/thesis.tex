@@ -1,0 +1,91 @@
+\documentclass[12pt,dvipdfmx,oneside,openany]{report}
+\usepackage[a4paper,textwidth=390pt,textheight=598pt,hcentering,
+  top=46mm,headsep=25pt,footskip=34pt]{geometry}
+\usepackage[authoryear,round]{natbib}
+\setcitestyle{authoryear,round,aysep={,},yysep={,},citesep={;}}
+\input{packages}
+\AddToHook{env/table/begin}{\setlength{\belowcaptionskip}{8pt}}
+\AddToHook{env/table*/begin}{\setlength{\belowcaptionskip}{8pt}}
+\newcommand{\documentlinespread}{1.15}
+\linespread{\documentlinespread}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{.5\baselineskip}
+\makeatletter
+\newcommand{\fs@thesisalgorithm}{%
+  \fs@ruled\def\@fs@mid{\kern2pt\hrule\kern6pt}%
+  \def\@fs@post{\kern6pt\hrule\relax}}
+\renewcommand{\@makechapterhead}[1]{%
+  \vspace*{24.5mm}%
+  {\parindent\z@\raggedright\normalfont
+   \Huge\bfseries\@chapapp\space\thechapter\par\nobreak
+   \vskip20pt\Huge\bfseries #1\par\nobreak\vskip40pt}}
+\renewcommand{\@makeschapterhead}[1]{%
+  \vspace*{24.5mm}%
+  {\parindent\z@\raggedright\normalfont\Huge\bfseries #1\par\nobreak\vskip40pt}}
+\renewcommand{\l@subsection}{\@dottedtocline{2}{3.8em}{3.8em}}
+\makeatother
+\floatstyle{thesisalgorithm}
+\restylefloat{algorithm}
+\floatstyle{ruled}
+\newcommand{\thesisfrontsection}[1]{%
+  \chapter*{#1}\markboth{#1}{#1}\addcontentsline{toc}{chapter}{#1}}
+\newcommand{\thesisappendixsection}[1]{%
+  \let\thesisaddcontentsline\addcontentsline
+  \renewcommand{\addcontentsline}[3]{}%
+  \section{#1}%
+  \let\addcontentsline\thesisaddcontentsline
+  \addcontentsline{toc}{section}{Appendix~\thesection\texorpdfstring{\quad}{ }#1}}
+\renewcommand{\bibname}{References}
+\usepackage{fancyhdr}
+\setlength{\headheight}{15pt}
+\fancyhf{}
+\fancyhead[R]{\normalsize\leftmark}
+\fancyfoot[R]{\thepage}
+\renewcommand{\headrulewidth}{.4pt}
+\renewcommand{\footrulewidth}{.4pt}
+\fancypagestyle{plain}{\fancyhf{}\fancyfoot[R]{\thepage}%
+  \renewcommand{\headrulewidth}{0pt}\renewcommand{\footrulewidth}{.4pt}}
+\newtheorem{theorem}{Theorem}[chapter]
+\input{theorems}
+\newtheorem{maintheorem}{Theorem}
+\crefname{maintheorem}{Theorem}{Theorems}
+\Crefname{maintheorem}{Theorem}{Theorems}
+\title{日本語の組版とパッケージの確認}
+\author{Local TeX Web Editor}
+\date{2026 年 11 月}
+\begin{document}
+\pagestyle{fancy}
+\newgeometry{top=27mm,bottom=27mm,left=27mm,right=27mm}
+\hypersetup{pageanchor=false}
+\begin{titlepage}
+ \thispagestyle{empty}\centering\vspace*{25mm}
+ {\fontsize{20}{34}\selectfont\bfseries 日本語の組版と\\パッケージの確認\par}
+ \vfill{\Large 2026 年 11 月\par}\vspace{23mm}
+ {\Large Local TeX Web Editor\par}\vspace*{18mm}
+\end{titlepage}
+\restoregeometry
+\pagenumbering{arabic}\hypersetup{pageanchor=true}
+\thesisfrontsection{Abstract}
+日本語，数式，図表，文献と相互参照を含む文書．
+\clearpage\pdfbookmark[0]{Contents}{front:contents}
+\begingroup\linespread{1.04}\small\setlength{\parskip}{1pt}\tableofcontents\endgroup
+\clearpage\phantomsection\addcontentsline{toc}{chapter}{List of Figures}\listoffigures
+\clearpage\phantomsection\addcontentsline{toc}{chapter}{List of Tables}\listoftables
+\chapter{Package checks}
+\input{body}
+\clearpage
+\begingroup
+\setcounter{section}{0}\small
+\renewcommand{\thesection}{\thechapter.\Alph{section}}
+\renewcommand{\theHsection}{\theHchapter.app.\Alph{section}}
+\renewcommand{\theHsubsection}{\theHsection.\arabic{subsection}}
+\crefalias{section}{appendix}
+\makeatletter
+\def\@seccntformat#1{\ifstrequal{#1}{section}{Appendix~\thesection\quad}{\csname the#1\endcsname\quad}}
+\makeatother
+\thesisappendixsection{Additional checks}\label{app:check}
+日本語の付録．\Cref{thm:check,prop:check,lem:check,eq:check} を参照する．
+\endgroup
+\clearpage\phantomsection\addcontentsline{toc}{chapter}{References}
+\bibliographystyle{plainnat}\bibliography{references}
+\end{document}

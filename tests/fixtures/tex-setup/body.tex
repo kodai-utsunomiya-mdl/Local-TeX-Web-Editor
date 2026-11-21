@@ -1,0 +1,75 @@
+\section{日本語と数式}\label{sec:check}
+日本語の本文と Latin text を同じ段落で組版する．
+\textbf{明朝体の太字}，\textsf{ゴシック体}と，\textit{Latin italics} を使う．
+\riskterm{赤}，\geomterm{緑}，\opterm{青}，\statterm{紫}を表示する．
+\begin{equation}
+ \mathds{1}_{\{x>0\}}+\mathscr{L}+\mathbb{R}
+ =\left\lVert\bm{x}\right\rVert^2+\bzero^{\mathsf T}\be
+ \label{eq:check}
+\end{equation}
+\begin{align}
+ f(x)&=\sum_{j=1}^{m}q_j x_j, &q_j&\ge0,\\
+ \sum_{j=1}^{m}q_j&=1, &\mathcal L(x)&=\frac12\lVert x\rVert^2.
+\end{align}
+\begin{enumerate}[label=(\roman*),leftmargin=*]
+ \item 原ノ味フォントを使って日本語を表示する．
+ \item 数式用の文字と太字を表示する．
+\end{enumerate}
+\begin{theorem}\label{thm:check}定理の本文．\end{theorem}
+\begin{proposition}\label{prop:check}命題の本文．\end{proposition}
+\begin{lemma}\label{lem:check}補題の本文．\end{lemma}
+\begin{corollary}\label{cor:check}系の本文．\end{corollary}
+\begin{definition}\label{def:check}定義の本文．\end{definition}
+\begin{assumption}\label{ass:check}仮定の本文．\end{assumption}
+\begin{remark}\label{rem:check}注記の本文．\end{remark}
+\begin{example}\label{ex:check}例の本文．\end{example}
+\begin{proof}数式 \eqref{eq:check} を参照する．\end{proof}
+References: \Cref{thm:check}; \Cref{prop:check}; \Cref{lem:check};
+\Cref{cor:check}; \Cref{def:check}; \Cref{ass:check}; \Cref{rem:check}; \Cref{ex:check}.
+\Needspace{5\baselineskip}
+\begin{generalbox}{日本語のボックス}
+\textbf{日本語の見出し}と数式 $x^2+\mathds{1}=1$ を含む．
+\tcblower
+\interpretation{ボックス内の文章と数式を表示する．}
+\consequence{必要なパッケージを導入した後にコンパイルする．}
+\end{generalbox}
+\section{図表とアルゴリズム}
+\begin{figure}[htbp]
+ \centering
+ \begin{tikzpicture}[>=Stealth,node distance=16mm]
+  \node[draw,fill=paperblue!10] (a) {日本語の入力};
+  \node[draw,right=of a] (b) {PDF};
+  \draw[->,very thick,paperpurple] (a) -- (b);
+  \draw[decorate,decoration={brace,mirror}] ($(a.south west)+(0,-.3)$) -- ($(b.south east)+(0,-.3)$);
+  \fill[pattern=north east lines,pattern color=papergreen] ($(a.north west)+(0,.4)$) rectangle ($(b.north east)+(0,.7)$);
+ \end{tikzpicture}
+ \caption{TikZ による図}\label{fig:tikz}
+\end{figure}
+\begin{figure}[htbp]
+ \centering\includegraphics[width=.32\linewidth]{image.pdf}
+ \caption{PDF 画像の挿入}\label{fig:pdf}
+\end{figure}
+\begin{table}[htbp]
+ \centering\caption{日本語の表}\label{tab:check}
+ \begin{tabular}{lr}\toprule 項目 & 値\\\midrule 日本語 & 1\\数式 $x$ & 2\\\bottomrule\end{tabular}
+\end{table}
+\begin{longtable}{@{}p{.28\linewidth}p{.66\linewidth}@{}}
+ \toprule\textbf{Notation}&\textbf{Description}\\\midrule\endfirsthead
+ \toprule\textbf{Notation}&\textbf{Description}\\\midrule\endhead
+ \midrule\endfoot\bottomrule\endlastfoot
+ $x,q$ & 日本語の説明と数式．\\
+ $\mathscr L,\mathds 1$ & 異なる数式用フォント．\\
+\end{longtable}
+\begin{algorithm}[htbp]
+ \caption{日本語の手順}\label{alg:check}
+ \begin{algorithmic}[1]
+  \Require 入力 $x$．
+  \State $y\gets x^2$ とする．\label{alg:line}
+  \For{$j=1,\ldots,3$}\State $y\gets y+j$．\EndFor
+  \State \Return $y$．
+ \end{algorithmic}
+\end{algorithm}
+\FloatBarrier
+\Cref{fig:tikz,fig:pdf,tab:check,alg:check} とアルゴリズムの行~\ref{alg:line} を参照する．
+\citet{latexproject} と括弧内の引用 \citep{latexproject} を表示する．
+\url{https://www.latex-project.org/}

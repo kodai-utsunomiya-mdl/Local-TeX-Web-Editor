@@ -15,10 +15,9 @@ jobs:
   windows:
     name: Windows with TeX Live and Chromium
     runs-on: windows-2022
-    timeout-minutes: 35
+    timeout-minutes: 45
     env:
       CGO_ENABLED: '0'
-      CTAN_REPO: https://mirror.ctan.org/systems/texlive/tlnet
     steps:
       - name: Check out source
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -44,6 +43,14 @@ jobs:
 
       - name: Build the frontend
         run: npm run build
+
+      - name: Install Chromium for browser tests
+        run: npx playwright install chromium
+
+      - name: Test TeX setup and management screens before installing TeX
+        env:
+          LOCAL_TEX_EDITOR_TEST_PHASE: before-tex
+        run: npm test
 
       - name: Embed the Windows application icon
         run: npm run build:windows-resources
@@ -78,35 +85,8 @@ jobs:
           go test ./cmd/local-tex-editor -run '^TestWindowsExecutableIcon$' -count=1 -v
           if ($LASTEXITCODE -ne 0) { throw 'The Windows icon check failed.' }
 
-      - name: Set up TeX Live for tests
-        uses: r-lib/actions/setup-tinytex@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
-
-      - name: Install Japanese TeX packages
-        shell: pwsh
-        run: |
-          tlmgr update --self
-          if ($LASTEXITCODE -ne 0) { throw 'Could not update the TeX Live package manager.' }
-          tlmgr install latexmk uptex uptex-base uplatex platex jsclasses dvipdfmx synctex natbib ptex-fonts ptex-fontmaps haranoaji adobemapping
-          if ($LASTEXITCODE -ne 0) { throw 'Could not install the TeX packages needed for the tests.' }
-          fmtutil-sys --byfmt uplatex
-          if ($LASTEXITCODE -ne 0) { throw 'Could not create the upLaTeX format.' }
-          updmap-sys --setoption kanjiEmbed haranoaji
-          if ($LASTEXITCODE -ne 0) { throw 'Could not configure the Japanese fonts.' }
-          kpsewhich --format=cmap UniJIS2004-UTF16-H
-          if ($LASTEXITCODE -ne 0) { throw 'Could not find the CMap needed for Japanese PDF output.' }
-          kpsewhich HaranoAjiMincho-Regular.otf
-          if ($LASTEXITCODE -ne 0) { throw 'Could not find the Japanese font needed for PDF output.' }
-          $texBin = Split-Path -Parent (Get-Command uplatex.exe).Source
-          "LOCAL_TEX_EDITOR_TEST_TEX_BIN=$texBin" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          & (Join-Path $texBin 'latexmk.exe') -v
-          if ($LASTEXITCODE -ne 0) { throw 'latexmk could not start.' }
-          & (Join-Path $texBin 'upbibtex.exe') --version
-          if ($LASTEXITCODE -ne 0) { throw 'upBibTeX could not start.' }
-          & (Join-Path $texBin 'synctex.exe') help
-          if ($LASTEXITCODE -ne 0) { throw 'SyncTeX could not start.' }
-
-      - name: Install Chromium for browser tests
-        run: npx playwright install chromium
+      - name: Install TeX through the application and compile the research preambles
+        run: node scripts/test-tex-setup.mjs
 
       - name: Download the previous release for the update test
         shell: pwsh
@@ -124,6 +104,8 @@ jobs:
           'LOCAL_TEX_EDITOR_TEST_PREVIOUS_VERSION=0.1.3' | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Test editing and compilation in the browser
+        env:
+          LOCAL_TEX_EDITOR_TEST_PHASE: after-tex
         run: npm test
 
       - name: Test the Windows folder selection dialog
@@ -137,6 +119,9 @@ jobs:
           $testExitCode = $LASTEXITCODE
           Copy-Item native-folder-picker.log test-results/native-folder-picker.log
           if ($testExitCode -ne 0) { throw 'The Windows folder selection test failed.' }
+
+      - name: Remove the app-managed TeX environment after the checks
+        run: node scripts/test-tex-setup.mjs --remove
 
       - name: Upload test results
         if: always()
@@ -221,13 +206,12 @@ jobs:
           - runner: macos-15-intel
             architecture: x64
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 30
+    timeout-minutes: 40
     permissions:
       actions: read
       contents: read
     env:
       CGO_ENABLED: '0'
-      CTAN_REPO: https://mirror.ctan.org/systems/texlive/tlnet
       GH_TOKEN: ${{ github.token }}
     steps:
       - name: Check out source
@@ -261,22 +245,8 @@ jobs:
           ditto -x -k "macos-download/local-tex-web-editor-$version-macos-universal.zip" macos-package
           echo "LOCAL_TEX_EDITOR_TEST_MAC_APP=$PWD/macos-package/Local TeX Web Editor.app" >> "$GITHUB_ENV"
 
-      - name: Set up TeX Live for tests
-        uses: r-lib/actions/setup-tinytex@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
-
-      - name: Install Japanese TeX packages
-        run: |
-          tlmgr update --self
-          tlmgr install latexmk uptex uptex-base uplatex platex jsclasses dvipdfmx synctex natbib ptex-fonts ptex-fontmaps haranoaji adobemapping
-          fmtutil-sys --byfmt uplatex
-          updmap-sys --setoption kanjiEmbed haranoaji
-          kpsewhich --format=cmap UniJIS2004-UTF16-H
-          kpsewhich HaranoAjiMincho-Regular.otf
-          tex_bin="$(dirname "$(command -v uplatex)")"
-          echo "LOCAL_TEX_EDITOR_TEST_TEX_BIN=$tex_bin" >> "$GITHUB_ENV"
-          "$tex_bin/latexmk" -v
-          "$tex_bin/upbibtex" --version
-          "$tex_bin/synctex" help
+      - name: Install TeX through the packaged application and compile the research preambles
+        run: node scripts/test-tex-setup.mjs
 
       - name: Run Go tests on macOS
         run: go test ./...
@@ -295,6 +265,9 @@ jobs:
         run: |
           mkdir -p test-results/macos
           go test -count=1 -timeout 45s -v -run NativeFolderPickerMac ./internal/platform 2>&1 | tee test-results/macos/native-folder-picker.log
+
+      - name: Remove the app-managed TeX environment after the checks
+        run: node scripts/test-tex-setup.mjs --remove
 
       - name: Upload macOS test results
         if: always()

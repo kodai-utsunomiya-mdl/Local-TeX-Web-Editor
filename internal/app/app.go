@@ -45,6 +45,10 @@ type App struct {
 	config                configuration
 	project               *Project
 	build                 *buildRun
+	texSetup              *texSetupRun
+	texSetupHooks         *texSetupHooks
+	texSetupMu            sync.Mutex
+	texEnvironment        *TeXEnvironment
 	address               string
 	closed                bool
 	shutdownOnce          sync.Once
@@ -73,6 +77,7 @@ type State struct {
 	PackageIdentity        *platform.PackageIdentity `json:"packageIdentity,omitempty"`
 	TexBin                 string                    `json:"texBin"`
 	TexPackages            TeXPackageStatus          `json:"texPackages"`
+	TexSetup               TeXSetupState             `json:"texSetup"`
 	Latexmk                string                    `json:"latexmk"`
 	ToolError              string                    `json:"toolError,omitempty"`
 	Synctex                string                    `json:"synctex"`
@@ -158,15 +163,30 @@ func (a *App) SetAddress(address string) {
 }
 
 func (a *App) Close() error {
+	a.mu.Lock()
+	setupRunning := a.isTeXSetupRunningLocked()
+	var setupDone <-chan struct{}
+	if setupRunning {
+		setupDone = a.texSetup.done
+	}
+	a.mu.Unlock()
 	a.CloseBrowserSessions()
 	platform.CancelFolderPicker()
+	a.cancelTeXSetup()
 	_ = a.stopBuild()
+	if setupDone != nil {
+		<-setupDone
+	}
 	done := make(chan struct{})
 	go func() { a.workers.Wait(); close(done) }()
+	wait := 15 * time.Second
+	if setupRunning {
+		wait = time.Minute
+	}
 	select {
 	case <-done:
 		return nil
-	case <-time.After(15 * time.Second):
+	case <-time.After(wait):
 		return messages.Errorf("コンパイルの停止を待っています．")
 	}
 }
@@ -180,6 +200,14 @@ func (a *App) Handler() http.Handler {
 	mux.HandleFunc("/api/project/delete", a.projectDeleteHandler)
 	mux.HandleFunc("/api/project/pick", a.pickHandler)
 	mux.HandleFunc("/api/settings", a.settingsHandler)
+	mux.HandleFunc("/api/tex/setup", a.texSetupHandler)
+	mux.HandleFunc("/api/tex/setup/stop", a.texSetupStopHandler)
+	mux.HandleFunc("/api/tex/setup/pick", a.texSetupPickHandler)
+	mux.HandleFunc("/api/tex/setup/delete", a.texSetupDeleteHandler)
+	mux.HandleFunc("/api/tex/setup/uninstaller", a.texSetupUninstallerHandler)
+	mux.HandleFunc("/api/tex/packages", a.texPackagesHandler)
+	mux.HandleFunc("/api/tex/packages/remove-preview", a.texPackageRemovalPreviewHandler)
+	mux.HandleFunc("/api/tex/packages/manager", a.texPackageManagerHandler)
 	mux.HandleFunc("/api/shortcuts", a.shortcutsHandler)
 	mux.HandleFunc("/api/storage", a.storageHandler)
 	mux.HandleFunc("/api/file", a.fileHandler)
@@ -308,7 +336,8 @@ func (a *App) stateLocked(refresh bool, language ...string) State {
 		ExecutablePath:  executable, InstallationError: messages.ErrorText(selected, a.options.InstallationError),
 		ShortcutsSupported: runtime.GOOS == "windows" && a.packageIdentity == nil,
 		TexBin:             a.config.TexBin, RecentProjects: append([]string{}, a.config.RecentProjects...),
-		Build: a.buildSnapshotLocked(selected), CompiledPDFs: a.compiledPDFSnapshotLocked(),
+		TexSetup: a.texSetupSnapshotLocked(selected),
+		Build:    a.buildSnapshotLocked(selected), CompiledPDFs: a.compiledPDFSnapshotLocked(),
 		ProjectStatus: projectStatus, RecentProjectStatuses: a.recentProjectStatusesLocked(projectStatus, selected),
 	}
 	if a.project != nil {
@@ -547,6 +576,17 @@ func (a *App) shutdownHandler(w http.ResponseWriter, r *http.Request) {
 	if !requireMethod(w, r, http.MethodPost) {
 		return
 	}
+	a.mu.Lock()
+	if a.isTeXSetupRunningLocked() {
+		if !a.texSetup.state.Cancelable {
+			a.mu.Unlock()
+			writeError(w, fail(http.StatusConflict, "TeX の操作が終わるまでお待ちください．OS の画面が開いている場合は，その画面で操作してください．"))
+			return
+		}
+		a.texSetup.state.Status = "cancelling"
+		a.texSetup.cancel()
+	}
+	a.mu.Unlock()
 	_ = a.stopBuild()
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 	go func() {

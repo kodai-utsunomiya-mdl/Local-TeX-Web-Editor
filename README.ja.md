@@ -4,11 +4,11 @@
 
 [![Microsoft Store から無料の Windows 版をインストール](docs/download-store.svg)](https://apps.microsoft.com/detail/9P6QF32N19HG?hl=ja-jp&gl=JP)
 &nbsp;&nbsp;
-[![Windows 版の ZIP をダウンロード](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.11/local-tex-web-editor-0.1.11-windows-x64.zip)
+[![Windows 版の ZIP をダウンロード](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.12/local-tex-web-editor-0.1.12-windows-x64.zip)
 &nbsp;&nbsp;
-[![macOS 版をダウンロード](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.11/local-tex-web-editor-0.1.11-macos-universal.zip)
+[![macOS 版をダウンロード](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.12/local-tex-web-editor-0.1.12-macos-universal.zip)
 
-**v0.1.11** · [配布ファイルと更新内容](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [利用前の準備](#利用前の準備) · [アプリの容量](#アプリとデータの保存先) · [起動する](#ダウンロードして起動する)
+**v0.1.12** · [配布ファイルと更新内容](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [利用前の準備](#利用前の準備) · [アプリの容量](#アプリとデータの保存先) · [起動する](#ダウンロードして起動する)
 
 Windows と macOS のブラウザで TeX の原稿を編集し，PC にある TeX Live でコンパイルするアプリ．編集画面と PDF を同じウィンドウで確認できる．アプリを起動すると，既定のブラウザで `localhost` の画面が開く．Markdown の編集とプレビューにも対応する．
 
@@ -28,19 +28,32 @@ PDF の連続スクロール，SyncTeX による原稿と PDF の相互移動，
 
 ## 利用前の準備
 
-コンパイルには，PC に別途導入した TeX Live を使う．すでに別のエディタから原稿をコンパイルできている場合は，その TeX Live の場所を指定すればよい．Markdown の編集とプレビューは TeX Live がなくても使える．
+コンパイルには PC の TeX Live を使う．**ホーム → TeX をセットアップ…** または **設定 → TeX をセットアップ…** で内容を確認して開始すると，アプリから必要な環境をダウンロードして導入できる．すでに別のエディタでコンパイルできている場合は，設定でその TeX の場所を選べる．Markdown の編集とプレビューは TeX がなくても使える．
 
 | 項目 | Windows | macOS |
 | --- | --- | --- |
 | OS と CPU | Windows 10 / 11，64-bit (x64) | macOS 12 Monterey 以降，Apple Silicon または Intel |
 | ブラウザ | 現行の Chrome または Edge | 現行の Chrome または Edge |
-| TeX の配布物 | [TeX Live](https://tug.org/texlive/windows.html) | [BasicTeX / MacTeX](https://tug.org/mactex/) または必要なパッケージを導入した TeX Live |
+| TeX の配布物 | アプリから TinyTeX を導入，または既存の [TeX Live](https://tug.org/texlive/windows.html) を選択 | アプリから TinyTeX を導入，または [BasicTeX / MacTeX](https://tug.org/mactex/) など既存の TeX Live を選択 |
 | TeX の場所の例 | `C:\texlive\2025\bin\windows` | `/Library/TeX/texbin` |
 | 原稿 | PC にあるプロジェクトのフォルダー | PC にあるプロジェクトのフォルダー |
 
 Microsoft Store 版には，Windows 10 version 2004 (build 19041) 以降，または Windows 11 の x64 PC が必要である．
 
 macOS 版の最低 OS は，アプリのビルドに使う [Go 1.25 の対応 OS](https://go.dev/doc/go1.25#darwin) に基づく．MacTeX の GUI アプリ向けの TeX の場所は，公式の [What Is Installed](https://tug.org/mactex/What_Is_Installed.pdf) で案内されている．
+
+### アプリから TeX を導入する
+
+1. ホームまたは設定で **「TeX をセットアップ…」** を開く．
+2. 取得元，パッケージ，容量の目安，導入先を確認する．公式の [TinyTeX v2026.11](https://github.com/rstudio/tinytex-releases/releases/tag/v2026.11) を使い，ダウンロードした配布物の SHA-256 を照合してから展開する．
+3. **「ダウンロードしてインストール」** を押す．TinyTeX 本体の取得中は，取得量と全体の容量，割合に応じたプログレスバーを表示する．展開，パッケージの導入，コンパイルの確認では，処理中を示すバー，現在の段階，ログを表示する．**「閉じて編集を続ける」** で導入を続けながら Markdown を編集でき，画面下部から進捗を再表示できる．**「セットアップを停止」** で中断できる．
+4. 導入とプログラムの確認が終わると，新しい TeX が選ばれる．`.tex` を開いて「コンパイル」を押す．
+
+Windows x64 と，Apple Silicon / Intel の Mac に対応する．通常のユーザー権限で自分のフォルダーへ導入し，TeX の検索先はアプリが起動するコマンドに設定する．開始前に導入先を変更でき，既定の場所は「[アプリとデータの保存先](#アプリとデータの保存先)」で確認できる．失敗や停止の場合は，それまで選んでいた TeX を引き続き使え，セットアップをやり直せる．
+
+初期構成には pdfLaTeX，upLaTeX，XeLaTeX，LuaLaTeX，`latexmk`，SyncTeX，`dvipdfmx`，日本語の文書クラスと原ノ味フォント，BibTeX，upBibTeX，Biber，`upmendex` が含まれる．数式・図・定理のための `amsmath`，`mathtools`，`mathrsfs`，`dsfont`，TikZ，`tcolorbox` の `most`，`algorithm`，`algpseudocode`，`hyperref`，`pxjahyper`，`cleveref` なども導入する．
+
+ダウンロードは **Windows で約 250 MB，Mac で約 300 MB**，導入先は **約 1 GB**，作業中の空き容量は **約 2 GB** が目安となる．標準の構成に対する見積りで，パッケージの更新により変わる．導入や追加パッケージの取得にはインターネット接続を使う．編集とコンパイルは PC 上のファイルを使い，セットアップの取得先へ原稿を送信することはない．詳細は [プライバシーポリシー](docs/privacy.ja.md) にある．
 
 ### TeX に必要なプログラム
 
@@ -54,9 +67,9 @@ macOS 版の最低 OS は，アプリのビルドに使う [Go 1.25 の対応 OS
 
 upLaTeX の原稿では通常 `uplatex` と `dvipdfmx` を使い，参考文献の設定に応じて `upbibtex` なども使う．プロジェクトにある `latexmkrc` / `.latexmkrc` を一緒に用意する．
 
-### 小さめの構成から始める
+### 手動で導入する場合
 
-このアプリでは，TeX Live の一部を導入した環境を使える．最初に基本的なパッケージをまとめて入れ，原稿で必要になったものを TeX Live Manager (`tlmgr`) で追加していく．
+自分で導入した TeX を設定で選ぶこともできる．TeX Live の一部を導入した環境でも使えるので，最初に基本的なパッケージをまとめて入れ，原稿で必要になったものを TeX Live Manager (`tlmgr`) で追加していく．
 
 **Windows** では，[TeX Live のネットワークインストーラー](https://tug.org/texlive/acquire-netinstall.html) を開き，`Advanced` からインストールする `scheme` を選ぶ．`small` は基本的な LaTeX にいくつかのプログラムや言語を加えた構成，`medium` はそこからパッケージを増やした構成である．必要な `collection` を個別に選ぶこともできる．公式の [インストールガイド](https://tug.org/texlive/doc/texlive-en/texlive-en.html) に選択画面と各構成の説明がある．
 
@@ -66,9 +79,19 @@ upLaTeX の原稿では通常 `uplatex` と `dvipdfmx` を使い，参考文献�
 
 容量を抑える設定として，TeX Live のインストーラーでは package のドキュメントとソースの収録を外せる．すでに導入済みの場合は `tlmgr option docfiles 0` と `tlmgr option srcfiles 0` で，今後の追加時の設定を変えられる．これは今あるファイルを削除する操作ではない．詳細は [install-tl のマニュアル](https://tug.org/texlive/doc/install-tl.html) にある．
 
-### 後からパッケージを追加する
+### TeX のパッケージと環境を管理する
 
-アプリの **設定 → TeX パッケージを追加** には，見つかったプログラムと追加コマンドを表示する．`latexmk` / SyncTeX と日本語の組版を選べるほか，パッケージ名を入力できる．コマンドをコピーし，Windows では PowerShell，Mac ではターミナルで実行する．設定済みの TeX の場所と確認できた年度に合わせてコマンドを作る．旧年度にはその年度の `tlnet-final` を指定する．
+**「設定 → TeX を管理…」** で，選択中の環境とパッケージの一覧を開く．一覧を検索し，パッケージ名を入力して **「追加する内容を確認…」** へ進める．導入済みの項目を選んで **「選んだパッケージを削除…」** を押すと，`tlmgr` が示す削除予定と依存関係を確認できる．**「表示したパッケージを削除」** で実行する．TeX の管理に必要なパッケージは一覧から削除できない．
+
+アプリから導入した TeX と，既存の TeX Live，MacTeX，TinyTeX に対応する．既存の環境には，そのパッケージ管理に設定された取得先を使う．`tlmgr` が CTAN との年度の不一致を報告した場合は，その TeX Live の年度の `tlnet-final` へ再試行し，保存された取得先の設定はそのまま使う．独自・ローカル・複数の取得先は，その設定で実行する．Windows の ZIP 版と Mac では，変更に管理者権限が必要な場合に OS の承認画面を開く．Microsoft Store 版で共用の環境を変更する場合は，公式の `tlshell` が導入済みなら **「TeX の管理ツールを開く」** から移り，そのツールの承認と操作で進める．
+
+![選択中の TeX の保存先と math で絞ったパッケージの一覧を表示する管理画面](docs/screenshots/editor-tex-management.png)
+
+管理画面で TeX の実際の保存先とパッケージを確認できる．`math` などで一覧を絞り込み，パッケージを追加する欄も同じ画面で使える．
+
+**「TeX の環境全体を削除…」** は，保存先，項目数，容量，他のアプリへの影響を示す確認画面を開く．アプリから削除を開始する場合は，内容を確認し，チェックと表示されたフォルダー名の入力で進める．アプリから導入した TeX は，記録した導入先から削除する．既存の Windows の TeX Live は公式アンインストーラーを使い，既存の Mac の TeX とユーザー所有の TinyTeX は OS のごみ箱へ移す．Windows でごみ箱を使えない場合は，完全な削除の前に OS が確認する．管理者権限が必要な環境を Store 版で使う場合は，**「Windows の設定でアンインストール…」** から Windows 側で削除を選ぶ．設定画面を開くだけならフォルダー名の入力は不要となる．公式アンインストーラーが設定などのファイルを残した場合は，その場所をログに表示する．同じ TeX を使う他のアプリでも，再導入やごみ箱からの復元を行うまで，その環境を使えなくなる．
+
+設定の **「TeX パッケージを追加」** には，`latexmk` / SyncTeX と日本語の組版の選択，パッケージ名の入力，**「アプリで追加…」** もある．Windows の PowerShell と Mac のターミナルへコピーする手動のコマンドも使える．設定済みの TeX の場所と確認できた年度に合わせてコマンドを作り，旧年度にはその年度の `tlnet-final` を指定する．
 
 現行年度の TeX Live へ追加する例は次の通り．Windows のパスは実際の導入先に合わせる．
 
@@ -114,28 +137,28 @@ Mac のターミナルでは次を実行する．
 
 1. [Microsoft Store の Local TeX Web Editor](https://apps.microsoft.com/detail/9P6QF32N19HG?hl=ja-jp&gl=JP) を開き，無料のアプリをインストールする．
 2. Windows のスタートメニューから **Local TeX Web Editor** を開く．既定のブラウザに編集画面が開く．
-3. 原稿のフォルダーを選ぶ．TeX Live の場所が自動で見つからない場合は，設定に `C:\texlive\2026\bin\windows` など，`latexmk.exe` があるフォルダーを指定する．
+3. 原稿のフォルダーを選ぶ．「TeX をセットアップ…」から導入するか，設定に `C:\texlive\2026\bin\windows` など，既存の `latexmk.exe` があるフォルダーを指定する．
 4. コンパイルしたい `.tex` をエディタで開き，「コンパイル」を押す．
 
-インストールとアプリの更新は Microsoft Store が管理する．TeX Live は「[利用前の準備](#利用前の準備)」に従って別途導入する．Markdown の編集とプレビューは TeX Live がなくても使える．
+インストールとアプリの更新は Microsoft Store が管理する．TeX は「[利用前の準備](#利用前の準備)」に従ってアプリ内から導入できる．Markdown の編集とプレビューは TeX Live がなくても使える．
 
 #### ZIP をダウンロードする
 
 1. [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) を開き，最新のバージョンを選ぶ．
-2. **Assets** の `local-tex-web-editor-0.1.11-windows-x64.zip` をダウンロードする．`Source code` は開発用のソースである．
+2. **Assets** の `local-tex-web-editor-0.1.12-windows-x64.zip` をダウンロードする．`Source code` は開発用のソースである．
 3. ZIP を展開し，`local-tex-web-editor.exe` をダブルクリックする．
 4. 開いたブラウザで原稿のフォルダーを選ぶ．フォルダーのパスを入力して開くこともできる．
-5. TeX Live の場所が自動で見つからない場合は，設定に `C:\texlive\2025\bin\windows` など，`latexmk.exe` があるフォルダーを指定する．
+5. 「TeX をセットアップ…」から導入するか，設定に `C:\texlive\2026\bin\windows` など，既存の `latexmk.exe` があるフォルダーを指定する．
 6. コンパイルしたい `.tex` をエディタで開き，「コンパイル」を押す．
 
 Windows の ZIP に含まれる実行ファイルにはコード署名が付いていない．GitHub のリリースから取得したファイルを開く際に SmartScreen の「Windows によって PC が保護されました」が出た場合は，「詳細情報」でアプリ名を確認し，「実行」を選ぶ．[Microsoft の案内](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/publish-first-app) も参照できる．
 
 ### macOS
 
-1. [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) の **Assets** から `local-tex-web-editor-0.1.11-macos-universal.zip` をダウンロードする．Apple Silicon と Intel で共通の ZIP を使う．
+1. [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) の **Assets** から `local-tex-web-editor-0.1.12-macos-universal.zip` をダウンロードする．Apple Silicon と Intel で共通の ZIP を使う．
 2. ZIP を展開し，`Local TeX Web Editor.app` を「アプリケーション」フォルダーへ移す．
 3. Finder や Spotlight から `Local TeX Web Editor` を開く．ブラウザに編集画面が開く．
-4. 原稿のフォルダーを開く．TeX の場所が自動で見つからない場合は，設定に `/Library/TeX/texbin` を指定する．
+4. 原稿のフォルダーを開く．「TeX をセットアップ…」から導入するか，設定で既存の TeX を選ぶ．MacTeX / BasicTeX では `/Library/TeX/texbin` を指定する．
 5. コンパイルしたい `.tex` をエディタで開き，「コンパイル」を押す．
 
 macOS 版には Apple Developer ID による署名と notarization が付いていない．初回に開けない場合は，このリポジトリの Release から取得したアプリであることを確認したうえで，macOS の「システム設定 → プライバシーとセキュリティ → このまま開く」を使う．手順は [Apple の公式案内](https://support.apple.com/ja-jp/102445) にある．
@@ -398,6 +421,8 @@ PDF の引用リンクにカーソルを合わせるか，`Tab` でフォーカ�
 
 ### SyncTeX を追加する
 
+アプリから導入する TeX には SyncTeX も含まれる．アプリから導入した環境への追加・再取得は **「設定 → TeX パッケージを追加 → アプリで追加…」** で行える．次のコマンド例は，自分で管理している TeX に使う．
+
 `synctex.exe` が見つからない場合は，TeX Live Manager で `synctex` と Windows 用の実行ファイルを追加する．TeX Live 2025 を `C:\texlive\2025` に入れている場合は，PowerShell で次を順に実行する．
 
 ```powershell
@@ -438,7 +463,7 @@ PDF の引用リンクにカーソルを合わせるか，`Tab` でフォーカ�
 
 ## アプリとデータの保存先
 
-**v0.1.11** の配布ファイルの容量を示す．1 MB = 1,000,000 bytes とし，MB 単位に丸めている．各配布ファイルの容量は，[Release](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) の Assets で確認できる．
+次の表は **v0.1.11** の配布ファイルの実測値である．1 MB = 1,000,000 bytes とし，MB 単位に丸めている．現在の配布ファイルの容量は，[Release](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) の Assets で確認できる．
 
 | 対応環境 | ダウンロードする ZIP | 展開後のアプリ本体 |
 | --- | ---: | ---: |
@@ -447,7 +472,7 @@ PDF の引用リンクにカーソルを合わせるか，`Tab` でフォーカ�
 
 ZIP には README，画像，ライセンスも含む．Mac のアプリは両方の CPU 向けの実行ファイルを収録している．冒頭の Windows ZIP と macOS のボタンから，対応する配布ファイルを取得できる．
 
-編集画面に必要な JavaScript，PDF.js の worker，フォントなどはアプリに含む．ブラウザと TeX Live は PC にあるものを使う．配布ファイルには TeX Live，ブラウザのエンジン，Python，Node.js は含まない．
+編集画面に必要な JavaScript，PDF.js の worker，フォントなどはアプリに含む．ブラウザは PC にあるものを使う．TeX はセットアップを選んだときに取得するか，既存の環境を指定する．アプリ本体の配布ファイルには TeX，ブラウザのエンジン，Python，Node.js は含まない．
 
 利用中は，原稿，追加した TeX パッケージ，草稿，生成した PDF などの容量も必要になる．コンパイル時のファイルは各プロジェクトの `.local-tex-editor/build` 以下に作られ，容量は原稿や図によって変わる．ダウンロードした ZIP は展開後に削除できる．Windows の ZIP 版でスタートメニューやデスクトップにショートカットを作成すると，上で説明したアプリ用フォルダーに実行ファイルをコピーする．一度アプリを終了し，ショートカットから起動できることを確認した後は，ダウンロードを展開したフォルダーも削除できる．
 
@@ -456,6 +481,14 @@ ZIP には README，画像，ライセンスも含む．Mac のアプリは両�
 - **Microsoft Store 版:** アプリのパッケージの `LocalState\LocalTeXEditor` フォルダー．[完全なパスと移行の説明](docs/microsoft-store.md#installation-and-data) を参照できる．
 - **Windows の ZIP 版:** `%APPDATA%\LocalTeXEditor`．
 - **macOS:** `~/Library/Application Support/LocalTeXEditor`．
+
+アプリから導入する TeX は，次の場所の下に，導入ごとのフォルダーを作って保存する．開始前に，自分のユーザーフォルダー内の別の場所へ変更できる．
+
+| 配布形式 | TeX の導入先の親フォルダー |
+| --- | --- |
+| Windows の ZIP 版 | `%LOCALAPPDATA%\LocalTeXEditor\tex` |
+| Microsoft Store 版 | アプリのパッケージの `LocalState\LocalTeXEditor\tex` |
+| macOS | `~/Library/Application Support/LocalTeXEditor/tex` |
 
 Store 版の初回起動時には，ZIP 版に有効な設定，草稿，表示位置のデータがあれば，Store 版のデータフォルダーへコピーする．ZIP 版の元のデータは，元のフォルダーに残る．原稿そのものは，選択したプロジェクトのフォルダーへ保存する．PDF のコピーを使うことで，TeX が書き込み中の PDF と表示中の PDF が競合する状況を防ぐ．
 
@@ -481,7 +514,7 @@ go build -o bin/local-tex-web-editor.exe ./cmd/local-tex-editor
 Windows 用の配布ファイルは次のコマンドで作成する．
 
 ```sh
-go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.11" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
+go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.12" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
 ```
 
 `build:windows-resources` は同梱の ICO から Windows x64 用の resource を生成する．実行ファイルのビルド時に，16〜256 px の 9 サイズのアイコンが組み込まれる．
@@ -497,7 +530,7 @@ npx playwright install chromium
 node scripts/build-macos.mjs
 ```
 
-`dist/local-tex-web-editor-0.1.11-macos-universal.zip` に，Apple Silicon と Intel で動く `.app`，日英の README，ライセンスを収録する．
+`dist/local-tex-web-editor-0.1.12-macos-universal.zip` に，Apple Silicon と Intel で動く `.app`，日英の README，ライセンスを収録する．
 
 起動時のオプション:
 

@@ -1,0 +1,48 @@
+% Packages and loading order used by the thesis and article setup checks.
+\usepackage{amsmath,amssymb,amsthm,mathtools,mathrsfs,bm}
+\usepackage{dsfont}
+\usepackage{graphicx}
+\usepackage{placeins}
+\usepackage{float}
+\usepackage{enumitem,booktabs,array,longtable,url}
+\PassOptionsToPackage{dvipsnames}{xcolor}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[haranoaji]{pxchfon}
+\def\pgfsysdriver{pgfsys-dvipdfmx.def}
+\usepackage[most]{tcolorbox}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,calc,positioning,decorations.pathreplacing,patterns}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\IfFormatAtLeastTF{2026-06-01}{}{\usepackage{aliascnt}}
+\usepackage[unicode]{hyperref}
+\usepackage{pxjahyper}
+\usepackage[nameinlink]{cleveref}
+\usepackage{needspace}
+\hypersetup{colorlinks=true,linkcolor=red,citecolor=green,urlcolor=red,
+  pdftitle={日本語の組版とパッケージの確認},pdfauthor={Local TeX Web Editor},
+  bookmarksopen=true,bookmarksnumbered=true}
+\definecolor{paperblue}{RGB}{0,70,140}
+\definecolor{paperred}{RGB}{145,35,35}
+\definecolor{papergreen}{RGB}{0,105,80}
+\definecolor{paperpurple}{RGB}{95,55,145}
+\definecolor{boxbackcolor_black}{rgb}{0.96,0.96,0.96}
+\definecolor{boxframecolor_black}{rgb}{0.2,0.2,0.2}
+\newcommand{\riskterm}[1]{\textcolor{paperred}{#1}}
+\newcommand{\geomterm}[1]{\textcolor{papergreen}{#1}}
+\newcommand{\opterm}[1]{\textcolor{paperblue}{#1}}
+\newcommand{\statterm}[1]{\textcolor{paperpurple}{#1}}
+\newcommand{\interpretation}[1]{\par\smallskip\noindent\textcolor{paperpurple}{\textbf{Implication.}}~#1\par\smallskip}
+\newcommand{\consequence}[1]{\par\smallskip\noindent\textcolor{paperblue}{\textbf{Consequence.}}~#1\par\smallskip}
+\newcommand{\bzero}{\bm{0}}
+\newcommand{\be}{\bm{e}}
+\newtcolorbox{generalbox}[1]{
+  breakable,colback=boxbackcolor_black,colframe=boxframecolor_black,
+  fonttitle=\bfseries,title=#1,arc=1mm,boxrule=0.6pt,
+  toptitle=1.5mm,bottomtitle=1.5mm,left=3mm,right=3mm,top=2mm,bottom=2mm,
+  before upper={\phantomsection\addcontentsline{toc}{subsubsection}{#1}}
+}
+\hfuzz=0pt
+\emergencystretch=2em
+\allowdisplaybreaks[2]

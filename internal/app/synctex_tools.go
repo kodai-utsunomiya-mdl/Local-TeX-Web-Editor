@@ -9,7 +9,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/messages"
 )
@@ -39,7 +38,7 @@ func synctexStatus(bin string, language ...string) (string, string, []string) {
 	if runtime.GOOS == "windows" && bin != "" {
 		manager := filepath.Join(bin, "tlmgr.bat")
 		if info, statErr := os.Stat(manager); statErr == nil && info.Mode().IsRegular() {
-			commands = synctexRepairCommands(bin, texLiveYear(bin), time.Now().Year())
+			commands = synctexRepairCommands(bin)
 		}
 	}
 	selected := "ja"
@@ -112,13 +111,12 @@ func powershellLiteral(text string) string {
 	return "'" + strings.ReplaceAll(text, "'", "''") + "'"
 }
 
-func synctexRepairCommands(bin string, year, currentYear int) []string {
-	if year == 0 || year > currentYear {
+func synctexRepairCommands(bin string) []string {
+	if bin == "" {
 		return []string{}
 	}
-	repository := texLiveRepository(year, currentYear)
 	return []string{
-		"& " + powershellLiteral(filepath.Join(bin, "tlmgr.bat")) + " --repository " + powershellLiteral(repository) + " install --reinstall synctex synctex.windows",
+		texPackageCommand(filepath.Join(bin, "tlmgr.bat"), "windows") + " install --reinstall synctex synctex.windows",
 		"& " + powershellLiteral(filepath.Join(bin, "synctex.exe")) + " help",
 	}
 }

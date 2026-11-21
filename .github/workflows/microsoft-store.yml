@@ -2,7 +2,7 @@ name: Build Microsoft Store package
 
 on:
   push:
-    branches: [main, prepare-microsoft-store]
+    branches: [main, prepare-microsoft-store, add-optional-tex-setup]
     paths:
       - '.github/workflows/microsoft-store.yml'
       - 'cmd/**'
@@ -11,6 +11,8 @@ on:
       - 'packaging/windows/**'
       - 'scripts/build-msix.mjs'
       - 'scripts/test-msix*'
+      - 'scripts/tex-setup-checks.mjs'
+      - 'tests/fixtures/tex-setup/**'
       - 'scripts/build*.mjs'
       - 'package*.json'
       - 'go.mod'
@@ -30,10 +32,9 @@ jobs:
   msix:
     name: Install and test the Windows MSIX
     runs-on: windows-2022
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
       CGO_ENABLED: '0'
-      CTAN_REPO: https://mirror.ctan.org/systems/texlive/tlnet
       MSIX_IDENTITY_NAME: ${{ vars.MSIX_IDENTITY_NAME }}
       MSIX_PUBLISHER: ${{ vars.MSIX_PUBLISHER }}
       MSIX_PUBLISHER_DISPLAY_NAME: ${{ vars.MSIX_PUBLISHER_DISPLAY_NAME }}
@@ -78,23 +79,6 @@ jobs:
       - name: Create a package with the test identity
         run: node scripts/build-msix.mjs --test-identity
 
-      - name: Set up TeX Live
-        uses: r-lib/actions/setup-tinytex@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
-
-      - name: Install TeX packages for compilation and SyncTeX
-        shell: pwsh
-        run: |
-          tlmgr update --self
-          if ($LASTEXITCODE -ne 0) { throw 'Could not update the TeX package manager.' }
-          tlmgr install latexmk uptex uptex-base uplatex platex jsclasses dvipdfmx synctex natbib ptex-fonts ptex-fontmaps haranoaji adobemapping
-          if ($LASTEXITCODE -ne 0) { throw 'Could not install the TeX packages.' }
-          fmtutil-sys --byfmt uplatex
-          if ($LASTEXITCODE -ne 0) { throw 'Could not create the upLaTeX format.' }
-          updmap-sys --setoption kanjiEmbed haranoaji
-          if ($LASTEXITCODE -ne 0) { throw 'Could not configure the Japanese fonts.' }
-          $texBin = Split-Path -Parent (Get-Command uplatex.exe).Source
-          "LOCAL_TEX_EDITOR_TEST_TEX_BIN=$texBin" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-
       - name: Install, launch and test the MSIX application
         # The Appx deployment module uses Windows PowerShell and .NET Framework.
         shell: powershell
@@ -134,18 +118,18 @@ jobs:
             Write-Host 'The package build did not produce listing files.'
             exit 0
           }
-          $images = @('editor-tex-dark.png', 'editor-markdown-light.png')
+          $images = @('editor-tex-dark.png', 'editor-markdown-light.png', 'editor-tex-management.png')
           $captured = @($images | ForEach-Object { Join-Path 'test-results/msix' $_ })
           $missing = @($captured | Where-Object { -not (Test-Path -LiteralPath $_ -PathType Leaf) })
           if ($missing.Count -eq 0) {
             Copy-Item -LiteralPath $captured -Destination $listing -Force
             $source = 'installed-msix'
-            $note = 'The listing artifact contains both screenshots captured from the MSIX application installed in this run.'
+            $note = 'The listing artifact contains all screenshots captured from the MSIX application installed in this run.'
           } else {
-            $fallback = @($images | ForEach-Object { Join-Path 'docs/screenshots' $_ })
+            $fallback = @($images | ForEach-Object { Join-Path 'docs/screenshots' $_ } | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf })
             Copy-Item -LiteralPath $fallback -Destination $listing -Force
             $source = 'docs/screenshots'
-            $note = 'The listing artifact contains repository screenshots because both installed-app captures were not available. Use the images from a successful installed-package run when submitting to Store.'
+            $note = 'The listing artifact contains available repository screenshots because the installed-app captures were incomplete. Use the images from a successful installed-package run when submitting to Store.'
           }
           @{ source = $source; files = $images; note = $note } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $listing 'screenshot-source.json') -Encoding utf8
           $note | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
