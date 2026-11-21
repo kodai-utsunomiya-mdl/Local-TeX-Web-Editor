@@ -9,8 +9,10 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/messages"
+	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/platform"
 )
 
 // The inspector supplies absolute paths. Check them again immediately before
@@ -79,6 +81,39 @@ func elevatedExternalTeXShellCommand(environment TeXEnvironment, executable stri
 		"unset PERL5LIB PERLLIB PERL5OPT PERL5DB PERL5DB_THREADED PERL5SHELL PERL_UNICODE && " +
 		"PATH=" + quoteExternalTeXShellArgument(environment.Bin+":/usr/bin:/bin:/usr/sbin:/sbin") + " " +
 		strings.Join(words, " "), nil
+}
+
+// The first install uses the selected installation's configured repository.
+// Check it before elevation so tlmgr's release error reaches the application's
+// existing archive retry. The retry already has an explicit --repository.
+func externalTeXInstallCheckArguments(arguments []string) []string {
+	if len(arguments) == 0 || arguments[0] != "install" {
+		return nil
+	}
+	return append([]string{"install", "--dry-run"}, arguments[1:]...)
+}
+
+func runExternalTeXInstallCheck(ctx context.Context, command *exec.Cmd, output io.Writer) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if output == nil {
+		output = io.Discard
+	}
+	platform.PrepareCommand(command)
+	command.Cancel = func() error { return platform.StopProcess(command.Process) }
+	command.WaitDelay = 2 * time.Second
+	writer := &externalTeXOutput{writer: output}
+	command.Stdout, command.Stderr = writer, writer
+	fmt.Fprintf(writer, "[command] %s\n", displayCommand(command.Path, command.Args[1:]))
+	err := command.Run()
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+	if err != nil {
+		return messages.Errorf("TeX の導入コマンドが終了しました．ログを確認してください: %w", err)
+	}
+	return nil
 }
 
 // A privileged child can keep running after an unprivileged parent is killed.

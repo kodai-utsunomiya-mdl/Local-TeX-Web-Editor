@@ -6,6 +6,12 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 const repository = path.resolve(import.meta.dirname, '..');
 
+function setupFailure(status) {
+  // The full log is saved as an artifact. Keep the final command and its error
+  // visible when Node limits the length of an assertion message.
+  return `${status.error || ''}\n${String(status.log || '').slice(-32_000)}`;
+}
+
 async function waitForSetup(api, id, output, timeout = 20 * 60_000) {
   const deadline = Date.now() + timeout;
   let previousStage = '';
@@ -150,7 +156,7 @@ export async function installAndCheckTeX({ api, request, temporary, output, useD
   const startedAt = Date.now();
   const started = await api('/api/tex/setup', { operation: 'install', consent: true, ...(useDefaultParent ? {} : { parent }) });
   const installed = await waitForSetup(api, started.id, output);
-  assert.equal(installed.status, 'succeeded', `${installed.error}\n${installed.log}`);
+  assert.equal(installed.status, 'succeeded', setupFailure(installed));
   assert.equal(installed.managed, true);
   const current = await api('/api/state');
   assert.equal(current.texSetup.managed, true);
@@ -201,7 +207,7 @@ export async function installAndCheckTeX({ api, request, temporary, output, useD
   const beforeAddition = await api('/api/tex/packages');
   const additional = await api('/api/tex/setup', { operation: 'packages', consent: true, packages: ['siunitx'], reinstall: false, directory: beforeAddition.directory, revision: beforeAddition.revision });
   const added = await waitForSetup(api, additional.id, output, 5 * 60_000);
-  assert.equal(added.status, 'succeeded', `${added.error}\n${added.log}`);
+  assert.equal(added.status, 'succeeded', setupFailure(added));
   await writeFile(path.join(engines, 'units.tex'), '\\documentclass{article}\n\\usepackage{siunitx}\n\\begin{document}\n\\qty{12.3}{\\metre\\per\\second}\n\\end{document}\n');
   await api('/api/settings', { mode: 'pdflatex' }, 'PUT');
   await compile(api, 'units.tex', output);
@@ -214,7 +220,7 @@ export async function installAndCheckTeX({ api, request, temporary, output, useD
   assert.equal(rejected.status, 409, 'Package removal must require the current preview.');
   const removing = await api('/api/tex/setup', { operation: 'remove-packages', consent: true, packages: ['siunitx'], directory: removal.directory, revision: removal.revision });
   const removed = await waitForSetup(api, removing.id, output, 5 * 60_000);
-  assert.equal(removed.status, 'succeeded', `${removed.error}\n${removed.log}`);
+  assert.equal(removed.status, 'succeeded', setupFailure(removed));
   assert.ok(!(await api('/api/tex/packages')).packages.some(item => item.name === 'siunitx'));
   await api('/api/project/open', { path: project });
   await api('/api/settings', { mode: 'project' }, 'PUT');
@@ -259,7 +265,7 @@ export async function checkExistingTeX({ api, request, temporary, output, instal
     assert.equal(packages.environment.requiresElevation, false);
     const started = await api('/api/tex/setup', { operation: 'packages', consent: true, packages: ['siunitx'], directory: packages.directory, revision: packages.revision });
     const added = await waitForSetup(api, started.id, output, 5 * 60_000);
-    assert.equal(added.status, 'succeeded', `${added.error}\n${added.log}`);
+    assert.equal(added.status, 'succeeded', setupFailure(added));
     assert.equal(added.managed, false);
     assert.ok((await api('/api/tex/packages')).packages.some(item => item.name === 'siunitx'));
     // The original installation has not received the package.
@@ -270,7 +276,7 @@ export async function checkExistingTeX({ api, request, temporary, output, instal
     assert.ok(preview.removals.some(item => item.name === 'siunitx'));
     const removing = await api('/api/tex/setup', { operation: 'remove-packages', consent: true, packages: ['siunitx'], directory: preview.directory, revision: preview.revision });
     const removed = await waitForSetup(api, removing.id, output, 5 * 60_000);
-    assert.equal(removed.status, 'succeeded', `${removed.error}\n${removed.log}`);
+    assert.equal(removed.status, 'succeeded', setupFailure(removed));
     assert.ok(!(await api('/api/tex/packages')).packages.some(item => item.name === 'siunitx'));
     await api('/api/project/open', { path: project });
     await api('/api/settings', { mode: 'project' }, 'PUT');
@@ -327,7 +333,7 @@ export async function removeAndCheckTeX({ api, request, temporary, output, direc
   const started = await api('/api/tex/setup/delete', { directory, revision: review.revision, confirmation: 'TinyTeX' }, 'DELETE');
   assert.equal(started.operation, 'uninstall');
   const finished = await waitForSetup(api, started.id, output, 120_000);
-  assert.equal(finished.status, 'succeeded', `${finished.error}\n${finished.log}`);
+  assert.equal(finished.status, 'succeeded', setupFailure(finished));
   await assert.rejects(stat(directory), error => error.code === 'ENOENT');
   assert.equal(await readFile(outside, 'utf8'), 'This file is outside the TeX installation.\n');
   assert.equal(await readFile(source, 'utf8'), originalSource);

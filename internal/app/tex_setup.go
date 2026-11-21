@@ -456,7 +456,7 @@ func (a *App) texSetupPickHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func managedTeXProgramsAvailable(bin string) bool {
-	for _, name := range []string{"latexmk", "synctex", "pdflatex", "lualatex", "xelatex", "uplatex", "dvipdfmx", "bibtex", "upbibtex", "biber", "upmendex"} {
+	for _, name := range []string{"latexmk", "synctex", "pdflatex", "lualatex", "xelatex", "xdvipdfmx", "uplatex", "dvipdfmx", "bibtex", "upbibtex", "biber", "upmendex"} {
 		if runtime.GOOS == "windows" {
 			name += ".exe"
 		}

@@ -21,7 +21,7 @@ async function mockSetup(page, session) {
     error: '', log: '', bin: '', managed: false, cancelable: false };
   await page.route('**/api/state', async route => {
     const response = await route.fetch(); const meta = await response.json();
-    const ready = snapshot.status === 'succeeded';
+    const ready = snapshot.status === 'succeeded' && snapshot.operation !== 'uninstall';
     await route.fulfill({ response, json: { ...meta, texSetup: snapshot,
       texBin: ready ? installedBin : '', latexmk: ready ? path.join(installedBin, 'latexmk') : '', synctex: ready ? path.join(installedBin, 'synctex') : '',
       toolError: ready ? '' : 'TeX environment is not installed',
@@ -40,6 +40,7 @@ async function mockSetup(page, session) {
   return {
     calls, installedBin,
     complete() { snapshot = { ...snapshot, status: 'succeeded', stage: 'complete', managed: true, bin: installedBin, log: 'Available programs were checked', cancelable: false }; },
+    setSnapshot(values) { snapshot = { ...snapshot, ...values }; },
   };
 }
 
@@ -116,4 +117,54 @@ test('TeX がない状態でのコンパイルは導入内容の確認へ進み�
   await page.locator('#tex-setup-close').click();
   await expect(page.getByTestId('editor').locator('.cm-content')).toBeVisible();
   expect(await readFile(path.join(session.project, 'main.tex'), 'utf8')).toBe(content);
+});
+
+test('停止できない環境削除中は終了ボタンを無効にし，Markdown の編集を続けられる', async ({ page, session }, testInfo) => {
+  const filename = path.join(session.project, 'notes.md');
+  await writeFile(filename, '# Notes\n\nOriginal paragraph.\n');
+  await openProject(session);
+  const setup = await mockSetup(page, session);
+  const directory = path.dirname(setup.installedBin);
+  setup.setSnapshot({ status: 'running', operation: 'uninstall', id: 'example-removal', stage: 'deleting',
+    directory, bin: setup.installedBin, managed: true, cancelable: false, log: 'Removing the example TeX programs',
+    environment: { directory, bin: setup.installedBin, managed: true, canInstallPackages: true, canRemovePackages: true, canUninstall: true } });
+  const stopRequests = [];
+  page.on('request', request => {
+    const pathname = new URL(request.url()).pathname;
+    if (['/api/tex/setup/stop', '/api/shutdown'].includes(pathname)) stopRequests.push(pathname);
+  });
+  await openEditor(page, session); await setAutoSave(page, false);
+  await page.getByTestId('file-notes.md').click();
+  const paragraph = page.locator('#markdown-rich-primary .markdown-rich-document p');
+  await expect(paragraph).toHaveText('Original paragraph.');
+  const shutdown = page.locator('#shutdown-button');
+  await expect(shutdown).toBeDisabled();
+  await expect(shutdown).toHaveAttribute('title', 'TeX の処理が終わるまでお待ちください．');
+  await page.locator('#tex-setup-status').click();
+  await expect(page.locator('#tex-setup-stage')).toHaveText('TeX の環境を削除しています…');
+  await expect(page.locator('#tex-setup-stop')).toBeHidden();
+  await expect(page.locator('#tex-setup-progress-panel')).toContainText('この処理の途中では停止できません');
+  await expect(page.locator('#tex-setup-close')).toBeEnabled();
+  await page.screenshot({ path: testInfo.outputPath('tex-removal-noncancelable.png') });
+  await page.locator('#tex-setup-close').click();
+  await paragraph.click(); await page.keyboard.press('End'); await page.keyboard.type(' Edited during removal.');
+  await page.keyboard.press(`${modifier}+s`);
+  await expect.poll(() => readFile(filename, 'utf8')).toContain('Original paragraph. Edited during removal.');
+  await expect(shutdown).toBeDisabled();
+  expect(stopRequests).toEqual([]);
+
+  setup.setSnapshot({ status: 'succeeded', stage: 'complete', managed: false, bin: '', environment: undefined,
+    log: 'TeX programs were removed.\n[remaining] ' + path.join(directory, 'texlive.profile') });
+  await expect(shutdown).toBeEnabled();
+  await page.locator('#tex-setup-status').click();
+  await expect(page.locator('#tex-setup-stage')).toHaveText('TeX の環境を削除しました．');
+  await expect(page.locator('#tex-setup-progress-panel')).toContainText('保存先に残った項目がある場合は，ログで確認できます．');
+  await expect(page.locator('#tex-setup-environment-status')).toHaveText('TeX をコンパイルするための環境が見つかりません．');
+  await expect(page.locator('#tex-setup-log')).toContainText('texlive.profile');
+  await expect(page.locator('#tex-setup-stop')).toBeHidden();
+  await page.locator('#tex-setup-close').click();
+  await page.getByTestId('settings-button').click();
+  await expect(page.locator('#settings-tex-setup')).toHaveText('TeX をセットアップ…');
+  expect(setup.calls).toEqual([]);
+  expect(stopRequests).toEqual([]);
 });

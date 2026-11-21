@@ -161,8 +161,42 @@ func externalTeXVariable(ctx context.Context, kpsewhich, bin, name string) (stri
 }
 
 func pathInExternalTeX(root, path string) bool {
+	var err error
+	root, err = resolvedExternalTeXPath(root)
+	if err != nil {
+		return false
+	}
+	path, err = resolvedExternalTeXPath(path)
+	if err != nil {
+		return false
+	}
 	relative, err := filepath.Rel(root, path)
 	return err == nil && relative != "." && filepath.IsLocal(relative)
+}
+
+// Windows can name an existing directory with either its long name or an
+// 8.3 alias. Resolve both operands, including the existing parent of a cache
+// directory which TeX has not created yet, before checking their relationship.
+func resolvedExternalTeXPath(path string) (string, error) {
+	if !filepath.IsAbs(path) {
+		return "", messages.Errorf("TeX の操作に使うパスを確認できません: %s", path)
+	}
+	path = filepath.Clean(path)
+	var missing []string
+	for {
+		resolved, err := filepath.EvalSymlinks(path)
+		if err == nil {
+			for index := len(missing) - 1; index >= 0; index-- {
+				resolved = filepath.Join(resolved, missing[index])
+			}
+			return resolved, nil
+		}
+		if !os.IsNotExist(err) || samePath(path, filepath.Dir(path)) {
+			return "", err
+		}
+		missing = append(missing, filepath.Base(path))
+		path = filepath.Dir(path)
+	}
 }
 
 func validateExternalTeXPaths(root, kpsewhich, manager string) error {

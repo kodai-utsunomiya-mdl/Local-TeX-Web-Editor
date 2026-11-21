@@ -211,10 +211,10 @@ export function createTeXSetup({ api, getMeta, home, indicator, getCompileTarget
     compile.disabled = locked || !sameTarget || !!session.error;
     sample.hidden = !done || !actionContext || !!meta.project;
     sample.disabled = locked || !!session.error;
-    targetNote.textContent = done && context.target && !sameTarget
-      ? t('原稿を切り替えました．編集画面でコンパイルしてください．')
-      : done && snapshot?.operation === 'uninstall' && snapshot.environment?.uninstaller
-        ? t('TeX のプログラムの削除を確認しました．残ったフォルダーがある場合はログに表示します．')
+    targetNote.textContent = done && snapshot?.operation === 'uninstall'
+      ? t('保存先に残った項目がある場合は，ログで確認できます．')
+      : done && context.target && !sameTarget
+        ? t('原稿を切り替えました．編集画面でコンパイルしてください．')
         : done && !['uninstall', 'remove-packages'].includes(snapshot?.operation) ? t('この TeX の環境を設定しました．アプリを再起動せずにコンパイルできます．') : '';
     targetNote.hidden = !targetNote.textContent;
     const nextLog = String(snapshot?.log || '');

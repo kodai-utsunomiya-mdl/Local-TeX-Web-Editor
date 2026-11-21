@@ -71,5 +71,5 @@ export const texSetupEnglish = {
   '追加先の TeX を確認できませんでした．環境を再確認してください．': 'The target TeX environment could not be verified. Check the environment again.',
   'TeX の処理が終わるまでお待ちください．': 'Wait for the TeX operation to finish.',
   '対象のフォルダー: {path}': 'Target folder: {path}',
-  'TeX のプログラムの削除を確認しました．残ったフォルダーがある場合はログに表示します．': 'The TeX programs were removed. Any folders left behind are listed in the log.',
+  '保存先に残った項目がある場合は，ログで確認できます．': 'If any items remain in the installation folder, you can review them in the log.',
 };

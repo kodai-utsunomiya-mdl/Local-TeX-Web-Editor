@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strings"
 	"sync"
@@ -90,6 +91,98 @@ func TestExternalTeXShellCommandPassesEveryArgumentLiterally(t *testing.T) {
 	}
 	if _, err := elevatedExternalTeXShellCommand(environment, other, nil, environment.Directory); err == nil {
 		t.Fatal("accepted a different program for elevated execution")
+	}
+}
+
+func TestExternalTeXInstallCheckUsesTheOriginalPackageArguments(t *testing.T) {
+	archive := "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2025/tlnet-final"
+	for _, test := range []struct {
+		arguments []string
+		want      []string
+	}{
+		{nil, nil},
+		{[]string{"install", "amsmath", "blindtext"}, []string{"install", "--dry-run", "amsmath", "blindtext"}},
+		{[]string{"install", "--reinstall", "amsmath"}, []string{"install", "--dry-run", "--reinstall", "amsmath"}},
+		{[]string{"--repository", archive, "install", "amsmath"}, nil},
+		{[]string{"remove", "--no-depends-at-all", "blindtext"}, nil},
+	} {
+		original := append([]string(nil), test.arguments...)
+		if got := externalTeXInstallCheckArguments(test.arguments); !reflect.DeepEqual(got, test.want) {
+			t.Errorf("check arguments = %#v, want %#v", got, test.want)
+		}
+		if !reflect.DeepEqual(test.arguments, original) {
+			t.Fatalf("changed the arguments for the actual operation: %#v", test.arguments)
+		}
+	}
+}
+
+func TestExternalTeXInstallCheckProcess(t *testing.T) {
+	switch os.Getenv("LOCAL_TEX_INSTALL_CHECK_TEST") {
+	case "mismatch":
+		fmt.Fprintln(os.Stdout, "tlmgr: package repository https://mirror.ctan.org/systems/texlive/tlnet")
+		fmt.Fprintln(os.Stderr, "Local TeX Live (2025) is older than remote repository (2026).")
+		os.Exit(23)
+	case "network":
+		fmt.Fprintln(os.Stderr, "tlmgr: unable to connect to the repository")
+		os.Exit(17)
+	case "success":
+		fmt.Fprintln(os.Stdout, "tlmgr install: dry run, no changes will be made")
+		os.Exit(0)
+	}
+}
+
+func TestExternalTeXInstallCheckReturnsTheRepositoryErrorAndOutput(t *testing.T) {
+	executable, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	archive := "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2025/tlnet-final"
+	for _, test := range []struct {
+		name, mode, repository, archive string
+		code                            int
+	}{
+		{"older CTAN installation", "mismatch", "https://mirror.ctan.org/systems/texlive/tlnet", archive, 23},
+		{"custom repository", "mismatch", "https://tex.example/private", "", 23},
+		{"network error", "network", "ctan", "", 17},
+		{"same release", "success", "ctan", "", 0},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			command := exec.CommandContext(ctx, executable, "-test.run=^TestExternalTeXInstallCheckProcess$")
+			command.Env = append(os.Environ(), "LOCAL_TEX_INSTALL_CHECK_TEST="+test.mode)
+			var output bytes.Buffer
+			err := runExternalTeXInstallCheck(ctx, command, &output)
+			if test.code == 0 {
+				if err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				var exitError *exec.ExitError
+				if !errors.As(err, &exitError) || exitError.ExitCode() != test.code {
+					t.Fatalf("exit error = %v, want code %d", err, test.code)
+				}
+			}
+			if !strings.Contains(output.String(), "[command] ") || !strings.Contains(output.String(), "tlmgr") {
+				t.Fatalf("command output did not reach the application: %s", output.String())
+			}
+			if got := archivedTeXRepository(test.repository, output.String()); got != test.archive {
+				t.Fatalf("archive = %q, want %q; output: %s", got, test.archive, output.String())
+			}
+		})
+	}
+}
+
+func TestExternalTeXInstallCheckHonorsCancellationBeforeStarting(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	command := exec.CommandContext(ctx, "must-not-start")
+	var output bytes.Buffer
+	if err := runExternalTeXInstallCheck(ctx, command, &output); !errors.Is(err, context.Canceled) {
+		t.Fatalf("lost cancellation: %v", err)
+	}
+	if command.Process != nil || output.Len() != 0 {
+		t.Fatal("started a check after cancellation")
 	}
 }
 

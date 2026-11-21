@@ -55,7 +55,7 @@ Local TeX Web Editor edits TeX and Markdown projects on your Windows PC in a bro
 
 Review the download source, packages and destination, then choose Download and install. Setup provides pdfLaTeX, upLaTeX, XeLaTeX, LuaLaTeX, latexmk, SyncTeX, Japanese fonts, bibliography tools and common mathematics and drawing packages. It runs in your user folder and selects TeX after setup succeeds. Setup and package downloads require internet access; allow about 250 MB of downloads and 2 GB of free space during initial setup.
 
-Manage TeX lists packages in the selected installation, including existing TeX Live and TinyTeX. Search the list, add packages after review, and check the proposed changes and dependencies before removing packages. Removing an entire environment has a separate confirmation with its actual folder, contents and exact name. An installation shared with other applications can also affect their compilation. The Store edition opens the official TeX management tool or Windows app settings when administrator permission is required. Project documents stay in their project folders.
+Manage TeX lists packages in the selected installation, including existing TeX Live and TinyTeX. Search the list, add packages after review, and check the proposed changes and dependencies before removing packages. Starting an entire environment's removal inside the app has a separate confirmation with its actual folder, contents and exact name. An installation shared with other applications can also affect their compilation. The Store edition opens the official TeX management tool or Windows app settings when administrator permission is required. Project documents stay in their project folders.
 
 Complete TeX commands, environments, citations and labels. Tab moves between inserted fields; Ctrl + Space opens suggestions. Fold source sections and environments, and expand or collapse the outline.
 
@@ -130,7 +130,7 @@ Version 0.1.12
 - Set up TeX from Home or Settings. Review the source, destination and packages, then download and install official TinyTeX v2026.11 inside the app.
 - Start with pdfLaTeX, upLaTeX, XeLaTeX and LuaLaTeX, latexmk, SyncTeX, Japanese fonts, bibliography tools, and common mathematics, figures and theorem packages.
 - Follow progress, stop setup, or close the progress screen and continue editing. Successful setup selects the new environment; an existing TeX installation can still be selected.
-- Manage packages in app-installed or existing TeX Live and TinyTeX. Search the list, add after review, and inspect proposed changes before removing packages. Confirm the actual folder, contents and name before removing an entire environment.
+- Manage packages in app-installed or existing TeX Live and TinyTeX. Search the list, add after review, and inspect proposed changes before removing packages. Confirm the actual folder, contents and name before starting an entire environment's removal inside the app.
 - Setup uses your user folder and normal permissions. For shared TeX requiring administrator rights, the Store edition opens the official TeX manager or Windows app settings. Manual package commands remain available. Source documents stay on your PC.
 ```
 
@@ -149,7 +149,7 @@ Local TeX Web Editor は，Windows PC にある TeX と Markdown のプロジェ
 
 取得元，パッケージ，導入先を確認し，「ダウンロードしてインストール」を選ぶと，pdfLaTeX，upLaTeX，XeLaTeX，LuaLaTeX，latexmk，SyncTeX，日本語フォント，文献処理と数式・図の基本的なパッケージを導入します．自分のユーザーフォルダーへ導入し，成功後は新しい TeX を選択します．導入や追加パッケージの取得にはインターネット接続を使います．初期構成のダウンロードは約 250 MB，作業中の空き容量は約 2 GB が目安です．
 
-「TeX を管理」では，既存の TeX Live と TinyTeX を含め，選択中の環境のパッケージを一覧で確認できます．一覧の検索，内容を確認した上での追加，削除予定と依存関係を確認した上での削除を行えます．環境全体の削除には別の確認画面があり，実際の保存先，中身，正確なフォルダー名を確認します．他のアプリと共用する環境への変更は，そのアプリのコンパイルにも影響します．管理者権限が必要な場合，Store 版では公式の TeX 管理ツールや Windows のアプリ設定を開きます．原稿はプロジェクトのフォルダーに保存します．
+「TeX を管理」では，既存の TeX Live と TinyTeX を含め，選択中の環境のパッケージを一覧で確認できます．一覧の検索，内容を確認した上での追加，削除予定と依存関係を確認した上での削除を行えます．アプリ内で環境全体の削除を開始する場合には別の確認画面があり，実際の保存先，中身，正確なフォルダー名を確認します．他のアプリと共用する環境への変更は，そのアプリのコンパイルにも影響します．管理者権限が必要な場合，Store 版では公式の TeX 管理ツールや Windows のアプリ設定を開きます．原稿はプロジェクトのフォルダーに保存します．
 
 TeX のコマンド，環境，引用キー，相互参照の候補を表示します．環境は対応する終了コマンドまで挿入でき，Tab で次の入力箇所へ進めます．長い文献の題名や著者は候補一覧の横または下で読めます．設定で補完や候補の自動表示をオフにできます．原稿のセクションや環境，Markdown の見出しも折りたためます．アウトラインの縦線で階層を確認し，矢印で下位の見出しを開閉できます．
 
@@ -232,7 +232,7 @@ TeX の導入と追加パッケージの取得にはインターネット接続
 ・ホームと設定の「TeX をセットアップ…」から，取得元，導入先，パッケージを確認して，公式の TinyTeX v2026.11 をアプリ内でダウンロードして導入できる．
 ・pdfLaTeX，upLaTeX，XeLaTeX，LuaLaTeX，latexmk，SyncTeX，日本語フォント，文献処理，数式・図・定理の基本的なパッケージを初期構成に含む．
 ・進捗を確認して停止でき，画面を閉じて原稿の編集も続けられる．成功すると新しい環境を選び，既存の TeX を指定する使い方も続けられる．
-・アプリから導入した TeX と既存の TeX Live / TinyTeX のパッケージを一覧で確認・検索し，内容を確認して追加・削除できる．環境全体は，実際の保存先，中身，フォルダー名を確認して削除する．
+・アプリから導入した TeX と既存の TeX Live / TinyTeX のパッケージを一覧で確認・検索し，内容を確認して追加・削除できる．アプリ内で環境全体の削除を始める場合は，実際の保存先，中身，フォルダー名を確認する．
 ・通常のユーザー権限で自分のフォルダーに導入する．管理者権限が必要な共用の TeX には，Store 版から公式の管理ツールや Windows のアプリ設定を開く．手動のパッケージ用コマンドも使える．原稿は PC に保存する．
 ```
 

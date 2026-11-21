@@ -242,10 +242,22 @@ func (a *App) checkTeXSetup(ctx context.Context, run *texSetupRun) error {
 		if err := os.WriteFile(filepath.Join(work, name+".tex"), []byte(text), 0600); err != nil {
 			return err
 		}
-		if err := a.texSetupTool(ctx, run, work, engine, "-interaction=nonstopmode", "-halt-on-error", "-no-shell-escape", name+".tex"); err != nil {
+		arguments := []string{"-interaction=nonstopmode", "-halt-on-error", "-no-shell-escape"}
+		if engine == "xelatex" {
+			// XeTeX's built-in PDF driver does not quote its installation
+			// directory on macOS. Use the same XDV-to-PDF sequence as latexmk
+			// so that an installation path containing spaces works here too.
+			arguments = append(arguments, "-no-pdf")
+		}
+		if err := a.texSetupTool(ctx, run, work, engine, append(arguments, name+".tex")...); err != nil {
 			return err
 		}
-		if engine == "uplatex" {
+		switch engine {
+		case "xelatex":
+			if err := a.texSetupTool(ctx, run, work, "xdvipdfmx", "-E", "-o", name+".pdf", name+".xdv"); err != nil {
+				return err
+			}
+		case "uplatex":
 			if err := a.texSetupTool(ctx, run, work, "dvipdfmx", "-o", name+".pdf", name+".dvi"); err != nil {
 				return err
 			}

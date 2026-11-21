@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+
+	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/platform"
 )
 
 func externalTeXTestTree(t *testing.T) (root, bin, manager string) {
@@ -52,6 +54,60 @@ func TestExternalTeXRequiresOneInstallationTree(t *testing.T) {
 	}
 	if err := validateExternalTeXPaths(root, kpsewhich, manager); err == nil {
 		t.Fatal("accepted a tree without its TeX Live package database")
+	}
+}
+
+func TestExternalTeXAcceptsShortAndLongNamesOfTheSameInstallation(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("Windows provides short path names")
+	}
+	root, bin, manager := externalTeXTestTree(t)
+	kpsewhich := filepath.Join(bin, "kpsewhich.exe")
+	writeTestFile(t, kpsewhich, []byte("test executable"))
+	longRoot, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	shortRoot, err := platform.ShortPath(root)
+	if err != nil {
+		t.Skipf("short paths unavailable: %v", err)
+	}
+	if samePath(longRoot, shortRoot) {
+		t.Skip("this volume does not provide a different short path")
+	}
+	relativeBin, err := filepath.Rel(root, bin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, pair := range [][2]string{{shortRoot, longRoot}, {longRoot, shortRoot}} {
+		actualBin := filepath.Join(pair[1], relativeBin)
+		if err := validateExternalTeXPaths(pair[0], filepath.Join(actualBin, filepath.Base(kpsewhich)), filepath.Join(actualBin, filepath.Base(manager))); err != nil {
+			t.Fatalf("equivalent installation names were rejected: %v", err)
+		}
+		if !pathInExternalTeX(pair[0], filepath.Join(pair[1], "texmf-var", "not-created", "cache")) {
+			t.Fatal("the existing parent of a new cache directory did not resolve")
+		}
+	}
+	if pathInExternalTeX(shortRoot, filepath.Join(filepath.Dir(longRoot), "other-tex", "bin", "kpsewhich.exe")) {
+		t.Fatal("an unrelated installation was accepted")
+	}
+}
+
+func TestExternalTeXResolvesExistingParentsOfCacheDirectories(t *testing.T) {
+	root, _, _ := externalTeXTestTree(t)
+	alias := filepath.Join(t.TempDir(), "selected TeX")
+	if err := os.Symlink(root, alias); err != nil {
+		t.Skipf("symbolic links unavailable: %v", err)
+	}
+	if !pathInExternalTeX(root, filepath.Join(alias, "new-cache", "web2c")) || !pathInExternalTeX(alias, filepath.Join(root, "new-cache", "web2c")) {
+		t.Fatal("a not-yet-created cache lost its existing installation parent")
+	}
+	outside := t.TempDir()
+	if err := os.Symlink(outside, filepath.Join(root, "external-cache")); err != nil {
+		t.Fatal(err)
+	}
+	if pathInExternalTeX(root, filepath.Join(root, "external-cache", "new-cache")) {
+		t.Fatal("a cache linked outside the installation was accepted")
 	}
 }
 

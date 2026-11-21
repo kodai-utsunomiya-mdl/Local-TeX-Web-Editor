@@ -46,7 +46,7 @@ func fakeTeXSetup(t *testing.T) (*App, string, *atomic.Int32) {
 			if err := os.MkdirAll(bin, 0700); err != nil {
 				return err
 			}
-			for _, name := range []string{"latexmk", "synctex", "pdflatex", "lualatex", "xelatex", "uplatex", "dvipdfmx", "bibtex", "upbibtex", "biber", "upmendex", "tlmgr"} {
+			for _, name := range []string{"latexmk", "synctex", "pdflatex", "lualatex", "xelatex", "xdvipdfmx", "uplatex", "dvipdfmx", "bibtex", "upbibtex", "biber", "upmendex", "tlmgr"} {
 				if runtime.GOOS == "windows" {
 					if name == "tlmgr" {
 						name += ".bat"

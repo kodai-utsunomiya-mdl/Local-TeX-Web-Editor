@@ -133,6 +133,24 @@ func runElevatedTeXCommand(ctx context.Context, environment TeXEnvironment, exec
 		return err
 	}
 	defer cleanup()
+	if checkArguments := externalTeXInstallCheckArguments(arguments); checkArguments != nil {
+		// tlmgr permits --dry-run on a read-only installation and performs the
+		// same repository/year check as install. Capture this unprivileged
+		// process directly; the elevated console cannot inherit our pipes.
+		command, cleanCheck, err := texSetupToolCommand(ctx, environment.Bin, os.TempDir(), false, "tlmgr", checkArguments...)
+		if err != nil {
+			return err
+		}
+		command.Dir = directory
+		err = runExternalTeXInstallCheck(ctx, command, output)
+		cleanCheck()
+		if err != nil {
+			return err
+		}
+		if err := checkExternalTeXCommandPaths(environment, executable, directory); err != nil {
+			return err
+		}
+	}
 	if output != nil {
 		fmt.Fprintf(output, "[command] %s\n", displayCommand(executable, arguments))
 		fmt.Fprintln(output, messages.Text(messages.LanguageFromContext(ctx), "Windows の承認画面の後に開くウィンドウで，TeX の処理を確認してください．"))
