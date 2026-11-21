@@ -130,14 +130,14 @@
           <p>The app uses <code>latexmk</code> to compile and <code>synctex</code> to move between source and PDF. If your project uses a <code>latexmkrc</code> or <code>.latexmkrc</code> file, keep it with the source files.</p>
           <div class="table-scroll">
             <table class="size-table">
-              <thead><tr><th scope="col">v0.1.11</th><th scope="col">ZIP download</th><th scope="col">App after extraction</th></tr></thead>
+              <thead><tr><th scope="col">v0.1.12</th><th scope="col">ZIP download</th><th scope="col">App after extraction</th></tr></thead>
               <tbody>
-                <tr><th scope="row">Windows x64</th><td>About 8 MB</td><td>About 18 MB</td></tr>
-                <tr><th scope="row">macOS, both CPUs</th><td>About 16 MB</td><td>About 35 MB</td></tr>
+                <tr><th scope="row">Windows x64</th><td>About 9 MB</td><td>About 18 MB</td></tr>
+                <tr><th scope="row">macOS, both CPUs</th><td>About 16 MB</td><td>About 36 MB</td></tr>
               </tbody>
             </table>
           </div>
-          <p class="small-note">Sizes are rounded to the nearest MB; see the <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.11">v0.1.11 release assets</a> for each download's size. 1 MB = 1,000,000 bytes. TeX Live, documents, drafts, edit history, templates and compilation files use additional space. The app includes its editor and PDF viewer; it runs without installing Python, Node.js, Go or VS Code.</p>
+          <p class="small-note">Sizes are rounded to the nearest MB; see the <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.12">v0.1.12 release assets</a> for each download's size. 1 MB = 1,000,000 bytes. TeX Live, documents, drafts, edit history, templates and compilation files use additional space. The app includes its editor and PDF viewer; it runs without installing Python, Node.js, Go or VS Code.</p>
           <details>
             <summary>Install TeX yourself with a smaller package selection</summary>
             <p>On Windows, the <a href="https://tug.org/texlive/acquire-netinstall.html">TeX Live installer</a> lets you choose a smaller installation scheme. On Mac, <a href="https://tug.org/mactex/morepackages.html">BasicTeX</a> provides a small starting point. Add <code>latexmk</code>, <code>synctex</code> and packages needed by your documents.</p>
@@ -202,6 +202,12 @@
             <p>To remove packages, select them and choose <strong>Remove selected packages…</strong>. Review the proposed changes and dependency information, then choose <strong>Remove the displayed packages</strong>. The app checks the package database again before proceeding.</p>
             <p>This screen works with TeX installed by the app and existing TeX Live, MacTeX and TinyTeX. Existing installations use their configured repository. When a CTAN year mismatch occurs, the app can retry with the installed TeX Live year's archive. Custom repositories use their existing settings.</p>
             <p>The Windows ZIP and Mac editions request operating system approval when a shared installation needs administrator access. The Microsoft Store edition can open its existing official TeX management tool for that installation. After changing packages there, refresh the list in the editor.</p>
+            <figure class="screenshot secondary-shot">
+              <a href="assets/editor-tex-management.png" aria-label="Open the TeX management screenshot at full size">
+                <img src="assets/editor-tex-management.png" width="1600" height="1000" alt="The Manage TeX dialog in dark mode, with the installation folder, a search for math packages, the installed package list and a field for packages to add." loading="lazy" decoding="async">
+              </a>
+              <figcaption><span>Search installed packages and review changes from the TeX management screen.</span><span>Click to view at full size.</span></figcaption>
+            </figure>
           </div>
           <details>
             <summary>Remove an entire TeX environment</summary>
@@ -272,10 +278,10 @@
             <p>In Source mode, use that same click shortcut, or the navigation button above the editor, to move to the corresponding preview passage. Double-click a paragraph or heading in the preview to return to its source line. <strong>Sync scrolling</strong> in the Markdown preview toolbar links scrolling in both directions; it starts enabled and saves your choice for future sessions.</p>
             <p>Choose the <strong>New Markdown page</strong> icon or <strong>Editing tools → New Markdown page</strong> to add another page. Enter its title and a path in an existing project folder, review the relative link, and choose whether to open the new page. The file starts with its title as a heading, and the link replaces the current selection. Undo in the original document removes the inserted link; the new page remains in the project.</p>
             <figure class="screenshot secondary-shot">
-              <a href="assets/editor-markdown-visual.png" aria-label="Open the visual Markdown editor screenshot at full size">
-                <img src="assets/editor-markdown-visual.png" width="1600" height="1000" alt="Markdown in Visual editing, with headings, an equation, task checkboxes and a table. The preview pane is closed, giving the document the full editing area." loading="lazy" decoding="async">
+              <a href="assets/editor-markdown-light.png" aria-label="Open the Markdown editor screenshot at full size">
+                <img src="assets/editor-markdown-light.png" width="1600" height="1000" alt="Markdown source on the left and its preview on the right in light mode, with headings, equations, task checkboxes and a table." loading="lazy" decoding="async">
               </a>
-              <figcaption><span>Edit Markdown directly, with the preview closed. Switch to Source to edit its notation.</span><span>Click to view at full size.</span></figcaption>
+              <figcaption><span>Edit Markdown source alongside its preview, with equations, task lists and tables.</span><span>Click to view at full size.</span></figcaption>
             </figure>
           </div>
           <div class="usage-block">

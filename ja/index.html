@@ -130,14 +130,14 @@
           <p>コンパイルには <code>latexmk</code>，原稿と PDF の相互移動には <code>synctex</code> を使います．<code>latexmkrc</code> / <code>.latexmkrc</code> を使うプロジェクトでは，その設定ファイルも原稿と一緒に用意します．</p>
           <div class="table-scroll">
             <table class="size-table">
-              <thead><tr><th scope="col">v0.1.11</th><th scope="col">ZIP の容量</th><th scope="col">展開後のアプリ本体</th></tr></thead>
+              <thead><tr><th scope="col">v0.1.12</th><th scope="col">ZIP の容量</th><th scope="col">展開後のアプリ本体</th></tr></thead>
               <tbody>
-                <tr><th scope="row">Windows x64</th><td>約 8 MB</td><td>約 18 MB</td></tr>
-                <tr><th scope="row">macOS，両 CPU 共通</th><td>約 16 MB</td><td>約 35 MB</td></tr>
+                <tr><th scope="row">Windows x64</th><td>約 9 MB</td><td>約 18 MB</td></tr>
+                <tr><th scope="row">macOS，両 CPU 共通</th><td>約 16 MB</td><td>約 36 MB</td></tr>
               </tbody>
             </table>
           </div>
-          <p class="small-note">容量は MB 単位に丸めています．各ダウンロードの容量は <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.11">v0.1.11 の配布ファイル</a> で確認できます．1 MB = 1,000,000 bytes．TeX Live，原稿，草稿，編集履歴，テンプレート，コンパイル中のファイルにも容量を使います．アプリにはエディタと PDF ビューアーが含まれており，Python，Node.js，Go，VS Code の導入は不要です．</p>
+          <p class="small-note">容量は MB 単位に丸めています．各ダウンロードの容量は <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.12">v0.1.12 の配布ファイル</a> で確認できます．1 MB = 1,000,000 bytes．TeX Live，原稿，草稿，編集履歴，テンプレート，コンパイル中のファイルにも容量を使います．アプリにはエディタと PDF ビューアーが含まれており，Python，Node.js，Go，VS Code の導入は不要です．</p>
           <details>
             <summary>少ないパッケージから手動で TeX を導入する場合</summary>
             <p>Windows の <a href="https://tug.org/texlive/acquire-netinstall.html">TeX Live インストーラー</a> では，少ないパッケージから始める構成を選べます．Mac では <a href="https://tug.org/mactex/morepackages.html">BasicTeX</a> を使えます．<code>latexmk</code>，<code>synctex</code> と，原稿で必要なパッケージを追加します．</p>
@@ -202,6 +202,12 @@
             <p>パッケージを削除するときは，一覧で選択して<strong>「選んだパッケージを削除…」</strong>を開きます．変更する内容と依存関係を確認して，<strong>「表示したパッケージを削除」</strong>を選びます．アプリは実行前にパッケージの記録を再確認します．</p>
             <p>アプリから導入した TeX と，既存の TeX Live，MacTeX，TinyTeX に対応します．既存の環境では，設定済みの取得先を使います．CTAN との年度の不一致が出た場合には，導入済みの TeX Live と同じ年度の配布元へ再試行します．独自の取得先がある場合は，その設定を使います．</p>
             <p>Windows の ZIP 版と Mac 版では，共用する環境の変更に管理者権限が必要な場合，OS が承認を求めます．Microsoft Store 版からは，その環境にある公式の TeX 管理ツールを開けます．そこで変更した後，エディタのパッケージ一覧を更新します．</p>
+            <figure class="screenshot secondary-shot">
+              <a href="../assets/editor-tex-management.png" aria-label="TeX の管理画面を元のサイズで開く">
+                <img src="../assets/editor-tex-management.png" width="1600" height="1000" alt="ダークモードの TeX 管理画面．導入先のフォルダー，math で検索したパッケージ一覧，追加するパッケージの入力欄が見える．" loading="lazy" decoding="async">
+              </a>
+              <figcaption><span>TeX の管理画面で，導入済みのパッケージを検索し，追加・削除する内容を確認できます．</span><span>画像を押すと元のサイズで開きます．</span></figcaption>
+            </figure>
           </div>
           <details>
             <summary>TeX の環境全体を削除する</summary>
@@ -272,10 +278,10 @@
             <p>ソース編集では，同じクリック操作か原稿の上にある移動ボタンで，プレビューの対応する箇所へ移れます．プレビューの段落や見出しをダブルクリックすると，原稿の行へ戻ります．操作欄の<strong>「スクロールを同期」</strong>で，原稿とプレビューのスクロールを両方向に連動させられます．初期状態はオンで，選んだ状態を次回にも使います．</p>
             <p><strong>「新しい Markdown ページ」</strong>のアイコンか<strong>「編集の操作 → 新しい Markdown ページ」</strong>から別のページを追加できます．タイトルと既存フォルダー内の保存先を入力し，相対パスのリンクと作成後にページを開くかを確認します．新しいファイルはタイトルの見出しから始まり，現在の選択範囲にリンクを挿入します．元の文書で Undo するとリンクの挿入を取り消せます．作成したページはプロジェクト内に残ります．</p>
             <figure class="screenshot secondary-shot">
-              <a href="../assets/editor-markdown-visual.png" aria-label="Markdown の直接編集の画面を元のサイズで開く">
-                <img src="../assets/editor-markdown-visual.png" width="1600" height="1000" alt="Markdown の直接編集の画面．見出し，数式，タスクのチェック欄，表が見える．プレビューを閉じ，編集画面の幅全体を文書に使っている．" loading="lazy" decoding="async">
+              <a href="../assets/editor-markdown-light.png" aria-label="Markdown の編集画面を元のサイズで開く">
+                <img src="../assets/editor-markdown-light.png" width="1600" height="1000" alt="左に Markdown のソース，右にプレビューを表示したライトモードの画面．見出し，数式，タスクのチェック欄，表が見える．" loading="lazy" decoding="async">
               </a>
-              <figcaption><span>プレビューを閉じて Markdown を直接編集．記法を編集するときは「ソース」へ切り替えます．</span><span>画像を押すと元のサイズで開きます．</span></figcaption>
+              <figcaption><span>Markdown のソースを編集しながら，数式，タスクのリスト，表をプレビューで確認できます．</span><span>画像を押すと元のサイズで開きます．</span></figcaption>
             </figure>
           </div>
           <div class="usage-block">
