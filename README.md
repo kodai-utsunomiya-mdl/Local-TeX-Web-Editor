@@ -10,6 +10,8 @@ English | [日本語](README.ja.md) · [Website and guide](https://kodai-utsunom
 
 **v0.1.12** · [All downloads and release notes](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [Requirements](#requirements) · [App size](#app-files-and-storage) · [Get started](#download-and-launch)
 
+The ZIP downloads are v0.1.12. The Microsoft Store update becomes available after Store review and publication.
+
 Edit TeX documents in your browser on Windows or macOS, and compile them with TeX Live on your computer. The editor and PDF preview appear in the same window. Launching the app opens a `localhost` page in your default browser. Markdown editing and preview are also supported.
 
 ![Local TeX Web Editor showing a TeX document and its PDF in dark mode](docs/screenshots/editor-tex-dark.png)
@@ -463,12 +465,12 @@ The app does not impose a compilation time limit. Use the stop button to stop a 
 
 ## App files and storage
 
-The table below records the measured **v0.1.11** files, rounded to the nearest MB (1 MB = 1,000,000 bytes). The Assets section of the [current release](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) shows each current download's size.
+The table below records the measured **v0.1.12** files, rounded to the nearest MB (1 MB = 1,000,000 bytes). The Assets section of the [current release](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) shows each current download's size.
 
 | Platform | ZIP download | App after extraction |
 | --- | ---: | ---: |
-| Windows x64 | About **8 MB** | About **18 MB** (`.exe`) |
-| macOS, Apple Silicon + Intel | About **16 MB** | About **35 MB** (`.app`) |
+| Windows x64 | About **9 MB** | About **18 MB** (`.exe`) |
+| macOS, Apple Silicon + Intel | About **16 MB** | About **36 MB** (`.app`) |
 
 The ZIP also includes the README files, screenshots, and licenses. The macOS app contains both CPU versions. The Windows ZIP and macOS download buttons above link to the current release files.
 

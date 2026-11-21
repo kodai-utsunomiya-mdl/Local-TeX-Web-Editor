@@ -10,6 +10,8 @@
 
 **v0.1.12** · [配布ファイルと更新内容](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [利用前の準備](#利用前の準備) · [アプリの容量](#アプリとデータの保存先) · [起動する](#ダウンロードして起動する)
 
+ZIP は v0.1.12 を配布する．Microsoft Store 版の更新は，Store の審査と公開の完了後に利用できる．
+
 Windows と macOS のブラウザで TeX の原稿を編集し，PC にある TeX Live でコンパイルするアプリ．編集画面と PDF を同じウィンドウで確認できる．アプリを起動すると，既定のブラウザで `localhost` の画面が開く．Markdown の編集とプレビューにも対応する．
 
 ![ダークモードで TeX の原稿と PDF を並べて表示した Local TeX Web Editor](docs/screenshots/editor-tex-dark.png)
@@ -463,12 +465,12 @@ PDF の引用リンクにカーソルを合わせるか，`Tab` でフォーカ�
 
 ## アプリとデータの保存先
 
-次の表は **v0.1.11** の配布ファイルの実測値である．1 MB = 1,000,000 bytes とし，MB 単位に丸めている．現在の配布ファイルの容量は，[Release](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) の Assets で確認できる．
+次の表は **v0.1.12** の配布ファイルの実測値である．1 MB = 1,000,000 bytes とし，MB 単位に丸めている．現在の配布ファイルの容量は，[Release](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) の Assets で確認できる．
 
 | 対応環境 | ダウンロードする ZIP | 展開後のアプリ本体 |
 | --- | ---: | ---: |
-| Windows x64 | 約 **8 MB** | 約 **18 MB** (`.exe`) |
-| macOS，Apple Silicon + Intel | 約 **16 MB** | 約 **35 MB** (`.app`) |
+| Windows x64 | 約 **9 MB** | 約 **18 MB** (`.exe`) |
+| macOS，Apple Silicon + Intel | 約 **16 MB** | 約 **36 MB** (`.app`) |
 
 ZIP には README，画像，ライセンスも含む．Mac のアプリは両方の CPU 向けの実行ファイルを収録している．冒頭の Windows ZIP と macOS のボタンから，対応する配布ファイルを取得できる．
 
