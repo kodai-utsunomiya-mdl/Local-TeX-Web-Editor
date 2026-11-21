@@ -10,6 +10,8 @@ English | [日本語](README.ja.md) · [Website and guide](https://kodai-utsunom
 
 **v0.1.12** · [All downloads and release notes](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [Requirements](#requirements) · [App size](#app-files-and-storage) · [Get started](#download-and-launch)
 
+The ZIP downloads are v0.1.12. The Microsoft Store update becomes available after Store review and publication.
+
 Edit TeX documents in your browser on Windows or macOS, and compile them with TeX Live on your computer. The editor and PDF preview appear in the same window. Launching the app opens a `localhost` page in your default browser. Markdown editing and preview are also supported.
 
 ![Local TeX Web Editor showing a TeX document and its PDF in dark mode](docs/screenshots/editor-tex-dark.png)

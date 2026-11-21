@@ -10,6 +10,8 @@
 
 **v0.1.12** · [配布ファイルと更新内容](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [利用前の準備](#利用前の準備) · [アプリの容量](#アプリとデータの保存先) · [起動する](#ダウンロードして起動する)
 
+ZIP は v0.1.12 を配布する．Microsoft Store 版の更新は，Store の審査と公開の完了後に利用できる．
+
 Windows と macOS のブラウザで TeX の原稿を編集し，PC にある TeX Live でコンパイルするアプリ．編集画面と PDF を同じウィンドウで確認できる．アプリを起動すると，既定のブラウザで `localhost` の画面が開く．Markdown の編集とプレビューにも対応する．
 
 ![ダークモードで TeX の原稿と PDF を並べて表示した Local TeX Web Editor](docs/screenshots/editor-tex-dark.png)
