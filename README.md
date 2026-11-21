@@ -420,6 +420,8 @@ These tools reuse the Markdown renderer, browser printing, and PDF.js already us
 
 Opening a `.md` or `.markdown` file starts in **Visual editing**. Edit the displayed headings, paragraphs, lists, tables, and code directly. Tick task checkboxes and select a displayed equation to edit its TeX. Changes are saved as Markdown through the same autosave, drafts, and undo history used by the source editor.
 
+![Local TeX Web Editor editing rendered Markdown directly in light mode, with headings, equations, task checkboxes and a table](docs/screenshots/editor-markdown-light.png)
+
 Use the **Visual editing / Source** selector above the document to edit the Markdown notation. Switching modes leaves the document text unchanged. When editing a block visually, other blocks continue to use their original Markdown. Each of the two editor panes remembers its chosen mode, so the same file can be displayed in both modes at once.
 
 To change the text size in Visual editing, use `Ctrl + wheel` (`Cmd + wheel` also works on Mac), a trackpad pinch, or a two-finger pinch on a touchscreen. Visual editing and source editors share the 8–40 px size shown in Settings, including when two panes are open. The app saves the chosen size for the next session.
@@ -433,8 +435,6 @@ Right-click in a TeX or Markdown manuscript to insert an image or table at the c
 **Insert math** opens a dialog in either editing mode. Choose inline or display math, enter the TeX, and check the rendered equation and the Markdown that will be inserted. Inline math uses GitHub's ``$`…`$`` format by default; `$…$` and `\(…\)` are also available. The dialog remembers the chosen form while the editor is open. GitHub documents the backtick form in [Writing mathematical expressions](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/writing-mathematical-expressions).
 
 In visual editing, type an inline equation with its closing delimiter to render it within the paragraph. A line containing `---` becomes a horizontal rule when followed by `Enter` or a space. Markdown shortcuts also work next to Japanese text. Japanese italic and strikethrough text appears in visual editing, preview, and printing, including combinations of formatting and text next to punctuation. Code blocks and inline code display their contents as code.
-
-![Local TeX Web Editor displaying Markdown source and its live preview in light mode](docs/screenshots/editor-markdown-light.png)
 
 The preview toolbar offers **Auto**, **PDF**, and **Markdown**. Choose **PDF** to read the PDF while editing Markdown. Choose **Markdown** to keep the last edited Markdown document visible when you switch to a TeX tab. The chosen preview remains visible after saving or compiling. Return to **Auto** to follow the file being edited. The project remembers this choice for the next session.
 

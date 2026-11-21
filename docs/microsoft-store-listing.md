@@ -243,7 +243,7 @@ Use the **1600 × 1000** PNG screenshots captured from the installed MSIX by `sc
 | Image | English caption | 日本語の説明 |
 | --- | --- | --- |
 | `editor-tex-dark.png` | Edit TeX source and read the compiled PDF side by side in dark mode. | ダークモードで TeX の原稿とコンパイルした PDF を並べて表示． |
-| `editor-markdown-light.png` | Preview Markdown mathematics, a task list and a table while editing in light mode. | ライトモードで Markdown を編集し，数式，チェック項目，表をプレビュー． |
+| `editor-markdown-light.png` | Edit rendered Markdown directly in light mode, with headings, equations, task checkboxes and a table. | ライトモードで Markdown の本文を直接編集する画面．見出し，数式，チェック項目，表を表示． |
 | `editor-tex-management.png` | See the selected TeX installation and search installed packages before adding or removing them. | 選択中の TeX の保存先と導入済みのパッケージを確認し，検索して追加・削除へ進める管理画面． |
 | `tex-setup-home.png` | Open TeX setup from Home. | ホームから TeX のセットアップを開く． |
 | `tex-setup-plan.png` | Review the tools and packages included in TeX setup. | 導入するプログラムとパッケージを確認する． |
