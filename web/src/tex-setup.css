@@ -1,0 +1,47 @@
+.tex-setup-dialog { width: min(760px, calc(100vw - 32px)); max-height: min(900px, calc(100dvh - 40px)); }
+.tex-setup-dialog .import-body { min-height: 0; overflow-x: hidden; }
+.tex-setup-dialog h3 { margin: 18px 0 8px; font-size: 13px; }
+.tex-setup-dialog p, .tex-setup-dialog dd { font-size: 12px; line-height: 1.65; }
+.tex-setup-dialog .dialog-description { margin-top: 0; }
+.tex-setup-environment { padding: 0 12px 10px; border: 1px solid var(--border); border-radius: 7px; }
+.tex-setup-environment h3 { margin-top: 10px; }
+.tex-setup-environment > p { margin: 5px 0; overflow-wrap: anywhere; }
+.tex-setup-programs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 14px; padding: 0; margin: 9px 0 0; list-style: none; font-size: 11px; }
+.tex-setup-programs li { display: flex; justify-content: space-between; gap: 8px; }
+.tex-setup-programs [data-available="false"] span { color: var(--muted); }
+.tex-setup-package-list { display: flex; flex-wrap: wrap; gap: 5px 12px; max-height: 110px; overflow: auto; margin: 8px 0; padding: 8px 10px; border: 1px solid var(--border); border-radius: 5px; list-style: none; font: 11px/1.5 var(--editor-font, ui-monospace, monospace); }
+.tex-setup-package-list li { overflow-wrap: anywhere; }
+.tex-setup-sources a { display: block; margin: 5px 0; color: var(--accent); font-size: 11px; overflow-wrap: anywhere; }
+.tex-setup-capacity { display: grid; gap: 8px; padding-block: 8px; margin: 8px 0; }
+.tex-setup-capacity > div { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(0, 2fr); gap: 10px; }
+.tex-setup-capacity dt { font-size: 11px; color: var(--muted); line-height: 1.6; }
+.tex-setup-capacity dd { margin: 0; }
+.tex-setup-dialog .path-field { min-width: 0; }
+.tex-setup-dialog .path-field input { width: 100%; min-width: 0; }
+.tex-setup-dialog .path-field button { flex: 0 0 auto; }
+.tex-setup-path { overflow-wrap: anywhere; font-family: var(--editor-font, ui-monospace, monospace); }
+#tex-setup-stage { font-weight: 600; }
+#tex-setup-progress { width: 100%; height: 12px; accent-color: var(--accent); }
+.tex-setup-log { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 10px; }
+.tex-setup-log summary { cursor: pointer; font-size: 12px; }
+.tex-setup-log pre { max-height: 200px; min-width: 0; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; padding: 10px; border: 1px solid var(--border); border-radius: 5px; color: var(--text); background: var(--surface); font: 11px/1.6 var(--editor-font, ui-monospace, monospace); }
+#tex-setup-recheck { margin-top: 14px; }
+.tex-setup-dialog .dialog-actions { margin-top: 16px; }
+.tex-setup-dialog .dialog-actions .button { min-height: 36px; }
+.tex-setup-home { margin-top: 22px; padding: 16px 18px; border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 7px; background: var(--surface); }
+.tex-setup-home h2 { margin: 0 0 8px; font-size: 15px; }
+.tex-setup-home p { margin: 7px 0; line-height: 1.6; overflow-wrap: anywhere; }
+.tex-setup-home .button { margin-top: 6px; }
+#tex-setup-status { flex: 0 1 auto; min-width: 0; max-width: 230px; height: 23px; overflow: hidden; text-overflow: ellipsis; border: 0; padding: 1px 4px; background: transparent; color: var(--accent); font: inherit; text-align: start; white-space: nowrap; cursor: pointer; }
+#tex-setup-status:hover { text-decoration: underline; }
+#tex-setup-status:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.tex-setup-settings-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 9px; }
+@media (max-width: 520px) {
+  .tex-setup-dialog { max-height: calc(100dvh - 20px); width: calc(100vw - 20px); padding: 18px 14px; }
+  .tex-setup-dialog .dialog-actions { gap: 7px; }
+  .tex-setup-dialog .dialog-actions .button { flex: 1 1 auto; padding: 8px 10px; }
+  .tex-setup-programs { grid-template-columns: 1fr; }
+  .tex-setup-capacity > div { grid-template-columns: 1fr; gap: 2px; }
+  .tex-setup-home { padding: 13px; }
+  #tex-setup-status { max-width: 120px; }
+}

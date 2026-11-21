@@ -1,0 +1,29 @@
+.tex-management-dialog { width: min(760px, calc(100vw - 32px)); }
+.tex-management-dialog h3 { margin: 22px 0 10px; font-size: 13px; }
+.tex-management-dialog p { font-size: 12px; line-height: 1.65; }
+.tex-management-dialog .checkbox-field { gap: 9px; font-size: 12px; align-items: start; line-height: 1.6; }
+.tex-management-dialog .checkbox-field input { flex: 0 0 auto; margin-top: 4px; }
+.tex-managed-package-list { max-height: 290px; overflow: auto; padding: 0; margin: 8px 0; list-style: none; border: 1px solid var(--border); border-radius: 5px; }
+.tex-managed-package-list:empty { display: none; }
+.tex-managed-package-list li { display: flex; align-items: start; gap: 9px; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+.tex-managed-package-list li:last-child { border-bottom: 0; }
+.tex-managed-package-list label { display: flex; align-items: start; flex: 1; gap: 9px; min-width: 0; cursor: pointer; }
+.tex-managed-package-list input { flex: 0 0 auto; width: auto; margin: 3px 0 0; }
+.tex-managed-package-list label > span { display: grid; gap: 3px; min-width: 0; overflow-wrap: anywhere; }
+.tex-managed-package-list code { font: 12px/1.5 var(--editor-font, ui-monospace, monospace); }
+.tex-managed-package-list small { font-size: 11px; line-height: 1.5; color: var(--muted); }
+.tex-package-protected { flex: 0 0 auto; color: var(--muted); font-size: 10px; }
+.tex-package-selection-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+#tex-package-addition { margin-top: 22px; padding-top: 2px; border-top: 1px solid var(--border); }
+.tex-environment-removal { margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--border); }
+.tex-environment-removal summary { font-size: 12px; cursor: pointer; }
+.tex-management-dialog .button-danger { border-color: var(--danger, #b0444d); color: var(--danger, #b0444d); }
+.tex-removal-list { max-height: 240px; overflow: auto; margin: 12px 0; padding: 10px 12px 10px 28px; border: 1px solid var(--border); border-radius: 5px; font: 12px/1.6 var(--editor-font, ui-monospace, monospace); overflow-wrap: anywhere; }
+#tex-environment-delete-path { padding: 12px; border: 1px solid var(--border); border-radius: 5px; font-weight: 600; }
+#tex-environment-delete-name { max-width: 280px; }
+@media (max-width: 520px) {
+  .tex-management-dialog { width: calc(100vw - 20px); max-height: calc(100dvh - 20px); padding: 18px 14px; }
+  .tex-management-dialog .dialog-actions .button { flex: 1 1 auto; }
+  .tex-package-selection-actions .button { flex: 1 1 auto; }
+  .tex-managed-package-list { max-height: 230px; }
+}

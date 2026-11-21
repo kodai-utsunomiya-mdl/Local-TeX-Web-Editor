@@ -1,6 +1,6 @@
 # Microsoft Store distribution
 
-Local TeX Web Editor is available for free in [Microsoft Store](https://apps.microsoft.com/detail/9P6QF32N19HG) (Store ID: `9P6QF32N19HG`). The Windows application is packaged as MSIX for Store distribution. It opens the same browser editor and runs the TeX installation already on the computer. Store installation requires Windows 10 version 2004 (build 19041) or later, or Windows 11, on an x64 PC.
+Local TeX Web Editor is available for free in [Microsoft Store](https://apps.microsoft.com/detail/9P6QF32N19HG) (Store ID: `9P6QF32N19HG`). The Windows application is packaged as MSIX for Store distribution. It opens the browser editor and uses either an existing TeX installation or TinyTeX installed from the app after the user confirms setup. Store installation requires Windows 10 version 2004 (build 19041) or later, or Windows 11, on an x64 PC.
 
 ## Product identity
 
@@ -29,10 +29,10 @@ WACK's XML report and `certification.json` record the result returned by the kit
 When all three Product identity values are configured and the installation tests pass, the workflow creates these artifacts:
 
 - `microsoft-store-submission`: the unsigned `.msix` for upload and its version, identity and SHA-256 record.
-- `microsoft-store-listing`: the app icon, two screenshots, English/Japanese listing text, privacy policy text and `store-review-sample.zip` containing the reviewer's TeX and Markdown sample files.
+- `microsoft-store-listing`: the app icon, screenshots of TeX/PDF, Markdown and TeX package management, English/Japanese listing text, privacy policy text and `store-review-sample.zip` containing the reviewer's TeX and Markdown sample files.
 - `microsoft-store-test-results`: test output, screenshots and the certification-kit result.
 
-Listing files and test results are also collected when a later check fails. The workflow copies the two installed-app screenshots after package creation, including when the final package uses the Product identity. If those captures are unavailable, the listing artifact contains the repository's screenshots; `screenshot-source.json` and the job summary identify their source. Use images from a successful installed-package run for submission.
+Listing files and test results are also collected when a later check fails. The workflow copies the installed-app screenshots after package creation, including when the final package uses the Product identity. If those captures are unavailable, the listing artifact contains the repository's screenshots; `screenshot-source.json` and the job summary identify their source. Use images from a successful installed-package run for submission. The `editor-tex-management.png` capture shows the selected installation and installed packages filtered by `math` after the real setup completes.
 
 The package submitted to Store is unsigned. Microsoft signs it for Store distribution. The signing material used for the installation test exists only on the temporary runner. [Microsoft's MSIX preparation guide](https://learn.microsoft.com/en-us/windows/apps/publish/store-readiness-checklist)
 
@@ -53,7 +53,7 @@ The output is `dist/local-tex-web-editor-<version>-windows-x64.msix`. `MakePri` 
 
 ## Version numbers
 
-The app keeps its normal three-part version. The MSIX version adds one to the first part and uses `0` for the fourth part. For example, app `0.1.5` produces package `1.1.5.0`, and app `1.0.0` produces package `2.0.0.0`.
+The app keeps its normal three-part version. The MSIX version adds one to the first part and uses `0` for the fourth part. For example, app `0.1.12` produces package `1.1.12.0`, and app `1.0.0` produces package `2.0.0.0`.
 
 Microsoft requires a nonzero first part and reserves the last part for Store use. This rule gives each subsequent app version a larger Store package version. [Package version requirements](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/package-version-numbering)
 
@@ -67,7 +67,21 @@ Windows creates the Start menu entry and manages Store updates. The Store editio
 
 On the first launch, existing ZIP-edition settings, drafts and view preferences are copied from `%APPDATA%\LocalTeXEditor` when those files are available and valid. The original data remains in place. Store updates use the same package family and user-data folder. Project documents stay in their existing folders.
 
-TeX Live is installed separately. The package uses `runFullTrust` so the editor can start `latexmk`, TeX engines, bibliography tools and SyncTeX, read and save the chosen project, and open its loopback page in the browser. It runs with the user's normal Windows permissions. The listing's reviewer notes explain these operations.
+The package uses `runFullTrust` so the editor can read and save the chosen project, run `latexmk`, TeX engines, bibliography tools and SyncTeX, open its loopback page in the browser, and carry out the TeX setup and package operations confirmed by the user. It runs with the user's normal Windows permissions. The listing's reviewer notes explain these operations.
+
+### TeX setup and management
+
+From version 0.1.12, **Home → Set up TeX…** and **Settings → Set up TeX…** offer installation inside the app. The confirmation shows the official TinyTeX v2026.11 download, destination and package selection. **Download and install** starts the operation. The app checks the downloaded archive against its expected SHA-256 before extracting it. Additional packages come from CTAN or the TeX Live archive for the installed year.
+
+The Store edition creates an installation folder under `LocalState\LocalTeXEditor\tex` by default. It sets the TeX search path for its child processes and runs with normal user permissions. Successful setup selects the environment automatically. Existing TeX installations remain selectable in Settings; failed or stopped setup leaves the previous selection available.
+
+The standard packages provide pdfLaTeX, upLaTeX, XeLaTeX, LuaLaTeX, `latexmk`, SyncTeX, Japanese classes and Harano Aji fonts, bibliography and index tools, and common mathematics and drawing packages. Allow about 250 MB of downloads, about 1 GB installed, and about 2 GB of free space during setup on Windows. These are estimates that can change as packages are updated.
+
+**Settings → Manage TeX…** lists packages in the selected installation, including TeX created by the app and existing TeX Live or TinyTeX. User-writable installations support package additions and removal after review. Removal shows the proposed changes and dependency information before execution. For a shared installation that needs administrator permission, the Store edition opens its existing official `tlshell` GUI; the GUI owns the approval and package operation. The app itself continues to run with normal user permissions.
+
+Starting removal of an entire environment inside the app has its own confirmation with the actual folder, contents, shared use and exact folder-name entry. The app checks its recorded installation files before removing app-installed TeX. Existing user-owned TinyTeX can be moved to Recycle Bin; existing TeX Live uses its verified official uninstaller when it can run with normal user permissions. For an installation requiring administrator rights, **Uninstall in Windows Settings…** opens the operating system's app settings without a folder-name entry in the app. The user selects removal in Windows; opening that screen alone does not start deletion or report the environment as removed. An official uninstaller can leave configuration files; the app checks that the tools and package database were removed and logs the remaining folder and files. Project documents in their own folders remain available.
+
+The listing opens with the TeX dependency and the choice of in-app setup or an existing installation. The privacy policy describes the user-initiated downloads and their destinations. [Microsoft Store policies](https://learn.microsoft.com/en-us/windows/apps/publish/store-policies) address consent for components acquired after installation in 10.1.5, software dependencies in 10.2.4, and removal in 10.2.7. Use the reviewer notes to demonstrate setup, package management and removal alongside compilation. Store updates continue to manage the app package.
 
 ## Submit the app
 

@@ -1,6 +1,6 @@
 # Privacy policy for Local TeX Web Editor
 
-Last updated: 20 November 2026
+Last updated: 21 November 2026
 
 [日本語](privacy.ja.md)
 
@@ -19,10 +19,13 @@ To support saving and resuming work, the app stores the following on your comput
 - Custom templates containing the project files you select, and their names and descriptions.
 - Open documents, cursor positions and preview positions.
 - Copies of compiled PDFs, SyncTeX data and information about the corresponding source files.
+- When you use TeX setup or management, installation paths and records, package information and logs; setup also stores the downloaded TeX programs and packages.
 
 These files are used to operate the editor and resume your previous session. The developer does not receive their contents through the app.
 
 Settings, drafts, edit history, custom templates and preview copies are stored in the app's user-data folder. Edit history uses its `history` subfolder, and custom templates use its `templates` subfolder. On Windows, the Microsoft Store edition uses its package's `LocalState` folder; the ZIP edition uses `%APPDATA%\LocalTeXEditor`. On Mac, the default location is `~/Library/Application Support/LocalTeXEditor`. Compilation files and logs are also written within the project's `.local-tex-editor/build` folder or the output location selected by the project's TeX configuration.
+
+TeX installed through the app uses `%LOCALAPPDATA%\LocalTeXEditor\tex` in the Windows ZIP edition, `LocalState\LocalTeXEditor\tex` in the Store package, or `~/Library/Application Support/LocalTeXEditor/tex` on Mac by default. Each installation uses its own folder. You can choose another destination in your user folder before starting setup.
 
 On its first launch, the Store edition can copy settings, drafts and view preferences from an existing ZIP installation into its own user-data folder. The original files remain in the ZIP edition's folder. Project source files remain where you placed them.
 
@@ -34,11 +37,21 @@ Launching the app starts a server on a loopback address such as `127.0.0.1` and 
 
 The editor's scripts, fonts and PDF-viewing resources are included with the app. Editing and previewing do not require loading these resources from an external service.
 
+## TeX setup and package downloads
+
+TeX setup starts after you review the download source, destination and packages and choose **Download and install**. The app downloads the official TinyTeX archive from GitHub, checks its SHA-256, and obtains additional TeX packages from a CTAN mirror or the archive repository for that TeX Live year. Adding packages later also requires your confirmation. For an existing TeX Live, MacTeX or TinyTeX installation, package additions use the repository configured in that installation's `tlmgr`. If `tlmgr` reports that the installed year differs from CTAN's current year, the app retries with the official `tlnet-final` repository for the installed year; the installation's saved repository setting stays as configured. Custom, local and multiple-repository configurations use their own settings. These operations use an internet connection when downloading from an online repository; ordinary document editing continues to use the local connection described above.
+
+Download services receive the network requests needed to serve files, including your IP address and the requested archive or package paths. The app sends no project documents, draft text, PDFs or bibliography contents to those services for setup or package management. GitHub handles its requests under its [General Privacy Statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement); package repositories and mirrors have their own operators and privacy policies. The [TinyTeX release page](https://github.com/rstudio/tinytex-releases/releases/tag/v2026.11) and [CTAN mirror list](https://ctan.org/mirrors) identify the distribution services.
+
+The package-help screen can also prepare commands to run in your terminal. Those commands connect to the selected TeX repository when you run them. Viewing installed packages and reviewing package removal use information in the local installation. If you open an official TeX management tool from the app, that tool uses its own repository and network settings.
+
+Changes to a shared TeX installation can require operating system authorization. Windows and macOS present their own approval screens; the app does not ask for or receive your administrator password. In the Store edition, operations requiring administrator rights open the existing official TeX management tool or Windows app settings.
+
 ## External links and other software
 
 When you choose an external link in a document or in the app's help, your browser opens the linked website. That website handles the resulting request under its own privacy policy. External images in Markdown are shown as links; the preview does not download them automatically. Images inside your project are read locally.
 
-TeX engines, bibliography programs and commands specified by your project run as separate programs. Their access to files and the network depends on their own configuration. The TeX package help prepares commands for you to run in a terminal. When you run an installation command, the package manager connects to its configured repository.
+TeX engines, bibliography programs and commands specified by your project run as separate programs. Their access to files and the network depends on their own configuration.
 
 If you place a project or app-data folder in a location managed by OneDrive, iCloud or another synchronization or backup service, that service can copy the files according to your settings.
 
@@ -53,6 +66,10 @@ Open **Editing tools → Document history → History settings** to change the h
 You choose which files to register as a custom template. Open **Editing tools → Manage templates → Edit the selected template** to change its name or description or delete its registration. Deleting a template leaves the original project files and projects previously created from it in their own folders.
 
 To remove the app's saved settings, drafts, history, templates and preview copies, first save the documents you want to keep and close the app, then remove its user-data folder. Browser site-data controls can remove the saved theme and any remaining browser draft backups. Project files and files in a previous ZIP installation's data folder are managed separately.
+
+**Settings → Manage TeX…** shows the selected TeX installation and its packages. This includes TeX installed by the app and existing TeX Live, MacTeX and TinyTeX installations. Package removal shows the proposed changes before you confirm. Starting removal of an entire environment inside the app requires reviewing its actual location and contents, acknowledging the effect on other applications, and entering its folder name. The confirmation explains whether the action deletes app-managed files, runs the official Windows uninstaller, or moves the selected folder to Trash or Recycle Bin. For a shared installation in the Store edition, opening Windows app settings leaves the removal decision to Windows; opening the settings screen does not start deletion or require entering the folder name in the app. TinyTeX removal also removes path registrations that point to that installation. An official uninstaller can leave settings or other files, which the app reports. Project documents in their own folders remain available.
+
+The Windows ZIP edition's default TeX folder is under `LocalAppData`, so deleting its settings in `AppData\Roaming` leaves that TeX folder on disk. On Mac and in the Store edition, the default TeX folder is inside the app-data folder and is removed if you delete that whole folder. Existing TeX installations outside the app-data folder are managed at their own locations.
 
 ## Support and the project website
 

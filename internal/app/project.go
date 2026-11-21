@@ -53,9 +53,10 @@ type projectSettings struct {
 }
 
 type configuration struct {
-	TexBin         string                     `json:"texBin"`
-	RecentProjects []string                   `json:"recentProjects"`
-	Projects       map[string]projectSettings `json:"projects"`
+	TexBin           string                     `json:"texBin"`
+	TeXInstallations []managedTeXInstallation   `json:"texInstallations,omitempty"`
+	RecentProjects   []string                   `json:"recentProjects"`
+	Projects         map[string]projectSettings `json:"projects"`
 }
 
 func (a *App) loadConfig() error {
@@ -90,6 +91,7 @@ func (a *App) saveConfig(config configuration) error {
 
 func cloneConfig(config configuration) configuration {
 	copy := config
+	copy.TeXInstallations = append([]managedTeXInstallation{}, config.TeXInstallations...)
 	copy.RecentProjects = append([]string{}, config.RecentProjects...)
 	copy.Projects = make(map[string]projectSettings, len(config.Projects))
 	for key, value := range config.Projects {
@@ -172,6 +174,9 @@ func (a *App) updateSettingsLocked(texBin, main, mode *string) error {
 	if a.isRunningLocked() {
 		return fail(http.StatusConflict, "コンパイルが終わるか，停止してから設定を変更してください．")
 	}
+	if texBin != nil && a.isTeXSetupRunningLocked() && a.texSetup.state.Operation != "install" && !samePath(strings.TrimSpace(*texBin), a.config.TexBin) {
+		return texManagementBusyError()
+	}
 	config := cloneConfig(a.config)
 	var project Project
 	if a.project != nil {
@@ -219,11 +224,18 @@ func (a *App) updateSettingsLocked(texBin, main, mode *string) error {
 	if err := a.saveConfig(config); err != nil {
 		return messages.Errorf("設定を保存できません: %w", err)
 	}
-	compilationChanged := !samePath(config.TexBin, a.config.TexBin)
+	binChanged := !samePath(config.TexBin, a.config.TexBin)
+	compilationChanged := binChanged
 	if a.project != nil {
 		compilationChanged = compilationChanged || project.Mode != a.project.Mode
 	}
 	a.config = config
+	if binChanged {
+		a.texEnvironment = nil
+		if !a.isTeXSetupRunningLocked() {
+			a.texSetup = nil
+		}
+	}
 	if a.project != nil {
 		a.project = &project
 	}

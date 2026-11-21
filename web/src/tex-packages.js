@@ -18,6 +18,7 @@ const labels = {
     invalidFilename: 'Enter only the file name, for example: siunitx.sty.',
     after: 'After installation, reopen Settings to refresh the available programs, then compile again.',
     docs: 'Installation and package guide', docsURL: 'https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor#start-with-a-smaller-tex-installation',
+    addInApp: 'Add with the app…', managedHelp: 'Review the packages and the selected TeX environment before downloading.',
   },
   ja: {
     title: 'TeX パッケージを追加', intro: '小さめの TeX の構成から始め，原稿が使うパッケージを後から追加できます．',
@@ -36,13 +37,19 @@ const labels = {
     invalidFilename: 'ファイル名だけを入力してください．例: siunitx.sty',
     after: '追加後は設定を開き直すと，利用できるプログラムを再確認します．その後にコンパイルしてください．',
     docs: 'TeX の導入とパッケージの追加手順', docsURL: 'https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/blob/main/README.ja.md#小さめの構成から始める',
+    addInApp: 'アプリで追加…', managedHelp: '追加するパッケージと，選択中の TeX の環境を確認してからダウンロードします．',
   },
 };
 
+export function parseTeXPackageNames(input) {
+  const names = [...new Set(String(input || '').trim().split(/\s+/))];
+  return !names.length || names.length > 128 || names.some(name => !/^[A-Za-z0-9][A-Za-z0-9+_.-]{0,127}$/.test(name)) ? null : names;
+}
+
 export function packageInstallCommands(info, input, { reinstall = false, administrator = info?.shell === 'posix' } = {}) {
   if (!info?.commandPrefix) return '';
-  const names = [...new Set(String(input || '').trim().split(/\s+/))];
-  if (!names.length || names.length > 64 || names.some(name => !/^[a-z0-9][a-z0-9+_.-]{0,99}$/.test(name))) return '';
+  const names = parseTeXPackageNames(input);
+  if (!names) return '';
   const prefix = `${administrator && info.shell === 'posix' ? 'sudo ' : ''}${info.commandPrefix}`;
   return `${prefix} update --self\n${prefix} install${reinstall ? ' --reinstall' : ''} ${names.join(' ')}`;
 }
@@ -64,10 +71,10 @@ function element(tag, text, className) {
   return node;
 }
 
-export function renderTeXPackagesHelp(container, info) {
+export function renderTeXPackagesHelp(container, info, { managed = false, canInstall = managed, busy = false, onInstall } = {}) {
   if (!container) return;
   const language = getLanguage();
-  const fingerprint = JSON.stringify([language, info]);
+  const fingerprint = JSON.stringify([language, info, managed, canInstall, busy, !!onInstall]);
   const previous = views.get(container);
   if (previous?.fingerprint === fingerprint) return;
   const saved = previous?.read?.() || {};
@@ -79,15 +86,8 @@ export function renderTeXPackagesHelp(container, info) {
   const guide = element('a', text.docs);
   guide.href = text.docsURL;
   guide.target = '_blank'; guide.rel = 'noreferrer';
-  if (!info?.commandPrefix) {
-    details.append(element('p', text.unavailable), guide);
-    container.replaceChildren(details);
-    views.set(container, { fingerprint, read: () => ({ open: details.open }) });
-    return;
-  }
-
   const programs = element('ul', undefined, 'tex-package-programs');
-  for (const program of info.programs || []) {
+  for (const program of info?.programs || []) {
     const item = element('li');
     item.append(element('code', program.name), element('span', program.available ? text.available : text.missing));
     item.dataset.available = String(!!program.available);
@@ -95,6 +95,12 @@ export function renderTeXPackagesHelp(container, info) {
     programs.append(item);
   }
   details.append(programs);
+  if (!info?.commandPrefix) {
+    details.append(element('p', text.unavailable), guide);
+    container.replaceChildren(details);
+    views.set(container, { fingerprint, read: () => ({ open: details.open }) });
+    return;
+  }
   const location = element('p', undefined, 'tex-package-location');
   location.append(element('span', info.year ? `${text.year} ${info.year} · ` : ''), element('code', info.manager));
   details.append(location);
@@ -116,10 +122,19 @@ export function renderTeXPackagesHelp(container, info) {
   const reinstall = element('input'); reinstall.type = 'checkbox'; reinstall.checked = saved.reinstall ?? !!defaults;
   reinstallLabel.append(reinstall, element('span', text.reinstall));
   const adminLabel = element('label', undefined, 'tex-package-check');
-  const administrator = element('input'); administrator.type = 'checkbox'; administrator.checked = saved.administrator ?? true;
+  const administrator = element('input'); administrator.type = 'checkbox'; administrator.checked = saved.administrator ?? !managed;
   adminLabel.hidden = info.shell !== 'posix';
   adminLabel.append(administrator, element('span', text.administrator));
   details.append(packagesLabel, presets, element('p', text.japaneseHelp), reinstallLabel, adminLabel);
+  let addInApp = null;
+  if (canInstall && onInstall) {
+    addInApp = element('button', text.addInApp, 'button'); addInApp.type = 'button'; addInApp.dataset.testid = 'tex-package-add';
+    addInApp.addEventListener('click', () => {
+      const names = parseTeXPackageNames(packages.value);
+      if (names && !busy) onInstall({ packages: names, reinstall: reinstall.checked });
+    });
+    details.append(element('p', text.managedHelp), addInApp);
+  }
   details.append(element('p', info.shell === 'powershell' ? text.terminalWindows : text.terminalMac));
 
   function commandBox(testid) {
@@ -158,6 +173,7 @@ export function renderTeXPackagesHelp(container, info) {
     const command = packageInstallCommands(info, packages.value, { reinstall: reinstall.checked, administrator: administrator.checked });
     installBox.output.value = command; installBox.copy.disabled = !command;
     installBox.error.textContent = command ? '' : text.invalidPackages;
+    if (addInApp) addInApp.disabled = busy || !parseTeXPackageNames(packages.value);
   }
   function updateSearch() {
     const command = packageSearchCommand(info, filename.value);

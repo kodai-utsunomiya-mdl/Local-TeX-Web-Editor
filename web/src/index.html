@@ -17,6 +17,8 @@
   <link rel="stylesheet" href="/source-search.css">
   <link rel="stylesheet" href="/markdown-preview.css">
   <link rel="stylesheet" href="/tex-packages.css">
+  <link rel="stylesheet" href="/tex-setup.css">
+  <link rel="stylesheet" href="/tex-management.css">
   <link rel="stylesheet" href="/help.css">
   <link rel="stylesheet" href="/writing-workspace.css">
   <link rel="stylesheet" href="/writing-tools.css">
@@ -78,6 +80,7 @@
         <button type="button" id="welcome-open" class="button button-primary"><span data-i18n="プロジェクトフォルダーを開く">Open project folder</span></button>
         <button type="button" id="welcome-template" class="button"><span data-i18n="テンプレートから作成">Create from a template</span></button>
         <p class="welcome-note"><span data-i18n="原稿 (.tex)，参考文献 (.bib)，画像などが入ったフォルダーを選択してください．">Choose a folder containing your source (.tex), bibliography (.bib), images, and other project files.</span></p>
+        <section id="tex-setup-home" hidden></section>
         <div id="welcome-recent" class="welcome-recent" hidden>
           <h2><span data-i18n="最近開いたプロジェクト">Recent projects</span></h2>
           <div id="welcome-recent-list"></div>
@@ -230,7 +233,7 @@
       </section>
     </main>
 
-    <footer class="status-bar"><span id="cursor-status" data-testid="cursor-status"></span><span id="document-encoding"></span><span id="save-status" class="save-status"></span><span id="autosave-status"></span><span class="toolbar-spacer"></span><div class="build-summary"><span id="build-status" data-testid="build-status" class="build-status" role="status" data-status="idle"><span data-i18n="コンパイル前">Not compiled yet</span></span><span id="build-elapsed" class="muted"></span></div><span id="draft-status" data-testid="draft-status"></span><span id="connection-status" class="connection-status" role="status"><span data-i18n="接続しています…">Connecting…</span></span><span id="app-version"></span></footer>
+    <footer class="status-bar"><span id="cursor-status" data-testid="cursor-status"></span><span id="document-encoding"></span><span id="save-status" class="save-status"></span><span id="autosave-status"></span><span class="toolbar-spacer"></span><button type="button" id="tex-setup-status" hidden></button><div class="build-summary"><span id="build-status" data-testid="build-status" class="build-status" role="status" data-status="idle"><span data-i18n="コンパイル前">Not compiled yet</span></span><span id="build-elapsed" class="muted"></span></div><span id="draft-status" data-testid="draft-status"></span><span id="connection-status" class="connection-status" role="status"><span data-i18n="接続しています…">Connecting…</span></span><span id="app-version"></span></footer>
   </div>
 
   <dialog id="project-dialog" class="dialog project-dialog" aria-labelledby="project-dialog-title">
@@ -270,6 +273,7 @@
       <div class="field-group"><label class="field-label" for="editor-font-size"><span data-i18n="エディタの文字サイズ">Editor font size</span></label><div class="font-size-field"><input id="editor-font-size" data-testid="editor-font-size" type="number" min="8" max="40" step="0.1" value="14" required><span>px</span></div><p class="field-help"><span data-i18n="8〜40 px で指定できます．既定は 14 px です．原稿上の Ctrl + ホイールやピンチ操作でも変更できます．">Choose 8–40 px. The default is 14 px. You can also use Ctrl + wheel or pinch in the editor.</span></p></div>
       <div class="field-group appearance-entry"><div><span class="field-label" data-i18n="外観">Appearance</span><p class="field-help" data-i18n="モード，配色，アクセント，原稿のフォントを選びます．">Choose the mode, color scheme, accent, and editor font.</p></div><button type="button" id="open-appearance" data-testid="open-appearance" class="button"><span data-i18n="外観を開く">Open appearance</span></button></div>
       <div class="field-group"><label class="field-label" for="tex-bin"><span data-i18n="TeX Live の bin フォルダー">TeX Live bin folder</span></label><input id="tex-bin" data-testid="tex-bin" type="text" placeholder="Leave blank to detect automatically" autocomplete="off" spellcheck="false" data-i18n-placeholder="空欄で自動検索"><p id="tex-tool-status" class="field-help"></p></div>
+      <div class="tex-setup-settings-actions"><button type="button" id="settings-tex-setup" class="button"><span data-i18n="TeX をセットアップ…">Set up TeX…</span></button><span class="field-help" data-i18n="導入する内容と保存先を確認してから開始します．">Review what will be installed and its location before starting.</span></div>
       <div id="tex-packages-help"></div>
       <div class="field-group"><span class="field-label"><span data-i18n="原稿と PDF の移動 (SyncTeX)">Source–PDF navigation (SyncTeX)</span></span><p id="synctex-tool-status" class="field-help"></p><div id="synctex-setup" class="synctex-setup" hidden><p id="synctex-setup-help" class="field-help"><span data-i18n="PowerShell で次のコマンドを実行し，設定を開き直して SyncTeX のパスを確認してください．">Run these commands in PowerShell, then reopen Settings to check the SyncTeX path.</span></p><pre id="synctex-install-commands" tabindex="0"></pre><button type="button" id="copy-synctex-setup" class="button button-small"><span data-i18n="コマンドをコピー">Copy commands</span></button></div></div>
       <div class="field-group" id="main-field"><label class="field-label" for="main-file"><span data-i18n="既定のメイン文書">Default main document</span></label><select id="main-file" data-testid="main-file"></select><p class="field-help"><span data-i18n="章や参考文献などを編集しているときに使います．文書全体を含む .tex を編集中の場合は，そのタブの文書をコンパイルします．">Used when editing chapters, bibliography files, and other supporting files. When the active .tex tab contains a complete document, that document is compiled.</span></p></div>

@@ -3,6 +3,7 @@ import { cp, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { chromium, expect } from '@playwright/test';
+import { installAndCheckTeX, removeAndCheckTeX } from './tex-setup-checks.mjs';
 
 if (process.platform !== 'win32') throw new Error('Run the MSIX browser checks on Windows.');
 const options = new Map();
@@ -52,7 +53,7 @@ async function request(endpoint, data, method = data === undefined ? 'GET' : 'PO
   return fetch(new URL(endpoint, ready.url), {
     method,
     headers: { Origin: new URL(ready.url).origin, 'X-Local-Token': ready.token, 'Accept-Language': 'en', ...(data === undefined ? {} : { 'Content-Type': 'application/json' }) },
-    body: data === undefined ? undefined : JSON.stringify(data), signal: AbortSignal.timeout(20000),
+    body: data === undefined ? undefined : JSON.stringify(data), signal: AbortSignal.timeout(endpoint.includes('/tex/setup/delete') ? 660000 : 20000),
   });
 }
 async function api(endpoint, data, method) {
@@ -81,6 +82,7 @@ async function compile() {
 
 try {
   assert.equal(ready.version, version);
+  const setup = await installAndCheckTeX({ api, request, temporary, output: path.join(output, 'tex-setup'), useDefaultParent: true });
   const initial = await api('/api/state');
   assert.equal(initial.platform, 'windows');
   assert.deepEqual(initial.packageIdentity, { fullName: identity.fullName, familyName: identity.familyName });
@@ -178,6 +180,17 @@ $\widehat w$ & Estimated coefficient vector \\
   await expect(page.locator('#pdf-state')).not.toHaveClass(/stale/);
   await expect(page.locator('#toast')).toBeHidden();
   await page.screenshot({ path: path.join(output, 'editor-tex-dark.png') });
+  await page.getByTestId('settings-button').click();
+  await page.locator('#settings-tex-setup').click();
+  const management = page.locator('#tex-management-dialog');
+  await expect(management).toBeVisible();
+  await expect(page.locator('#tex-package-list')).toContainText('amsmath', { timeout: 120000 });
+  await page.locator('#tex-package-filter').fill('math');
+  await expect(page.locator('#tex-package-list')).toContainText('amsmath');
+  await expect(management.locator('.form-error')).toBeHidden();
+  await page.screenshot({ path: path.join(output, 'editor-tex-management.png') });
+  await management.getByRole('button', { name: 'Close', exact: true }).first().click();
+  if (await page.locator('#settings-dialog').isVisible()) await page.keyboard.press('Escape');
   await page.getByTestId('pdf-next').click();
   await expect(page.getByTestId('pdf-page')).toHaveValue('2');
 
@@ -243,6 +256,7 @@ $\widehat w$ & Estimated coefficient vector \\
     throw error;
   }), names => names.some(name => name.endsWith('.json')), 'The app did not save UI preferences in package LocalState.');
   assert.deepEqual(errors, []);
+  const removed = await removeAndCheckTeX({ api, request, temporary, output: path.join(output, 'tex-setup'), directory: setup.directory });
   await page.locator('#shutdown-button').click();
   await waitFor(async () => {
     const removed = await Promise.all([readyPath, path.join(identity.configDir, 'active.json')]
@@ -255,7 +269,8 @@ $\widehat w$ & Estimated coefficient vector \\
   await writeFile(path.join(output, 'result.json'), JSON.stringify({
     version, packageVersion: identity.packageVersion, architecture: process.arch,
     packageIdentity: initial.packageIdentity,
-    checks: ['package-identity', 'package-localstate', 'store-shortcuts', 'external-source-save', 'japanese-tex', 'bibliography', 'synctex', 'synctex-ui', 'pdf', 'active-document', 'markdown', 'shutdown'],
+    checks: ['package-identity', 'package-localstate', 'store-shortcuts', 'optional-tex-setup', 'thesis-preambles', 'external-source-save', 'japanese-tex', 'bibliography', 'synctex', 'synctex-ui', 'pdf', 'active-document', 'markdown', 'shutdown'],
+    texSetup: { release: setup.release, directory: setup.directory, checks: [...setup.checks, ...removed.checks] },
   }, null, 2));
   passed = true;
   console.log('Installed MSIX: package identity, local TeX, browser editing, previews, and shutdown passed.');

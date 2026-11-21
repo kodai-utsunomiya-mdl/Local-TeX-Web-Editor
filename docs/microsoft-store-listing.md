@@ -45,13 +45,17 @@ For MSIX submissions, Microsoft provides Store signing after review. This route 
 ### Short description
 
 ```text
-Edit TeX and Markdown in your browser, compile with TeX Live on your PC, and use SyncTeX to move between source and PDF. Includes continuous PDF viewing and live Markdown preview.
+Edit TeX and Markdown in your browser. Install TinyTeX from the app or use your existing TeX, compile on your PC, and move between source and PDF with SyncTeX.
 ```
 
 ### Description
 
 ```text
-Local TeX Web Editor edits TeX and Markdown projects on your Windows PC in a browser. Compile with your own TeX Live and read the PDF beside the source. No account or subscription is needed.
+Local TeX Web Editor edits TeX and Markdown projects on your Windows PC in a browser. TeX compilation requires a TeX installation: choose Set up TeX… to install TinyTeX from the app, or select an existing TeX Live. No account or subscription is needed.
+
+Review the download source, packages and destination, then choose Download and install. Setup provides pdfLaTeX, upLaTeX, XeLaTeX, LuaLaTeX, latexmk, SyncTeX, Japanese fonts, bibliography tools and common mathematics and drawing packages. It runs in your user folder and selects TeX after setup succeeds. Setup and package downloads require internet access; allow about 250 MB of downloads and 2 GB of free space during initial setup.
+
+Manage TeX lists packages in the selected installation, including existing TeX Live and TinyTeX. Search the list, add packages after review, and check the proposed changes and dependencies before removing packages. Removing an entire environment has a separate confirmation with its actual folder, contents and exact name. An installation shared with other applications can also affect their compilation. The Store edition opens the official TeX management tool or Windows app settings when administrator permission is required. Project documents stay in their project folders.
 
 Complete TeX commands, environments, citations and labels. Tab moves between inserted fields; Ctrl + Space opens suggestions. Fold source sections and environments, and expand or collapse the outline.
 
@@ -67,7 +71,7 @@ Edit Python, JavaScript and other program files. Home checks current and recent 
 
 Preview English or Japanese immediately in Settings, adjust panes and appearance, and use autosave and local drafts. Documents, history and templates stay on your PC.
 
-Requires an x64 PC with Windows 10 build 19041 or later, or Windows 11, and current Edge or Chrome. Install TeX Live with latexmk, SyncTeX and the packages your documents need separately. Markdown works without TeX Live. Free and open source under the MIT license.
+Requires an x64 PC with Windows 10 build 19041 or later, or Windows 11, and current Edge or Chrome. Use in-app TeX setup or select TeX Live with the packages your documents need. Markdown works without TeX. Free and open source under the MIT license.
 ```
 
 ### Product features
@@ -75,7 +79,7 @@ Requires an x64 PC with Windows 10 build 19041 or later, or Windows 11, and curr
 Enter each line as one feature, without adding a bullet character to the Store field.
 
 ```text
-Compile local TeX projects with your installed TeX Live and latexmk
+Set up TinyTeX from the app or select existing TeX Live to compile local projects
 Read PDFs with continuous scrolling, search and zoom, and open or delete each TeX document's saved previews
 Move between corresponding source and PDF positions with SyncTeX
 Edit rendered Markdown, resize its text with pinch or Ctrl + wheel, or switch to source and preview
@@ -94,7 +98,7 @@ Copy project files and folders, sort by name or date, drag to arrange or move, a
 Use autosave and local drafts, and resume after the browser tab sleeps
 Preview English or Japanese, and choose colors and the editor font
 Complete TeX commands and environments, fold source, and browse the outline
-Use dark PDF colors with zoom and download buttons always visible
+Manage packages in app-installed or existing TeX, review removal, and open official tools for shared installations
 ```
 
 ### Search terms
@@ -113,19 +117,21 @@ local editor
 
 ```text
 Current Microsoft Edge or Google Chrome
-TeX Live with latexmk for TeX compilation
-SyncTeX for source and PDF navigation
-Document-specific TeX packages, fonts and bibliography tools
+TeX installed through the app, or an existing TeX Live with latexmk and SyncTeX
+Internet access for TeX setup and additional package downloads
+About 2 GB free for initial TeX setup; extra packages may need more space
 ```
 
 ### What's new
 
 ```text
-Version 0.1.11
+Version 0.1.12
 
-- Change text size while editing Markdown visually with Ctrl + wheel, a trackpad pinch, or a two-finger pinch on a touchscreen. The size is shared with Source and the second editor pane, and is remembered next time.
-- Right-click a result under Compiled PDFs and choose Delete… to review the TeX document and file count before deleting. This clears its earlier previews, SyncTeX data, compilation output and auxiliary files.
-- Your source and PDFs saved or copied as ordinary files stay in place. Compile the TeX document again to return its PDF to the list.
+- Set up TeX from Home or Settings. Review the source, destination and packages, then download and install official TinyTeX v2026.11 inside the app.
+- Start with pdfLaTeX, upLaTeX, XeLaTeX and LuaLaTeX, latexmk, SyncTeX, Japanese fonts, bibliography tools, and common mathematics, figures and theorem packages.
+- Follow progress, stop setup, or close the progress screen and continue editing. Successful setup selects the new environment; an existing TeX installation can still be selected.
+- Manage packages in app-installed or existing TeX Live and TinyTeX. Search the list, add after review, and inspect proposed changes before removing packages. Confirm the actual folder, contents and name before removing an entire environment.
+- Setup uses your user folder and normal permissions. For shared TeX requiring administrator rights, the Store edition opens the official TeX manager or Windows app settings. Manual package commands remain available. Source documents stay on your PC.
 ```
 
 ## 日本語の掲載内容
@@ -133,13 +139,17 @@ Version 0.1.11
 ### 短い説明
 
 ```text
-ブラウザで TeX と Markdown を編集し，PC の TeX Live でコンパイルできます．PDF の連続スクロール，SyncTeX による原稿との相互移動，Markdown のプレビューに対応します．
+ブラウザで TeX と Markdown を編集できます．アプリから TinyTeX を導入するか，既存の TeX を選んで PC でコンパイルし，SyncTeX で原稿と PDF を相互に移動できます．
 ```
 
 ### 説明
 
 ```text
-Local TeX Web Editor は，Windows PC にある TeX と Markdown のプロジェクトをブラウザで編集するアプリです．別途導入した TeX Live でコンパイルし，原稿と PDF を並べて表示します．
+Local TeX Web Editor は，Windows PC にある TeX と Markdown のプロジェクトをブラウザで編集するアプリです．コンパイルには TeX が必要です．「TeX をセットアップ…」から TinyTeX を導入するか，既存の TeX Live を選んで使えます．
+
+取得元，パッケージ，導入先を確認し，「ダウンロードしてインストール」を選ぶと，pdfLaTeX，upLaTeX，XeLaTeX，LuaLaTeX，latexmk，SyncTeX，日本語フォント，文献処理と数式・図の基本的なパッケージを導入します．自分のユーザーフォルダーへ導入し，成功後は新しい TeX を選択します．導入や追加パッケージの取得にはインターネット接続を使います．初期構成のダウンロードは約 250 MB，作業中の空き容量は約 2 GB が目安です．
+
+「TeX を管理」では，既存の TeX Live と TinyTeX を含め，選択中の環境のパッケージを一覧で確認できます．一覧の検索，内容を確認した上での追加，削除予定と依存関係を確認した上での削除を行えます．環境全体の削除には別の確認画面があり，実際の保存先，中身，正確なフォルダー名を確認します．他のアプリと共用する環境への変更は，そのアプリのコンパイルにも影響します．管理者権限が必要な場合，Store 版では公式の TeX 管理ツールや Windows のアプリ設定を開きます．原稿はプロジェクトのフォルダーに保存します．
 
 TeX のコマンド，環境，引用キー，相互参照の候補を表示します．環境は対応する終了コマンドまで挿入でき，Tab で次の入力箇所へ進めます．長い文献の題名や著者は候補一覧の横または下で読めます．設定で補完や候補の自動表示をオフにできます．原稿のセクションや環境，Markdown の見出しも折りたためます．アウトラインの縦線で階層を確認し，矢印で下位の見出しを開閉できます．
 
@@ -161,7 +171,7 @@ TeX のロゴからホームへ移り，現在と最近使ったプロジェク�
 
 英語・日本語は選択直後に表示を切り替えられ，配色，フォント，各欄の大きさを選べます．原稿，設定，草稿，履歴，テンプレートは PC に保存します．
 
-必要な環境は Windows 10 build 19041 以降または Windows 11 の x64 PC と，現在の Edge または Chrome です．TeX のコンパイルには latexmk，SyncTeX と原稿で使うパッケージを含む TeX Live を別途導入します．Markdown は TeX Live がなくても使えます．
+必要な環境は Windows 10 build 19041 以降または Windows 11 の x64 PC と，現在の Edge または Chrome です．アプリから TeX を導入するか，原稿で使うパッケージを含む既存の TeX Live を選びます．Markdown は TeX がなくても使えます．
 
 MIT ライセンスで公開されている無料のアプリです．アプリ用のアカウント登録やサブスクリプションは不要です．
 ```
@@ -171,7 +181,7 @@ MIT ライセンスで公開されている無料のアプリです．アプリ�
 各行を 1 件の機能として入力する．Store の入力欄には箇条書きの記号を付けない．
 
 ```text
-導入済みの TeX Live と latexmk で PC の原稿をコンパイル
+アプリから TinyTeX を導入するか，既存の TeX Live を選んで PC の原稿をコンパイル
 PDF を連続スクロールし，検索・拡大し，TeX 文書ごとの結果を一覧から開く・削除
 SyncTeX による原稿と PDF の対応位置への相互移動
 Markdown を直接編集し，ピンチや Ctrl + ホイールで文字サイズを変え，ソースにも切替
@@ -190,7 +200,7 @@ Markdown を PDF に保存し，PDF の文字を TXT として保存
 自動保存と草稿を使い，ブラウザのタブが休止した後も作業を再開
 日本語・英語を選択直後に確認し，配色と原稿のフォントを選択
 TeX のコマンドと環境を補完し，原稿を折りたたんでアウトラインを確認
-PDF を暗い配色で表示し，狭い表示欄でも +/− と保存ボタンを利用
+アプリから導入した TeX と既存の TeX のパッケージを管理し，削除の確認や共用環境の公式ツールを開く
 ```
 
 ### 検索語
@@ -209,35 +219,38 @@ PDF プレビュー
 
 ```text
 現在の Microsoft Edge または Google Chrome
-TeX のコンパイルには latexmk を含む TeX Live
-原稿と PDF の相互移動には SyncTeX
-原稿で使う TeX パッケージ，フォント，文献処理のプログラム
+アプリから導入する TeX，または latexmk と SyncTeX を含む既存の TeX Live
+TeX の導入と追加パッケージの取得にはインターネット接続
+初期導入時の空き容量は約 2 GB が目安．追加パッケージによって増加
 ```
 
 ### このバージョンの最新情報
 
 ```text
-バージョン 0.1.11
+バージョン 0.1.12
 
-・Markdown の直接編集で，Ctrl + ホイール，トラックパッドのピンチ，タッチ画面の 2 本指のピンチによる文字の拡大・縮小に対応する．ソース編集と両ペインで文字サイズを共有し，次回の起動にも使う．
-・「コンパイルした PDF」の右クリックから「削除…」を選び，TeX 文書とファイルの件数を確認して削除できる．その文書の過去分を含む PDF と SyncTeX のキャッシュ，コンパイルの出力と補助ファイルを片付ける．
-・原稿と，通常のファイルとして保存・コピーした PDF はそのまま残る．TeX 文書を再コンパイルすると，PDF が一覧へ戻る．
+・ホームと設定の「TeX をセットアップ…」から，取得元，導入先，パッケージを確認して，公式の TinyTeX v2026.11 をアプリ内でダウンロードして導入できる．
+・pdfLaTeX，upLaTeX，XeLaTeX，LuaLaTeX，latexmk，SyncTeX，日本語フォント，文献処理，数式・図・定理の基本的なパッケージを初期構成に含む．
+・進捗を確認して停止でき，画面を閉じて原稿の編集も続けられる．成功すると新しい環境を選び，既存の TeX を指定する使い方も続けられる．
+・アプリから導入した TeX と既存の TeX Live / TinyTeX のパッケージを一覧で確認・検索し，内容を確認して追加・削除できる．環境全体は，実際の保存先，中身，フォルダー名を確認して削除する．
+・通常のユーザー権限で自分のフォルダーに導入する．管理者権限が必要な共用の TeX には，Store 版から公式の管理ツールや Windows のアプリ設定を開く．手動のパッケージ用コマンドも使える．原稿は PC に保存する．
 ```
 
 ## Images and captions
 
-Use the **1600 × 1000** PNG screenshots captured from the installed MSIX by `scripts/test-msix.mjs`. They are written to `test-results/msix/` and copied into the `microsoft-store-listing` artifact after both package-build paths. Check that `screenshot-source.json` says `installed-msix` and that the installed-package tests succeeded. If a run failed before capturing both images, its listing artifact contains the repository screenshots instead. This size meets the desktop minimum of 1366 × 768. Upload the same images separately for each listing language, with the corresponding captions below.
+Use the **1600 × 1000** PNG screenshots captured from the installed MSIX by `scripts/test-msix.mjs`. They are written to `test-results/msix/` and copied into the `microsoft-store-listing` artifact after both package-build paths. Check that `screenshot-source.json` says `installed-msix` and that the installed-package tests succeeded. If a run failed before capturing all images, its listing artifact uses the available repository screenshots. This size meets the desktop minimum of 1366 × 768. Upload the same images separately for each listing language, with the corresponding captions below.
 
 | Image | English caption | 日本語の説明 |
 | --- | --- | --- |
 | `editor-tex-dark.png` | Edit TeX source and read the compiled PDF side by side in dark mode. | ダークモードで TeX の原稿とコンパイルした PDF を並べて表示． |
 | `editor-markdown-light.png` | Preview Markdown mathematics, a task list and a table while editing in light mode. | ライトモードで Markdown を編集し，数式，チェック項目，表をプレビュー． |
+| `editor-tex-management.png` | See the selected TeX installation and search installed packages before adding or removing them. | 選択中の TeX の保存先と導入済みのパッケージを確認し，検索して追加・削除へ進める管理画面． |
 
 For the Store app icon, export a **300 × 300 PNG** from [the existing app icon](../internal/branding/app-icon.svg). The package's manifest icons are also required by the package format and are prepared with the MSIX. A separate Store icon gives the listing a consistent image.
 
 Desktop listings accept up to 10 screenshots, each as PNG up to 50 MB. At least one screenshot is required. Captions can contain up to 200 characters. Use images of the submitted app's interface. [Microsoft's image specifications](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/screenshots-and-images)
 
-Trailers, promotional artwork and extra screenshots can be added later. These two screenshots show the TeX/PDF and Markdown workflows.
+The three screenshots show the TeX/PDF, Markdown and TeX management workflows. The management image is captured after the app's TeX setup succeeds, with the installed package list filtered by `math`.
 
 ## Reviewer notes
 
@@ -257,14 +270,18 @@ Sample project: https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/down
 1. Launch Local TeX Web Editor and use Open to select that folder.
 2. Open notes.md. It starts in Visual editing with the preview closed. Edit a rendered sentence and save with Ctrl+S. Switch to Source to edit the Markdown notation and use the separate preview. Show preview / Hide preview controls its visibility.
 3. Open Settings, switch Language between English and Japanese, and change the theme. These changes do not alter document contents.
-4. To test TeX compilation, install TeX Live separately with latexmk, pdflatex and synctex. A smaller TeX Live installation is sufficient for the sample. The installation guide is linked below.
-5. If the programs are not found automatically, set the TeX program folder in Settings, for example C:\texlive\2026\bin\windows. Choose pdfLaTeX as the compilation mode for the sample.
+4. To test the new setup in version 0.1.12, open Home or Settings > Set up TeX…. Review TinyTeX v2026.11, the packages, about 250 MB of downloads and the destination under the app's LocalState folder. Choose Download and install. Allow about 2 GB of free space and an internet connection. Follow the progress log; Close and continue editing allows editing while setup continues. On a disposable first attempt, Stop setup and confirm that it can be started again.
+5. After setup succeeds, the app selects the new environment. Choose pdfLaTeX as the compilation mode for the sample. An existing TeX installation can also be selected in Settings, for example C:\texlive\2026\bin\windows.
 6. Open main.tex, set the preview to Auto, and click Compile. A PDF appears on the right.
 7. Double-click a sentence in the PDF to open its source line. Ctrl-click that source line to navigate back to the PDF.
 8. Open notes.md, use Show preview if it is closed, and choose PDF in the preview toolbar. Editing and saving the Markdown keeps the PDF visible. Select Auto to return to the Markdown preview.
 9. Save the files and close the browser tab. The local app keeps running. Launch the same app again to reopen the running editor. Use Quit at the top right to stop it.
 
-For version 0.1.11, open notes.md in Visual editing and use Ctrl + wheel over its text. Also try a trackpad pinch or a two-finger pinch on a touchscreen. Check the new font size in Settings, switch to Source, and open the second editor pane to confirm that they use the same size. Reopen the app to check that the size was saved.
+In Settings > Manage TeX…, verify the actual folder and installed packages. Search for math, clear the search, and add a small extra package such as blindtext using Review packages to add… and Add these packages. Refresh the list, select that package, and open Remove selected packages…. Review the proposed removals and dependency information; try Cancel before confirming Remove the displayed packages. For an existing shared TeX installation, the Store edition offers Open the TeX management tool when tlshell is installed; this opens the official tool, which handles any administrator approval. Refresh the app's list after changes there.
+
+After the compilation checks, use the disposable app-installed environment to test Remove the entire TeX environment…. Review its actual path, file count and size. The acknowledgment and exact folder name are both required. Try Cancel first, then confirm removal; the sample project's files and Markdown editing remain available. For a shared external installation, Uninstall in Windows Settings… opens the native app settings; opening that screen alone does not mark TeX as removed. The app runs with the current user's permissions.
+
+In notes.md, also try Ctrl + wheel, a trackpad pinch or a two-finger touchscreen pinch in Visual editing. The font size is shared with Source and the other editor pane, and is saved for the next launch.
 
 After compiling main.tex, right-click its entry under Compiled PDFs and use Copy into project… to create saved-main.pdf. Open Delete… on the compiled entry, review the TeX document and file count, and try Cancel. Open the confirmation again and choose Delete. Check that main.tex and the ordinary saved-main.pdf remain in the file list. Compile main.tex again and confirm that its result returns under Compiled PDFs.
 
@@ -276,7 +293,7 @@ Leave the editor in a background browser tab, return, and continue editing. In S
 
 In notes.md, insert inline equations using each notation in the math dialog, then switch between visual and source editing. Type --- followed by Enter to add a horizontal rule, and check active toolbar buttons before typing formatted text. Check Japanese italic and strikethrough text next to punctuation. Right-click in TeX and Markdown to open insertion commands, and use Shift+right-click for the browser menu. Try sorting files by name and date, then drag entries into a manual order. Save a file and reopen the app to check the selected order. Save and apply settings should show a clearly visible notification in light and dark themes.
 
-TeX Live is an external prerequisite for TeX compilation. Markdown editing and preview work without it. The app prepares package-install commands for the user to run; it does not install TeX or packages automatically.
+TeX is required for TeX compilation; Markdown editing and preview work without it. Setup and package changes begin after the user reviews and confirms them. Setup downloads the official TinyTeX archive from GitHub, verifies its SHA-256, and obtains packages from CTAN or the matching TeX Live archive. Existing installations use their configured repositories, with a matching-year archive retry for a CTAN year mismatch. Project documents are not uploaded. Manual package commands remain available.
 
 The Store edition uses Windows to manage installation and app updates. Source files remain in the selected project folder. Settings, drafts, edit history, custom templates and PDF preview copies are stored in the app's local user data.
 
@@ -296,14 +313,18 @@ Local TeX Web Editor は，ブラウザを画面として使う Windows のデ�
 1. アプリを起動し，Open からそのフォルダーを選びます．
 2. notes.md を開きます．初期状態は「直接編集」で，プレビューは閉じています．表示された文章を編集し，Ctrl + S で保存します．「ソース」へ切り替えると Markdown の記法とプレビューを使えます．「プレビューを表示 / プレビューを閉じる」で表示を変更できます．
 3. Settings の Language で英語と日本語を切り替え，テーマも変更します．原稿の内容は変わりません．
-4. TeX のコンパイルを確認するため，latexmk，pdflatex，synctex を含む TeX Live を別途導入します．このサンプルには小さめの TeX の構成を使えます．導入手順は末尾の README にあります．
-5. 自動で見つからない場合は，Settings で C:\texlive\2026\bin\windows などの TeX のプログラムの場所を指定します．このサンプルのコンパイル方法には pdfLaTeX を選びます．
+4. v0.1.12 のセットアップを確認するため，ホームまたは「設定 → TeX をセットアップ…」を開きます．TinyTeX v2026.11，パッケージ，約 250 MB のダウンロード，アプリの LocalState 内の導入先を確認し，「ダウンロードしてインストール」を選びます．インターネット接続と約 2 GB の空き容量が必要です．進捗とログを確認し，「閉じて編集を続ける」で導入中も編集できます．試験用の最初の操作では「セットアップを停止」も試し，再度開始できることを確認します．
+5. 導入が成功すると，新しい環境が選ばれます．このサンプルのコンパイル方法には pdfLaTeX を選びます．設定で C:\texlive\2026\bin\windows などの既存の TeX を選ぶこともできます．
 6. main.tex を開き，プレビューを Auto にして Compile を押します．右側に PDF が表示されます．
 7. PDF の文章をダブルクリックして原稿の行へ移動し，その行を Ctrl + クリックして PDF へ移動します．
 8. notes.md を開き，閉じている場合は「プレビューを表示」を押します．プレビューを PDF にすると，Markdown の編集・保存中も PDF を表示します．Auto に戻すと Markdown を表示します．
 9. 原稿を保存してブラウザのタブを閉じても，アプリは動作を続けます．同じアプリを起動すると，起動中の編集画面へ戻ります．右上の終了ボタンで終了します．
 
-v0.1.11 では，notes.md を「直接編集」で開き，本文の上で Ctrl + ホイールを使います．トラックパッドのピンチや，タッチ画面の 2 本指のピンチも試してください．設定の文字サイズを確認し，「ソース」へ切り替え，二つ目のペインも開いて，同じサイズが使われることを確認します．アプリを開き直し，選んだサイズで再開することも確認できます．
+「設定 → TeX を管理…」で，実際の保存先と導入済みのパッケージを確認します．math で検索した後に検索を解除し，blindtext などの小さい追加パッケージを入力して「追加する内容を確認…」「確認したパッケージを追加」へ進みます．一覧を更新してその項目を選び，「選んだパッケージを削除…」で削除予定と依存関係を確認します．キャンセルを試してから，「表示したパッケージを削除」で実行します．既存の共用 TeX では，tlshell が導入済みなら「TeX の管理ツールを開く」へ進めます．公式の管理ツールが必要な管理者承認を扱います．そこで変更した後，アプリの一覧を更新します．
+
+コンパイルの確認が終わったら，試験用にアプリから導入した環境で「TeX の環境全体を削除…」を開きます．実際のパス，項目数，容量を確認します．チェックと正確なフォルダー名の入力が両方必要です．キャンセルを試してから削除し，サンプルの原稿と Markdown の編集が引き続き使えることを確認します．共用の外部環境では，「Windows の設定でアンインストール…」から OS のアプリ設定を開きます．この画面を開くだけで TeX が削除された扱いにはなりません．アプリは現在のユーザーの通常の権限で動作します．
+
+notes.md の「直接編集」では Ctrl + ホイール，トラックパッドのピンチ，タッチ画面の 2 本指のピンチも試してください．文字サイズはソースと別のペインで共通になり，次回の起動にも使われます．
 
 main.tex をコンパイルした後，「コンパイルした PDF」の項目を右クリックし，「プロジェクトへコピー…」から saved-main.pdf を作ります．同じコンパイル結果で「削除…」を開き，TeX 文書とファイルの件数を確認して「キャンセル」を試します．もう一度確認画面を開いて「削除」を押し，main.tex と通常のファイルの saved-main.pdf が一覧に残ることを確認します．main.tex を再コンパイルすると，その結果が「コンパイルした PDF」に戻ります．
 
@@ -315,7 +336,7 @@ main.tex で \b から \begin を選び，中括弧に i と入力して itemize
 
 notes.md の数式ダイアログでインライン数式の 3 形式を試し，直接編集とソースを切り替えます．--- の後で Enter を押して水平線を追加し，文字を入力する前に選んだ書式もボタンに表示されることを確認します．句読点に接した日本語の斜体と取り消し線を試してください．TeX と Markdown の原稿で右クリックから挿入を選び，Shift + 右クリックでブラウザのメニューを開きます．名前や日時でファイルを並べた後，ドラッグで手動の順序へ並べ替え，保存後と起動し直した後の順番を確認します．「設定を保存して反映」の後に，ライトとダークの両方で通知が読みやすいことを確認します．
 
-TeX Live はコンパイルに使う外部のソフトウェアです．Markdown の編集とプレビューは TeX Live がなくても使えます．アプリはパッケージ追加用のコマンドを用意し，ユーザーが必要に応じて実行します．TeX やパッケージの自動導入は行いません．
+TeX のコンパイルには TeX が必要で，Markdown の編集とプレビューは TeX がなくても使えます．導入とパッケージの変更は，ユーザーが内容を確認して開始します．GitHub から公式の TinyTeX を取得して SHA-256 を照合し，パッケージは CTAN または TeX Live の年度に合う過去の配布元から取得します．既存の環境には設定済みの取得先を使い，CTAN との年度の不一致が出た場合は同じ年度の配布元へ再試行します．原稿はアップロードしません．手動のパッケージ用コマンドも使えます．
 
 Store 版のインストールとアプリの更新は Windows が管理します．原稿は選んだプロジェクトフォルダーに保存し，設定・草稿・編集履歴・自分のテンプレート・PDF の表示用コピーはアプリのローカルデータへ保存します．
 
@@ -328,7 +349,7 @@ TeX の導入と使い方: https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web
 Enter this explanation in **Submission options > Restricted capabilities**. The text fits the form's 500-character limit.
 
 ```text
-Local TeX Web Editor is a packaged Win32 desktop app. It requires runFullTrust to read and write files in project folders selected by the user, run the user's installed latexmk, TeX and SyncTeX programs for compilation and navigation between source files and PDFs, and open the default browser to its local loopback interface. The app runs in the user's session with the user's permissions. TeX package installation commands are displayed for the user to run separately.
+Local TeX Web Editor uses runFullTrust to read and save selected project files, run latexmk, TeX and SyncTeX, and open its loopback editor in the browser. With user confirmation it downloads and verifies TinyTeX, installs it in the user's folder, and manages TeX packages and removal. It runs with normal user permissions. For shared TeX requiring administrator approval, it opens the existing official TeX tool or Windows app settings. Documents stay on the PC.
 ```
 
 If the submitted manifest declares additional restricted capabilities, document the concrete feature that uses each one. Microsoft's [submission-options guide](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/manage-submission-options) explains the information reviewers need.

@@ -1,0 +1,75 @@
+% The enclosing document defines theorem's chapter or section counter.
+\IfFormatAtLeastTF{2026-06-01}{%
+  \newtheorem{proposition}[theorem]{Proposition}
+  \newtheorem{lemma}[theorem]{Lemma}
+  \newtheorem{corollary}[theorem]{Corollary}
+  \theoremstyle{definition}
+  \newtheorem{definition}[theorem]{Definition}
+  \newtheorem{assumption}[theorem]{Assumption}
+  \theoremstyle{remark}
+  \newtheorem{remark}[theorem]{Remark}
+  \newtheorem{example}[theorem]{Example}
+}{%
+  \newaliascnt{proposition}{theorem}
+  \newtheorem{proposition}[proposition]{Proposition}
+  \aliascntresetthe{proposition}
+  \newaliascnt{lemma}{theorem}
+  \newtheorem{lemma}[lemma]{Lemma}
+  \aliascntresetthe{lemma}
+  \newaliascnt{corollary}{theorem}
+  \newtheorem{corollary}[corollary]{Corollary}
+  \aliascntresetthe{corollary}
+  \theoremstyle{definition}
+  \newaliascnt{definition}{theorem}
+  \newtheorem{definition}[definition]{Definition}
+  \aliascntresetthe{definition}
+  \newaliascnt{assumption}{theorem}
+  \newtheorem{assumption}[assumption]{Assumption}
+  \aliascntresetthe{assumption}
+  \theoremstyle{remark}
+  \newaliascnt{remark}{theorem}
+  \newtheorem{remark}[remark]{Remark}
+  \aliascntresetthe{remark}
+  \newaliascnt{example}{theorem}
+  \newtheorem{example}[example]{Example}
+  \aliascntresetthe{example}
+}
+\crefname{theorem}{Theorem}{Theorems}
+\Crefname{theorem}{Theorem}{Theorems}
+\crefname{proposition}{Proposition}{Propositions}
+\Crefname{proposition}{Proposition}{Propositions}
+\crefname{lemma}{Lemma}{Lemmas}
+\Crefname{lemma}{Lemma}{Lemmas}
+\crefname{corollary}{Corollary}{Corollaries}
+\Crefname{corollary}{Corollary}{Corollaries}
+\crefname{definition}{Definition}{Definitions}
+\Crefname{definition}{Definition}{Definitions}
+\crefname{assumption}{Assumption}{Assumptions}
+\Crefname{assumption}{Assumption}{Assumptions}
+\crefname{remark}{Remark}{Remarks}
+\Crefname{remark}{Remark}{Remarks}
+\crefname{example}{Example}{Examples}
+\Crefname{example}{Example}{Examples}
+\crefname{algorithm}{Algorithm}{Algorithms}
+\Crefname{algorithm}{Algorithm}{Algorithms}
+\crefname{table}{Table}{Tables}
+\Crefname{table}{Table}{Tables}
+\crefname{figure}{Figure}{Figures}
+\Crefname{figure}{Figure}{Figures}
+\crefname{section}{Section}{Sections}
+\Crefname{section}{Section}{Sections}
+\crefname{appendix}{Appendix}{Appendices}
+\Crefname{appendix}{Appendix}{Appendices}
+\crefname{equation}{Eq.}{Eqs.}
+\Crefname{equation}{Eq.}{Eqs.}
+\crefformat{equation}{#2Eq.~(#1)#3}
+\Crefformat{equation}{#2Eq.~(#1)#3}
+\makeatletter
+\renewcommand{\theHALG@line}{\thealgorithm.\arabic{ALG@line}}
+\renewcommand{\eqref}[1]{\hyperref[#1]{Eq.~\textup{\tagform@{\ref*{#1}}}}}
+\AtBeginDocument{%
+  \renewcommand\NAT@open{\textcolor{black}{(}}%
+  \renewcommand\NAT@close{\textcolor{black}{)}}%
+  \renewcommand\NAT@nmfmt[1]{\textcolor{black}{#1}}%
+}
+\makeatother
