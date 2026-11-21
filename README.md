@@ -60,6 +60,11 @@ First [download and launch the app](#download-and-launch). The first launch uses
 | Close and continue editing | 閉じて編集を続ける |
 | TeX setup is complete. | TeX のセットアップが完了しました． |
 | Create a sample… | サンプルを作成… |
+| Create from a template | テンプレートから作成 |
+| Destination folder | 保存先のフォルダー |
+| Choose a folder | フォルダーを選ぶ |
+| New project folder name | 新しいプロジェクトのフォルダー名 |
+| Create and open | 作成して開く |
 | Compile | コンパイル / コンパイルする |
 
 #### 1. Open TeX setup from Home
@@ -90,7 +95,7 @@ Under **Parent folder for installation**, use the suggested location or click **
 
 Click **Download and install** after reviewing the contents and destination. An internet connection is needed for this step. The download shows completed and total sizes with a progress bar. Extraction, package installation and checks show the current stage and an activity bar. Open **Setup log** to see the output from the running step.
 
-![TeX setup showing the current stage and download progress](docs/screenshots/tex-setup-progress.png)
+![TeX setup showing the current stage and installation progress](docs/screenshots/tex-setup-progress.png)
 
 **Close and continue editing** leaves setup running while you edit and save Markdown. Reopen its progress from the indicator at the bottom of the app or **View setup progress** on Home or in Settings. **Stop setup** stops the operation. After a failure or stop, **Review and try again…** returns to the contents and destination before another attempt.
 
@@ -102,11 +107,13 @@ Wait until the dialog says **TeX setup is complete.** and the program checks hav
 
 ![Completed TeX setup with the installed environment and the next action](docs/screenshots/tex-setup-complete.png)
 
-If you started from Home with no project open, **Create a sample…** opens the template chooser. Choose a template and a destination for the new project. If you already have a project, close the setup dialog and return to its editor. When the completion screen offers **Compile** for the same document you were preparing, that button starts its compilation.
+If you started from Home with no project open, click **Create a sample…** to open **Start from a template**. You can also open this chooser from **Home → Create from a template**. If you already have a project, click **Close** to return to its editor. When the completion screen offers **Compile** for the same document you were preparing, that button starts its compilation.
 
 #### 6. Open a document and compile
 
-For an existing document, choose **Open project folder** on Home, use **Browse…** or enter the folder path, and click **Open**. Select the `.tex` document in the file list. In **Settings**, use **Use latexmkrc settings** when the project supplies `latexmkrc` or `.latexmkrc`; otherwise choose its TeX engine and save the settings.
+For a first document, select **English article** or **Japanese document** in the template chooser. Click **Choose a folder** beside **Destination folder** and select a parent folder, such as Documents. Enter an unused name, such as `my-first-paper`, in **New project folder name**, then click **Create and open**. The app creates the project inside that parent folder and selects the compiler for its template. Select `main.tex` in the file list.
+
+For an existing document, choose **Open project folder** on Home, use **Browse…** or enter the folder path, and click **Open**. Select the main `.tex` document in the file list. Before compiling, open **Settings → Compiler**. Choose **Use latexmkrc settings** when the project supplies `latexmkrc` or `.latexmkrc`; otherwise choose the TeX engine required by the document. Click **Save and apply settings**.
 
 Click **Compile** in the top toolbar. The app saves the document and runs TeX. The resulting PDF appears beside the source. If compilation reports a missing package, follow [Manage TeX packages and installations](#manage-tex-packages-and-installations), then compile again.
 

@@ -220,6 +220,7 @@ export const english = {
   'カーソル位置を PDF で表示 ({value0}+クリックでも移動)': 'Show the cursor location in the PDF (also {value0}+click)',
   'SyncTeX を使うには，このアプリで PDF をコンパイルしてください．': 'Compile the PDF in this app to use SyncTeX.',
   'PDF を取得できませんでした．{value0}': 'Could not load the PDF. {value0}',
+  'ログをコピー': 'Copy log',
   'ログをコピーしました．': 'Log copied.',
   '別のタブでプロジェクトが切り替わりました．この画面の編集内容は残っています．作業中のフォルダーを開き直してください．': 'The project was changed in another tab. Your edits are still here. Reopen the folder you were working in.',
   '元のフォルダーへ戻る': 'Reopen the previous folder',

@@ -161,10 +161,14 @@ try {
       await expect(page.locator('#tex-setup-sample')).toBeEnabled();
       await expect(page.locator('#tex-setup-stop')).toBeHidden();
       await expect(page.locator('#tex-setup-dialog .form-error')).toBeHidden();
+      const log = page.locator('#tex-setup-progress-panel .tex-setup-log');
+      if (await log.evaluate(element => element.open)) await log.locator('summary').click();
+      await expect(page.locator('#tex-setup-log')).toBeHidden();
       await setupBody.evaluate(body => { body.scrollTop = 0; });
       await expect(page.locator('#tex-setup-stage')).toBeInViewport({ ratio: 1 });
       await expect(page.locator('#tex-setup-directory')).toBeInViewport({ ratio: 1 });
       await expect(page.locator('#tex-setup-sample')).toBeInViewport({ ratio: 1 });
+      await expect(page.locator('#tex-setup-recheck')).toBeInViewport({ ratio: 1 });
       await page.screenshot({ path: path.join(output, 'tex-setup-complete.png') });
       assert.equal(progressCaptured, true, 'Capture the real installation progress for the setup guide.');
       await page.locator('#tex-setup-close').click();
@@ -182,7 +186,7 @@ try {
   assert.equal(shortcut.status, 501, await shortcut.text());
   await api('/api/project/open', { path: project });
 
-  await page.goto(`${ready.url}#token=${encodeURIComponent(ready.token)}`);
+  await page.reload();
   const editor = page.getByTestId('editor').locator('.cm-content');
   await expect(editor).toBeVisible({ timeout: 20000 });
   await page.getByTestId('settings-button').click();

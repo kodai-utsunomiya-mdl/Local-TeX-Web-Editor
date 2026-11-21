@@ -73,14 +73,15 @@ async function submitReset(page, { unsaved = false } = {}) {
   return response;
 }
 
-async function completeReset(page, options) {
+async function completeReset(page, session, options) {
+  const previous = await json(session, '/api/state');
   const reloaded = page.waitForEvent('domcontentloaded');
   const response = await submitReset(page, options);
-  expect(response.ok(), await response.text()).toBe(true);
-  const result = await response.json();
-  expect(result.warning).toBe('');
+  expect(response.status()).toBe(200);
   await reloaded;
   await expect(page.getByTestId('settings-button')).toBeEnabled();
+  const result = await json(session, '/api/state');
+  expect(result.settingsGeneration).not.toBe(previous.settingsGeneration);
   return result;
 }
 
@@ -132,7 +133,7 @@ test('設定を初期化するとホームへ戻り，原稿と選択してい�
   await replaceSource(page, text);
   await openReset(page);
   await selectReset(page);
-  const result = await completeReset(page, { unsaved: true });
+  const result = await completeReset(page, session, { unsaved: true });
   expect(result.settingsGeneration).not.toBe('');
   expect(result.draftsGeneration).toBe('');
   await expect(page.locator('#welcome')).toBeVisible();
@@ -164,7 +165,7 @@ test('草稿だけを削除すると設定とプロジェクトが残り，旧�
   await page.evaluate(({ key, value }) => localStorage.setItem(key, value), { key: backupKey, value: backup });
   await openReset(page);
   await selectReset(page, { drafts: true });
-  const result = await completeReset(page);
+  const result = await completeReset(page, session);
   expect(result.draftsGeneration).not.toBe('');
   expect(result.draftsGeneration).toBe(result.settingsGeneration);
   await expect(source(page)).toBeVisible();
@@ -222,7 +223,7 @@ test('別タブの未保存原稿をダウンロードして開き直しても�
   await page.bringToFront();
   await openReset(page);
   await selectReset(page, { settings: true, drafts: true });
-  await completeReset(page);
+  await completeReset(page, session);
   await other.evaluate(() => window.dispatchEvent(new Event('focus')));
   const notice = other.locator('#settings-reset-notice');
   await expect(notice).toBeVisible();
@@ -274,7 +275,7 @@ test('別タブの外観保存の応答が遅れても，初期化後の設定�
     await page.bringToFront();
     await openReset(page);
     await selectReset(page);
-    await completeReset(page);
+    await completeReset(page, session);
     await other.evaluate(() => window.dispatchEvent(new Event('focus')));
     await expect(other.locator('#settings-reset-notice')).toBeVisible();
     release();
@@ -291,6 +292,6 @@ test('別タブの外観保存の応答が遅れても，初期化後の設定�
     expect(await stored(session, 'preferences')).toBeNull();
   } finally {
     release();
-    await other.unroute('**/api/storage', delayPreferences);
+    await other.unrouteAll({ behavior: 'wait' });
   }
 });

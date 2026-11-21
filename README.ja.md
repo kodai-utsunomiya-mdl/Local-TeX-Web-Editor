@@ -60,6 +60,11 @@ macOS 版の最低 OS は，アプリのビルドに使う [Go 1.25 の対応 OS
 | Close and continue editing | 閉じて編集を続ける |
 | TeX setup is complete. | TeX のセットアップが完了しました． |
 | Create a sample… | サンプルを作成… |
+| Create from a template | テンプレートから作成 |
+| Destination folder | 保存先のフォルダー |
+| Choose a folder | フォルダーを選ぶ |
+| New project folder name | 新しいプロジェクトのフォルダー名 |
+| Create and open | 作成して開く |
 | Compile | コンパイル / コンパイルする |
 
 #### 1. ホームからセットアップを開く
@@ -90,7 +95,7 @@ macOS 版の最低 OS は，アプリのビルドに使う [Go 1.25 の対応 OS
 
 内容と保存先を確認したら，**Download and install (ダウンロードしてインストール)** を押す．この段階ではインターネット接続を使う．ダウンロード中は，取得済みの量と全体の容量，進捗のバーを表示する．展開，パッケージの追加，動作の確認では，現在の段階と処理中を示すバーを表示する．**Setup log (セットアップのログ)** を開くと，処理中の出力を読める．
 
-![現在の処理とダウンロードの進捗を表示する TeX のセットアップ](docs/screenshots/tex-setup-progress.png)
+![現在の処理と導入の進捗を表示する TeX のセットアップ](docs/screenshots/tex-setup-progress.png)
 
 **Close and continue editing (閉じて編集を続ける)** を押すと，導入を続けながら Markdown を編集・保存できる．画面下部の表示，またはホームや設定の **View setup progress (セットアップの進捗を見る)** から進捗へ戻れる．**Stop setup (セットアップを停止)** で処理を止められる．失敗または停止した場合は，**Review and try again… (内容を確認して再試行…)** で内容と導入先を確認して再試行できる．
 
@@ -102,11 +107,13 @@ Windows x64 と，Apple Silicon / Intel の Mac に対応する．通常のユ�
 
 ![TeX の導入完了と保存先，次に進む操作を示す画面](docs/screenshots/tex-setup-complete.png)
 
-プロジェクトを開かずにホームから開始した場合は，**Create a sample… (サンプルを作成…)** でテンプレートの一覧を開ける．テンプレートと保存先を選んで，新しいプロジェクトを作成する．原稿を開いていた場合は，セットアップ画面を閉じて編集へ戻る．完了画面に **Compile (コンパイルする)** が表示され，準備していた原稿が引き続き選択されている場合は，そこからコンパイルを開始できる．
+プロジェクトを開かずにホームから開始した場合は，**Create a sample… (サンプルを作成…)** を押し，**Start from a template (テンプレートから始める)** を開く．ホームの **Create from a template (テンプレートから作成)** でも同じ画面を開ける．原稿を開いていた場合は，**Close (閉じる)** を押して編集へ戻る．完了画面に **Compile (コンパイルする)** が表示され，準備していた原稿が引き続き選択されている場合は，そこからコンパイルを開始できる．
 
 #### 6. 原稿を開いてコンパイルする
 
-既存の原稿を使う場合は，ホームの **Open project folder (プロジェクトフォルダーを開く)** を押し，**Browse… (参照…)** またはパスの入力でフォルダーを選んで **Open (開く)** を押す．ファイル一覧からコンパイルする `.tex` を開く．プロジェクトに `latexmkrc` または `.latexmkrc` がある場合は，設定のコンパイラーを **Use latexmkrc settings (latexmkrc の設定を使う)** にする．それ以外は，原稿に合う TeX のエンジンを選び，設定を保存する．
+最初の原稿を作る場合は，テンプレートの一覧で **Japanese document (日本語の文書)** または **English article (英語の文書)** を選ぶ．**Destination folder (保存先のフォルダー)** の横にある **Choose a folder (フォルダーを選ぶ)** を押し，「ドキュメント」などの親フォルダーを選ぶ．**New project folder name (新しいプロジェクトのフォルダー名)** に `my-first-paper` など，まだ使っていない名前を入力し，**Create and open (作成して開く)** を押す．アプリがその親フォルダー内にプロジェクトを作り，テンプレートに合うコンパイラーを選ぶ．ファイル一覧の `main.tex` を開く．
+
+既存の原稿を使う場合は，ホームの **Open project folder (プロジェクトフォルダーを開く)** を押し，**Browse… (参照…)** またはパスの入力でフォルダーを選んで **Open (開く)** を押す．ファイル一覧からメインの `.tex` を開く．コンパイル前に **Settings (設定) → Compiler (コンパイラー)** を開く．プロジェクトに `latexmkrc` または `.latexmkrc` がある場合は **Use latexmkrc settings (latexmkrc の設定を使う)**，それ以外は原稿に合う TeX のエンジンを選び，**Save and apply settings (設定を保存して反映)** を押す．
 
 上部の **Compile (コンパイル)** を押すと，原稿を保存してから TeX を実行する．完了すると，原稿の隣に PDF が表示される．パッケージがないというエラーが出た場合は，[TeX のパッケージと環境を管理する](#tex-のパッケージと環境を管理する) の手順で追加してから，もう一度コンパイルする．
 
