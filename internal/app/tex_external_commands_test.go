@@ -103,7 +103,10 @@ func TestExternalTeXInstallCheckUsesTheOriginalPackageArguments(t *testing.T) {
 		{nil, nil},
 		{[]string{"install", "amsmath", "blindtext"}, []string{"install", "--dry-run", "amsmath", "blindtext"}},
 		{[]string{"install", "--reinstall", "amsmath"}, []string{"install", "--dry-run", "--reinstall", "amsmath"}},
-		{[]string{"--repository", archive, "install", "amsmath"}, nil},
+		{[]string{"--repository", archive, "install", "amsmath"}, []string{"--repository", archive, "install", "--dry-run", "amsmath"}},
+		{[]string{"--repository=" + archive, "install", "--reinstall", "amsmath"}, []string{"--repository=" + archive, "install", "--dry-run", "--reinstall", "amsmath"}},
+		{[]string{"--repository", "install", "update", "--self"}, nil},
+		{[]string{"--", "install", "amsmath"}, nil},
 		{[]string{"remove", "--no-depends-at-all", "blindtext"}, nil},
 	} {
 		original := append([]string(nil), test.arguments...)

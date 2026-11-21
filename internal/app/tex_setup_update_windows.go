@@ -53,6 +53,25 @@ func (a *App) prepareTeXSetupSelfUpdate(run *texSetupRun, name string, arguments
 		if !info.Mode().IsRegular() {
 			return entryChangedError()
 		}
+		// Lstat on Windows defers reading the file ID until SameFile is
+		// called. Obtain the ID through a handle before the old name goes
+		// away, then close the handle so Windows permits the rename.
+		file, err := os.Open(updater)
+		if err != nil {
+			return err
+		}
+		opened, statErr := file.Stat()
+		closeErr := file.Close()
+		if statErr != nil {
+			return statErr
+		}
+		if closeErr != nil {
+			return closeErr
+		}
+		if !os.SameFile(info, opened) {
+			return entryChangedError()
+		}
+		info = opened
 		if err := removeTeXSetupUpdateFile(run.root, "updater-w32.bat"); err != nil {
 			return err
 		}

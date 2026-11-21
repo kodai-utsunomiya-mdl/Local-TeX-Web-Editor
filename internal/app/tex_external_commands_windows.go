@@ -75,6 +75,106 @@ func encodeExternalTeXPowerShell(script string) string {
 	return base64.StdEncoding.EncodeToString(data)
 }
 
+func externalTeXWindowsSelfUpdate(arguments []string) bool {
+	update, self := false, false
+	for _, argument := range arguments {
+		switch argument {
+		case "update":
+			update = true
+		case "--self", "-self":
+			self = true
+		case "--dry-run", "-dry-run", "--list", "-list":
+			return false
+		}
+	}
+	return update && self
+}
+
+// Run these checks again inside the approved process. The installation or its
+// temp directory may have changed while Windows was asking for approval.
+const externalTeXPowerShellPathChecks = `
+function Get-TeXEntry([string]$Path, [bool]$Directory, [bool]$Optional) {
+  $full=[IO.Path]::GetFullPath($Path)
+  if(-not $full.Equals($texRoot,[StringComparison]::OrdinalIgnoreCase) -and -not $full.StartsWith($texRoot+'\',[StringComparison]::OrdinalIgnoreCase)){throw 'The TeX path is outside the selected installation.'}
+  $current=$full
+  $target=$null
+  while($current){
+    $attributes=$null
+    try {$attributes=[IO.File]::GetAttributes($current)}
+    catch [IO.FileNotFoundException],[IO.DirectoryNotFoundException] {
+      if(-not $Optional -or $current.Equals($texRoot,[StringComparison]::OrdinalIgnoreCase) -or -not $current.StartsWith($texRoot+'\',[StringComparison]::OrdinalIgnoreCase)){throw}
+    }
+    if($null -ne $attributes){
+      if(($attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0){throw 'The TeX path contains a reparse point. Select the installation again.'}
+      $isDirectory=($attributes -band [IO.FileAttributes]::Directory) -ne 0
+      if($current.Equals($full,[StringComparison]::OrdinalIgnoreCase)){
+        if($isDirectory -ne $Directory){throw 'The TeX file or folder has changed.'}
+        if($Directory){$target=[IO.DirectoryInfo]::new($full)}else{$target=[IO.FileInfo]::new($full)}
+      }elseif(-not $isDirectory){throw 'A parent of the TeX path is not a directory.'}
+    }
+    $parent=[IO.Directory]::GetParent($current)
+    if($null -eq $parent){break}
+    $current=$parent.FullName
+  }
+  return $target
+}
+function Remove-TeXUpdateFile([string]$Path) {
+  $entry=Get-TeXEntry $Path $false $true
+  if($null -ne $entry){[IO.File]::Delete($entry.FullName)}
+}
+`
+
+func externalTeXPowerShellPrepareUpdate(environment TeXEnvironment) string {
+	root := environment.Directory
+	return "$texRoot=" + quoteExternalTeXPowerShell(root) + "\n" + externalTeXPowerShellPathChecks +
+		"[void](Get-TeXEntry $texRoot $true $false)\n" +
+		"[void](Get-TeXEntry " + quoteExternalTeXPowerShell(filepath.Join(root, "tlpkg", "tlperl", "bin", "perl.exe")) + " $false $false)\n" +
+		"[void](Get-TeXEntry " + quoteExternalTeXPowerShell(filepath.Join(root, "texmf-dist", "scripts", "texlive", "tlmgr.pl")) + " $false $false)\n" +
+		"$texTemp=[IO.Path]::Combine($texRoot,'temp')\n[void](Get-TeXEntry $texTemp $true $true)\n" +
+		"$texUpdater=[IO.Path]::Combine($texTemp,'updater-w32')\n$texBatch=$texUpdater+'.bat'\n$texLog=[IO.Path]::Combine($texTemp,'update-self.log')\n" +
+		"Remove-TeXUpdateFile $texUpdater\nRemove-TeXUpdateFile $texBatch\nRemove-TeXUpdateFile $texLog\n"
+}
+
+func externalTeXPowerShellFinishUpdate(commandRoot string) string {
+	return `
+if($code -eq 0){
+  $prepared=Get-TeXEntry $texUpdater $false $true
+  if($null -ne $prepared){
+    [void](Get-TeXEntry $texTemp $true $false)
+    Remove-TeXUpdateFile $texBatch
+    [IO.File]::Move($texUpdater,$texBatch)
+    [void](Get-TeXEntry $texBatch $false $false)
+    $u=New-Object System.Diagnostics.Process
+` +
+		"    $u.StartInfo.FileName=" + quoteExternalTeXPowerShell(externalTeXSystemProgram("cmd.exe")) + "\n" +
+		"    $u.StartInfo.Arguments='/d /e:on /v:off /c updater-w32.bat'\n" +
+		"    $u.StartInfo.WorkingDirectory=" + quoteExternalTeXPowerShell(filepath.Join(commandRoot, "temp")) + "\n" +
+		`    $u.StartInfo.UseShellExecute=$false
+    foreach($key in @($u.StartInfo.EnvironmentVariables.Keys)){if($key -like 'PERL*'){$u.StartInfo.EnvironmentVariables.Remove($key)}}
+    $u.StartInfo.EnvironmentVariables['PATH']=$p.StartInfo.EnvironmentVariables['PATH']
+    $u.StartInfo.EnvironmentVariables['PERL5LIB']=$p.StartInfo.EnvironmentVariables['PERL5LIB']
+    [void]$u.Start()
+    $u.WaitForExit()
+    $code=$u.ExitCode
+    $log=Get-TeXEntry $texLog $false $true
+    if($null -ne $log){
+      if($log.Length -le 2097152){[Console]::Write([IO.File]::ReadAllText($log.FullName,[Text.Encoding]::Default))}
+      else{Write-Host ('TeX update log: '+$log.FullName)}
+    }
+  }
+  if($code -eq 0){
+    Remove-TeXUpdateFile $texBatch
+    Remove-TeXUpdateFile $texLog
+    $remaining=Get-TeXEntry $texTemp $true $true
+    if($null -ne $remaining -and [IO.Directory]::GetFileSystemEntries($texTemp).Length -eq 0){
+      try {[IO.Directory]::Delete($texTemp,$false)}
+      catch [IO.IOException] {if([IO.Directory]::GetFileSystemEntries($texTemp).Length -eq 0){throw}}
+    }
+  }
+}
+`
+}
+
 func elevatedExternalTeXPowerShell(environment TeXEnvironment, executable string, arguments []string, directory string) (string, func(), error) {
 	if err := checkExternalTeXCommandPaths(environment, executable, directory); err != nil {
 		return "", nil, err
@@ -95,6 +195,20 @@ func elevatedExternalTeXPowerShell(environment TeXEnvironment, executable string
 			return "", nil, err
 		}
 	}
+	selfUpdate := externalTeXWindowsSelfUpdate(arguments)
+	commandRoot := environment.Directory
+	if selfUpdate {
+		var err error
+		commandRoot, err = texSetupCommandPath(environment.Directory)
+		if err != nil {
+			return "", nil, err
+		}
+		// The official updater writes a batch file containing its TeX root.
+		// Its short spelling also keeps the nested cmd invocation literal.
+		perlRoot = filepath.Join(commandRoot, "tlpkg", "tlperl")
+		perl = filepath.Join(perlRoot, "bin", "perl.exe")
+		script = filepath.Join(commandRoot, "texmf-dist", "scripts", "texlive", "tlmgr.pl")
+	}
 	cleanup := func() {}
 	if hasNonASCII(perl) || hasNonASCII(script) || hasNonASCII(strings.Join(arguments, "")) {
 		var err error
@@ -108,16 +222,24 @@ func elevatedExternalTeXPowerShell(environment TeXEnvironment, executable string
 	// ProcessStartInfo accepts a Windows command line verbatim. Each argument
 	// is quoted with CommandLineToArgvW rules before it becomes a PS literal.
 	command := "$ErrorActionPreference='Stop'\n" +
+		"trap {[Console]::Error.WriteLine($_.Exception.Message); if(-not [Console]::IsInputRedirected){[void](Read-Host 'Press Enter after reviewing the output')}; exit 1}\n"
+	if selfUpdate {
+		command += externalTeXPowerShellPrepareUpdate(environment)
+	}
+	command +=
 		"$p=New-Object System.Diagnostics.Process\n" +
-		"$p.StartInfo.FileName=" + quoteExternalTeXPowerShell(perl) + "\n" +
-		"$p.StartInfo.Arguments=" + quoteExternalTeXPowerShell(externalTeXWindowsArguments(toolArguments)) + "\n" +
-		"$p.StartInfo.WorkingDirectory=" + quoteExternalTeXPowerShell(directory) + "\n" +
-		"$p.StartInfo.UseShellExecute=$false\n" +
-		"foreach($key in @($p.StartInfo.EnvironmentVariables.Keys)){if($key -like 'PERL*'){$p.StartInfo.EnvironmentVariables.Remove($key)}}\n" +
-		"$p.StartInfo.EnvironmentVariables['PATH']=" + quoteExternalTeXPowerShell(searchPath) + "\n" +
-		"$p.StartInfo.EnvironmentVariables['PERL5LIB']=" + quoteExternalTeXPowerShell(filepath.Join(perlRoot, "site", "lib")+";"+filepath.Join(perlRoot, "lib")) + "\n" +
-		"[void]$p.Start()\n$p.WaitForExit()\n$code=$p.ExitCode\n" +
-		"if($code -ne 0){Write-Host ('TeX exited with code '+$code); [void](Read-Host 'Press Enter after reviewing the output')}\nexit $code\n"
+			"$p.StartInfo.FileName=" + quoteExternalTeXPowerShell(perl) + "\n" +
+			"$p.StartInfo.Arguments=" + quoteExternalTeXPowerShell(externalTeXWindowsArguments(toolArguments)) + "\n" +
+			"$p.StartInfo.WorkingDirectory=" + quoteExternalTeXPowerShell(directory) + "\n" +
+			"$p.StartInfo.UseShellExecute=$false\n" +
+			"foreach($key in @($p.StartInfo.EnvironmentVariables.Keys)){if($key -like 'PERL*'){$p.StartInfo.EnvironmentVariables.Remove($key)}}\n" +
+			"$p.StartInfo.EnvironmentVariables['PATH']=" + quoteExternalTeXPowerShell(searchPath) + "\n" +
+			"$p.StartInfo.EnvironmentVariables['PERL5LIB']=" + quoteExternalTeXPowerShell(filepath.Join(perlRoot, "site", "lib")+";"+filepath.Join(perlRoot, "lib")) + "\n" +
+			"[void]$p.Start()\n$p.WaitForExit()\n$code=$p.ExitCode\n"
+	if selfUpdate {
+		command += externalTeXPowerShellFinishUpdate(commandRoot)
+	}
+	command += "if($code -ne 0){Write-Host ('TeX exited with code '+$code); if(-not [Console]::IsInputRedirected){[void](Read-Host 'Press Enter after reviewing the output')}}\nexit $code\n"
 	return command, cleanup, nil
 }
 

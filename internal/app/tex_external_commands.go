@@ -83,14 +83,29 @@ func elevatedExternalTeXShellCommand(environment TeXEnvironment, executable stri
 		strings.Join(words, " "), nil
 }
 
-// The first install uses the selected installation's configured repository.
-// Check it before elevation so tlmgr's release error reaches the application's
-// existing archive retry. The retry already has an explicit --repository.
+// Check every install before elevation so both release errors and requests to
+// update tlmgr reach the application, including a retry from an annual archive.
 func externalTeXInstallCheckArguments(arguments []string) []string {
-	if len(arguments) == 0 || arguments[0] != "install" {
-		return nil
+	for index := 0; index < len(arguments); index++ {
+		argument := arguments[index]
+		switch argument {
+		case "--repository", "-repository", "--location", "-location", "--repo", "-repo":
+			index++
+			continue
+		case "--":
+			return nil
+		}
+		if strings.HasPrefix(argument, "-") {
+			continue
+		}
+		if argument != "install" {
+			return nil
+		}
+		result := append([]string{}, arguments[:index+1]...)
+		result = append(result, "--dry-run")
+		return append(result, arguments[index+1:]...)
 	}
-	return append([]string{"install", "--dry-run"}, arguments[1:]...)
+	return nil
 }
 
 func runExternalTeXInstallCheck(ctx context.Context, command *exec.Cmd, output io.Writer) error {

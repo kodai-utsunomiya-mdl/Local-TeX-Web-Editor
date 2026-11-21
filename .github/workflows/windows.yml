@@ -44,6 +44,14 @@ jobs:
       - name: Build the frontend
         run: npm run build
 
+      - name: Install Chromium for browser tests
+        run: npx playwright install chromium
+
+      - name: Test TeX setup and management screens before installing TeX
+        env:
+          LOCAL_TEX_EDITOR_TEST_PHASE: before-tex
+        run: npm test
+
       - name: Embed the Windows application icon
         run: npm run build:windows-resources
 
@@ -76,14 +84,6 @@ jobs:
           $env:LOCAL_TEX_EDITOR_ICON_EXE = (Resolve-Path 'bin/local-tex-web-editor.exe').Path
           go test ./cmd/local-tex-editor -run '^TestWindowsExecutableIcon$' -count=1 -v
           if ($LASTEXITCODE -ne 0) { throw 'The Windows icon check failed.' }
-
-      - name: Install Chromium for browser tests
-        run: npx playwright install chromium
-
-      - name: Test TeX setup and management screens before installing TeX
-        env:
-          LOCAL_TEX_EDITOR_TEST_PHASE: before-tex
-        run: npm test
 
       - name: Install TeX through the application and compile the research preambles
         run: node scripts/test-tex-setup.mjs

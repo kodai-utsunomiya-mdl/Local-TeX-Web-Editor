@@ -46,7 +46,7 @@ The macOS requirement follows the [operating systems supported by Go 1.25](https
 
 1. Open **Set up TeX…** from Home or Settings.
 2. Review the download source, packages, estimated size, and destination. The app uses the official [TinyTeX v2026.11](https://github.com/rstudio/tinytex-releases/releases/tag/v2026.11) archive and checks its SHA-256 before extraction.
-3. Choose **Download and install**. Progress and logs appear in the app. **Close and continue editing** lets the operation continue while you work; **Stop setup** stops it.
+3. Choose **Download and install**. While downloading TinyTeX, a progress bar shows the completed portion, alongside the downloaded and total sizes. Extraction, package installation and compilation checks show an activity bar, the current stage and the log. **Close and continue editing** lets the operation continue while you edit Markdown; use the status indicator at the bottom of the screen to reopen its progress. **Stop setup** stops the operation.
 4. After installation and the tool checks finish, the app selects the new TeX environment. Open a `.tex` file and click **Compile**.
 
 The setup supports Windows x64 and both Apple Silicon and Intel Macs. It installs in your user folder with your normal permissions. The app sets the TeX search path for its own commands. The destination can be changed before setup; the default locations are listed under [App files and storage](#app-files-and-storage). If setup fails or is stopped, the previous TeX selection remains available and you can try setup again.
