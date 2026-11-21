@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"io"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -95,6 +96,15 @@ func (a *App) executeTeXSetup(ctx context.Context, run *texSetupRun, command *ex
 }
 
 func (a *App) texSetupTool(ctx context.Context, run *texSetupRun, directory, name string, arguments ...string) error {
+	return a.texSetupToolWithOutput(ctx, run, directory, name, nil, arguments...)
+}
+
+func (a *App) texSetupToolWithOutput(ctx context.Context, run *texSetupRun, directory, name string, output io.Writer, arguments ...string) error {
+	if output == nil {
+		output = texSetupOutput{a, run}
+	} else {
+		output = io.MultiWriter(texSetupOutput{a, run}, output)
+	}
 	if run.external != nil && run.external.RequiresElevation {
 		if name != "tlmgr" {
 			return messages.Errorf("この TeX の操作にはパッケージ管理ツールを使ってください．")
@@ -109,7 +119,7 @@ func (a *App) texSetupTool(ctx context.Context, run *texSetupRun, directory, nam
 		}
 		run.state.Cancelable, run.state.Stage = false, "authorizing"
 		a.mu.Unlock()
-		return runElevatedTeXCommand(ctx, *run.external, run.external.Manager, arguments, directory, texSetupOutput{a, run})
+		return runElevatedTeXCommand(ctx, *run.external, run.external.Manager, arguments, directory, output)
 	}
 	command, cleanup, err := texSetupToolCommand(ctx, run.bin, a.options.ConfigDir, run.external == nil, name, arguments...)
 	if err != nil {
@@ -122,7 +132,17 @@ func (a *App) texSetupTool(ctx context.Context, run *texSetupRun, directory, nam
 			return err
 		}
 	}
-	return a.executeTeXSetup(ctx, run, command, directory, nil)
+	finish, err := a.prepareTeXSetupSelfUpdate(run, name, arguments)
+	if err != nil {
+		return err
+	}
+	if err := a.executeTeXSetup(ctx, run, command, directory, output); err != nil {
+		return err
+	}
+	if finish != nil {
+		return finish(ctx, output)
+	}
+	return nil
 }
 
 func (a *App) extractTeXSetup(ctx context.Context, run *texSetupRun, archive string) error {
@@ -138,65 +158,132 @@ func (a *App) extractTeXSetup(ctx context.Context, run *texSetupRun, archive str
 	return a.executeTeXSetup(ctx, run, command, run.job.commandPath, nil)
 }
 
-func (a *App) installTeXSetupPackages(ctx context.Context, run *texSetupRun) error {
-	year := texLiveYear(run.bin)
-	repository := texLiveRepository(year, time.Now().Year())
-	if repository == "" {
-		return messages.Errorf("TeX Live の年を確認できません．導入した環境の記録を確認してください．")
+func (a *App) texSetupManagerResult(ctx context.Context, run *texSetupRun, arguments ...string) (string, error) {
+	var output texManagementOutput
+	err := a.texSetupToolWithOutput(ctx, run, run.root, "tlmgr", &output, arguments...)
+	return readableLog(output.data, true), err
+}
+
+func resolvedTeXSetupRepository(fallback, output string) string {
+	for _, line := range strings.Split(output, "\n") {
+		location, ok := strings.CutPrefix(line, "location-url\t")
+		if !ok {
+			continue
+		}
+		location = strings.TrimSpace(location)
+		parsed, err := url.Parse(location)
+		if err == nil && (parsed.Scheme == "https" || parsed.Scheme == "http" || parsed.Scheme == "ftp") && parsed.Host != "" && parsed.User == nil && parsed.RawQuery == "" && parsed.Fragment == "" && !strings.ContainsAny(location, " \t\r\n") {
+			return strings.TrimSuffix(location, "/")
+		}
 	}
-	a.texSetupLog(run, "[repository] %s\n", repository)
-	if run.state.Operation == "packages" {
-		a.mu.Lock()
-		run.state.Source = repository
-		a.mu.Unlock()
-	}
-	candidates := []string{repository}
-	if year == time.Now().Year() {
-		candidates = append(candidates, "https://ftp.fau.de/ctan/systems/texlive/tlnet", "https://tug.ctan.org/systems/texlive/tlnet")
-	}
+	return fallback
+}
+
+func (a *App) updateTeXSetupRepository(ctx context.Context, run *texSetupRun, candidates []string) (string, error) {
+	// The current CTAN release often remains available after New Year's Day.
+	// Only tlmgr's release error selects an annual archive; a connection error
+	// continues to the other CTAN mirrors.
+	tried := make(map[string]bool)
 	var updateErr error
-	for _, candidate := range candidates {
+	for len(candidates) > 0 {
+		candidate := candidates[0]
+		candidates = candidates[1:]
+		if tried[candidate] {
+			continue
+		}
+		tried[candidate] = true
 		if ctx.Err() != nil {
-			return ctx.Err()
+			return "", ctx.Err()
+		}
+		a.texSetupLog(run, "[repository] %s\n", candidate)
+		if run.state.Operation == "packages" {
+			a.mu.Lock()
+			run.state.Source = candidate
+			a.mu.Unlock()
 		}
 		updateContext, cancel := context.WithTimeout(ctx, 5*time.Minute)
-		updateErr = a.texSetupTool(updateContext, run, run.root, "tlmgr", "--repository", candidate, "update", "--self")
+		output, err := a.texSetupManagerResult(updateContext, run, "--machine-readable", "--repository", candidate, "update", "--self")
+		updateErr = err
 		cancel()
 		if updateErr == nil {
-			repository = candidate
-			break
+			// mirror.ctan.org can choose a different mirror on each request.
+			// Use tlmgr's documented location-url header for the whole job.
+			return resolvedTeXSetupRepository(candidate, output), nil
+		}
+		if ctx.Err() != nil {
+			return "", ctx.Err()
 		}
 		a.texSetupLog(run, "[repository retry] %s: %v\n", candidate, updateErr)
-	}
-	if updateErr != nil {
-		return updateErr
-	}
-	if run.job != nil {
-		if err := a.texSetupTool(ctx, run, run.root, "tlmgr", "option", "repository", repository); err != nil {
-			return err
+		if archive := archivedTeXRepository(candidate, output); archive != "" && !tried[archive] {
+			candidates = append([]string{archive}, candidates...)
 		}
 	}
-	a.mu.Lock()
-	if run.state.Operation == "packages" {
-		run.state.Source = repository
+	return "", updateErr
+}
+
+func (a *App) installTeXSetupPackages(ctx context.Context, run *texSetupRun) error {
+	if texLiveYear(run.bin) == 0 {
+		return messages.Errorf("TeX Live の年を確認できません．導入した環境の記録を確認してください．")
 	}
-	a.mu.Unlock()
-	arguments := []string{"--repository", repository, "install"}
+	repository, err := a.updateTeXSetupRepository(ctx, run, []string{
+		texSetupCTANRepository,
+		"https://ftp.fau.de/ctan/systems/texlive/tlnet",
+		"https://tug.ctan.org/systems/texlive/tlnet",
+	})
+	if err != nil {
+		return err
+	}
+	setRepository := func() error {
+		if run.job != nil {
+			if err := a.texSetupTool(ctx, run, run.root, "tlmgr", "option", "repository", repository); err != nil {
+				return err
+			}
+		}
+		a.mu.Lock()
+		if run.state.Operation == "packages" {
+			run.state.Source = repository
+		}
+		a.mu.Unlock()
+		return nil
+	}
+	if err := setRepository(); err != nil {
+		return err
+	}
+	arguments := []string{"install"}
 	if run.reinstall {
 		arguments = append(arguments, "--reinstall")
 	}
 	arguments = append(arguments, run.state.Packages...)
-	if err := a.texSetupTool(ctx, run, run.root, "tlmgr", arguments...); err != nil {
+	install := func() (string, error) {
+		return a.texSetupManagerResult(ctx, run, append([]string{"--repository", repository}, arguments...)...)
+	}
+	if output, err := install(); err != nil {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
 		a.texSetupLog(run, "[retry] %v\n", err)
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(2 * time.Second):
+		retryRepository := archivedTeXRepository(repository, output)
+		if retryRepository == "" && strings.Contains(output, "tlmgr itself needs to be updated.") {
+			retryRepository = resolvedTeXSetupRepository(repository, output)
 		}
-		if err := a.texSetupTool(ctx, run, run.root, "tlmgr", arguments...); err != nil {
+		if retryRepository != "" {
+			// A mirror can publish a new release or infrastructure between
+			// update and install. Complete the matching update before retrying.
+			repository, err = a.updateTeXSetupRepository(ctx, run, []string{retryRepository})
+			if err != nil {
+				return err
+			}
+			if err := setRepository(); err != nil {
+				return err
+			}
+		} else {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(2 * time.Second):
+			}
+		}
+		if _, err := install(); err != nil {
 			return err
 		}
 	}

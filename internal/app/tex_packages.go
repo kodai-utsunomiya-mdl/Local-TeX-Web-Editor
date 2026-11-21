@@ -1,14 +1,12 @@
 package app
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
-	"time"
 )
 
 type TeXProgramStatus struct {
@@ -42,7 +40,12 @@ func texPackagesStatus(bin string) TeXPackageStatus {
 		manager := filepath.Join(bin, managerName)
 		if texProgramExists(manager) {
 			result.Manager = manager
-			result.Repository, result.CommandPrefix = texPackageCommand(manager, result.Year, time.Now().Year(), runtime.GOOS)
+			rootBin := bin
+			if resolved, err := filepath.EvalSymlinks(bin); err == nil {
+				rootBin = resolved
+			}
+			result.Repository, _ = installedTeXRepository(filepath.Dir(filepath.Dir(rootBin)))
+			result.CommandPrefix = texPackageCommand(manager, runtime.GOOS)
 		}
 	}
 	programs := []struct {
@@ -115,33 +118,18 @@ func texPackageBin(configured string) string {
 	return ""
 }
 
-func texLiveRepository(year, currentYear int) string {
-	if year == 0 || year > currentYear {
-		return ""
-	}
-	if year < currentYear {
-		return fmt.Sprintf("https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/%d/tlnet-final", year)
-	}
-	return "https://mirror.ctan.org/systems/texlive/tlnet"
-}
-
 func posixLiteral(text string) string {
 	return "'" + strings.ReplaceAll(text, "'", "'\"'\"'") + "'"
 }
 
-func texPackageCommand(manager string, year, currentYear int, platform string) (string, string) {
+func texPackageCommand(manager, platform string) string {
 	if manager == "" {
-		return "", ""
+		return ""
 	}
 	quote := posixLiteral
 	prefix := ""
 	if platform == "windows" {
 		quote, prefix = powershellLiteral, "& "
 	}
-	prefix += quote(manager)
-	repository := texLiveRepository(year, currentYear)
-	if repository != "" {
-		prefix += " --repository " + quote(repository)
-	}
-	return repository, prefix
+	return prefix + quote(manager)
 }

@@ -20,6 +20,7 @@ import (
 
 const texSetupRelease = "v2026.11"
 const texSetupTimeout = 4 * time.Hour
+const texSetupCTANRepository = "https://mirror.ctan.org/systems/texlive/tlnet"
 
 type TeXSetupState struct {
 	Supported       bool            `json:"supported"`
@@ -229,7 +230,7 @@ func (a *App) startTeXSetupLocked(input texSetupInput) error {
 		}
 		if ok {
 			reused, parent = &managed, managed.Parent
-			source = texLiveRepository(texLiveYear(managed.Bin), time.Now().Year())
+			source = texSetupCTANRepository
 		} else {
 			if input.Operation == "packages" && !input.environment.CanInstallPackages || input.Operation == "remove-packages" && !input.environment.CanRemovePackages {
 				return fail(http.StatusForbidden, "この TeX のパッケージは公式の管理画面から変更してください．")

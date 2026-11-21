@@ -90,7 +90,7 @@ export async function inspectPDF(data, name, output, { research = false } = {}) 
       const content = await page.getTextContent();
       const pageText = content.items.map(item => item.str || '').join(' ');
       text += pageText + '\n';
-      if (!illustrationPage && /TikZ/.test(pageText)) illustrationPage = number;
+      if (!illustrationPage && /TikZ/.test(pageText) && pageText.replace(/\s/g, '').includes('日本語の入力')) illustrationPage = number;
       await page.getOperatorList();
       for (const fontName of Object.keys(content.styles)) {
         if (!page.commonObjs.has(fontName)) continue;
@@ -133,7 +133,7 @@ export async function inspectPDF(data, name, output, { research = false } = {}) 
 
 export async function installAndCheckTeX({ api, request, temporary, output, useDefaultParent = false }) {
   await mkdir(output, { recursive: true });
-  const parent = path.join(temporary, 'TeX installation');
+  const parent = path.join(temporary, process.platform === 'win32' ? 'TeX-installation' : 'TeX installation');
   await mkdir(parent, { recursive: true });
   const previous = await api('/api/state');
   const unavailable = path.join(temporary, 'missing-tex');
@@ -150,7 +150,8 @@ export async function installAndCheckTeX({ api, request, temporary, output, useD
 
   const cancelled = await api('/api/tex/setup', { operation: 'install', consent: true, parent });
   await api('/api/tex/setup/stop', { id: cancelled.id });
-  assert.equal((await waitForSetup(api, cancelled.id, output, 30_000)).status, 'cancelled');
+  const cancellationResult = await waitForSetup(api, cancelled.id, output, 30_000);
+  assert.equal(cancellationResult.status, 'cancelled', setupFailure(cancellationResult));
   assert.equal((await api('/api/state')).texBin, unavailable, 'Cancellation must leave the previous TeX choice in place.');
 
   const startedAt = Date.now();

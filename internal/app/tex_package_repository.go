@@ -1,9 +1,11 @@
 package app
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"net/url"
-	"path/filepath"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -12,21 +14,39 @@ import (
 var texLiveRepositoryMismatch = regexp.MustCompile(`Local TeX Live \((20[0-9]{2})\) is older than remote repository \((20[0-9]{2})\)`)
 
 func installedTeXRepository(root string) (string, error) {
-	data, err := readCacheFile(filepath.Join(root, "tlpkg", "texlive.tlpdb"), 64<<20)
+	path, info, err := entryTreePath(root, "tlpkg/texlive.tlpdb")
 	if err != nil {
 		return "", err
 	}
+	if !info.Mode().IsRegular() || info.Size() > 64<<20 {
+		return "", entryChangedError()
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+	current, err := file.Stat()
+	if err != nil || !os.SameFile(info, current) {
+		return "", entryChangedError()
+	}
+	// Settings read this on every refresh. The installation record is near
+	// the start of the database, so stop before reading all package records.
+	scanner := bufio.NewScanner(io.LimitReader(file, 64<<20+1))
 	inInstallation := false
-	for _, line := range strings.Split(string(data), "\n") {
-		line = strings.TrimSuffix(line, "\r")
+	for scanner.Scan() {
+		line := scanner.Text()
 		if strings.HasPrefix(line, "name ") {
+			if inInstallation {
+				return "", nil
+			}
 			inInstallation = line == "name 00texlive.installation"
 		}
 		if inInstallation && strings.HasPrefix(line, "depend opt_location:") {
 			return strings.TrimSpace(strings.TrimPrefix(line, "depend opt_location:")), nil
 		}
 	}
-	return "", nil
+	return "", scanner.Err()
 }
 
 // Retry the official annual archive only after tlmgr reports a release mismatch.

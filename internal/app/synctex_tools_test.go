@@ -56,14 +56,11 @@ func TestSyncTeXRepairUsesTheInstallationYear(t *testing.T) {
 	if year := texLiveYear(bin); year != 2024 {
 		t.Fatalf("installation directory year = %d", year)
 	}
-	commands := synctexRepairCommands(bin, 2025, 2026)
-	if len(commands) != 2 || !strings.Contains(commands[0], "/2025/tlnet-final' install --reinstall synctex synctex.windows") || !strings.Contains(commands[0], "author''s TeX") {
+	commands := synctexRepairCommands(bin)
+	if len(commands) != 2 || !strings.HasSuffix(commands[0], "' install --reinstall synctex synctex.windows") || !strings.Contains(commands[0], "author''s TeX") || strings.Contains(commands[0], "--repository") {
 		t.Fatalf("PowerShell repair commands = %v", commands)
 	}
-	if current := synctexRepairCommands(bin, 2026, 2026); !strings.Contains(current[0], "mirror.ctan.org/systems/texlive/tlnet") {
-		t.Fatalf("current release command = %v", current)
-	}
-	if commands := synctexRepairCommands(bin, 0, 2026); len(commands) != 0 {
-		t.Fatal("an installation with an unknown year should not select an arbitrary repository")
+	if commands := synctexRepairCommands(""); len(commands) != 0 {
+		t.Fatal("a missing installation produced commands")
 	}
 }

@@ -2,12 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { packageInstallCommands, packageSearchCommand } from '../web/src/tex-packages.js';
 
-const windows = { shell: 'powershell', commandPrefix: "& 'C:\\texlive\\2025\\bin\\windows\\tlmgr.bat' --repository 'https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2025/tlnet-final'" };
+const windows = { shell: 'powershell', repository: 'https://tex.example/private', commandPrefix: "& 'C:\\texlive\\2025\\bin\\windows\\tlmgr.bat'" };
 const mac = { shell: 'posix', commandPrefix: "'/Library/TeX/texbin/tlmgr'" };
 
 test('package commands use the selected TeX installation and support reinstalling a missing program', () => {
   const commands = packageInstallCommands(windows, 'synctex synctex.windows synctex', { reinstall: true });
   assert.equal(commands, `${windows.commandPrefix} update --self\n${windows.commandPrefix} install --reinstall synctex synctex.windows`);
+  assert.doesNotMatch(commands, /--repository/);
   assert.equal(packageInstallCommands(mac, 'latexmk'), "sudo '/Library/TeX/texbin/tlmgr' update --self\nsudo '/Library/TeX/texbin/tlmgr' install latexmk");
   assert.equal(packageInstallCommands(mac, 'latexmk', { administrator: false }), "'/Library/TeX/texbin/tlmgr' update --self\n'/Library/TeX/texbin/tlmgr' install latexmk");
 });
