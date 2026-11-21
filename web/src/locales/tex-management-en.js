@@ -12,6 +12,7 @@ export const texManagementEnglish = {
   'アプリ用の TeX を導入…': 'Install TeX for this app…',
   'インストール済みのパッケージ': 'Installed packages',
   'パッケージを検索': 'Search packages',
+  'パッケージ一覧を更新': 'Refresh packages',
   '続きを表示': 'Show more',
   '表示中のパッケージを選択': 'Select displayed packages',
   '選択を解除': 'Clear selection',

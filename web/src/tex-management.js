@@ -58,7 +58,7 @@ export function createTeXManagement({ api, getMeta, getSetup, isBusy = () => fal
   danger.append(translated('summary', 'TeX の環境全体を削除'),
     translated('p', '選択中の TeX の環境全体を削除します．実際の保存先と内容を，次の画面で確認します．', { class: 'field-help' }), uninstallError, deleteEnvironment);
   ui.body.append(path, format, shared, elevation, external, manager, managerNote, loadingMessage, install, inventorySection, adding, danger);
-  const refresh = translated('button', '一覧を更新', { id: 'tex-package-refresh', type: 'button', class: 'button' });
+  const refresh = translated('button', 'パッケージ一覧を更新', { id: 'tex-package-refresh', type: 'button', class: 'button' });
   const close = translated('button', '閉じる', { type: 'button', class: 'button' });
   ui.footer.append(refresh, close);
 
