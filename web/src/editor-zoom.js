@@ -1,10 +1,13 @@
 const clampSize = value => Math.min(40, Math.max(8, value));
 const FONT_MEASURE = Symbol('editor-font-measure');
+const editorResizes = new WeakMap();
 
 // Keep the text under the pointer at the same screen position after the
 // editor has measured the new font. No document or selection is dispatched.
 export function prepareEditorResize(view, origin = null) {
   if (!view || !view.dom.isConnected || !view.scrollDOM.clientHeight) return () => {};
+  const request = {};
+  editorResizes.set(view, request);
   const scroll = view.scrollDOM;
   const bounds = scroll.getBoundingClientRect();
   const x = Math.min(bounds.right - 4, Math.max(bounds.left + 4, origin?.[0] ?? bounds.left + bounds.width / 2));
@@ -12,15 +15,27 @@ export function prepareEditorResize(view, origin = null) {
   const position = view.posAtCoords({ x, y }) ?? view.lineBlockAtHeight(Math.max(0, y - view.documentTop)).from;
   const before = view.coordsAtPos(position);
   const document = view.state.doc;
-  return () => view.requestMeasure({
-    key: FONT_MEASURE,
-    read: () => view.dom.isConnected && view.state.doc === document ? view.coordsAtPos(position) : null,
-    write: after => {
-      if (!before || !after || view.state.doc !== document) return;
-      scroll.scrollTop += after.top - before.top;
-      scroll.scrollLeft += after.left - before.left;
-    },
-  });
+  const current = () => view.dom.isConnected && scroll.clientHeight && view.state.doc === document && editorResizes.get(view) === request;
+  return () => {
+    if (!before || !current()) return;
+    view.requestMeasure({
+      key: FONT_MEASURE,
+      read: current,
+      write: valid => {
+        if (!valid) return;
+        // CodeMirror adjusts its scroll anchor after measure.write. Read the
+        // final coordinates once that adjustment has finished, before paint.
+        queueMicrotask(() => {
+          if (!current()) return;
+          const after = view.coordsAtPos(position);
+          if (!after || !current()) return;
+          editorResizes.delete(view);
+          scroll.scrollTop += after.top - before.top;
+          scroll.scrollLeft += after.left - before.left;
+        });
+      },
+    });
+  };
 }
 
 export function prepareRichEditorResize(view, scroll, origin = null) {

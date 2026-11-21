@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { EditorState } from '@codemirror/state';
+import { EditorView } from '@codemirror/view';
 import { history, undo, redo } from '@codemirror/commands';
 import { attachEditorZoom, attachFontZoom, prepareEditorResize, prepareRichEditorResize } from '../web/src/editor-zoom.js';
 
@@ -107,7 +108,7 @@ test('Safari の scale を使い，タッチと重なるイベントや破棄後
   assert.equal(events.send('wheel', { ctrlKey: true, deltaY: -100 }).defaultPrevented, false);
 });
 
-test('どちらのエディタでも操作位置の本文へスクロールを合わせ，差し替えた文書には適用しない', () => {
+test('どちらのエディタでも操作位置の本文へスクロールを合わせ，差し替えた文書には適用しない', async () => {
   for (const rich of [false, true]) {
     const bounds = { left: 10, right: 610, top: 20, bottom: 620, width: 600, height: 600 };
     const scroll = { clientHeight: 600, scrollTop: 120, scrollLeft: 10, getBoundingClientRect: () => bounds };
@@ -118,12 +119,65 @@ test('どちらのエディタでも操作位置の本文へスクロールを�
       coordsAtPos: position => { assert.equal(position, 25); return { top: layout.top - scroll.scrollTop, left: layout.left - scroll.scrollLeft }; },
       requestMeasure: value => { measurement = value; } };
     const prepare = () => rich ? prepareRichEditorResize(view, scroll, [150, 220]) : prepareEditorResize(view, [150, 220]);
-    const run = apply => { apply(); if (measurement) { const value = measurement.read(); measurement.write(value); measurement = null; } };
+    const run = async apply => { apply(); if (measurement) { const value = measurement.read(); measurement.write(value); measurement = null; } await Promise.resolve(); };
     const restore = prepare();
     assert.deepEqual(requested, rich ? { left: 150, top: 220 } : { x: 150, y: 220 });
-    layout.top += 145; layout.left += 15; run(restore);
+    layout.top += 145; layout.left += 15; await run(restore);
     assert.equal(scroll.scrollTop, 265); assert.equal(scroll.scrollLeft, 25);
-    const old = prepare(); view.state.doc = {}; layout.top += 100; run(old);
+    const old = prepare(); view.state.doc = {}; layout.top += 100; await run(old);
     assert.equal(scroll.scrollTop, 265);
+  }
+});
+
+test('CodeMirror 自身が行の高さを補正した後に，折り返しを含む本文の座標を合わせる', async t => {
+  const originalWindow = globalThis.Window;
+  globalThis.Window ??= class Window {};
+  t.after(() => { if (originalWindow === undefined) delete globalThis.Window; else globalThis.Window = originalWindow; });
+  const noop = () => {};
+  for (const [lineDelta, characterDelta] of [[349.65625, 349.65625], [349.65625, 393.65625], [-220.25, -264.25]]) {
+    let anchorHeight = 900, characterHeight = 960, changed = true;
+    const bounds = { left: 0, right: 500, top: 0, bottom: 600, width: 500, height: 600 };
+    const scroll = { scrollTop: 900, scrollLeft: 0, scrollHeight: 20000, clientHeight: 600, getBoundingClientRect: () => bounds };
+    // Use CodeMirror's actual measurement loop so its scroll adjustment runs
+    // after our request's write callback, as it does with the browser layout.
+    const view = {
+      state: EditorState.create({ doc: 'text' }), destroyed: false, measureScheduled: -1, measureRequests: [], updateState: 0,
+      win: { requestAnimationFrame: () => 1, cancelAnimationFrame: noop }, observer: { forceFlush: noop }, scrollDOM: scroll,
+      dom: { isConnected: true }, posAtCoords: () => 0, coordsAtPos: () => ({ top: characterHeight - scroll.scrollTop, left: 0 }),
+      inputState: { update: noop }, updatePlugins: noop, updateAttrs: noop, docView: { update: () => false }, hasFocus: true,
+      requestMeasure(request) { this.measureRequests.push(request); },
+      viewState: {
+        scrollParent: scroll, scrollOffset: 900, scrollAnchorPos: 0, scrollAnchorHeight: 900, scaleY: 1,
+        scrollTarget: null, editorHeight: 600, heightMap: { height: 20000 }, getScrollOffset: () => scroll.scrollTop,
+        scrollAnchorAt: () => ({ from: 0, top: anchorHeight }), lineBlockAt: () => ({ from: 0, top: anchorHeight }),
+        measure: () => { if (changed) { changed = false; return 2; } return 0; },
+      },
+    };
+    const state = view.state, before = view.coordsAtPos(0).top;
+    const restore = prepareEditorResize(view, [100, 60]);
+    anchorHeight += lineDelta; characterHeight += characterDelta; restore();
+    EditorView.prototype.measure.call(view);
+    await Promise.resolve();
+    assert.equal(view.coordsAtPos(0).top, before);
+    assert.equal(scroll.scrollTop, 900 + characterDelta);
+    assert.equal(view.state, state);
+  }
+});
+
+test('measure 後に文書や表示状態が変わった場合と，次のサイズ変更が始まった場合は古い補正を使わない', async () => {
+  const bounds = { left: 0, right: 500, top: 0, bottom: 600, width: 500, height: 600 };
+  for (const change of ['document', 'hidden', 'disconnected', 'resize']) {
+    let height = 960, measurement;
+    const scroll = { scrollTop: 900, scrollLeft: 0, clientHeight: 600, getBoundingClientRect: () => bounds };
+    const view = { dom: { isConnected: true }, scrollDOM: scroll, state: { doc: {} }, posAtCoords: () => 0,
+      coordsAtPos: () => ({ top: height - scroll.scrollTop, left: 0 }), requestMeasure: request => { measurement = request; } };
+    const restore = prepareEditorResize(view); height += 300; restore();
+    measurement.write(measurement.read());
+    if (change === 'document') view.state.doc = {};
+    if (change === 'hidden') scroll.clientHeight = 0;
+    if (change === 'disconnected') view.dom.isConnected = false;
+    if (change === 'resize') prepareEditorResize(view);
+    await Promise.resolve();
+    assert.equal(scroll.scrollTop, 900, change);
   }
 });
