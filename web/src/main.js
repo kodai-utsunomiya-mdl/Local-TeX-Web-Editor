@@ -628,7 +628,7 @@ function synchronizeRichSelection(name, selection) {
   if (name === state.activePane) updateCursor();
 }
 function anyEditorComposing() {
-  return visibleEditorSlots().some(([name, slot]) => editorMode(name) === 'rich' ? slot.rich?.composing : slot.view.composing);
+  return visibleEditorSlots().some(([name, slot]) => editorMode(name) === 'rich' ? slot.rich?.composing : slot.view.compositionStarted);
 }
 function ensureRichEditor(slot, name) {
   if (!slot.view || !isMarkdown(slot.path) || editorMode(name) !== 'rich') return;

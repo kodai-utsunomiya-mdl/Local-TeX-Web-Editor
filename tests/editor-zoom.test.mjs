@@ -68,6 +68,39 @@ test('IME 中の wheel とピンチではブラウザの拡大を止め，保留
   editor.stop();
 });
 
+test('CodeMirror が IME を開始した直後から，入力終了まで両方のペインの拡大を待つ', () => {
+  const source = surface(), rich = surface(); let size = 14;
+  const view = { scrollDOM: source.element, inputState: { composing: -1 }, state: EditorState.create({ doc: '日本語の本文' }) };
+  for (const property of ['composing', 'compositionStarted']) {
+    Object.defineProperty(view, property, Object.getOwnPropertyDescriptor(EditorView.prototype, property));
+  }
+  const state = view.state, calls = [];
+  const options = { getSize: () => size, onSize: value => { size = value; calls.push(value); } };
+  const stopSource = attachEditorZoom(view, options);
+  const stopRich = attachFontZoom(rich.element, { ...options, isComposing: () => view.compositionStarted });
+  // CodeMirror uses 0 after compositionstart and a positive value once the
+  // composition has changed the document. Its composing getter covers only
+  // the latter; compositionStarted covers the full input session.
+  for (const phase of [0, 1]) {
+    view.inputState.composing = phase;
+    assert.equal(view.composing, phase > 0); assert.equal(view.compositionStarted, true);
+    for (const events of [source, rich]) {
+      assert.equal(events.send('wheel', { ctrlKey: true, deltaY: -100, deltaMode: 0 }).defaultPrevented, true);
+      events.flush();
+    }
+    assert.equal(size, 14); assert.equal(calls.length, 0);
+  }
+  view.inputState.composing = -1;
+  assert.equal(view.compositionStarted, false);
+  for (const events of [source, rich]) {
+    const before = size;
+    events.send('wheel', { ctrlKey: true, deltaY: -10, deltaMode: 0 }); events.flush();
+    assert.ok(size > before);
+  }
+  assert.equal(calls.length, 2); assert.equal(view.state, state);
+  stopSource(); stopRich();
+});
+
 test('ソースのピンチで最初の選択範囲へ戻し，本文と Undo と Redo をそのまま使う', () => {
   const events = surface(); let size = 14;
   const view = { scrollDOM: events.element, composing: false,

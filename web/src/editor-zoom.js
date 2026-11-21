@@ -55,7 +55,7 @@ export function prepareRichEditorResize(view, scroll, origin = null) {
   };
 }
 
-export function attachEditorZoom(view, { getSize, onSize, isActive = () => true, isComposing = () => view.composing }) {
+export function attachEditorZoom(view, { getSize, onSize, isActive = () => true, isComposing = () => view.compositionStarted }) {
   return attachFontZoom(view.scrollDOM, {
     getSize, onSize, isActive,
     isComposing,

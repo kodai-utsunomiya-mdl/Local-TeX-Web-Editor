@@ -25,6 +25,13 @@ async function wheel(page, point, deltaY) {
   await page.mouse.move(point.x, point.y);
   await page.keyboard.down(modifier); await page.mouse.wheel(0, deltaY); await page.keyboard.up(modifier);
 }
+async function sourceComposition(source, type) {
+  await source.evaluate((element, type) => {
+    // CodeMirror receives composition events on EditContext when enabled,
+    // and on the content element in the usual desktop input path.
+    (element.editContext || element).dispatchEvent(new CompositionEvent(type, { bubbles: true, data: '' }));
+  }, type);
+}
 
 test('直接編集の文字サイズを保存し，選択と Undo を続けてソース編集にも同じ設定を使う', async ({ page, session }) => {
   const file = await openNotes(page, session);
@@ -120,12 +127,17 @@ test('別のペインで拡大してもプレビューとフォーカスを変�
     return 10000;
   })))).toBeLessThan(3);
 
-  await source.dispatchEvent('compositionstart', { data: '' });
-  await rich(page, 'secondary').evaluate((element, point) => element.dispatchEvent(new WheelEvent('wheel', {
-    bubbles: true, cancelable: true, ctrlKey: true, deltaY: -100, clientX: point.x, clientY: point.y,
-  })), point);
+  await sourceComposition(source, 'compositionstart');
+  for (const editor of [source, rich(page, 'secondary')]) {
+    await editor.evaluate((element, point) => element.dispatchEvent(new WheelEvent('wheel', {
+      bubbles: true, cancelable: true, ctrlKey: true, deltaY: -100, clientX: point.x, clientY: point.y,
+    })), point);
+  }
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   expect(await fontSize(rich(page, 'secondary'))).toBe(enlarged);
-  await source.dispatchEvent('compositionend', { data: '' });
+  expect(await fontSize(page.getByTestId('editor').locator('.cm-scroller'))).toBe(enlarged);
+  await sourceComposition(source, 'compositionend');
+  await wheel(page, point, -10);
+  await expect.poll(() => fontSize(rich(page, 'secondary'))).toBeGreaterThan(enlarged);
   expect(await readFile(file, 'utf8')).toBe(text);
 });
