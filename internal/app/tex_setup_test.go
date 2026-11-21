@@ -179,7 +179,7 @@ func TestTeXSetupCreatesTheDefaultParentShownInTheReview(t *testing.T) {
 			startTeXSetupForTest(t, a, input)
 			state := waitTeXSetupForTest(t, a, "succeeded")
 			info, err := os.Stat(plan.Parent)
-			if err != nil || !info.IsDir() || !samePath(state.Parent, plan.Parent) || !state.Managed || requests.Load() != 1 {
+			if err != nil || !info.IsDir() || !sameTeXSetupLocation(state.Parent, plan.Parent) || !state.Managed || requests.Load() != 1 {
 				t.Fatalf("setup did not create and use the reviewed destination: state=%+v error=%v requests=%d", state, err, requests.Load())
 			}
 		})
