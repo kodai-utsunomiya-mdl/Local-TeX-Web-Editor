@@ -21,15 +21,19 @@ export function createTeXManagement({ api, getMeta, getSetup, isBusy = () => fal
   onInstall, onAdd, onRemove, onUninstall, onProgress, onEnvironment = () => {}, onClose = () => {} }) {
   const ui = createImportDialog('tex-management-dialog', 'TeX を管理');
   ui.dialog.classList.add('tex-management-dialog');
+  const environmentDetails = element('div', { class: 'tex-management-environment' });
   const path = element('p', { id: 'tex-management-directory', class: 'tex-setup-path' });
   const format = element('p', { id: 'tex-management-format', class: 'field-help' });
   const shared = translated('p', 'この TeX を使う他のアプリやユーザーにも変更が反映されます．', { class: 'field-help', hidden: '' });
   const elevation = translated('p', '変更を始めるときに，OS が管理者の承認を求めます．', { class: 'field-help', hidden: '' });
-  const external = translated('p', 'この画面で利用できない操作は，TeX の管理ツールや設定にある手動コマンドを使ってください．', { class: 'field-help' });
+  const external = translated('p', 'この画面で利用できない操作は，TeX の配布元の管理ツールで行えます．アプリ用の TeX を新しく導入することもできます．', { id: 'tex-management-external-note', class: 'field-help' });
   const manager = translated('button', 'TeX の管理ツールを開く', { id: 'tex-management-open-manager', type: 'button', class: 'button', hidden: '' });
   const managerNote = element('p', { id: 'tex-management-manager-note', class: 'field-help', role: 'status', hidden: '' });
   const loadingMessage = translated('p', 'TeX の環境を確認しています…', { class: 'field-help', role: 'status', hidden: '' });
   const install = translated('button', 'アプリ用の TeX を導入…', { id: 'tex-management-install', type: 'button', class: 'button' });
+  const environmentActions = element('div', { class: 'tex-management-actions' });
+  environmentActions.append(manager, install);
+  environmentDetails.append(path, format, shared, elevation, external, environmentActions, managerNote, loadingMessage);
   const inventorySection = element('section', { id: 'tex-package-inventory' });
   const heading = translated('h3', 'インストール済みのパッケージ');
   const search = labelledInput('tex-package-filter', 'パッケージを検索', 'input', { type: 'search', autocomplete: 'off', spellcheck: 'false' });
@@ -51,13 +55,17 @@ export function createTeXManagement({ api, getMeta, getSetup, isBusy = () => fal
   const reinstall = element('input', { type: 'checkbox', id: 'tex-managed-package-reinstall' });
   reinstallLabel.append(reinstall, translated('span', 'ファイルが欠けている場合は，同じパッケージを再取得する'));
   const add = translated('button', '追加する内容を確認…', { id: 'tex-managed-package-add', type: 'button', class: 'button' });
-  adding.append(translated('h3', 'パッケージを追加'), names.group, reinstallLabel, addError, add);
+  const addActions = element('div', { class: 'tex-management-actions' });
+  addActions.append(add);
+  adding.append(translated('h3', 'パッケージを追加'), names.group, reinstallLabel, addError, addActions);
   const danger = element('details', { class: 'tex-environment-removal', id: 'tex-environment-removal' });
   const deleteEnvironment = translated('button', 'TeX の環境全体を削除…', { id: 'tex-environment-delete', type: 'button', class: 'button button-danger' });
   const uninstallError = element('p', { id: 'tex-management-uninstall-error', class: 'field-help', hidden: '' });
+  const deleteActions = element('div', { class: 'tex-management-actions' });
+  deleteActions.append(deleteEnvironment);
   danger.append(translated('summary', 'TeX の環境全体を削除'),
-    translated('p', '選択中の TeX の環境全体を削除します．実際の保存先と内容を，次の画面で確認します．', { class: 'field-help' }), uninstallError, deleteEnvironment);
-  ui.body.append(path, format, shared, elevation, external, manager, managerNote, loadingMessage, install, inventorySection, adding, danger);
+    translated('p', '選択中の TeX の環境全体を削除します．実際の保存先と内容を，次の画面で確認します．', { class: 'field-help' }), uninstallError, deleteActions);
+  ui.body.append(environmentDetails, inventorySection, adding, danger);
   const refresh = translated('button', 'パッケージ一覧を更新', { id: 'tex-package-refresh', type: 'button', class: 'button' });
   const close = translated('button', '閉じる', { type: 'button', class: 'button' });
   ui.footer.append(refresh, close);
@@ -301,12 +309,25 @@ export function createTeXManagement({ api, getMeta, getSetup, isBusy = () => fal
     finally { mutating = false; update(); if (action.dialog.open) (action === removal ? removeCancel : deleteCancel).focus(); }
   }
 
-  async function open() {
+  async function open({ openManager = false, packages = null, reinstall = false } = {}) {
     if (destroyed || isBlocked()) return;
-    returnFocus = document.activeElement; ++generation;
+    returnFocus = document.activeElement; const opened = ++generation;
     selected.clear(); limit = 100; search.input.value = ''; inventory = null;
     ui.open(); renderList(); close.focus();
     await refreshList();
+    if (opened !== generation || !ui.dialog.open || busy()) return;
+    const additions = packages && parseTeXPackageNames(Array.isArray(packages) ? packages.join(' ') : packages);
+    if (additions && environment().canInstallPackages) { ui.close(); onAdd({ packages: additions, reinstall }); return; }
+    if ((openManager || additions) && !manager.hidden && !manager.disabled) await launchManager();
+  }
+
+  async function launchManager() {
+    if (manager.disabled) return;
+    ui.clearError();
+    try {
+      const result = await read('/api/tex/packages/manager', { method: 'POST', body: {} });
+      if (result) { managerNote.textContent = t('TeX の管理ツールを開きました．変更が終わったら一覧を更新してください．'); managerNote.hidden = false; }
+    } catch (error) { if (ui.dialog.open && error.name !== 'AbortError') ui.showError(error); }
   }
 
   search.input.addEventListener('input', () => { limit = 100; renderList(); });
@@ -316,14 +337,7 @@ export function createTeXManagement({ api, getMeta, getSetup, isBusy = () => fal
   clear.addEventListener('click', () => { selected.clear(); renderList(); });
   add.addEventListener('click', () => { if (!add.disabled) { const values = { packages: parseTeXPackageNames(names.input.value), reinstall: reinstall.checked }; ui.close(); onAdd(values); } });
   install.addEventListener('click', () => { if (!install.disabled) { ui.close(); onInstall(); } });
-  manager.addEventListener('click', async () => {
-    if (manager.disabled) return;
-    ui.clearError();
-    try {
-      const result = await read('/api/tex/packages/manager', { method: 'POST', body: {} });
-      if (result) { managerNote.textContent = t('TeX の管理ツールを開きました．変更が終わったら一覧を更新してください．'); managerNote.hidden = false; }
-    } catch (error) { if (ui.dialog.open && error.name !== 'AbortError') ui.showError(error); }
-  });
+  manager.addEventListener('click', launchManager);
   remove.addEventListener('click', () => { void inspectRemoval(); });
   refresh.addEventListener('click', () => { void refreshList(); });
   close.addEventListener('click', () => ui.close());

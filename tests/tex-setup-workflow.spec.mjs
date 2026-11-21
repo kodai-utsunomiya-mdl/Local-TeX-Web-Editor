@@ -15,6 +15,7 @@ async function mockSetup(page, session) {
   const actual = await json(session, '/api/state');
   const calls = [];
   const installedBin = path.join(session.temp, 'setup-example', 'TinyTeX', 'bin');
+  let synctexMissing = false;
   let snapshot = { supported: true, status: 'idle', operation: '', id: '', stage: '', release: 'v2026.11',
     parent: path.join(session.temp, 'setup-example'), directory: '', source: 'https://github.com/rstudio/tinytex-releases/releases/download/v2026.11/TinyTeX-1.zip',
     archiveBytes: 73_710_178, downloadedBytes: 0, downloadTotal: 0, packages: ['latexmk', 'synctex', 'collection-langjapanese', 'biber'],
@@ -23,9 +24,10 @@ async function mockSetup(page, session) {
     const response = await route.fetch(); const meta = await response.json();
     const ready = snapshot.status === 'succeeded' && snapshot.operation !== 'uninstall';
     await route.fulfill({ response, json: { ...meta, texSetup: snapshot,
-      texBin: ready ? installedBin : '', latexmk: ready ? path.join(installedBin, 'latexmk') : '', synctex: ready ? path.join(installedBin, 'synctex') : '',
+      texBin: ready ? installedBin : '', latexmk: ready ? path.join(installedBin, 'latexmk') : '', synctex: ready && !synctexMissing ? path.join(installedBin, 'synctex') : '',
+      synctexError: synctexMissing ? 'SyncTeX is not installed' : '',
       toolError: ready ? '' : 'TeX environment is not installed',
-      texPackages: { ...actual.texPackages, programs: (actual.texPackages?.programs || []).map(program => ({ ...program, available: ready })) },
+      texPackages: { ...actual.texPackages, programs: (actual.texPackages?.programs || []).map(program => ({ ...program, available: ready && !(synctexMissing && program.name === 'synctex') })) },
     } });
   });
   await page.route('**/api/tex/setup', async route => {
@@ -37,10 +39,16 @@ async function mockSetup(page, session) {
     }
     await route.fulfill({ json: snapshot });
   });
+  await page.route('**/api/tex/packages', route => route.fulfill({ json: {
+    directory: path.dirname(installedBin), bin: installedBin, revision: 'example-packages', packages: [],
+    environment: { directory: path.dirname(installedBin), bin: installedBin, managed: true, canInstallPackages: true, canRemovePackages: true, canUninstall: true },
+  } }));
   return {
     calls, installedBin,
     complete() { snapshot = { ...snapshot, status: 'succeeded', stage: 'complete', managed: true, bin: installedBin, log: 'Available programs were checked', cancelable: false }; },
     setSnapshot(values) { snapshot = { ...snapshot, ...values }; },
+    setMissingSyncTeX(value) { synctexMissing = value; },
+    synctexPackages: actual.texPackages?.programs?.find(program => program.name === 'synctex')?.packages,
   };
 }
 
@@ -61,6 +69,8 @@ test('導入を背景で進めながら Markdown の編集と保存を続け，�
   const rich = page.locator('#markdown-rich-primary .markdown-rich-document');
   await expect(rich).toBeVisible();
   await page.getByTestId('settings-button').click();
+  await expect(page.locator('#settings-tex-management')).toBeVisible();
+  await expect(page.locator('#settings-tex-management')).toBeDisabled();
   await page.locator('#editor-font-size').fill('18');
   await page.locator('#settings-tex-setup').click();
   await page.locator('#tex-setup-start').click();
@@ -83,7 +93,18 @@ test('導入を背景で進めながら Markdown の編集と保存を続け，�
   await expect(page.locator('#tex-bin')).toHaveValue(setup.installedBin);
   await expect(page.locator('#tex-bin')).toBeEnabled();
   await expect(page.locator('#editor-font-size')).toHaveValue('19');
-  await expect(page.locator('#settings-tex-setup')).toHaveText('TeX を管理…');
+  await expect(page.locator('#settings-tex-setup')).toHaveText('TeX をセットアップ…');
+  await expect(page.locator('#settings-tex-management')).toHaveText('TeX を管理…');
+  await expect(page.locator('#settings-tex-management')).toBeEnabled();
+  await page.locator('#settings-tex-setup').click();
+  await expect(page.locator('#tex-setup-review')).toBeVisible();
+  await expect(page.locator('#tex-setup-start')).toBeEnabled();
+  await page.locator('#tex-setup-close').click();
+  await page.locator('#settings-tex-management').click();
+  await expect(page.locator('#tex-management-install')).toBeEnabled();
+  await page.locator('#tex-management-dialog > .dialog-actions').getByRole('button', { name: '閉じる', exact: true }).click();
+  await expect(page.locator('#settings-tex-management')).toBeFocused();
+  await expect(page.locator('#editor-font-size')).toHaveValue('19');
   await page.locator('#save-settings').click();
   await expect(page.locator('#settings-dialog')).toBeHidden();
   await paragraph.click(); await page.keyboard.press(`${modifier}+z`);
@@ -101,6 +122,12 @@ test('導入を背景で進めながら Markdown の編集と保存を続け，�
   await page.locator('#tex-setup-compile').click();
   await expect(page.getByTestId('build-status')).toHaveAttribute('data-status', 'success', { timeout: 120_000 });
   expect((await json(session, '/api/state')).project.root).toBe(meta.project.root);
+  await page.locator('#go-home').click();
+  await expect(page.locator('#tex-setup-home')).toBeVisible();
+  await expect(page.locator('#home-tex-setup')).toHaveText('TeX をセットアップ…');
+  await expect(page.locator('#home-tex-management')).toBeEnabled();
+  await page.locator('#home-tex-management').click();
+  await expect(page.locator('#tex-management-dialog')).toBeVisible();
 });
 
 test('TeX がない状態でのコンパイルは導入内容の確認へ進み，取り消すと原稿をそのまま編集できる', async ({ page, session }) => {
@@ -117,6 +144,27 @@ test('TeX がない状態でのコンパイルは導入内容の確認へ進み�
   await page.locator('#tex-setup-close').click();
   await expect(page.getByTestId('editor').locator('.cm-content')).toBeVisible();
   expect(await readFile(path.join(session.project, 'main.tex'), 'utf8')).toBe(content);
+});
+
+test('SyncTeX がない設定からパッケージと追加先を確認して導入する', async ({ page, session }) => {
+  await openProject(session);
+  const setup = await mockSetup(page, session);
+  setup.complete();
+  setup.setSnapshot({ directory: path.dirname(setup.installedBin) });
+  setup.setMissingSyncTeX(true);
+  await openEditor(page, session);
+  await page.getByTestId('settings-button').click();
+  await expect(page.locator('#install-synctex')).toHaveText('SyncTeX を追加…');
+  await expect(page.locator('#synctex-setup pre, #copy-synctex-setup')).toHaveCount(0);
+  await page.locator('#install-synctex').click();
+  await expect(page.locator('#tex-setup-package-list > li')).toHaveText(setup.synctexPackages);
+  await expect(page.locator('#tex-setup-package-destination')).toContainText(path.dirname(setup.installedBin));
+  await expect(page.locator('#tex-setup-start')).toBeEnabled();
+  expect(setup.calls).toEqual([]);
+  await page.locator('#tex-setup-start').click();
+  await expect(page.locator('#tex-setup-stage')).toHaveText('TeX をダウンロードしています…');
+  expect(setup.calls).toHaveLength(1);
+  expect(setup.calls[0]).toMatchObject({ operation: 'packages', packages: setup.synctexPackages, reinstall: true, consent: true });
 });
 
 test('停止できない環境削除中は終了ボタンを無効にし，Markdown の編集を続けられる', async ({ page, session }, testInfo) => {
@@ -165,6 +213,7 @@ test('停止できない環境削除中は終了ボタンを無効にし，Markd
   await page.locator('#tex-setup-close').click();
   await page.getByTestId('settings-button').click();
   await expect(page.locator('#settings-tex-setup')).toHaveText('TeX をセットアップ…');
+  await expect(page.locator('#settings-tex-management')).toBeDisabled();
   expect(setup.calls).toEqual([]);
   expect(stopRequests).toEqual([]);
 });

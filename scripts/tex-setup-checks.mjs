@@ -12,7 +12,7 @@ function setupFailure(status) {
   return `${status.error || ''}\n${String(status.log || '').slice(-32_000)}`;
 }
 
-async function waitForSetup(api, id, output, timeout = 20 * 60_000) {
+async function waitForSetup(api, id, output, timeout = 20 * 60_000, onStatus) {
   const deadline = Date.now() + timeout;
   let previousStage = '';
   while (Date.now() < deadline) {
@@ -24,6 +24,7 @@ async function waitForSetup(api, id, output, timeout = 20 * 60_000) {
     }
     await writeFile(path.join(output, `setup-${id}-status.json`), JSON.stringify(status, null, 2));
     await writeFile(path.join(output, `setup-${id}.log`), status.log || '');
+    await onStatus?.(status);
     if (!['running', 'cancelling'].includes(status.status)) return status;
     await delay(500);
   }
@@ -132,7 +133,7 @@ export async function inspectPDF(data, name, output, { research = false } = {}) 
   } finally { await loading.destroy(); }
 }
 
-export async function installAndCheckTeX({ api, request, temporary, output, useDefaultParent = false }) {
+export async function installAndCheckTeX({ api, request, temporary, output, useDefaultParent = false, observeSetup = {} }) {
   await mkdir(output, { recursive: true });
   const parent = path.join(temporary, process.platform === 'win32' ? 'TeX-installation' : 'TeX installation');
   await mkdir(parent, { recursive: true });
@@ -148,6 +149,7 @@ export async function installAndCheckTeX({ api, request, temporary, output, useD
   const refused = await request('/api/tex/setup', { operation: 'install', parent });
   assert.equal(refused.status, 400, 'Installation must require the explicit consent value.');
   assert.equal((await api('/api/tex/setup')).status, initial.status);
+  await observeSetup.review?.(initial);
 
   const cancelled = await api('/api/tex/setup', { operation: 'install', consent: true, parent });
   await api('/api/tex/setup/stop', { id: cancelled.id });
@@ -156,10 +158,11 @@ export async function installAndCheckTeX({ api, request, temporary, output, useD
   assert.equal((await api('/api/state')).texBin, unavailable, 'Cancellation must leave the previous TeX choice in place.');
 
   const startedAt = Date.now();
-  const started = await api('/api/tex/setup', { operation: 'install', consent: true, ...(useDefaultParent ? {} : { parent }) });
-  const installed = await waitForSetup(api, started.id, output);
+  const started = observeSetup.start ? await observeSetup.start() : await api('/api/tex/setup', { operation: 'install', consent: true, ...(useDefaultParent ? {} : { parent }) });
+  const installed = await waitForSetup(api, started.id, output, 20 * 60_000, observeSetup.status);
   assert.equal(installed.status, 'succeeded', setupFailure(installed));
   assert.equal(installed.managed, true);
+  await observeSetup.complete?.(installed);
   const current = await api('/api/state');
   assert.equal(current.texSetup.managed, true);
   assert.equal(await realpath(current.texBin), await realpath(installed.bin));

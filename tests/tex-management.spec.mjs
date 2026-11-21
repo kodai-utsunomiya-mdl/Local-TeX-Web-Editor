@@ -79,6 +79,9 @@ test('インストール済みの一覧を検索し，TeX の管理に必要な�
   await page.locator('#tex-managed-package-add').click();
   expect(await page.evaluate(() => added)).toEqual([{ packages: ['siunitx', 'microtype'], reinstall: true }]);
   expect(await page.evaluate(() => removed)).toEqual([]);
+  await page.evaluate(() => management.open({ packages: ['synctex', 'synctex.windows'], reinstall: true }));
+  expect(await page.evaluate(() => added[1])).toEqual({ packages: ['synctex', 'synctex.windows'], reinstall: true });
+  await expect(page.locator('#tex-management-dialog')).toBeHidden();
 });
 
 test('パッケージを削除する予定を確認し，内容が変わったときは新しい一覧を確認する', async ({ page }, testInfo) => {
@@ -200,7 +203,7 @@ test('既存の MacTeX では保存先と共用の影響を示し，ごみ箱へ
   await expect(page.locator('#tex-environment-delete-confirm')).toHaveText('Move the TeX environment to Trash');
 });
 
-test('Store で直接変更できない既存環境は公式ツールと Windows の設定へ進み，削除完了にはしない', async ({ page }) => {
+test('Store で直接変更できない既存環境は公式ツールと Windows の設定へ進み，削除完了にはしない', async ({ page }, testInfo) => {
   await page.evaluate(async () => {
     const environment = { directory: 'C:/texlive/2026', bin: 'C:/texlive/2026/bin/windows', manager: 'C:/texlive/2026/bin/windows/tlmgr.bat',
       managerApplication: 'C:/texlive/2026/bin/windows/tlshell.exe', format: 'texlive', managed: false, writable: false,
@@ -210,11 +213,36 @@ test('Store で直接変更できない既存環境は公式ツールと Windows
     inspection = { ...inspection, directory: environment.directory, confirmation: '2026', canDelete: false, environment };
     await management.refresh();
   });
+  for (const language of ['en', 'ja']) {
+    await page.evaluate(value => setLanguage(value), language);
+    for (const width of [1600, 390]) {
+      await page.setViewportSize({ width, height: width === 390 ? 740 : 1000 });
+      await page.locator('#tex-management-dialog .import-body').evaluate(body => { body.scrollTop = 0; });
+      const bounds = await page.locator('#tex-management-dialog').evaluate(dialog => {
+        const first = dialog.querySelector('#tex-management-open-manager').getBoundingClientRect();
+        const second = dialog.querySelector('#tex-management-install').getBoundingClientRect();
+        const description = dialog.querySelector('#tex-management-external-note').getBoundingClientRect();
+        return { textGap: first.top - description.bottom, buttonGap: Math.max(second.left - first.right, second.top - first.bottom),
+          scroll: dialog.scrollWidth, client: dialog.clientWidth, right: dialog.getBoundingClientRect().right };
+      });
+      expect(bounds.textGap).toBeGreaterThanOrEqual(10);
+      expect(bounds.buttonGap).toBeGreaterThanOrEqual(8);
+      expect(bounds.scroll).toBeLessThanOrEqual(bounds.client + 1);
+      expect(bounds.right).toBeLessThanOrEqual(width);
+      await page.screenshot({ path: testInfo.outputPath(`tex-management-actions-${language}-${width}.png`) });
+      const details = page.locator('#tex-environment-removal');
+      if (!await details.evaluate(element => element.open)) await details.locator('summary').click();
+      const deleteGap = await details.evaluate(element => element.querySelector('#tex-environment-delete').getBoundingClientRect().top
+        - element.querySelector('p').getBoundingClientRect().bottom);
+      expect(deleteGap).toBeGreaterThanOrEqual(10);
+    }
+  }
+  await page.setViewportSize({ width: 1600, height: 1000 });
   await page.locator('#tex-managed-package-names').fill('siunitx');
   await expect(page.locator('#tex-managed-package-add')).toBeDisabled();
-  await page.locator('#tex-management-open-manager').click();
+  await page.evaluate(() => management.open({ openManager: true }));
   await expect(page.locator('#tex-management-manager-note')).toContainText('管理ツールを開きました');
-  await page.locator('#tex-environment-removal > summary').click();
+  expect(await page.evaluate(() => requests.filter(value => value.endpoint === '/api/tex/packages/manager'))).toHaveLength(1);
   await page.locator('#tex-environment-delete').click();
   await expect(page.locator('#tex-environment-delete-path')).toHaveText('C:/texlive/2026');
   await expect(page.locator('#tex-environment-delete-confirm')).toBeHidden();

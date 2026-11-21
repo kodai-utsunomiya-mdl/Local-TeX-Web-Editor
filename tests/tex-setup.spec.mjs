@@ -9,7 +9,7 @@ let javascript;
 
 test.beforeAll(async () => {
   const result = await build({ stdin: { resolveDir: path.join(repository, 'web/src'), contents: `
-    import { createTeXSetup } from './tex-setup.js';
+    import { createTeXSetup, teXEnvironment } from './tex-setup.js';
     import { renderTeXPackagesHelp } from './tex-packages.js';
     import { setLanguage } from './i18n.js';
     window.setLanguage = setLanguage; setLanguage('ja');
@@ -17,14 +17,16 @@ test.beforeAll(async () => {
       parent: '/Users/Example/Applications', directory: '', source: 'https://github.com/rstudio/tinytex-releases/releases/download/v2026.11/TinyTeX-1.zip',
       archiveBytes: 108000000, downloadedBytes: 0, downloadTotal: 0, packages: ['latexmk', 'synctex', 'collection-langjapanese', 'biber'], log: '', error: '', bin: '', managed: false };
     window.server = JSON.parse(localStorage.getItem('setup') || 'null') || idle;
-    window.requests = []; window.compiled = []; window.samples = 0; window.toolChecks = 0;
+    window.requests = []; window.compiled = []; window.samples = 0; window.toolChecks = 0; window.managementOpened = 0; window.managerOpened = 0;
     window.target = { root: '/projects/paper', main: 'main.tex' }; window.blocked = false;
     window.meta = { platform: 'windows', project: { root: '/projects/paper', main: 'main.tex', mode: 'pdflatex' }, texBin: '', latexmk: '',
       texPackages: { repository: 'https://mirror.ctan.org/systems/texlive/tlnet/', shell: 'posix', commandPrefix: '', programs: [
         { name: 'latexmk', available: false, packages: ['latexmk'] }, { name: 'pdflatex', available: false }, { name: 'synctex', available: false, packages: ['synctex'] } ] } };
     window.setSnapshot = value => { server = { ...server, ...value }; localStorage.setItem('setup', JSON.stringify(server)); };
     window.renderHelper = () => renderTeXPackagesHelp(document.getElementById('package-helper'), meta.texPackages, {
-      managed: server.managed, busy: setup?.busy, onInstall: values => setup.open({ reason: 'packages', operation: 'packages', ...values }) });
+      canInstall: teXEnvironment(server).canInstallPackages, canSetup: server.supported, managerApplication: teXEnvironment(server).managerApplication,
+      busy: setup?.busy, onInstall: values => setup.open({ reason: 'packages', operation: 'packages', ...values }),
+      onSetup: () => setup.open({ reason: 'settings' }), onOpenManager: () => managerOpened++ });
     const api = async (endpoint, options = {}) => {
       requests.push({ endpoint, method: options.method || 'GET', body: options.body, projectRoot: options.projectRoot });
       if (endpoint.endsWith('/pick')) return new Promise(resolve => window.resolvePicker = resolve);
@@ -51,7 +53,7 @@ test.beforeAll(async () => {
         }
       },
       onStateChange: snapshot => { meta.texSetup = snapshot; if (window.setup) renderHelper(); },
-      onCompile: value => compiled.push(value), onCreateSample: () => samples++,
+      onCompile: value => compiled.push(value), onCreateSample: () => samples++, onManage: () => managementOpened++,
     });
     setup.sync(server); renderHelper();
     document.getElementById('open-setup').addEventListener('click', () => setup.open({ reason: 'home' }));
@@ -79,6 +81,9 @@ test.beforeEach(async ({ page }) => {
 const starts = page => page.evaluate(() => requests.filter(value => value.endpoint === '/api/tex/setup' && value.method === 'POST'));
 
 test('TeX がないホームから内容と保存先を確認し，開始前はダウンロードしない', async ({ page }, testInfo) => {
+  await expect(page.locator('#home-tex-setup')).toHaveText('TeX をセットアップ…');
+  await expect(page.locator('#home-tex-management')).toBeVisible();
+  await expect(page.locator('#home-tex-management')).toBeDisabled();
   await page.locator('#home-tex-setup').click();
   await expect(page.locator('#tex-setup-dialog')).toBeVisible();
   await expect(page.locator('#tex-setup-close')).toBeFocused();
@@ -173,6 +178,8 @@ test('管理された TeX へのパッケージ追加は有効な名前を確認
     await setup.refresh(); renderHelper();
   });
   await page.locator('[data-testid="tex-packages"] > summary').click();
+  await expect(page.locator('[data-testid="tex-packages"] textarea')).toHaveCount(0);
+  await expect(page.locator('[data-testid="tex-packages"]')).not.toContainText('PowerShell');
   await page.locator('[data-testid="tex-package-names"]').fill('--all');
   await expect(page.locator('[data-testid="tex-package-add"]')).toBeDisabled();
   await page.locator('[data-testid="tex-package-names"]').fill('siunitx siunitx cleveref');
@@ -224,9 +231,34 @@ test('最後の処理がパッケージ追加でも，新規導入では固定�
         packages: ['latexmk', 'synctex', 'collection-langjapanese'], parent: '/Users/Example/New TeX', release: 'v2026.11' } });
     await setup.refresh();
   });
-  await page.locator('#open-setup').click();
+  await expect(page.locator('#tex-setup-home')).toBeVisible();
+  await expect(page.locator('#home-tex-setup')).toHaveText('TeX をセットアップ…');
+  await expect(page.locator('#home-tex-management')).toHaveText('TeX を管理…');
+  await expect(page.locator('#home-tex-management')).toBeEnabled();
+  await page.locator('#home-tex-management').click();
+  expect(await page.evaluate(() => managementOpened)).toBe(1);
+  await page.evaluate(() => setLanguage('en'));
+  await expect(page.locator('#home-tex-setup')).toHaveText('Set up TeX…');
+  await expect(page.locator('#home-tex-management')).toHaveText('Manage TeX…');
+  await page.locator('#home-tex-setup').click();
   await expect(page.locator('#tex-setup-source')).toHaveAttribute('href', /TinyTeX-1-windows-v2026\.11\.exe$/);
   await expect(page.locator('#tex-setup-package-list > li')).toHaveText(['latexmk', 'synctex', 'collection-langjapanese']);
   await expect(page.locator('#tex-setup-parent')).toHaveValue('/Users/Example/New TeX');
+  expect(await starts(page)).toEqual([]);
+});
+
+test('Store の共用 TeX への追加は公式管理ツールを開き，アプリ用の導入も選べる', async ({ page }) => {
+  await page.evaluate(() => {
+    server = { ...server, environment: { directory: 'C:/texlive/2026', managerApplication: 'C:/texlive/2026/bin/windows/tlshell.exe', canInstallPackages: false } };
+    meta.texPackages = { ...meta.texPackages, manager: 'C:/texlive/2026/bin/windows/tlmgr.bat', shell: 'powershell' };
+    renderHelper();
+  });
+  await page.locator('[data-testid="tex-packages"] > summary').click();
+  await expect(page.locator('[data-testid="tex-packages"] textarea')).toHaveCount(0);
+  await expect(page.locator('[data-testid="tex-package-names"]')).toHaveCount(0);
+  await page.locator('[data-testid="tex-package-open-manager"]').click();
+  expect(await page.evaluate(() => managerOpened)).toBe(1);
+  await page.locator('[data-testid="tex-package-setup"]').click();
+  await expect(page.locator('#tex-setup-start')).toBeEnabled();
   expect(await starts(page)).toEqual([]);
 });

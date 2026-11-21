@@ -83,10 +83,10 @@ try {
   for (const size of [16, 24, 32, 48, 256]) await icon(path.join(stage, 'Assets', `Square44x44Logo.targetsize-${size}_altform-unplated.png`), size);
   await icon(path.join(listing, 'store-logo-300.png'), 300);
 } finally { await browser.close(); }
-for (const filename of ['editor-tex-dark.png', 'editor-markdown-light.png', 'editor-tex-management.png']) {
+for (const filename of ['editor-tex-dark.png', 'editor-markdown-light.png', 'editor-tex-management.png', 'tex-setup-home.png', 'tex-setup-plan.png', 'tex-setup-location.png', 'tex-setup-progress.png', 'tex-setup-complete.png']) {
   const captured = path.join(root, 'test-results/msix', filename);
   const source = await exists(captured) ? captured : path.join(root, 'docs/screenshots', filename);
-  if (filename === 'editor-tex-management.png' && !await exists(source)) continue;
+  if (filename !== 'editor-tex-dark.png' && filename !== 'editor-markdown-light.png' && !await exists(source)) continue;
   await copyFile(source, path.join(listing, filename));
 }
 for (const filename of ['microsoft-store-listing.md', 'privacy.md', 'privacy.ja.md']) {

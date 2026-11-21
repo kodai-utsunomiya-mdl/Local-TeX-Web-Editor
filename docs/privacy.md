@@ -29,7 +29,7 @@ TeX installed through the app uses `%LOCALAPPDATA%\LocalTeXEditor\tex` in the Wi
 
 On its first launch, the Store edition can copy settings, drafts and view preferences from an existing ZIP installation into its own user-data folder. The original files remain in the ZIP edition's folder. Project source files remain where you placed them.
 
-The browser stores the selected theme locally. While a draft is being written to the app's data folder, it may also store a temporary draft backup. That backup is removed after the app confirms the save. The local connection token is stored in the browser tab's session storage.
+The browser stores a copy of the appearance settings locally. While a draft is being written to the app's data folder, it may also store a temporary draft backup. That backup is removed after the app confirms the save. The local connection token is stored in the browser tab's session storage.
 
 ## Local communication
 
@@ -43,7 +43,7 @@ TeX setup starts after you review the download source, destination and packages 
 
 Download services receive the network requests needed to serve files, including your IP address and the requested archive or package paths. The app sends no project documents, draft text, PDFs or bibliography contents to those services for setup or package management. GitHub handles its requests under its [General Privacy Statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement); package repositories and mirrors have their own operators and privacy policies. The [TinyTeX release page](https://github.com/rstudio/tinytex-releases/releases/tag/v2026.11) and [CTAN mirror list](https://ctan.org/mirrors) identify the distribution services.
 
-The package-help screen can also prepare commands to run in your terminal. Those commands connect to the selected TeX repository when you run them. Viewing installed packages and reviewing package removal use information in the local installation. If you open an official TeX management tool from the app, that tool uses its own repository and network settings.
+Package additions use the app's review and progress dialogs. You review the package names and selected installation before starting the download. Viewing installed packages and reviewing package removal use information in the local installation. If you open an official TeX management tool from the app, that tool uses its own repository and network settings.
 
 Changes to a shared TeX installation can require operating system authorization. Windows and macOS present their own approval screens; the app does not ask for or receive your administrator password. In the Store edition, operations requiring administrator rights open the existing official TeX management tool or Windows app settings.
 
@@ -61,15 +61,19 @@ If you install the app through Microsoft Store, Microsoft handles Store installa
 
 You can edit, copy and delete project files using your normal file tools. The app's draft-recovery dialog offers an option to delete a saved draft. Settings lets you turn autosave on or off; local drafts are recorded independently of that setting.
 
-Open **Editing tools → Document history → History settings** to change the history period and capacity, or stop recording new versions. The defaults are 30 days and 50 MiB across all projects, with at most 50 versions per file and 2000 versions overall. Documents larger than 2 MiB are omitted from history. Older versions are removed when these limits are reached, including named versions. Turning recording off leaves existing history subject to the same limits. To delete all stored history, close the app and remove the `history` subfolder from its user-data folder.
+Open **Editing tools → Document history → History settings** to change the history period and capacity, or stop recording new versions. The defaults are 30 days and 50 MiB across all projects, with at most 50 versions per file and 2000 versions overall. Documents larger than 2 MiB are omitted from history. Older versions are removed when these limits are reached, including named versions. Turning recording off leaves existing history subject to the same limits. To delete all stored history from the app, open **Settings → Reset settings and remembered information…** and select **Edit history**.
 
 You choose which files to register as a custom template. Open **Editing tools → Manage templates → Edit the selected template** to change its name or description or delete its registration. Deleting a template leaves the original project files and projects previously created from it in their own folders.
 
-To remove the app's saved settings, drafts, history, templates and preview copies, first save the documents you want to keep and close the app, then remove its user-data folder. Browser site-data controls can remove the saved theme and any remaining browser draft backups. Project files and files in a previous ZIP installation's data folder are managed separately.
+Open **Settings → Information saved by the app → Reset settings and remembered information…** to choose what to reset. The dialog shows the app-data location and the file count and size for each category. **Settings and remembered actions** is selected initially. **Unsaved drafts**, **Edit history**, **Your templates**, and **PDF and SyncTeX cache** are initially unchecked. Choose the categories, check the confirmation, then click **Reset selected information**.
+
+The settings choice restores appearance, editing preferences, recent projects, tabs and editing positions, and the selected TeX installation to their defaults. Other categories delete their corresponding saved copies. The reset applies to the data folder shown in the dialog. In the Store edition, the ZIP edition's original data from a previous migration remains at its own location. Your project files and installed TeX remain available, including TeX installed inside the app-data folder.
+
+Before resetting, the app offers to save unsaved documents to their project files or leave them as drafts. If you selected drafts for deletion, it offers to save or discard those changes. After a successful reset, the page reloads. Other open tabs ask to reload when they next connect and offer downloads of their unsaved documents first. When drafts were deleted, older browser draft backups are also removed when a tab reconnects or reads its drafts.
+
+Browser site-data controls can remove the saved appearance and any remaining browser draft backups. Project files can be managed in their original folders.
 
 **Settings → Manage TeX…** shows the selected TeX installation and its packages. This includes TeX installed by the app and existing TeX Live, MacTeX and TinyTeX installations. Package removal shows the proposed changes before you confirm. Starting removal of an entire environment inside the app requires reviewing its actual location and contents, acknowledging the effect on other applications, and entering its folder name. The confirmation explains whether the action deletes app-managed files, runs the official Windows uninstaller, or moves the selected folder to Trash or Recycle Bin. For a shared installation in the Store edition, opening Windows app settings leaves the removal decision to Windows; opening the settings screen does not start deletion or require entering the folder name in the app. TinyTeX removal also removes path registrations that point to that installation. An official uninstaller can leave settings or other files, which the app reports. Project documents in their own folders remain available.
-
-The Windows ZIP edition's default TeX folder is under `LocalAppData`, so deleting its settings in `AppData\Roaming` leaves that TeX folder on disk. On Mac and in the Store edition, the default TeX folder is inside the app-data folder and is removed if you delete that whole folder. Existing TeX installations outside the app-data folder are managed at their own locations.
 
 ## Support and the project website
 

@@ -1,6 +1,20 @@
 name: Build Microsoft Store package
 
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/microsoft-store.yml'
+      - 'cmd/**'
+      - 'internal/**'
+      - 'web/**'
+      - 'packaging/windows/**'
+      - 'scripts/build*.mjs'
+      - 'scripts/test-msix*'
+      - 'scripts/tex-setup-checks.mjs'
+      - 'tests/fixtures/tex-setup/**'
+      - 'package*.json'
+      - 'go.mod'
   push:
     branches: [main, prepare-microsoft-store, add-optional-tex-setup]
     paths:
@@ -118,7 +132,7 @@ jobs:
             Write-Host 'The package build did not produce listing files.'
             exit 0
           }
-          $images = @('editor-tex-dark.png', 'editor-markdown-light.png', 'editor-tex-management.png')
+          $images = @('editor-tex-dark.png', 'editor-markdown-light.png', 'editor-tex-management.png', 'tex-setup-home.png', 'tex-setup-plan.png', 'tex-setup-location.png', 'tex-setup-progress.png', 'tex-setup-complete.png')
           $captured = @($images | ForEach-Object { Join-Path 'test-results/msix' $_ })
           $missing = @($captured | Where-Object { -not (Test-Path -LiteralPath $_ -PathType Leaf) })
           if ($missing.Count -eq 0) {

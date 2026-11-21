@@ -319,13 +319,20 @@ test.describe('Interface language', () => {
     await expect(page.getByTestId('settings-button')).toHaveAccessibleName('Settings');
     await page.getByTestId('settings-button').click();
     await page.getByTestId('autosave-setting').uncheck();
+    await expect(page.locator('#settings-tex-setup')).toHaveText('Set up TeX…');
+    await expect(page.locator('#settings-tex-management')).toHaveText('Manage TeX…');
+    await page.locator('#settings-tex-management').click();
+    await expect(page.locator('#tex-package-refresh')).toBeEnabled();
+    await page.locator('#tex-management-dialog > .dialog-actions').getByRole('button', { name: 'Close', exact: true }).click();
     await page.getByTestId('tex-packages').locator('summary').first().click();
     await expect(page.getByTestId('tex-packages').locator('summary').first()).toHaveText('Add TeX packages');
     await page.getByTestId('tex-package-names').fill('siunitx');
-    await expect(page.getByTestId('tex-package-install-command')).toHaveValue(/install(?: --reinstall)? siunitx/);
-    await page.getByTestId('tex-packages').getByText('Find a package from a missing file', { exact: true }).click();
-    await page.getByTestId('tex-package-filename').fill('siunitx.sty');
-    await expect(page.getByTestId('tex-package-search-command')).toHaveValue(/search --global --file '\/siunitx\\\.sty\$'/);
+    await expect(page.getByTestId('tex-packages').locator('textarea')).toHaveCount(0);
+    await page.getByTestId('tex-package-add').click();
+    await expect(page.locator('#tex-setup-package-list > li')).toHaveText(['siunitx']);
+    await expect(page.locator('#tex-setup-start')).toBeEnabled();
+    await expect(page.locator('#tex-setup-start')).toHaveText('Add these packages');
+    await page.locator('#tex-setup-close').click();
     await page.locator('#save-settings').click();
     await expect(page.locator('#settings-dialog')).not.toBeVisible();
     const original = (await readFile(path.join(session.project, 'main.tex'), 'utf8')).replaceAll('\r\n', '\n');
@@ -2082,7 +2089,6 @@ test('日本語の原稿を編集し，参考文献と PDF を更新する', asy
     if (toolMissing) {
       metadata.synctex = '';
       metadata.synctexError = 'synctex が見つかりません．';
-      metadata.synctexInstallCommands = ['tlmgr install --reinstall synctex synctex.windows'];
     }
     await route.fulfill({ response, json: metadata });
   });

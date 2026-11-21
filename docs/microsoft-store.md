@@ -29,7 +29,7 @@ WACK's XML report and `certification.json` record the result returned by the kit
 When all three Product identity values are configured and the installation tests pass, the workflow creates these artifacts:
 
 - `microsoft-store-submission`: the unsigned `.msix` for upload and its version, identity and SHA-256 record.
-- `microsoft-store-listing`: the app icon, screenshots of TeX/PDF, Markdown and TeX package management, English/Japanese listing text, privacy policy text and `store-review-sample.zip` containing the reviewer's TeX and Markdown sample files.
+- `microsoft-store-listing`: the app icon, screenshots of TeX/PDF, Markdown, TeX package management and the five setup stages, English/Japanese listing text, privacy policy text and `store-review-sample.zip` containing the reviewer's TeX and Markdown sample files.
 - `microsoft-store-test-results`: test output, screenshots and the certification-kit result.
 
 Listing files and test results are also collected when a later check fails. The workflow copies the installed-app screenshots after package creation, including when the final package uses the Product identity. If those captures are unavailable, the listing artifact contains the repository's screenshots; `screenshot-source.json` and the job summary identify their source. Use images from a successful installed-package run for submission. The `editor-tex-management.png` capture shows the selected installation and installed packages filtered by `math` after the real setup completes.
@@ -53,7 +53,7 @@ The output is `dist/local-tex-web-editor-<version>-windows-x64.msix`. `MakePri` 
 
 ## Version numbers
 
-The app keeps its normal three-part version. The MSIX version adds one to the first part and uses `0` for the fourth part. For example, app `0.1.12` produces package `1.1.12.0`, and app `1.0.0` produces package `2.0.0.0`.
+The app keeps its normal three-part version. The MSIX version adds one to the first part and uses `0` for the fourth part. For example, app `0.1.13` produces package `1.1.13.0`, and app `1.0.0` produces package `2.0.0.0`.
 
 Microsoft requires a nonzero first part and reserves the last part for Store use. This rule gives each subsequent app version a larger Store package version. [Package version requirements](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/package-version-numbering)
 
@@ -95,3 +95,9 @@ In Partner Center, set the price to Free, complete the product properties and ag
 - [日本語](https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/ja/privacy/)
 
 The public download page is [Local TeX Web Editor in Microsoft Store](https://apps.microsoft.com/detail/9P6QF32N19HG). Use this product URL in the website and README when directing users to the Store edition. [Microsoft's submission instructions](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/create-app-submission)
+
+## Reset settings and remembered information
+
+Version 0.1.13 adds **Settings → Reset settings and remembered information…**. The dialog shows the data location, file counts and sizes. Settings are selected initially; drafts, history, custom templates and PDF/SyncTeX caches are optional. Confirming the selection resets those items and reloads the app. Project files and installed TeX remain available.
+
+Use a disposable test profile to review the reset. Change the appearance, open a project, make an unsaved edit with autosave off, then reset settings while leaving drafts unchecked. The app returns to Home with default preferences, and the draft is available when the project is reopened. A second tab with an unsaved document offers a download before reloading. Selecting drafts for deletion also clears their earlier browser backups.

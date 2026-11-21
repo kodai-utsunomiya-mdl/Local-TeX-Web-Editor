@@ -85,6 +85,7 @@ type texSetupRun struct {
 // with a local server and small files instead of installing a distribution.
 type texSetupHooks struct {
 	archive        texSetupArchive
+	defaultParent  string
 	client         *http.Client
 	extract        func(context.Context, *texSetupRun, string) error
 	packages       func(context.Context, *texSetupRun) error
@@ -126,6 +127,13 @@ func (a *App) texSetupDistributionLocked() (texSetupArchive, bool) {
 	return defaultTeXSetupArchive()
 }
 
+func (a *App) defaultTeXSetupParentLocked() (string, error) {
+	if a.texSetupHooks != nil && a.texSetupHooks.defaultParent != "" {
+		return a.texSetupHooks.defaultParent, nil
+	}
+	return platform.DefaultTeXSetupParent(a.options.ConfigDir)
+}
+
 func baseTeXSetupPackages() []string {
 	packages := strings.Fields("latexmk synctex latex-bin pdftex luahbtex luaotfload xetex collection-langjapanese bibtex biblatex biber upmendex amsmath amsfonts amscls tools graphics float geometry booktabs url natbib hyperref lm mathtools jknapltx rsfs doublestroke placeins enumitem tcolorbox pgf algorithms algorithmicx aliascnt cleveref fancyhdr needspace tikzfill pdfcol listings listingsutf8 haranoaji ptex-fontmaps adobemapping")
 	if runtime.GOOS == "windows" {
@@ -141,7 +149,7 @@ func (a *App) isTeXSetupRunningLocked() bool {
 
 func (a *App) texSetupSnapshotLocked(language string) TeXSetupState {
 	archive, supported := a.texSetupDistributionLocked()
-	parent, parentErr := platform.DefaultTeXSetupParent(a.options.ConfigDir)
+	parent, parentErr := a.defaultTeXSetupParentLocked()
 	plan := TeXSetupPlan{Release: texSetupRelease, Parent: parent, Source: archive.URL, ArchiveBytes: archive.Bytes, Packages: baseTeXSetupPackages()}
 	if run := a.texSetup; run != nil {
 		result := run.state
@@ -252,11 +260,19 @@ func (a *App) startTeXSetupLocked(input texSetupInput) error {
 	} else {
 		return fail(http.StatusBadRequest, "TeX の導入方法を選び直してください．")
 	}
-	if parent == "" {
-		var err error
-		parent, err = platform.DefaultTeXSetupParent(a.options.ConfigDir)
-		if err != nil {
+	createParent := parent == ""
+	if createParent || input.Operation == "install" {
+		defaultParent, err := a.defaultTeXSetupParentLocked()
+		if err != nil && createParent {
 			return err
+		}
+		if createParent {
+			parent = defaultParent
+		}
+		// The review form sends the displayed default path explicitly.
+		// Other destinations still require an existing parent folder.
+		if err == nil && input.Operation == "install" && samePath(parent, defaultParent) {
+			createParent = true
 		}
 	}
 	id, err := randomID()
@@ -289,7 +305,7 @@ func (a *App) startTeXSetupLocked(input texSetupInput) error {
 	}
 	a.texSetup = run
 	a.workers.Add(1)
-	go a.runTeXSetup(run, input.Parent == "")
+	go a.runTeXSetup(run, createParent)
 	return nil
 }
 
