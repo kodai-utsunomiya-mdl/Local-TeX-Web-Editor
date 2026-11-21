@@ -263,7 +263,6 @@ body.resizing * { cursor: inherit !important; user-select: none !important; }
 .path-field input { flex: 1 1 auto; }
 .picker-status { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 9px; padding: 9px 10px; color: var(--secondary); border: 1px solid var(--border); border-radius: 5px; font-size: 11px; line-height: 1.7; }
 .picker-status > span:nth-child(2) { flex: 1 1 170px; }
-.synctex-setup pre { margin: 10px 0; padding: 10px; border: 1px solid var(--border); border-radius: 5px; background: var(--subtle); color: var(--text); font: 11px/1.7 Consolas, "Cascadia Code", monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
 .shortcut-settings { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
 .shortcut-settings h3 { color: var(--text); font-size: 12px; font-weight: 600; }
 .shortcut-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }

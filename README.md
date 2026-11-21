@@ -4,13 +4,13 @@ English | [日本語](README.ja.md) · [Website and guide](https://kodai-utsunom
 
 [![Get the free Windows app from Microsoft Store](docs/download-store.svg)](https://apps.microsoft.com/detail/9P6QF32N19HG)
 &nbsp;&nbsp;
-[![Download Windows ZIP](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.12/local-tex-web-editor-0.1.12-windows-x64.zip)
+[![Download Windows ZIP](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.13/local-tex-web-editor-0.1.13-windows-x64.zip)
 &nbsp;&nbsp;
-[![Download for macOS](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.12/local-tex-web-editor-0.1.12-macos-universal.zip)
+[![Download for macOS](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.13/local-tex-web-editor-0.1.13-macos-universal.zip)
 
-**v0.1.12** · [All downloads and release notes](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [Requirements](#requirements) · [App size](#app-files-and-storage) · [Get started](#download-and-launch)
+**v0.1.13** · [All downloads and release notes](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [Requirements](#requirements) · [App size](#app-files-and-storage) · [Get started](#download-and-launch)
 
-The ZIP downloads are v0.1.12. The Microsoft Store update becomes available after Store review and publication.
+The ZIP downloads are v0.1.13. The Microsoft Store update becomes available after Store review and publication.
 
 Edit TeX documents in your browser on Windows or macOS, and compile them with TeX Live on your computer. The editor and PDF preview appear in the same window. Launching the app opens a `localhost` page in your default browser. Markdown editing and preview are also supported.
 
@@ -37,7 +37,7 @@ Compilation uses TeX Live on your computer. **Home → Set up TeX…** or **Sett
 | OS and CPU | Windows 10 / 11, 64-bit (x64) | macOS 12 Monterey or later, Apple Silicon or Intel |
 | Browser | Current Chrome or Edge | Current Chrome or Edge |
 | TeX distribution | Install TinyTeX from the app, or select an existing [TeX Live](https://tug.org/texlive/windows.html) | Install TinyTeX from the app, or select [BasicTeX / MacTeX](https://tug.org/mactex/) or another TeX Live installation |
-| Example TeX folder | `C:\texlive\2025\bin\windows` | `/Library/TeX/texbin` |
+| Example TeX folder | `C:\texlive\2026\bin\windows` | `/Library/TeX/texbin` |
 | Documents | A project folder on your computer | A project folder on your computer |
 
 The Microsoft Store edition requires Windows 10 version 2004 (build 19041) or later, or Windows 11, on an x64 PC.
@@ -46,16 +46,71 @@ The macOS requirement follows the [operating systems supported by Go 1.25](https
 
 ### Set up TeX from the app
 
-1. Open **Set up TeX…** from Home or Settings.
-2. Review the download source, packages, estimated size, and destination. The app uses the official [TinyTeX v2026.11](https://github.com/rstudio/tinytex-releases/releases/tag/v2026.11) archive and checks its SHA-256 before extraction.
-3. Choose **Download and install**. While downloading TinyTeX, a progress bar shows the completed portion, alongside the downloaded and total sizes. Extraction, package installation and compilation checks show an activity bar, the current stage and the log. **Close and continue editing** lets the operation continue while you edit Markdown; use the status indicator at the bottom of the screen to reopen its progress. **Stop setup** stops the operation.
-4. After installation and the tool checks finish, the app selects the new TeX environment. Open a `.tex` file and click **Compile**.
+First [download and launch the app](#download-and-launch). The first launch uses **English**. To switch to Japanese, open **Settings** at the top right, choose **日本語** under **Language / 言語設定**, and click **Save and apply settings (設定を保存して反映)**. The same setup screens are available in both languages.
 
-The setup supports Windows x64 and both Apple Silicon and Intel Macs. It installs in your user folder with your normal permissions. The app sets the TeX search path for its own commands. The destination can be changed before setup; the default locations are listed under [App files and storage](#app-files-and-storage). If setup fails or is stopped, the previous TeX selection remains available and you can try setup again.
+| English label | Japanese label |
+| --- | --- |
+| Set up TeX… | TeX をセットアップ… |
+| Manage TeX… | TeX を管理… |
+| What will be installed | インストールするもの |
+| Download sources | ダウンロードの取得元 |
+| Parent folder for installation | インストール先の親フォルダー |
+| Browse… | 参照… |
+| Download and install | ダウンロードしてインストール |
+| Close and continue editing | 閉じて編集を続ける |
+| TeX setup is complete. | TeX のセットアップが完了しました． |
+| Create a sample… | サンプルを作成… |
+| Compile | コンパイル / コンパイルする |
 
-The initial environment includes pdfLaTeX, upLaTeX, XeLaTeX and LuaLaTeX; `latexmk`, SyncTeX and `dvipdfmx`; Japanese classes and Harano Aji fonts; and BibTeX, upBibTeX, Biber and `upmendex`. It also includes common mathematics, figures and theorem packages, including `amsmath`, `mathtools`, `mathrsfs`, `dsfont`, TikZ, `tcolorbox` with its `most` libraries, `algorithm`, `algpseudocode`, `hyperref`, `pxjahyper` and `cleveref`.
+#### 1. Open TeX setup from Home
 
-Allow about **250 MB of downloads on Windows** or **300 MB on Mac**, about **1 GB for the installed environment**, and about **2 GB of free space during setup**. These are estimates for the standard package selection; package updates can change them. An internet connection is needed for setup and for downloading additional packages. Editing and compiling use files on your computer; setup sends no project documents to the download services. See the [privacy policy](docs/privacy.md).
+On the **Projects** home screen, find **TeX installation and management** and click **Set up TeX…**. You can return to Home by clicking the TeX logo at the top left. Home and Settings both show **Set up TeX…** and **Manage TeX…**. Setup creates a new environment; management opens the selected environment. **Manage TeX…** becomes available once a TeX environment has been found.
+
+![Home with Set up TeX and Manage TeX](docs/screenshots/tex-setup-home.png)
+
+#### 2. Review the programs and packages
+
+The upper part of the setup dialog shows **Current TeX environment** and **What will be installed**. On a computer without TeX, the program list shows **Not found**. Review the TinyTeX release and the package list below it. If you already use TeX, the dialog explains that a new installation will use another folder and become this app's selection after setup finishes. To keep using your existing installation, follow [Use an existing TeX installation](#use-an-existing-tex-installation).
+
+![The setup dialog showing the current environment and the packages to install](docs/screenshots/tex-setup-plan.png)
+
+The initial environment includes pdfLaTeX, upLaTeX, XeLaTeX and LuaLaTeX; `latexmk`, SyncTeX and `dvipdfmx`; Japanese classes and Harano Aji fonts; and BibTeX, upBibTeX, Biber and `upmendex`. Common mathematics, figures and theorem packages include `amsmath`, `mathtools`, `mathrsfs`, `dsfont`, TikZ, `tcolorbox` with its `most` libraries, `algorithm`, `algpseudocode`, `hyperref`, `pxjahyper` and `cleveref`.
+
+#### 3. Check the download sources, space and destination
+
+Scroll down within the setup dialog to **Download sources**. The app uses the official [TinyTeX v2026.11](https://github.com/rstudio/tinytex-releases/releases/tag/v2026.11) archive and checks its SHA-256 before extraction. The dialog also shows the source for additional TeX Live packages.
+
+Check the archive size and the estimate for additional downloads and installed files. Allow about **250 MB of downloads on Windows** or **300 MB on Mac**, about **1 GB for the installed environment**, and about **2 GB of free space during setup**. The selected release and additional packages can change these estimates.
+
+Under **Parent folder for installation**, use the suggested location or click **Browse…** to choose another folder you can write to. The app creates its own TeX folder inside that parent folder. Leaving the field blank uses the recommended location. The defaults are listed under [App files and storage](#app-files-and-storage).
+
+![Download sources, estimated space and the parent folder for the TeX installation](docs/screenshots/tex-setup-location.png)
+
+#### 4. Start installation and follow its progress
+
+Click **Download and install** after reviewing the contents and destination. An internet connection is needed for this step. The download shows completed and total sizes with a progress bar. Extraction, package installation and checks show the current stage and an activity bar. Open **Setup log** to see the output from the running step.
+
+![TeX setup showing the current stage and download progress](docs/screenshots/tex-setup-progress.png)
+
+**Close and continue editing** leaves setup running while you edit and save Markdown. Reopen its progress from the indicator at the bottom of the app or **View setup progress** on Home or in Settings. **Stop setup** stops the operation. After a failure or stop, **Review and try again…** returns to the contents and destination before another attempt.
+
+The setup supports Windows x64 and both Apple Silicon and Intel Macs. It runs in your user folder with your normal permissions. Setup downloads TeX programs and packages; project documents stay on your computer. See the [privacy policy](docs/privacy.md).
+
+#### 5. Wait for the completion message
+
+Wait until the dialog says **TeX setup is complete.** and the program checks have finished. The app selects the installed environment, so you can compile immediately. **Current TeX environment** and the destination show the selected paths.
+
+![Completed TeX setup with the installed environment and the next action](docs/screenshots/tex-setup-complete.png)
+
+If you started from Home with no project open, **Create a sample…** opens the template chooser. Choose a template and a destination for the new project. If you already have a project, close the setup dialog and return to its editor. When the completion screen offers **Compile** for the same document you were preparing, that button starts its compilation.
+
+#### 6. Open a document and compile
+
+For an existing document, choose **Open project folder** on Home, use **Browse…** or enter the folder path, and click **Open**. Select the `.tex` document in the file list. In **Settings**, use **Use latexmkrc settings** when the project supplies `latexmkrc` or `.latexmkrc`; otherwise choose its TeX engine and save the settings.
+
+Click **Compile** in the top toolbar. The app saves the document and runs TeX. The resulting PDF appears beside the source. If compilation reports a missing package, follow [Manage TeX packages and installations](#manage-tex-packages-and-installations), then compile again.
+
+![An installed TeX environment compiling a document with the PDF beside the source](docs/screenshots/editor-tex-dark.png)
 
 ### TeX programs used by the app
 
@@ -69,21 +124,17 @@ Allow about **250 MB of downloads on Windows** or **300 MB on Mac**, about **1 G
 
 An upLaTeX project usually needs `uplatex` and `dvipdfmx`, and may use `upbibtex` for references. Include the project's `latexmkrc` or `.latexmkrc` when you copy the project to your computer.
 
-### Manual installation options
+### Use an existing TeX installation
 
-You can also install TeX yourself and select it in Settings. A partial TeX Live installation is sufficient: start with a basic set of packages, then add what your documents need through TeX Live Manager (`tlmgr`).
+If your documents already compile with TeX Live, BasicTeX, MacTeX or TinyTeX, open **Settings** and enter that installation's **TeX Live bin folder**. Typical locations are `C:\texlive\2026\bin\windows` on Windows and `/Library/TeX/texbin` on Mac. Click **Save and apply settings** to use it.
 
-On **Windows**, open the [TeX Live network installer](https://tug.org/texlive/acquire-netinstall.html) and choose an installation `scheme` under **Advanced**. The `small` scheme includes basic LaTeX with some additional programs and languages; `medium` includes more packages. You can also select individual `collection` groups. The official [installation guide](https://tug.org/texlive/doc/texlive-en/texlive-en.html) explains the choices and their installation screens.
+You can also install a distribution with its own installer: [TeX Live for Windows](https://tug.org/texlive/windows.html) or [BasicTeX / MacTeX](https://tug.org/mactex/) for Mac. Follow its installation guide, then select its bin folder in the app. The app's package controls can add the programs and packages your documents need to supported installations.
 
-On **Mac**, [BasicTeX](https://tug.org/mactex/morepackages.html) provides an installation based on `scheme-small`. After installation, use `/Library/TeX/texbin/tlmgr` to add packages. See the official [BasicTeX guide](https://tug.org/mactex/BasicTeX.pdf) for details.
-
-Add `latexmk` for compilation and `synctex` for navigation between source and PDF. For Japanese documents, add `collection-langjapanese`; it includes Japanese engines, document classes, fonts, and their dependencies. Add packages for mathematics, figures, and bibliography management as your documents require them.
-
-To reduce disk usage, the TeX Live installer lets you omit package documentation and source files. In an existing installation, `tlmgr option docfiles 0` and `tlmgr option srcfiles 0` change these options for future package installations. Existing documentation and source files remain on disk. These options are described in the [install-tl manual](https://tug.org/texlive/doc/install-tl.html).
+A smaller TeX installation can be extended later. **Settings → Add TeX packages** includes **latexmk and SyncTeX** and **Japanese typesetting** presets. The Japanese preset includes `collection-langjapanese`, which supplies Japanese engines, classes, fonts and their dependencies. Mathematics, figures and bibliography packages can be added by name.
 
 ### Manage TeX packages and installations
 
-Open **Settings → Manage TeX…** to see the selected installation and its packages. You can search the list, enter package names under **Review packages to add…**, or select installed packages and choose **Remove selected packages…**. Before removal, the app asks `tlmgr` to list the proposed changes and displays its dependency information. Confirm with **Remove the displayed packages**. Packages needed to manage TeX remain available.
+Open **Manage TeX…** on Home or in Settings to see the selected installation and its packages. Both setup and management stay visible after installation. You can search the list, enter package names under **Review packages to add…**, or select installed packages and choose **Remove selected packages…**. Before removal, the app asks `tlmgr` to list the proposed changes and displays its dependency information. Confirm with **Remove the displayed packages**. Packages needed to manage TeX remain available.
 
 This screen supports TeX installed by the app and existing TeX Live, MacTeX and TinyTeX installations. Existing installations use their configured package repository. If `tlmgr` reports a year mismatch with CTAN, the app retries with that TeX Live year's `tlnet-final` while leaving the saved repository setting in place. Custom, local and multiple-repository configurations use their own settings. The Windows ZIP edition and Mac request operating system approval when changes require administrator rights. In the Microsoft Store edition, a shared installation can be managed through the **Open the TeX management tool** button when its official `tlshell` is installed; that tool handles its own approval and package operations.
 
@@ -93,43 +144,23 @@ The management screen shows the actual TeX folder alongside the package list. Se
 
 **Remove the entire TeX environment…** opens a separate confirmation with the actual folder, file count, size and effect on other applications. To start removal from the app, review it, select the acknowledgment, and enter the displayed folder name. App-installed TeX is removed from its recorded folder. Existing Windows TeX Live uses its official uninstaller; existing Mac TeX and user-owned TinyTeX use the operating system's Trash or Recycle Bin. Windows asks before permanent removal if an item cannot be recycled. The Store edition opens **Uninstall in Windows Settings…** for installations that require administrator permission; choose the removal in Windows, with no folder-name entry needed just to open Settings. An official uninstaller can leave settings or other files; their locations appear in the log. Other applications using the selected TeX also lose access to it until it is installed again or restored from Trash.
 
-The **Add TeX packages** section in Settings also provides the `latexmk` / SyncTeX and Japanese typesetting presets, package-name entry, and **Add with the app…**. Manual commands remain available for PowerShell on Windows and Terminal on Mac. They use the configured TeX folder and the installation year it can identify; for older TeX Live releases, the prepared commands select that year's `tlnet-final` repository.
+To add packages from Settings:
 
-For the current TeX Live release, the following commands are examples. Change the Windows path to match your installation.
+1. Expand **Add TeX packages**.
+2. Choose **latexmk and SyncTeX** or **Japanese typesetting**, or enter package names separated by spaces in **Packages to add**.
+3. If a package is already listed but its files are missing, select **Download these packages again if their files are missing**.
+4. Click **Review packages to add…**. Check the package list, download source and **Add to:** folder in the review dialog.
+5. Click **Add these packages**, wait for completion, and compile the document again.
 
-```powershell
-& 'C:\texlive\2026\bin\windows\tlmgr.bat' update --self
-& 'C:\texlive\2026\bin\windows\tlmgr.bat' install latexmk synctex synctex.windows collection-langjapanese
-```
+The management screen uses the same review and progress flow. For a shared installation that the Store edition cannot change directly, use **Open the TeX management tool** when offered, make the changes there, then return and click **Refresh packages**.
 
-```sh
-sudo /Library/TeX/texbin/tlmgr update --self
-sudo /Library/TeX/texbin/tlmgr install latexmk synctex collection-langjapanese
-```
-
-The standard MacTeX / BasicTeX installation location requires `sudo` for changes. If TeX Live is installed in your own user folder, clear **Use sudo for installation** in the app. If Windows reports a permission error, check the installation location and the account that installed TeX Live; run the same commands in an administrator PowerShell when that installation requires it.
-
-For an error such as `File 'siunitx.sty' not found`, use `tlmgr search --global --file '/siunitx\.sty$'` to find the package that contains the file, then install the package shown in the result, for example `tlmgr install siunitx`. File names and package names can differ. The app's **Find a package from a missing file** section prepares this search command from a file name. The [tlmgr manual](https://tug.org/texlive/doc/tlmgr.html) documents both `search` and `install`.
-
-For custom `.sty` or `.cls` files supplied with a document, obtain them from the document's publisher or author and place them in the project. After adding packages, reopen Settings and compile again. If a package is registered as installed but its executable is missing, select the option to download its files again, or use `tlmgr install --reinstall`. See [Add SyncTeX](#add-synctex) for an example.
+For an error such as `File 'siunitx.sty' not found`, add its package, `siunitx`, by name. If the package name is unclear, check the document's instructions or the package documentation; a file name can differ from its package name. Custom `.sty` or `.cls` files supplied by a publisher or author belong in the project folder. See [Add SyncTeX](#add-synctex) for the source–PDF navigation controls.
 
 ### Check your TeX installation
 
-In Windows PowerShell, adjust the year and path to match your installation:
+Open **Settings** to review the selected **TeX Live bin folder** and the available programs. **Set up TeX… → Check the environment again** refreshes the program checks. **Manage TeX…** shows the actual installation folder and its installed packages.
 
-```powershell
-& 'C:\texlive\2025\bin\windows\latexmk.exe' -v
-& 'C:\texlive\2025\bin\windows\synctex.exe' help
-```
-
-In Terminal on Mac:
-
-```sh
-/Library/TeX/texbin/latexmk -v
-/Library/TeX/texbin/synctex help
-```
-
-When these commands display their version or usage information, select the same TeX folder in the app's Settings. To add these two programs to MacTeX / BasicTeX, use `sudo /Library/TeX/texbin/tlmgr install latexmk synctex`. For older TeX Live releases, see [Add SyncTeX](#add-synctex) for the repository to use.
+If a required program is missing, use **Add TeX packages** to review and add it to the selected installation. The dedicated **Add SyncTeX…** button appears when source–PDF navigation needs SyncTeX. After adding packages, compile the document again so its PDF and SyncTeX data match the source.
 
 ## Download and launch
 
@@ -147,7 +178,7 @@ Microsoft Store manages installation and app updates. TeX setup is available ins
 #### ZIP download
 
 1. Open [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) and select the latest version.
-2. Under **Assets**, download `local-tex-web-editor-0.1.12-windows-x64.zip`. The **Source code** archives contain the files for development.
+2. Under **Assets**, download `local-tex-web-editor-0.1.13-windows-x64.zip`. The **Source code** archives contain the files for development.
 3. Extract the ZIP and double-click `local-tex-web-editor.exe`.
 4. In the browser window, choose your project folder. You can also enter its path.
 5. Use **Set up TeX…** to install TeX, or select an existing folder containing `latexmk.exe` in Settings, for example `C:\texlive\2026\bin\windows`.
@@ -157,7 +188,7 @@ The Windows executable in the ZIP download does not have a code signature. If Sm
 
 ### macOS
 
-1. Under **Assets** in [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases), download `local-tex-web-editor-0.1.12-macos-universal.zip`. The same ZIP supports Apple Silicon and Intel.
+1. Under **Assets** in [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases), download `local-tex-web-editor-0.1.13-macos-universal.zip`. The same ZIP supports Apple Silicon and Intel.
 2. Extract the ZIP and move `Local TeX Web Editor.app` to **Applications**.
 3. Open **Local TeX Web Editor** from Finder or Spotlight. The editor opens in your browser.
 4. Open your project folder. Use **Set up TeX…** to install TeX, or select an existing installation in Settings, such as `/Library/TeX/texbin` for MacTeX / BasicTeX.
@@ -348,6 +379,24 @@ The app also checks open documents for changes on disk during its regular refres
 
 The next session opens the previous project and restores all open tabs in their order, the two-editor layout when used, source cursor and scroll positions, the PDF page, and the zoom level. The last successfully compiled PDF is available immediately for reading.
 
+### Reset settings and remembered information
+
+Open **Settings → Information saved by the app → Reset settings and remembered information…**. The dialog shows the app-data location and the number and size of the files in each category.
+
+| Choice | Selected initially | Effect |
+| --- | --- | --- |
+| Settings and remembered actions | Yes | Returns appearance, editing preferences, recent projects, open tabs, editing positions and the selected TeX installation to their defaults |
+| Unsaved drafts | No | Deletes the app's copies of text that has not been saved to project files |
+| Edit history | No | Deletes the recorded earlier versions of documents |
+| Your templates | No | Deletes templates you added |
+| PDF and SyncTeX cache | No | Deletes the app's copies used to preview compiled documents |
+
+Choose the information to reset, select **I confirm that I want to reset the selected information**, then click **Reset selected information**. If an open document has unsaved changes, choose **Save and reset** or **Keep drafts and reset**. When you selected **Unsaved drafts**, the second choice becomes **Discard changes and reset**. **Cancel** returns to your work.
+
+The app reloads after a successful reset. Resetting settings returns to Home; open the project folder again to resume. When you select only drafts, history, templates or the preview cache, the current project and settings remain in use. Other open tabs ask to reload when they next connect. Their notice offers downloads of unsaved documents before you reload them.
+
+Project files and installed TeX remain available, including TeX installed inside the app-data folder. Use **Manage TeX…** for package changes or removal of a TeX installation. See the [privacy policy](docs/privacy.md#managing-your-data) for the saved data and its locations.
+
 ### Create a linked Markdown page
 
 With a Markdown document open, choose **New page** in the formatting toolbar above the source, or **Editing tools → New Markdown page**. Enter a title and a path in an existing project folder. The dialog previews the relative link that will be inserted at the current selection and can open the new page afterward. The new file starts with its title as a heading. Existing files are not overwritten. Undo in the original document removes the inserted link; the created page remains in the project.
@@ -423,25 +472,16 @@ Open **Log** to see a list above the complete compilation output. Filter it by *
 
 ### Add SyncTeX
 
-The app's TeX setup includes SyncTeX. For an environment installed by the app, use **Settings → Add TeX packages → Add with the app…** to add or download its files again. The following commands are for a TeX installation you manage yourself.
+The standard TeX setup already includes SyncTeX. If **Settings → Source–PDF navigation (SyncTeX)** reports it as missing:
 
-If `synctex.exe` is missing, use TeX Live Manager to add `synctex` and its Windows executable. For TeX Live 2025 installed at `C:\texlive\2025`, run these commands in PowerShell:
+1. Click **Add SyncTeX…**.
+2. Review the selected TeX folder and packages. Windows also needs the `synctex.windows` executable package; the app includes it when required.
+3. Click **Add these packages** and wait for completion. This flow can download files again when a package is registered but its executable is missing.
+4. Compile the document once in the app, then use **Go to PDF** or double-click the corresponding text in the PDF.
 
-```powershell
-& 'C:\texlive\2025\bin\windows\tlmgr.bat' --repository 'https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2025/tlnet-final' update --self
+For a shared installation in the Store edition, the button can open the official TeX management tool. Add the packages there, return to the app, and check the environment again. If no TeX installation is selected, **Set up TeX…** provides an environment that includes SyncTeX.
 
-& 'C:\texlive\2025\bin\windows\tlmgr.bat' --repository 'https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2025/tlnet-final' install --reinstall synctex synctex.windows
-
-& 'C:\texlive\2025\bin\windows\synctex.exe' help
-```
-
-When adding packages to an older TeX Live release, use that year's `tlnet-final`. The `--repository` option above selects the repository for each command. `--reinstall` downloads the files again even if the package is already registered as installed. See [TUG's download guidance](https://www.tug.org/texlive/acquire.html) and the [tlmgr manual](https://www.tug.org/texlive/doc/tlmgr.html).
-
-Once `synctex.exe help` displays its usage information, compile once in the app before using source–PDF navigation. If your TeX Live installation is elsewhere, change both the command paths and the app's TeX Live folder setting.
-
-After recompiling, the PDF stays near the page you were reading. If compilation fails or is stopped, the last successful PDF remains available while you edit.
-
-Open **Log** at the top right when you need the compilation details. The log opens automatically after a failed compilation.
+After recompiling, the PDF stays near the page you were reading. If compilation fails or is stopped, the last successful PDF remains available while you edit. Open **Log** at the top right for compilation details; it opens automatically after a failed compilation.
 
 ## Configure compilation
 
@@ -516,7 +556,7 @@ go build -o bin/local-tex-web-editor.exe ./cmd/local-tex-editor
 Build a Windows distribution executable:
 
 ```sh
-go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.12" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
+go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.13" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
 ```
 
 `build:windows-resources` generates Windows x64 resources from the bundled ICO. The executable embeds nine icon sizes from 16 to 256 px.
@@ -532,7 +572,7 @@ npx playwright install chromium
 node scripts/build-macos.mjs
 ```
 
-This creates `dist/local-tex-web-editor-0.1.12-macos-universal.zip` with an app supporting Apple Silicon and Intel, the English and Japanese READMEs, and license files.
+This creates `dist/local-tex-web-editor-0.1.13-macos-universal.zip` with an app supporting Apple Silicon and Intel, the English and Japanese READMEs, and license files.
 
 Command-line options:
 

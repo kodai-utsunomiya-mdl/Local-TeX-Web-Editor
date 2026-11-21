@@ -82,7 +82,94 @@ async function compile() {
 
 try {
   assert.equal(ready.version, version);
-  const setup = await installAndCheckTeX({ api, request, temporary, output: path.join(output, 'tex-setup'), useDefaultParent: true });
+  browser = await chromium.launch({ headless: true });
+  context = await browser.newContext({ viewport: { width: 1600, height: 1000 }, locale: 'en-US' });
+  await context.tracing.start({ screenshots: true, snapshots: true });
+  page = await context.newPage();
+  page.on('pageerror', error => errors.push(error.message));
+  let progressCaptured = false;
+  let reviewedParent = '';
+  const setupBody = page.locator('#tex-setup-dialog .import-body');
+  const setup = await installAndCheckTeX({ api, request, temporary, output: path.join(output, 'tex-setup'), useDefaultParent: true, observeSetup: {
+    async review(initial) {
+      reviewedParent = initial.install?.parent || initial.parent;
+      await page.goto(`${ready.url}#token=${encodeURIComponent(ready.token)}`);
+      await expect(page.locator('#home-tex-setup')).toBeVisible();
+      await expect(page.locator('#home-tex-setup')).toBeEnabled();
+      await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+      await expect(page.locator('#home-tex-setup')).toBeInViewport({ ratio: 1 });
+      await expect(page.locator('#home-tex-management')).toBeInViewport({ ratio: 1 });
+      await page.screenshot({ path: path.join(output, 'tex-setup-home.png') });
+      await page.locator('#home-tex-setup').click();
+      await expect(page.locator('#tex-setup-review')).toBeVisible();
+      await expect(page.locator('#tex-setup-start')).toBeEnabled();
+      await expect(page.locator('#tex-setup-source')).toHaveAttribute('href', /tinytex-releases/);
+      await setupBody.evaluate(body => { body.scrollTop = 0; });
+      await expect(page.locator('.tex-setup-programs')).toBeInViewport({ ratio: 1 });
+      await expect(page.locator('#tex-setup-package-list')).toBeInViewport({ ratio: 1 });
+      await page.screenshot({ path: path.join(output, 'tex-setup-plan.png') });
+      await setupBody.evaluate(body => { body.scrollTop = body.scrollHeight; });
+      await expect(page.locator('#tex-setup-source')).toBeInViewport({ ratio: 1 });
+      await expect(page.locator('#tex-setup-archive-size')).toBeInViewport({ ratio: 1 });
+      await expect(page.locator('#tex-setup-size-estimate')).toBeInViewport({ ratio: 1 });
+      await expect(page.locator('#tex-setup-parent')).toHaveValue(reviewedParent);
+      await expect(page.locator('#tex-setup-parent')).toBeInViewport({ ratio: 1 });
+      await expect(page.locator('#tex-setup-start')).toBeInViewport({ ratio: 1 });
+      await page.screenshot({ path: path.join(output, 'tex-setup-location.png') });
+      await page.locator('#tex-setup-close').click();
+    },
+    async start() {
+      await page.locator('#home-tex-setup').click();
+      await expect(page.locator('#tex-setup-recheck')).toBeEnabled({ timeout: 20000 });
+      // The browser may have observed the cancellation while the API check ran.
+      // Reopen the review through the same retry control available to a user.
+      if (await page.locator('#tex-setup-retry').isVisible()) await page.locator('#tex-setup-retry').click();
+      await expect(page.locator('#tex-setup-review')).toBeVisible();
+      await expect(page.locator('#tex-setup-parent')).toHaveValue(reviewedParent);
+      await expect(page.locator('#tex-setup-start')).toBeVisible();
+      await expect(page.locator('#tex-setup-start')).toBeEnabled();
+      const [response] = await Promise.all([
+        page.waitForResponse(response => new URL(response.url()).pathname === '/api/tex/setup' && response.request().method() === 'POST'),
+        page.locator('#tex-setup-start').click(),
+      ]);
+      assert.equal(response.ok(), true, await response.text());
+      await expect(page.locator('#tex-setup-progress-panel')).toBeVisible();
+      return response.json();
+    },
+    async status(status) {
+      if (progressCaptured || status.status !== 'running' || (status.stage === 'downloading' && !status.downloadedBytes)) return;
+      await expect(page.locator('#tex-setup-progress-panel')).toBeVisible();
+      await expect.poll(async () => {
+        const stage = await page.locator('#tex-setup-stage').textContent();
+        if (stage === 'Downloading TeX…') return Number(await page.locator('#tex-setup-progress').getAttribute('value')) > 0;
+        return ['Checking the downloaded file…', 'Extracting TeX files…', 'Adding TeX packages…', 'Checking available programs…'].includes(stage);
+      }, { timeout: 20000 }).toBe(true);
+      await expect(page.locator('#tex-setup-stop')).toBeVisible();
+      const log = page.locator('#tex-setup-progress-panel .tex-setup-log');
+      await expect(log).toBeVisible();
+      if (!await log.evaluate(element => element.open)) await log.locator('summary').click();
+      await expect(page.locator('#tex-setup-log')).not.toHaveText('');
+      await setupBody.evaluate(body => { body.scrollTop = 0; });
+      await expect(page.locator('#tex-setup-stage')).toBeInViewport({ ratio: 1 });
+      await expect(page.locator('#tex-setup-log')).toBeInViewport({ ratio: 1 });
+      await page.screenshot({ path: path.join(output, 'tex-setup-progress.png') });
+      progressCaptured = true;
+    },
+    async complete() {
+      await expect(page.locator('#tex-setup-stage')).toHaveText('TeX setup is complete.', { timeout: 30000 });
+      await expect(page.locator('#tex-setup-sample')).toBeVisible({ timeout: 30000 });
+      await expect(page.locator('#tex-setup-sample')).toBeEnabled();
+      await expect(page.locator('#tex-setup-stop')).toBeHidden();
+      await expect(page.locator('#tex-setup-dialog .form-error')).toBeHidden();
+      await setupBody.evaluate(body => { body.scrollTop = 0; });
+      await expect(page.locator('#tex-setup-stage')).toBeInViewport({ ratio: 1 });
+      await expect(page.locator('#tex-setup-directory')).toBeInViewport({ ratio: 1 });
+      await expect(page.locator('#tex-setup-sample')).toBeInViewport({ ratio: 1 });
+      await page.screenshot({ path: path.join(output, 'tex-setup-complete.png') });
+      assert.equal(progressCaptured, true, 'Capture the real installation progress for the setup guide.');
+      await page.locator('#tex-setup-close').click();
+    },
+  } });
   const initial = await api('/api/state');
   assert.equal(initial.platform, 'windows');
   assert.deepEqual(initial.packageIdentity, { fullName: identity.fullName, familyName: identity.familyName });
@@ -95,11 +182,6 @@ try {
   assert.equal(shortcut.status, 501, await shortcut.text());
   await api('/api/project/open', { path: project });
 
-  browser = await chromium.launch({ headless: true });
-  context = await browser.newContext({ viewport: { width: 1600, height: 1000 }, locale: 'en-US' });
-  await context.tracing.start({ screenshots: true, snapshots: true });
-  page = await context.newPage();
-  page.on('pageerror', error => errors.push(error.message));
   await page.goto(`${ready.url}#token=${encodeURIComponent(ready.token)}`);
   const editor = page.getByTestId('editor').locator('.cm-content');
   await expect(editor).toBeVisible({ timeout: 20000 });
@@ -181,7 +263,7 @@ $\widehat w$ & Estimated coefficient vector \\
   await expect(page.locator('#toast')).toBeHidden();
   await page.screenshot({ path: path.join(output, 'editor-tex-dark.png') });
   await page.getByTestId('settings-button').click();
-  await page.locator('#settings-tex-setup').click();
+  await page.locator('#settings-tex-management').click();
   const management = page.locator('#tex-management-dialog');
   await expect(management).toBeVisible();
   await expect(page.locator('#tex-package-list')).toContainText('amsmath', { timeout: 120000 });

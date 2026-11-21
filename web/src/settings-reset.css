@@ -1,0 +1,19 @@
+.settings-reset-section { display: grid; gap: 12px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
+.settings-reset-section h3, .settings-reset-section p { margin: 0; }
+.settings-reset-section > button { justify-self: start; }
+.settings-reset-dialog { width: min(660px, calc(100vw - 32px)); }
+.settings-reset-dialog .import-body { display: grid; gap: 16px; }
+.settings-reset-dialog .import-body > p { margin: 0; }
+.settings-reset-options { display: grid; gap: 12px; border: 0; padding: 0; margin: 0; min-width: 0; }
+.settings-reset-options > legend { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.settings-reset-dialog .button-danger { border-color: var(--danger, #b0444d); color: var(--danger, #b0444d); }
+.settings-reset-option { display: flex; align-items: flex-start; gap: 12px; padding: 14px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; }
+.settings-reset-option > input, .settings-reset-confirmation > input { flex: 0 0 auto; margin-top: 4px; }
+.settings-reset-option-text { display: grid; gap: 6px; min-width: 0; }
+.settings-reset-option-text .field-help { margin: 0; }
+.settings-reset-size { font-size: 12px; color: var(--muted); }
+.settings-reset-directory { display: block; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; overflow-wrap: anywhere; font-size: 12px; }
+.settings-reset-confirmation { display: flex; align-items: flex-start; gap: 12px; padding-top: 8px; }
+.settings-reset-downloads { display: grid; gap: 10px; padding-left: 22px; overflow-wrap: anywhere; }
+.settings-reset-dialog > .field-help { margin: 16px 0; }
+.settings-reset-dialog > .dialog-actions { margin-top: 24px; gap: 12px; }

@@ -1,8 +1,7 @@
 export const texManagementEnglish = {
   'TeX を管理': 'Manage TeX',
   'TeX を管理…': 'Manage TeX…',
-  'このアプリが管理する TeX の環境で，パッケージの追加・削除を行えます．外部の TeX は設定にある手動コマンドを使ってください．': 'Add and remove packages in the TeX environment managed by this app. For an external TeX environment, use the manual commands in Settings.',
-  'この画面で利用できない操作は，TeX の管理ツールや設定にある手動コマンドを使ってください．': 'For operations unavailable here, use the TeX management tool or the manual commands in Settings.',
+  'この画面で利用できない操作は，TeX の配布元の管理ツールで行えます．アプリ用の TeX を新しく導入することもできます．': 'Use the TeX distribution’s management tool for operations unavailable here. You can also install a new TeX environment for this app.',
   'TeX の管理ツールを開く': 'Open the TeX management tool',
   'TeX の管理ツールを開きました．変更が終わったら一覧を更新してください．': 'The TeX management tool was opened. Refresh this list after making changes.',
   'Windows の設定でアンインストール…': 'Uninstall in Windows Settings…',

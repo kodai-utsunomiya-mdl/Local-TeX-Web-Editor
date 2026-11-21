@@ -30,6 +30,22 @@ function deferred() {
   return { promise, resolve };
 }
 
+function browserStorage(context) {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  const values = new Map();
+  const storage = {
+    getItem: key => values.get(key) ?? null,
+    setItem: (key, value) => values.set(key, String(value)),
+    removeItem: key => values.delete(key),
+  };
+  Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: storage });
+  context.after(() => {
+    if (descriptor) Object.defineProperty(globalThis, 'localStorage', descriptor);
+    else delete globalThis.localStorage;
+  });
+  return storage;
+}
+
 async function until(predicate) {
   const deadline = Date.now() + 2000;
   while (!predicate()) {
@@ -336,4 +352,385 @@ test('forgetting a project cancels its queued writes while other projects contin
   assert.equal(server.current('session:deleted-project').value, null);
   assert.deepEqual(server.current('session:kept-project').value, { position: 3 });
   assert.equal(store.pending, false);
+});
+
+test('draft recovery uses backups from the current generation, including older backups before the first reset', async context => {
+  const storage = browserStorage(context);
+  const key = 'drafts:backup-generation', backupKey = `local-tex-editor-backup:${key}`;
+  for (const [generation, backupGeneration, restore] of [
+    ['', undefined, true],
+    ['current', 'current', true],
+    ['current', 'previous', false],
+    ['current', undefined, false],
+    ['', 'previous', false],
+  ]) {
+    const saved = draft('saved text', 100), backup = draft('unsaved text', 200);
+    storage.setItem(backupKey, JSON.stringify({ value: backup, updatedAt: backup.updatedAt, ...(backupGeneration === undefined ? {} : { draftsGeneration: backupGeneration }) }));
+    const server = storageServer({ [key]: saved });
+    const store = new SessionStore(server.api, undefined, { getDraftsGeneration: () => generation });
+    context.after(() => store.stop());
+    assert.deepEqual(await store.read(key), restore ? backup : saved);
+    if (restore) assert.equal(JSON.parse(storage.getItem(backupKey)).draftsGeneration, generation);
+    else assert.equal(storage.getItem(backupKey), null);
+    await store.flush();
+    assert.deepEqual(server.current(key).value, restore ? backup : saved);
+    assert.equal(server.calls.filter(call => call.method === 'PUT').length, Number(restore));
+    assert.equal(storage.getItem(backupKey), null);
+    store.stop();
+  }
+});
+
+test('each draft backup records the current generation and stopping leaves it available', context => {
+  const storage = browserStorage(context);
+  const key = 'drafts:backup-write', backupKey = `local-tex-editor-backup:${key}`;
+  let generation = '';
+  const store = new SessionStore(storageServer().api, undefined, { getDraftsGeneration: () => generation });
+  context.after(() => store.stop());
+  store.write(key, draft('first input'), 60_000);
+  assert.equal(JSON.parse(storage.getItem(backupKey)).draftsGeneration, '');
+  generation = 'current';
+  store.write(key, draft('later input', 200), 60_000);
+  const backup = storage.getItem(backupKey);
+  assert.equal(JSON.parse(backup).draftsGeneration, 'current');
+  store.stop();
+  assert.equal(storage.getItem(backupKey), backup);
+});
+
+test('a stopped store cancels queued saves and all later storage operations stay stopped', async context => {
+  const storage = browserStorage(context);
+  const server = storageServer(), statuses = [];
+  const store = new SessionStore(server.api, (...args) => statuses.push(args));
+  context.after(() => store.stop());
+  const key = 'drafts:stopped', backupKey = `local-tex-editor-backup:${key}`;
+  store.write(key, draft('input awaiting a save'), 5);
+  store.write('preferences', { theme: 'dark' }, 5);
+  const backup = storage.getItem(backupKey), statusCount = statuses.length;
+  store.stop();
+  store.stop();
+  store.write(key, draft('input after stopping', 200), 0);
+  store.forget(key);
+  await assert.rejects(store.read(key), { name: 'AbortError' });
+  await store.flush({ retryConflicts: true });
+  await store.resume();
+  store.flushOnHide();
+  await store.settle();
+  await delay(10);
+  assert.equal(server.calls.length, 0);
+  assert.equal(store.pending, false);
+  assert.equal(statuses.length, statusCount);
+  assert.equal(storage.getItem(backupKey), backup);
+});
+
+test('stopping during a read aborts the request and a late response cannot restore or remove a backup', async context => {
+  const storage = browserStorage(context);
+  const key = 'drafts:stopped-read', backupKey = `local-tex-editor-backup:${key}`;
+  const gate = deferred(), server = storageServer({ [key]: draft('previously saved') });
+  const statuses = [];
+  let signal;
+  const store = new SessionStore(async (url, options) => {
+    signal = options.signal;
+    const response = await server.api(url, options);
+    await gate.promise;
+    return response;
+  }, (...args) => statuses.push(args));
+  context.after(() => { gate.resolve(); store.stop(); });
+  const reading = store.read(key);
+  await until(() => signal);
+  store.stop();
+  assert.equal(signal.aborted, true);
+  const backup = JSON.stringify({ value: draft('new input', 200), updatedAt: 200, draftsGeneration: 'after-reset' });
+  storage.setItem(backupKey, backup);
+  gate.resolve();
+  await assert.rejects(reading, { name: 'AbortError' });
+  assert.equal(server.calls.length, 1);
+  assert.equal(store.pending, false);
+  assert.equal(statuses.length, 0);
+  assert.equal(storage.getItem(backupKey), backup);
+});
+
+test('stopping while a draft fetches its base revision prevents the following PUT', async context => {
+  const storage = browserStorage(context);
+  const key = 'drafts:stopped-base', backupKey = `local-tex-editor-backup:${key}`;
+  const server = storageServer(), gate = deferred(), statuses = [];
+  let signal;
+  const store = new SessionStore(async (url, options) => {
+    signal = options.signal;
+    const response = await server.api(url, options);
+    await gate.promise;
+    return response;
+  }, (...args) => statuses.push(args));
+  context.after(() => { gate.resolve(); store.stop(); });
+  store.write(key, draft('pending input'), 60_000);
+  const writing = store.flush();
+  await until(() => signal);
+  const backup = storage.getItem(backupKey), statusCount = statuses.length;
+  store.stop();
+  assert.equal(signal.aborted, true);
+  gate.resolve();
+  await writing;
+  assert.deepEqual(server.calls.map(call => call.method), ['GET']);
+  assert.equal(statuses.length, statusCount);
+  assert.equal(storage.getItem(backupKey), backup);
+});
+
+for (const method of ['PUT', 'PATCH']) {
+  test(`stopping during a ${method} prevents a late acknowledgement from changing a newer backup`, async context => {
+    const storage = browserStorage(context);
+    const key = 'drafts:stopped-save', backupKey = `local-tex-editor-backup:${key}`;
+    const server = storageServer({ [key]: draft('original') }), gate = deferred(), statuses = [];
+    let signal;
+    const store = new SessionStore(async (url, options = {}) => {
+      const response = await server.api(url, options);
+      if (options.method === method) { signal = options.signal; await gate.promise; }
+      return response;
+    }, (...args) => statuses.push(args));
+    context.after(() => { gate.resolve(); store.stop(); });
+    await store.read(key);
+    store.write(key, draft('earlier input', 200), 60_000);
+    let writing;
+    if (method === 'PUT') writing = store.flush();
+    else store.flushOnHide();
+    await until(() => signal);
+    store.write(key, draft('queued input', 300), 60_000);
+    const statusCount = statuses.length;
+    const keepalive = [...store.keepaliveRequests];
+    store.stop();
+    assert.equal(signal.aborted, true);
+    server.values.delete(key);
+    const backup = JSON.stringify({ value: draft('input after reset', 400), updatedAt: 400, draftsGeneration: 'after-reset' });
+    storage.setItem(backupKey, backup);
+    gate.resolve();
+    await Promise.all([writing, ...keepalive]);
+    await store.resume();
+    store.flushOnHide();
+    assert.equal(server.current(key).value, null);
+    assert.deepEqual(server.calls.map(call => call.method), ['GET', method]);
+    assert.equal(statuses.length, statusCount);
+    assert.equal(store.pending, false);
+    assert.equal(storage.getItem(backupKey), backup);
+  });
+}
+
+test('stopping during hashing prevents a pending draft from being sent', async context => {
+  const storage = browserStorage(context);
+  const key = 'drafts:stopped-hashing', backupKey = `local-tex-editor-backup:${key}`;
+  const server = storageServer({ [key]: draft('original') }), gate = deferred(), statuses = [];
+  const store = new SessionStore(server.api, (...args) => statuses.push(args));
+  context.after(() => { gate.resolve(); store.stop(); });
+  const digest = crypto.subtle.digest.bind(crypto.subtle);
+  let hashing = false;
+  context.mock.method(crypto.subtle, 'digest', async (...args) => {
+    hashing = true;
+    await gate.promise;
+    return digest(...args);
+  });
+  await store.read(key);
+  store.write(key, draft('pending input', 200), 60_000);
+  const writing = store.flush();
+  await until(() => hashing);
+  const backup = storage.getItem(backupKey), statusCount = statuses.length;
+  store.stop();
+  gate.resolve();
+  await writing;
+  assert.deepEqual(server.calls.map(call => call.method), ['GET']);
+  assert.equal(statuses.length, statusCount);
+  assert.equal(storage.getItem(backupKey), backup);
+});
+
+test('pausing selected drafts lets a reset continue past their existing conflicts while other records are saved', async context => {
+  browserStorage(context);
+  const key = 'drafts:discard', server = storageServer({ [key]: draft('original') });
+  const store = new SessionStore(server.api);
+  context.after(() => store.stop());
+  await store.read(key);
+  const otherTab = draft('another tab', 200), unsaved = draft('this tab', 300);
+  server.values.set(key, snapshot(otherTab));
+  store.write(key, unsaved, 60_000);
+  await assert.rejects(store.flush(), { status: 409 });
+  const release = store.pauseKeys(name => name === key || name === 'preferences');
+  store.write('preferences', { theme: 'dark' }, 0);
+  store.write('session:keep', { path: 'main.tex' }, 60_000);
+  await store.settle();
+  await store.flush({ retryConflicts: true });
+  assert.deepEqual(server.current(key).value, otherTab);
+  assert.equal(server.current('preferences').value, null);
+  assert.deepEqual(server.current('session:keep').value, { path: 'main.tex' });
+  assert.equal(server.calls.filter(call => call.method === 'PUT' && call.body.key === key).length, 1);
+  release();
+  await assert.rejects(store.settle(), { status: 409 });
+  await store.flush({ retryConflicts: true });
+  assert.deepEqual(server.current(key).value, unsaved);
+  assert.deepEqual(server.current('preferences').value, { theme: 'dark' });
+});
+
+test('a conflict in an unselected draft still stops settling before a reset', async context => {
+  const key = 'drafts:keep', server = storageServer({ [key]: draft('original') });
+  const store = new SessionStore(server.api);
+  context.after(() => store.stop());
+  await store.read(key);
+  server.values.set(key, snapshot(draft('another tab', 200)));
+  store.write(key, draft('this tab', 300), 60_000);
+  store.write('preferences', { theme: 'dark' }, 60_000);
+  store.pauseKeys(name => name === 'preferences');
+  await assert.rejects(store.settle(), { status: 409 });
+  assert.equal(server.current('preferences').value, null);
+});
+
+for (const fail of [false, true]) {
+  test(`settling a paused record waits for its current PUT ${fail ? 'to fail' : 'to finish'} and resumes the latest queued value after release`, async context => {
+    const storage = browserStorage(context);
+    const key = 'drafts:paused-put', backupKey = `local-tex-editor-backup:${key}`;
+    const server = storageServer({ [key]: draft('original') }), gate = deferred(), statuses = [];
+    let puts = 0, entered = false;
+    const store = new SessionStore(async (url, options = {}) => {
+      if (options.method === 'PUT' && ++puts === 1) {
+        entered = true;
+        await gate.promise;
+        if (fail) throw Object.assign(new Error('The write failed'), { status: 500 });
+      }
+      return server.api(url, options);
+    }, (...args) => statuses.push(args));
+    context.after(() => { gate.resolve(); store.stop(); });
+    await store.read(key);
+    store.write(key, draft('being sent', 200), 60_000);
+    const writing = store.flush();
+    await until(() => entered);
+    const release = store.pauseKeys(name => name === key);
+    const latest = draft('latest queued input', 300);
+    store.write(key, latest, 0);
+    let settled = false;
+    const settling = store.settle().then(() => { settled = true; });
+    await delay(5);
+    assert.equal(settled, false);
+    gate.resolve();
+    await Promise.all([writing, settling]);
+    assert.equal(puts, 1);
+    assert.equal(statuses.filter(([status]) => status === 'error').length, 0);
+    assert.deepEqual(JSON.parse(storage.getItem(backupKey)).value, latest);
+    release();
+    await until(() => !store.pending);
+    assert.deepEqual(server.current(key).value, latest);
+    assert.equal(storage.getItem(backupKey), null);
+    assert.equal(puts, 2);
+  });
+}
+
+test('a late acknowledgement during a pause cannot remove a newer backup from another tab', async context => {
+  const storage = browserStorage(context);
+  const key = 'drafts:paused-ack', backupKey = `local-tex-editor-backup:${key}`;
+  const server = storageServer({ [key]: draft('original') }), gate = deferred();
+  let entered = false;
+  const store = new SessionStore(async (url, options = {}) => {
+    const response = await server.api(url, options);
+    if (options.method === 'PUT') { entered = true; await gate.promise; }
+    return response;
+  });
+  context.after(() => { gate.resolve(); store.stop(); });
+  await store.read(key);
+  store.write(key, draft('already sent', 200), 60_000);
+  const writing = store.flush();
+  await until(() => entered);
+  const release = store.pauseKeys(name => name === key);
+  const backup = JSON.stringify({ value: draft('newer text in another tab', 300), updatedAt: 300, draftsGeneration: '' });
+  storage.setItem(backupKey, backup);
+  gate.resolve();
+  await writing;
+  await store.settle();
+  assert.equal(storage.getItem(backupKey), backup);
+  release();
+  await store.settle();
+  assert.equal(store.pending, false);
+  assert.equal(storage.getItem(backupKey), backup);
+});
+
+test('a read that finishes during a pause does not restore or discard its browser backup', async context => {
+  const storage = browserStorage(context);
+  const key = 'drafts:paused-read', backupKey = `local-tex-editor-backup:${key}`;
+  const original = draft('saved text'), backup = draft('unsaved text', 200);
+  storage.setItem(backupKey, JSON.stringify({ value: backup, updatedAt: 200, draftsGeneration: '' }));
+  const server = storageServer({ [key]: original }), gate = deferred();
+  let entered = false;
+  const store = new SessionStore(async (url, options) => {
+    const response = await server.api(url, options);
+    if (!entered) { entered = true; await gate.promise; }
+    return response;
+  });
+  context.after(() => { gate.resolve(); store.stop(); });
+  const reading = store.read(key);
+  await until(() => entered);
+  const release = store.pauseKeys(name => name === key);
+  gate.resolve();
+  assert.deepEqual(await reading, original);
+  await store.settle();
+  assert.deepEqual(JSON.parse(storage.getItem(backupKey)).value, backup);
+  assert.deepEqual(server.calls.map(call => call.method), ['GET']);
+  release();
+  assert.deepEqual(await store.read(key), backup);
+  await store.settle();
+  assert.deepEqual(server.current(key).value, backup);
+});
+
+for (const stage of ['base revision', 'hash']) {
+  test(`pausing while a draft waits for its ${stage} prevents a new PUT until release`, async context => {
+    browserStorage(context);
+    const key = 'drafts:paused-preparation', server = storageServer({ [key]: draft('original') }), gate = deferred();
+    let entered = false;
+    const store = new SessionStore(async (url, options) => {
+      const response = await server.api(url, options);
+      if (stage === 'base revision' && !entered) { entered = true; await gate.promise; }
+      return response;
+    });
+    context.after(() => { gate.resolve(); store.stop(); });
+    if (stage === 'hash') {
+      await store.read(key);
+      const digest = crypto.subtle.digest.bind(crypto.subtle);
+      context.mock.method(crypto.subtle, 'digest', async (...args) => { entered = true; await gate.promise; return digest(...args); });
+    }
+    const latest = draft('queued input', 200);
+    store.write(key, latest, 60_000);
+    const writing = store.flush();
+    await until(() => entered);
+    const release = store.pauseKeys(name => name === key);
+    gate.resolve();
+    await writing;
+    await store.settle();
+    assert.equal(server.calls.filter(call => call.method === 'PUT').length, 0);
+    release();
+    await until(() => !store.pending);
+    assert.deepEqual(server.current(key).value, latest);
+  });
+}
+
+test('paused records are excluded from close-time writes and overlapping pauses resume independently', async context => {
+  const key = 'drafts:paused-hide', server = storageServer({ [key]: draft('original') });
+  const store = new SessionStore(server.api);
+  context.after(() => store.stop());
+  await store.read(key);
+  const releaseDraft = store.pauseKeys(name => name === key);
+  const releaseSelected = store.pauseKeys(name => name === key || name === 'preferences');
+  store.write(key, draft('queued input', 200), 0);
+  store.write('preferences', { theme: 'dark' }, 0);
+  store.write('session:keep', { path: 'main.tex' }, 60_000);
+  releaseDraft(); releaseDraft();
+  store.flushOnHide();
+  await store.settle();
+  assert.deepEqual(server.calls.filter(call => call.method !== 'GET').map(call => call.body.key), ['session:keep']);
+  releaseSelected();
+  await store.resume();
+  assert.deepEqual(server.current(key).value, draft('queued input', 200));
+  assert.deepEqual(server.current('preferences').value, { theme: 'dark' });
+});
+
+test('releasing a pause after a permanent stop cannot restart saved records', async context => {
+  const server = storageServer(), store = new SessionStore(server.api);
+  context.after(() => store.stop());
+  const release = store.pauseKeys(() => true);
+  store.write('preferences', { theme: 'dark' }, 0);
+  store.stop();
+  release(); release();
+  await store.settle();
+  await store.resume();
+  store.flushOnHide();
+  await delay(5);
+  assert.equal(server.calls.length, 0);
 });

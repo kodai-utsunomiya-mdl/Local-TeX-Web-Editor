@@ -48,6 +48,7 @@ import { isMac, shortcutModifier } from './platform-keys.js';
 import { renderTeXPackagesHelp } from './tex-packages.js';
 import { createTeXSetup, isTeXSetupRunning, missingTeXPrograms, teXEnvironment } from './tex-setup.js';
 import { createTeXManagement } from './tex-management.js';
+import { createSettingsReset } from './settings-reset.js';
 import { extractTexMetadata, extractCitations, compileTarget } from './tex-tools.js';
 
 const $ = id => document.getElementById(id);
@@ -62,6 +63,11 @@ if (fragment.has('token')) history.replaceState(null, '', location.pathname + lo
 
 const state = {
   meta: null,
+  settingsGeneration: null,
+  draftsGeneration: '',
+  resetDetected: false,
+  resetInProgress: false,
+  reloadAfterReset: false,
   documents: new Map(),
   assets: new Map(),
   tabOrder: [],
@@ -139,6 +145,7 @@ let documentHistory = null;
 let templateManager = null;
 let texSetup = null;
 let texManagement = null;
+let settingsReset = null;
 let fileTemplatePicker = null;
 let logIssues = null;
 let markdownEditing = null;
@@ -203,9 +210,11 @@ function setConnected(connected) {
 }
 
 async function api(path, { method = 'GET', body, binary = false, headers: additionalHeaders = {}, timeout = 15000, projectRoot = state.meta?.project?.root, signal, keepalive = false } = {}) {
+  if (state.resetDetected) throw new DOMException(t('初期化後の状態を使うため，アプリを開き直してください．'), 'AbortError');
   if (state.closed) throw new Error(t("アプリは終了しています．実行ファイルから開き直してください．"));
   if (!token) throw new APIError(t("接続に必要な情報が見つかりません．アプリの実行ファイルを起動して開いたページを使用してください．"), 401);
   const headers = { ...additionalHeaders, 'X-Local-Token': token, Accept: 'application/json', 'Accept-Language': getLanguage() };
+  if (state.settingsGeneration !== null) headers['X-Settings-Generation'] = state.settingsGeneration;
   if (projectRoot && !/^\/api\/(state|project\/(open|pick)|shutdown)(\?|$)/.test(path)) headers['X-Project-Root'] = encodeURIComponent(projectRoot);
   if (body !== undefined) headers['Content-Type'] = binary ? 'application/octet-stream' : 'application/json';
   const controller = new AbortController();
@@ -218,11 +227,13 @@ async function api(path, { method = 'GET', body, binary = false, headers: additi
     let data;
     try { data = text ? JSON.parse(text) : null; }
     catch { throw new APIError(t("応答を読み取れませんでした (HTTP {value0})．{value1}", { value0: response.status, value1: text.slice(0, 500) }), response.status); }
+    if (data?.resetRequired === true) handleSettingsReset(data);
+    if (state.resetDetected) throw new DOMException(t('初期化後の状態を使うため，アプリを開き直してください．'), 'AbortError');
     if (!response.ok) throw new APIError(data?.error || t("処理に失敗しました (HTTP {value0})．", { value0: response.status }), response.status, data);
     setConnected(true);
     return data;
   } catch (error) {
-    if (signal?.aborted) throw new DOMException(t("操作を取り消しました．"), 'AbortError');
+    if (signal?.aborted || state.resetDetected) throw new DOMException(t("操作を取り消しました．"), 'AbortError');
     if (error instanceof APIError) {
       if (error.status === 401 || error.status === 403) setConnected(false);
       throw error;
@@ -234,7 +245,7 @@ async function api(path, { method = 'GET', body, binary = false, headers: additi
 }
 
 function showError(error, action = null) {
-  if (state.closed) return;
+  if (state.closed || state.resetDetected || error?.name === 'AbortError') return;
   state.connectionError = error instanceof APIError && error.status === 0 && !state.connected;
   const message = error?.message || String(error);
   $('error-text').textContent = message;
@@ -471,6 +482,7 @@ function updateTreeSelection() {
 function isRunning() { return state.build?.status === 'running'; }
 
 function setOperation(operation) {
+  if (state.resetDetected) operation = 'reset';
   state.operation = operation;
   if (operation) { editorContextMenu?.close(); fileTreeDrag?.cancel(); }
   for (const doc of state.documents.values()) applyDocumentTransaction(doc, doc.state.update({ effects: readOnly.reconfigure([EditorState.readOnly.of(!!operation), EditorView.editable.of(!operation)]) }));
@@ -1436,7 +1448,7 @@ async function completeProjectDeletion(result) {
 }
 
 async function applyMeta(meta, resetProject = false, sequence = ++state.statusRequestSequence) {
-  if (state.closed || sequence < state.statusAppliedSequence) return false;
+  if (state.closed || state.resetDetected || sequence < state.statusAppliedSequence) return false;
   if (!resetProject && state.meta?.project && meta.project?.root !== state.meta.project.root) {
     handleExternalProjectChange();
     return;
@@ -1543,15 +1555,24 @@ function cancelPicker() {
 function renderToolStatus() {
   $('tex-tool-status').textContent = state.meta?.latexmk ? `latexmk: ${state.meta.latexmk}` : state.meta?.toolError || t("例: C:\\texlive\\2025\\bin\\windows．空欄の場合は自動で検索します．");
   $('synctex-tool-status').textContent = state.meta?.synctex ? `synctex: ${state.meta.synctex}` : state.meta?.synctexError || t("SyncTeX で，原稿と PDF の対応する位置へ移動できます．");
-  const synctexCommands = state.meta?.synctexInstallCommands || [];
-  $('synctex-setup').hidden = !synctexCommands.length;
-  $('synctex-setup-help').textContent = t('次のコマンドを {value0} で実行し，設定を開き直して SyncTeX のパスを確認してください．', { value0: isMac ? t('ターミナル') : 'PowerShell' });
-  $('synctex-install-commands').textContent = synctexCommands.join('\n');
+  const snapshot = texSetup?.snapshot || state.meta?.texSetup;
+  const current = teXEnvironment(snapshot);
+  const hasEnvironment = !!(current.directory || state.meta?.latexmk);
+  const environmentKnown = !!snapshot?.environment || !!snapshot?.managed;
+  const canReviewSyncTeX = current.canInstallPackages || (!environmentKnown && !!state.texPackages?.manager);
+  $('synctex-setup').hidden = !state.meta || typeof state.meta.synctex !== 'string' || !!state.meta.synctex;
+  $('install-synctex').firstElementChild.textContent = t(canReviewSyncTeX ? 'SyncTeX を追加…'
+    : current.managerApplication ? 'TeX の管理ツールを開く' : hasEnvironment ? 'TeX を管理…' : 'TeX をセットアップ…');
+  $('synctex-setup-help').textContent = t(canReviewSyncTeX ? 'SyncTeX のパッケージと追加先を確認してから開始します．'
+    : current.managerApplication ? '公式の TeX 管理ツールを開き，SyncTeX のパッケージを追加できます．'
+      : hasEnvironment ? 'TeX の管理画面で，この環境で利用できる操作を確認できます．' : 'TeX の標準構成には SyncTeX も含まれます．');
   renderTeXPackagesHelp($('tex-packages-help'), state.texPackages, {
-    managed: teXEnvironment(texSetup?.snapshot || state.meta?.texSetup).managed,
-    canInstall: teXEnvironment(texSetup?.snapshot || state.meta?.texSetup).canInstallPackages,
+    canInstall: current.canInstallPackages, canSetup: !!snapshot?.supported, managerApplication: current.managerApplication, environmentKnown,
     busy: state.texSetupBusy || !!state.operation || isRunning(),
     onInstall: values => texSetup?.open({ reason: 'packages', operation: 'packages', ...values }),
+    onSetup: () => texSetup?.open({ reason: 'settings' }),
+    onOpenManager: () => texManagement?.open({ openManager: true }),
+    onManage: () => texManagement?.open(),
   });
 }
 function updateApplicationDetails(meta) {
@@ -1562,7 +1583,6 @@ function updateApplicationDetails(meta) {
 function updateTools(meta) {
   if (!state.meta) return;
   for (const key of ['texBin', 'latexmk', 'toolError', 'synctex', 'synctexError']) state.meta[key] = meta[key] || '';
-  state.meta.synctexInstallCommands = meta.synctexInstallCommands || [];
   state.meta.texPackages = meta.texPackages || null;
   if (meta.texSetup) { state.meta.texSetup = meta.texSetup; texSetup?.sync(meta.texSetup); }
   state.texPackages = state.meta.texPackages;
@@ -1606,6 +1626,97 @@ async function showSettings() {
   }
 }
 
+function stopForSettingsReset() {
+  if (state.resetDetected) return;
+  state.resetDetected = true;
+  state.persistenceReady = false;
+  ++state.projectGeneration; ++state.openSequence; ++state.toolsGeneration;
+  sessionStore.stop();
+  browserSession.stop();
+  texSetup?.destroy(); texManagement?.destroy();
+  for (const timer of [state.pollTimer, state.autoSaveTimer, state.draftTimer, state.sessionTimer, state.outlineTimer, toastTimer, lineFlashTimer]) clearTimeout(timer);
+  clearInterval(state.heartbeat);
+  state.heartbeatPending = false;
+  appearanceDraft = null;
+  $('toast').hidden = true; clearError();
+  setOperation('reset');
+}
+
+function removePreviousDraftBackups(generation) {
+  try {
+    for (const key of Object.keys(localStorage)) {
+      if (!key.startsWith('local-tex-editor-backup:drafts:')) continue;
+      let backup;
+      try { backup = JSON.parse(localStorage.getItem(key)); } catch { /* An unreadable backup cannot be restored. */ }
+      if ((backup?.draftsGeneration || '') !== generation) localStorage.removeItem(key);
+    }
+  } catch { /* The server still checks the generation when browser storage is unavailable. */ }
+}
+
+function handleSettingsReset(data) {
+  if (state.resetDetected) return;
+  stopForSettingsReset();
+  removePreviousDraftBackups(data.draftsGeneration || '');
+  const documents = dirtyDocuments().map(doc => ({
+    path: doc.path, name: basename(doc.path),
+    content: doc.lineEnding === 'crlf' ? documentText(doc).replace(/\n/g, '\r\n') : documentText(doc),
+  }));
+  settingsReset.showNotice(documents);
+}
+
+function reloadAfterSettingsReset() {
+  state.reloadAfterReset = true;
+  location.reload();
+}
+
+async function resetSavedInformation(selection) {
+  if (state.operation || state.closed || isRunning() || state.texSetupBusy || state.folderPicker) throw new Error(t('実行中の操作が終わってから初期化してください．'));
+  const persistenceReady = state.persistenceReady;
+  let resumeStorage = null;
+  setOperation('resetting');
+  try {
+    await Promise.all([...state.documents.values()].map(doc => doc.saving).filter(Boolean));
+    await state.saveQueue;
+    const dirty = dirtyDocuments();
+    if (dirty.length) {
+      const message = selection.drafts
+        ? t('草稿の削除も選ばれています．未保存の変更をファイルへ保存しますか？')
+        : t('未保存の変更をファイルへ保存しますか？草稿に残した場合は，プロジェクトを開いて復元できます．');
+      const answer = await choose({ title: t('未保存の原稿を確認してから初期化します'), description: `${dirty.map(doc => doc.path).join('\n')}\n\n${message}`,
+        primary: t('保存して初期化'), secondary: t(selection.drafts ? '保存せず初期化' : '草稿に残して初期化') });
+      if (answer === 'cancel') return false;
+      if (answer === 'primary') await saveAll();
+    }
+    if (!selection.drafts) syncDrafts();
+    if (!selection.settings) persistSession();
+    resumeStorage = sessionStore.pauseKeys(key => (selection.settings && (key === 'preferences' || key.startsWith('session:'))) || (selection.drafts && key.startsWith('drafts:')));
+    state.persistenceReady = false;
+    state.resetInProgress = true;
+    for (const timer of [state.autoSaveTimer, state.draftTimer, state.sessionTimer]) clearTimeout(timer);
+    await sessionStore.settle();
+    const result = await api('/api/settings/reset', { method: 'POST', body: selection, projectRoot: '', timeout: 60000 });
+    stopForSettingsReset();
+    if (selection.settings) {
+      try { localStorage.removeItem('local-tex-editor-appearance'); localStorage.removeItem('local-tex-editor-theme'); }
+      catch { /* Browser caching is optional. */ }
+    }
+    removePreviousDraftBackups(result.draftsGeneration || '');
+    return result;
+  } catch (error) {
+    // A lost response can follow a completed reset. The old generation makes
+    // the state request open the reload notice before any old data is written.
+    if (state.resetInProgress && !state.resetDetected && error instanceof APIError && error.status === 0) {
+      try { await api('/api/state'); } catch { /* Keep the original error unless a reset was observed. */ }
+    }
+    if (!state.resetDetected) state.persistenceReady = persistenceReady;
+    throw error;
+  } finally {
+    state.resetInProgress = false;
+    if (!state.resetDetected) resumeStorage?.();
+    setOperation('');
+  }
+}
+
 async function saveSettings(event) {
   event.preventDefault(); if (state.operation) return;
   const body = {};
@@ -1626,6 +1737,7 @@ async function saveSettings(event) {
     state.preferences.language = language;
     applyEditorFontSize($('editor-font-size').valueAsNumber);
     savePreferences(); await sessionStore.flush();
+    if (state.resetDetected) return;
     applyLanguage(language);
     if (languageChanged) {
       const sequence = ++state.statusRequestSequence;
@@ -2047,7 +2159,9 @@ function renderControls() {
   $('main-document').disabled = busy || !project || running;
   $('settings-button').disabled = busy || running;
   $('settings-tex-setup').disabled = busy || running;
-  $('settings-tex-setup').firstElementChild.textContent = t(state.texSetupBusy ? 'セットアップの進捗を見る' : teXEnvironment(texSetup?.snapshot).directory || state.meta?.latexmk ? 'TeX を管理…' : 'TeX をセットアップ…');
+  $('settings-tex-setup').firstElementChild.textContent = t(state.texSetupBusy ? 'セットアップの進捗を見る' : 'TeX をセットアップ…');
+  $('settings-tex-management').disabled = busy || running || state.texSetupBusy || !(teXEnvironment(texSetup?.snapshot).directory || state.meta?.latexmk);
+  $('install-synctex').disabled = busy || running || state.texSetupBusy;
   $('tex-bin').disabled = busy || state.texSetupBusy;
   $('project-tex-bin').disabled = busy || state.texSetupBusy || !!state.folderPicker;
   $('show-project').disabled = busy || running;
@@ -2210,6 +2324,7 @@ async function shutdown() {
 }
 
 const sessionStore = new SessionStore(api, (status, key, error) => {
+  if (state.resetDetected) return;
   if (key.startsWith('drafts:') && key === `drafts:${state.meta?.project?.root}`) {
     $('draft-status').dataset.status = status;
     $('draft-status').textContent = status === 'saving' ? t("草稿を保存中…") : status === 'saved' ? t("草稿を PC に記録済み") : t("草稿の記録を確認");
@@ -2218,8 +2333,8 @@ const sessionStore = new SessionStore(api, (status, key, error) => {
     const item = key.startsWith('drafts:') ? t("草稿") : key.startsWith('session:') ? t("編集位置") : t("設定");
     showError(new Error(t("{value0}を記録できませんでした．{value1}", { value0: item, value1: error.message || error })), { label: t("再保存"), run: () => sessionStore.flush({ retryConflicts: true }) });
   }
-});
-const browserSession = new BrowserSession({ token, onConnectionChange: connected => { if (!state.closed) setConnected(connected); } });
+}, { getDraftsGeneration: () => state.draftsGeneration });
+const browserSession = new BrowserSession({ token, onConnectionChange: connected => { if (!state.closed && !state.resetDetected) setConnected(connected); } });
 const panelLayout = createPanelLayout({
   workbench: $('workbench'), shell: $('app-shell'),
   handles: { sidebar: $('sidebar-splitter'), editor: $('splitter'), log: $('log-splitter') },
@@ -2286,7 +2401,7 @@ function applyAppearance(value, cache = false) {
   root.style.setProperty('--editor-font-family', appearance.fontFamily);
   applyTheme(appearance.theme);
   restore();
-  if (cache) {
+  if (cache && !state.resetDetected && !state.resetInProgress) {
     try {
       localStorage.setItem('local-tex-editor-appearance', JSON.stringify(normalizeAppearance(value)));
       localStorage.setItem('local-tex-editor-theme', appearance.theme);
@@ -2350,6 +2465,7 @@ async function saveAppearance(event) {
   state.preferences.theme = appearance.mode === 'system' ? null : appearance.mode;
   try {
     savePreferences(); await sessionStore.flush();
+    if (state.resetDetected) return;
     appearanceDraft = null;
     applyAppearance(appearance, true);
     $('appearance-dialog').close();
@@ -2361,7 +2477,9 @@ async function saveAppearance(event) {
   } finally { setDialogBusy($('appearance-dialog'), false); }
 }
 
-function savePreferences(delay = 0) { sessionStore.write('preferences', { ...state.preferences, updatedAt: Date.now() }, delay); }
+function savePreferences(delay = 0) {
+  if (!state.resetDetected && !state.resetInProgress) sessionStore.write('preferences', { ...state.preferences, updatedAt: Date.now() }, delay);
+}
 function applyPDFDarkMode(enabled) {
   state.preferences.pdfDarkMode = !!enabled;
   viewer.setDarkMode(state.preferences.pdfDarkMode);
@@ -3177,9 +3295,26 @@ systemColorScheme.addEventListener('change', () => {
 
 onClick('show-project', showProjectDialog); onClick('welcome-open', showProjectDialog);
 onClick('go-home', showHome);
+settingsReset = createSettingsReset({ api, onReset: resetSavedInformation, reload: reloadAfterSettingsReset });
+onClick('settings-reset-data', () => {
+  if (state.operation || state.resetDetected) return;
+  $('settings-dialog').close();
+  return settingsReset.open();
+});
 onClick('settings-button', showSettings); onClick('main-document', showSettings);
-onClick('settings-tex-setup', () => state.texSetupBusy ? texSetup.open({ reason: 'settings', progress: true })
-  : teXEnvironment(texSetup.snapshot).directory || state.meta?.latexmk ? texManagement.open() : texSetup.open({ reason: 'settings' }));
+onClick('settings-tex-setup', () => texSetup.open({ reason: 'settings', progress: state.texSetupBusy }));
+onClick('settings-tex-management', () => texManagement.open());
+onClick('install-synctex', () => {
+  const current = teXEnvironment(texSetup.snapshot);
+  const program = state.texPackages?.programs?.find(value => value.name === 'synctex');
+  const packages = program?.packages?.length ? program.packages : ['synctex', ...(state.meta?.platform === 'windows' ? ['synctex.windows'] : [])];
+  if (current.canInstallPackages) {
+    return texSetup.open({ reason: 'packages', operation: 'packages', packages, reinstall: true });
+  }
+  if (current.managerApplication) return texManagement.open({ openManager: true });
+  if (current.directory || state.meta?.latexmk || state.texPackages?.manager) return texManagement.open({ packages, reinstall: true });
+  return texSetup.open({ reason: 'settings' });
+});
 $('language-setting').addEventListener('change', event => {
   if ($('settings-dialog').open) applyLanguage(event.target.value, { preview: true });
 });
@@ -3224,7 +3359,6 @@ $('appearance-dialog').addEventListener('close', () => {
   applyAppearance(state.preferences.appearance);
 });
 onClick('shortcut-start-menu', () => createShortcut('start-menu')); onClick('shortcut-desktop', () => createShortcut('desktop'));
-onClick('copy-synctex-setup', async () => { await navigator.clipboard.writeText($('synctex-install-commands').textContent); toast(t("コマンドをコピーしました．")); });
 onClick('pick-project', pickProject); onClick('cancel-picker', cancelPicker); onClick('shutdown-button', shutdown);
 onClick('save-button', saveCurrent); onClick('compile-button', startBuild); onClick('stop-button', stopBuild);
 onClick('project-search-button', () => projectSearch.open());
@@ -3361,17 +3495,17 @@ document.addEventListener('keydown', event => {
   else if (event.key === 'Enter') { event.preventDefault(); runTask(startBuild); }
 });
 window.addEventListener('beforeunload', event => {
-  if (state.closed) return;
-  syncDrafts(); persistSession(); sessionStore.flush().catch(() => {});
+  if (state.closed || state.reloadAfterReset) return;
+  if (!state.resetDetected && !state.resetInProgress) { syncDrafts(); persistSession(); sessionStore.flush().catch(() => {}); }
   if (dirtyDocuments().length || [...state.documents.values()].some(doc => doc.saving)) { event.preventDefault(); event.returnValue = ''; }
 });
 function pauseBrowserSession() {
-  if (state.closed) return;
+  if (state.closed || state.resetDetected || state.resetInProgress) return;
   syncDrafts(); persistSession(); sessionStore.flushOnHide();
   browserSession.stop();
 }
 function resumeBrowserSession(replaceConnection = false) {
-  if (state.closed) return;
+  if (state.closed || state.resetDetected || state.resetInProgress) return;
   if (replaceConnection) browserSession.resume();
   else browserSession.start();
   runTask(() => sessionStore.resume());
@@ -3383,6 +3517,7 @@ window.addEventListener('focus', () => { if (state.persistenceReady) runTask(() 
 document.addEventListener('freeze', pauseBrowserSession);
 document.addEventListener('resume', () => resumeBrowserSession(true));
 document.addEventListener('visibilitychange', () => {
+  if (state.resetDetected || state.resetInProgress) return;
   if (document.visibilityState === 'visible') resumeBrowserSession(true);
   else { syncDrafts(); persistSession(); sessionStore.flush().catch(() => {}); }
 });
@@ -3391,9 +3526,11 @@ setInterval(() => { if (isRunning()) updateElapsed(); }, 1000);
 async function initialise() {
   setOperation('initialising');
   try {
-    await loadPreferences();
     const sequence = ++state.statusRequestSequence;
     const meta = await api('/api/state');
+    state.settingsGeneration = meta.settingsGeneration || '';
+    state.draftsGeneration = meta.draftsGeneration || '';
+    await loadPreferences();
     await applyMeta(meta, true, sequence);
     if (meta.installationError) showError(new Error(meta.installationError));
     state.heartbeat = setInterval(() => runTask(heartbeat), 30000);

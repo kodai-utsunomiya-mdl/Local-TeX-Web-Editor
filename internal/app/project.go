@@ -53,10 +53,12 @@ type projectSettings struct {
 }
 
 type configuration struct {
-	TexBin           string                     `json:"texBin"`
-	TeXInstallations []managedTeXInstallation   `json:"texInstallations,omitempty"`
-	RecentProjects   []string                   `json:"recentProjects"`
-	Projects         map[string]projectSettings `json:"projects"`
+	SettingsGeneration string                     `json:"settingsGeneration,omitempty"`
+	DraftsGeneration   string                     `json:"draftsGeneration,omitempty"`
+	TexBin             string                     `json:"texBin"`
+	TeXInstallations   []managedTeXInstallation   `json:"texInstallations,omitempty"`
+	RecentProjects     []string                   `json:"recentProjects"`
+	Projects           map[string]projectSettings `json:"projects"`
 }
 
 func (a *App) loadConfig() error {

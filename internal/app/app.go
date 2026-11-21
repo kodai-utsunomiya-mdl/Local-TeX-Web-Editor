@@ -34,6 +34,9 @@ type Options struct {
 }
 
 type App struct {
+	settingsMu            sync.RWMutex
+	settingsResetPending  bool
+	folderPickerRequests  int
 	uiMu                  sync.Mutex
 	mu                    sync.Mutex
 	cacheMu               sync.RWMutex
@@ -69,6 +72,8 @@ type App struct {
 }
 
 type State struct {
+	SettingsGeneration     string                    `json:"settingsGeneration"`
+	DraftsGeneration       string                    `json:"draftsGeneration"`
 	Version                string                    `json:"version"`
 	ExecutablePath         string                    `json:"executablePath"`
 	InstallationError      string                    `json:"installationError,omitempty"`
@@ -130,6 +135,9 @@ func New(options Options) (*App, error) {
 	}
 	if err := os.MkdirAll(options.ConfigDir, 0700); err != nil {
 		return nil, messages.Errorf("設定フォルダーを作成できません: %w", err)
+	}
+	if err := recoverSettingsReset(options.ConfigDir); err != nil {
+		return nil, err
 	}
 	a := &App{
 		options: options, packageIdentity: identity, pdfVersions: make(map[string]string), pdfMains: make(map[string]string), compiledPDFs: make(map[string]CompiledPDF),
@@ -200,6 +208,7 @@ func (a *App) Handler() http.Handler {
 	mux.HandleFunc("/api/project/delete", a.projectDeleteHandler)
 	mux.HandleFunc("/api/project/pick", a.pickHandler)
 	mux.HandleFunc("/api/settings", a.settingsHandler)
+	mux.HandleFunc("/api/settings/reset", a.settingsResetHandler)
 	mux.HandleFunc("/api/tex/setup", a.texSetupHandler)
 	mux.HandleFunc("/api/tex/setup/stop", a.texSetupStopHandler)
 	mux.HandleFunc("/api/tex/setup/pick", a.texSetupPickHandler)
@@ -268,7 +277,7 @@ func (a *App) authenticate(next http.Handler) http.Handler {
 			writeError(w, fail(http.StatusUnauthorized, "接続情報が一致しません．アプリを起動したときの URL を開き直してください．"))
 			return
 		}
-		next.ServeHTTP(w, r)
+		a.serveSettingsRequest(next, w, r)
 	})
 }
 
@@ -331,6 +340,7 @@ func (a *App) stateLocked(refresh bool, language ...string) State {
 		executable, _ = filepath.Abs(executable)
 	}
 	result := State{
+		SettingsGeneration: a.config.SettingsGeneration, DraftsGeneration: a.config.DraftsGeneration,
 		Version: a.options.Version, Platform: runtime.GOOS, Architecture: runtime.GOARCH,
 		PackageIdentity: a.packageIdentity,
 		ExecutablePath:  executable, InstallationError: messages.ErrorText(selected, a.options.InstallationError),

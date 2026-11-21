@@ -2,42 +2,34 @@ import { getLanguage } from './i18n.js';
 
 const labels = {
   en: {
-    title: 'Add TeX packages', intro: 'You can start with a small TeX installation and add the packages your documents use.',
-    available: 'Available', missing: 'Not found', folder: 'TeX folder', manager: 'Package manager', year: 'TeX Live',
-    unknown: 'Year not found; commands use your configured repository.',
-    unavailable: 'Select a TeX Live folder containing tlmgr to prepare commands here.',
+    title: 'Add TeX packages', intro: 'Add the packages your documents use to the selected TeX installation.',
+    available: 'Available', missing: 'Not found', year: 'TeX Live',
+    unavailable: 'Set up TeX first, or select an existing TeX Live, MacTeX or TinyTeX installation in Settings.',
+    external: 'Add packages with the official management tool for this TeX installation. Refresh the package list after making changes.',
+    unsupported: 'This installation cannot be changed from the app. Use its distribution’s management tool or select another TeX installation in Settings.',
+    check: 'Open TeX management to check the selected installation and add packages.', manage: 'Manage TeX…',
+    setup: 'Set up TeX…', openManager: 'Open the TeX management tool',
     packages: 'Packages to add', basic: 'latexmk and SyncTeX', japanese: 'Japanese typesetting',
     japaneseHelp: 'collection-langjapanese includes Japanese engines, classes and fonts, with their dependencies.',
-    reinstall: 'Download these packages again if their files are missing', administrator: 'Use sudo for installation',
-    terminalWindows: 'Copy these commands into PowerShell and run them in order. Close any running compilation first.',
-    terminalMac: 'Copy these commands into Terminal and run them in order. Close any running compilation first.',
-    copied: 'Copied', copy: 'Copy commands', copyError: 'Select the commands below and copy them.',
+    reinstall: 'Download these packages again if their files are missing',
     invalidPackages: 'Enter package names separated by spaces, for example: latexmk synctex.',
-    search: 'Find a package from a missing file', filename: 'Missing file name',
-    searchHelp: 'If the log says a .sty or .cls file is missing, search for its package. Enter the package name from the result above.',
-    invalidFilename: 'Enter only the file name, for example: siunitx.sty.',
-    after: 'After installation, reopen Settings to refresh the available programs, then compile again.',
-    docs: 'Installation and package guide', docsURL: 'https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor#start-with-a-smaller-tex-installation',
-    addInApp: 'Add with the app…', managedHelp: 'Review the packages and the selected TeX environment before downloading.',
+    docs: 'Installation and package guide', docsURL: 'https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor#manage-tex-packages-and-installations',
+    addInApp: 'Review packages to add…', managedHelp: 'Review the packages and the selected TeX environment before downloading.',
   },
   ja: {
-    title: 'TeX パッケージを追加', intro: '小さめの TeX の構成から始め，原稿が使うパッケージを後から追加できます．',
-    available: '利用可能', missing: '見つかりません', folder: 'TeX のフォルダー', manager: 'パッケージ管理', year: 'TeX Live',
-    unknown: '年度を確認できないため，設定済みの取得先を使うコマンドを表示します．',
-    unavailable: 'tlmgr がある TeX Live のフォルダーを指定すると，追加用のコマンドを表示します．',
+    title: 'TeX パッケージを追加', intro: '原稿で使うパッケージを，選択中の TeX の環境へ追加できます．',
+    available: '利用可能', missing: '見つかりません', year: 'TeX Live',
+    unavailable: 'TeX を導入するか，設定で既存の TeX Live，MacTeX，TinyTeX を指定してください．',
+    external: 'この TeX の公式管理ツールでパッケージを追加できます．変更後はパッケージ一覧を更新してください．',
+    unsupported: 'この環境はアプリから変更できません．配布元の管理ツールを使うか，設定で別の TeX を選んでください．',
+    check: 'TeX の管理画面で，選択中の環境を確認してパッケージの追加へ進めます．', manage: 'TeX を管理…',
+    setup: 'TeX をセットアップ…', openManager: 'TeX の管理ツールを開く',
     packages: '追加するパッケージ', basic: 'latexmk と SyncTeX', japanese: '日本語の組版',
     japaneseHelp: 'collection-langjapanese には，日本語のエンジン，文書クラス，フォントと，それらが使うパッケージが含まれます．',
-    reinstall: 'ファイルが欠けている場合は，同じパッケージを再取得する', administrator: 'インストールに sudo を使う',
-    terminalWindows: 'PowerShell にコピーし，上から順に実行してください．実行中のコンパイルは先に終了してください．',
-    terminalMac: 'ターミナルにコピーし，上から順に実行してください．実行中のコンパイルは先に終了してください．',
-    copied: 'コピーしました', copy: 'コマンドをコピー', copyError: '下のコマンドを選択してコピーしてください．',
+    reinstall: 'ファイルが欠けている場合は，同じパッケージを再取得する',
     invalidPackages: 'パッケージ名をスペースで区切って入力してください．例: latexmk synctex',
-    search: '不足しているファイルからパッケージを探す', filename: '不足しているファイル名',
-    searchHelp: '.sty や .cls が見つからない場合は，このコマンドで収録先を探します．結果に出たパッケージ名を上の欄へ入力してください．',
-    invalidFilename: 'ファイル名だけを入力してください．例: siunitx.sty',
-    after: '追加後は設定を開き直すと，利用できるプログラムを再確認します．その後にコンパイルしてください．',
-    docs: 'TeX の導入とパッケージの追加手順', docsURL: 'https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/blob/main/README.ja.md#小さめの構成から始める',
-    addInApp: 'アプリで追加…', managedHelp: '追加するパッケージと，選択中の TeX の環境を確認してからダウンロードします．',
+    docs: 'TeX の導入とパッケージの追加手順', docsURL: 'https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/blob/main/README.ja.md#tex-のパッケージと環境を管理する',
+    addInApp: '追加する内容を確認…', managedHelp: '追加するパッケージと，選択中の TeX の環境を確認してからダウンロードします．',
   },
 };
 
@@ -46,20 +38,11 @@ export function parseTeXPackageNames(input) {
   return !names.length || names.length > 128 || names.some(name => !/^[A-Za-z0-9][A-Za-z0-9+_.-]{0,127}$/.test(name)) ? null : names;
 }
 
-export function packageInstallCommands(info, input, { reinstall = false, administrator = info?.shell === 'posix' } = {}) {
-  if (!info?.commandPrefix) return '';
-  const names = parseTeXPackageNames(input);
-  if (!names) return '';
-  const prefix = `${administrator && info.shell === 'posix' ? 'sudo ' : ''}${info.commandPrefix}`;
-  return `${prefix} update --self\n${prefix} install${reinstall ? ' --reinstall' : ''} ${names.join(' ')}`;
-}
-
-export function packageSearchCommand(info, input) {
-  if (!info?.commandPrefix) return '';
-  const filename = String(input || '').trim();
-  if (!/^[A-Za-z0-9][A-Za-z0-9+_.-]{0,149}$/.test(filename)) return '';
-  const pattern = `/${filename.replace(/[.+]/g, '\\$&')}$`;
-  return `${info.commandPrefix} search --global --file '${pattern}'`;
+export function teXPackagePresets(info) {
+  const basic = ['latexmk', 'synctex', ...(info?.shell === 'powershell' ? ['synctex.windows'] : [])];
+  const missing = [...new Set((info?.programs || []).filter(program => !program.available && ['latexmk', 'synctex'].includes(program.name))
+    .flatMap(program => program.packages || []))];
+  return { basic, japanese: ['collection-langjapanese', ...basic], suggested: missing.length ? missing : basic, reinstall: missing.length > 0 };
 }
 
 const views = new WeakMap();
@@ -71,10 +54,11 @@ function element(tag, text, className) {
   return node;
 }
 
-export function renderTeXPackagesHelp(container, info, { managed = false, canInstall = managed, busy = false, onInstall } = {}) {
+export function renderTeXPackagesHelp(container, info, { managed = false, canInstall = managed, canSetup = true, managerApplication = '', environmentKnown = true,
+  busy = false, onInstall, onSetup, onOpenManager, onManage } = {}) {
   if (!container) return;
   const language = getLanguage();
-  const fingerprint = JSON.stringify([language, info, managed, canInstall, busy, !!onInstall]);
+  const fingerprint = JSON.stringify([language, info, canInstall, canSetup, managerApplication, environmentKnown, busy, !!onInstall, !!onSetup, !!onOpenManager, !!onManage]);
   const previous = views.get(container);
   if (previous?.fingerprint === fingerprint) return;
   const saved = previous?.read?.() || {};
@@ -95,101 +79,73 @@ export function renderTeXPackagesHelp(container, info, { managed = false, canIns
     programs.append(item);
   }
   details.append(programs);
-  if (!info?.commandPrefix) {
-    details.append(element('p', text.unavailable), guide);
+  if (info?.manager) {
+    const location = element('p', undefined, 'tex-package-location');
+    location.append(element('span', info.year ? `${text.year} ${info.year} · ` : ''), element('code', info.manager));
+    details.append(location);
+  }
+  if (!canInstall || !onInstall) {
+    const canOpenManager = !!managerApplication && !!onOpenManager;
+    const canCheck = !environmentKnown && !!info?.manager && !!onManage;
+    details.append(element('p', canOpenManager ? text.external : canCheck ? text.check : info?.manager ? text.unsupported : text.unavailable));
+    const actions = element('div', undefined, 'tex-package-actions');
+    if (canOpenManager) {
+      const openManager = element('button', text.openManager, 'button'); openManager.type = 'button';
+      openManager.dataset.testid = 'tex-package-open-manager'; openManager.disabled = busy;
+      openManager.addEventListener('click', () => { if (!busy) onOpenManager(); });
+      actions.append(openManager);
+    } else if (canCheck) {
+      const manage = element('button', text.manage, 'button'); manage.type = 'button';
+      manage.dataset.testid = 'tex-package-manage'; manage.disabled = busy;
+      manage.addEventListener('click', () => { if (!busy) onManage(); });
+      actions.append(manage);
+    }
+    if (canSetup && onSetup) {
+      const setup = element('button', text.setup, 'button'); setup.type = 'button';
+      setup.dataset.testid = 'tex-package-setup'; setup.disabled = busy;
+      setup.addEventListener('click', () => { if (!busy) onSetup(); });
+      actions.append(setup);
+    }
+    if (actions.childElementCount) details.append(actions);
+    details.append(guide);
     container.replaceChildren(details);
-    views.set(container, { fingerprint, read: () => ({ open: details.open }) });
+    views.set(container, { fingerprint, read: () => ({ ...saved, open: details.open }) });
     return;
   }
-  const location = element('p', undefined, 'tex-package-location');
-  location.append(element('span', info.year ? `${text.year} ${info.year} · ` : ''), element('code', info.manager));
-  details.append(location);
-  if (!info.year) details.append(element('p', text.unknown));
 
-  const basePackages = info.shell === 'powershell' ? 'latexmk synctex synctex.windows' : 'latexmk synctex';
-  const defaults = [...new Set((info.programs || []).filter(program => !program.available && ['latexmk', 'synctex'].includes(program.name)).flatMap(program => program.packages || []))].join(' ');
+  const choices = teXPackagePresets(info);
   const packagesLabel = element('label', text.packages);
   const packages = element('input');
-  packages.type = 'text'; packages.value = saved.packages ?? (defaults || basePackages);
-  packages.placeholder = 'latexmk synctex'; packages.spellcheck = false;
+  packages.type = 'text'; packages.value = saved.packages ?? choices.suggested.join(' ');
+  packages.placeholder = 'latexmk synctex'; packages.spellcheck = false; packages.disabled = busy;
   packages.dataset.testid = 'tex-package-names';
   packagesLabel.append(packages);
   const presets = element('div', undefined, 'tex-package-presets');
-  const basic = element('button', text.basic, 'button'); basic.type = 'button';
-  const japanese = element('button', text.japanese, 'button'); japanese.type = 'button';
+  const basic = element('button', text.basic, 'button'); basic.type = 'button'; basic.disabled = busy;
+  const japanese = element('button', text.japanese, 'button'); japanese.type = 'button'; japanese.disabled = busy;
   presets.append(basic, japanese);
   const reinstallLabel = element('label', undefined, 'tex-package-check');
-  const reinstall = element('input'); reinstall.type = 'checkbox'; reinstall.checked = saved.reinstall ?? !!defaults;
+  const reinstall = element('input'); reinstall.type = 'checkbox'; reinstall.checked = saved.reinstall ?? choices.reinstall; reinstall.disabled = busy;
   reinstallLabel.append(reinstall, element('span', text.reinstall));
-  const adminLabel = element('label', undefined, 'tex-package-check');
-  const administrator = element('input'); administrator.type = 'checkbox'; administrator.checked = saved.administrator ?? !managed;
-  adminLabel.hidden = info.shell !== 'posix';
-  adminLabel.append(administrator, element('span', text.administrator));
-  details.append(packagesLabel, presets, element('p', text.japaneseHelp), reinstallLabel, adminLabel);
-  let addInApp = null;
-  if (canInstall && onInstall) {
-    addInApp = element('button', text.addInApp, 'button'); addInApp.type = 'button'; addInApp.dataset.testid = 'tex-package-add';
-    addInApp.addEventListener('click', () => {
-      const names = parseTeXPackageNames(packages.value);
-      if (names && !busy) onInstall({ packages: names, reinstall: reinstall.checked });
-    });
-    details.append(element('p', text.managedHelp), addInApp);
-  }
-  details.append(element('p', info.shell === 'powershell' ? text.terminalWindows : text.terminalMac));
+  const error = element('p', undefined, 'tex-package-error'); error.setAttribute('role', 'status');
+  const add = element('button', text.addInApp, 'button'); add.type = 'button'; add.dataset.testid = 'tex-package-add';
+  const actions = element('div', undefined, 'tex-package-actions'); actions.append(add);
+  details.append(packagesLabel, presets, element('p', text.japaneseHelp), reinstallLabel, element('p', text.managedHelp), error, actions, guide);
 
-  function commandBox(testid) {
-    const wrapper = element('div', undefined, 'tex-package-command');
-    const output = element('textarea');
-    output.readOnly = true; output.spellcheck = false; output.rows = 3;
-    output.dataset.testid = testid; output.setAttribute('aria-label', text.copy);
-    const error = element('p'); error.setAttribute('role', 'status');
-    const copy = element('button', text.copy, 'button'); copy.type = 'button';
-    copy.addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText(output.value);
-        error.textContent = text.copied;
-      } catch {
-        output.focus(); output.select(); error.textContent = text.copyError;
-      }
-    });
-    wrapper.append(output, copy, error);
-    return { wrapper, output, error, copy };
+  function update() {
+    const names = parseTeXPackageNames(packages.value);
+    add.disabled = busy || !names;
+    error.textContent = packages.value.trim() && !names ? text.invalidPackages : '';
   }
-  const installBox = commandBox('tex-package-install-command');
-  details.append(installBox.wrapper);
-  const searchDetails = element('details', undefined, 'tex-package-search');
-  searchDetails.open = saved.searchOpen || false;
-  searchDetails.append(element('summary', text.search), element('p', text.searchHelp));
-  const filenameLabel = element('label', text.filename);
-  const filename = element('input'); filename.type = 'text'; filename.value = saved.filename || '';
-  filename.placeholder = 'siunitx.sty'; filename.spellcheck = false;
-  filename.dataset.testid = 'tex-package-filename';
-  filenameLabel.append(filename); searchDetails.append(filenameLabel);
-  const searchBox = commandBox('tex-package-search-command');
-  searchDetails.append(searchBox.wrapper);
-  details.append(searchDetails, element('p', text.after), guide);
-
-  function updateInstall() {
-    const command = packageInstallCommands(info, packages.value, { reinstall: reinstall.checked, administrator: administrator.checked });
-    installBox.output.value = command; installBox.copy.disabled = !command;
-    installBox.error.textContent = command ? '' : text.invalidPackages;
-    if (addInApp) addInApp.disabled = busy || !parseTeXPackageNames(packages.value);
-  }
-  function updateSearch() {
-    const command = packageSearchCommand(info, filename.value);
-    searchBox.output.value = command; searchBox.copy.disabled = !command;
-    searchBox.error.textContent = command || !filename.value ? '' : text.invalidFilename;
-  }
-  packages.addEventListener('input', updateInstall);
-  reinstall.addEventListener('change', updateInstall);
-  administrator.addEventListener('change', updateInstall);
-  filename.addEventListener('input', updateSearch);
-  basic.addEventListener('click', () => { packages.value = basePackages; reinstall.checked = true; updateInstall(); });
-  japanese.addEventListener('click', () => { packages.value = `collection-langjapanese ${basePackages}`; reinstall.checked = false; updateInstall(); });
-  updateInstall(); updateSearch();
+  add.addEventListener('click', () => {
+    const names = parseTeXPackageNames(packages.value);
+    if (names && !busy) onInstall({ packages: names, reinstall: reinstall.checked });
+  });
+  packages.addEventListener('input', update);
+  reinstall.addEventListener('change', update);
+  basic.addEventListener('click', () => { packages.value = choices.basic.join(' '); reinstall.checked = true; update(); });
+  japanese.addEventListener('click', () => { packages.value = choices.japanese.join(' '); reinstall.checked = false; update(); });
+  update();
   container.replaceChildren(details);
-  views.set(container, { fingerprint, read: () => ({
-    open: details.open, packages: packages.value, reinstall: reinstall.checked,
-    administrator: administrator.checked, searchOpen: searchDetails.open, filename: filename.value,
-  }) });
+  views.set(container, { fingerprint, read: () => ({ open: details.open, packages: packages.value, reinstall: reinstall.checked }) });
 }

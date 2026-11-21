@@ -1,7 +1,7 @@
 .tex-packages { margin: 12px 0; border: 1px solid var(--border); border-radius: 6px; padding: 9px 11px; font-size: 12px; }
 .tex-packages summary { cursor: pointer; font-weight: 600; }
 .tex-packages p { line-height: 1.5; margin: 9px 0; }
-.tex-packages a { color: var(--accent); }
+.tex-packages a { display: inline-block; margin-top: 10px; color: var(--accent); }
 .tex-packages label { display: grid; gap: 5px; margin: 10px 0; }
 .tex-packages input[type="text"] { width: 100%; font: 12px/1.5 ui-monospace, monospace; }
 .tex-package-programs { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 14px; }
@@ -12,8 +12,8 @@
 .tex-packages button { font-size: 12px; min-height: 28px; padding: 4px 9px; }
 .tex-packages .tex-package-check { display: flex; align-items: start; gap: 7px; font-weight: normal; }
 .tex-package-check input { flex: 0 0 auto; width: auto; margin-top: 3px; }
-.tex-package-command textarea { width: 100%; resize: vertical; padding: 9px; margin: 3px 0 6px; font: 11px/1.6 ui-monospace, monospace; overflow-wrap: anywhere; }
-.tex-package-command p:empty { display: none; }
-.tex-package-command p { color: var(--muted); }
-.tex-package-search { margin: 12px 0; padding-top: 10px; border-top: 1px solid var(--border); }
+.tex-package-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.tex-package-actions .button { min-width: 0; max-width: 100%; white-space: normal; }
+.tex-package-error:empty { display: none; }
+.tex-package-error { color: var(--muted); }
 @media (max-width: 520px) { .tex-package-programs { grid-template-columns: 1fr; } }

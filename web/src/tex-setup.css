@@ -31,7 +31,8 @@
 .tex-setup-home { margin-top: 22px; padding: 16px 18px; border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 7px; background: var(--surface); }
 .tex-setup-home h2 { margin: 0 0 8px; font-size: 15px; }
 .tex-setup-home p { margin: 7px 0; line-height: 1.6; overflow-wrap: anywhere; }
-.tex-setup-home .button { margin-top: 6px; }
+.tex-setup-home-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.tex-setup-home-actions .button, .tex-setup-settings-actions .button { min-width: 0; max-width: 100%; white-space: normal; }
 #tex-setup-status { flex: 0 1 auto; min-width: 0; max-width: 230px; height: 23px; overflow: hidden; text-overflow: ellipsis; border: 0; padding: 1px 4px; background: transparent; color: var(--accent); font: inherit; text-align: start; white-space: nowrap; cursor: pointer; }
 #tex-setup-status:hover { text-decoration: underline; }
 #tex-setup-status:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }

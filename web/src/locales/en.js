@@ -392,8 +392,6 @@ export const english = {
   'エディタの文字サイズ': 'Editor font size',
   '8〜40 px で指定できます．既定は 14 px です．原稿上の Ctrl + ホイールやピンチ操作でも変更できます．': 'Choose 8–40 px. The default is 14 px. You can also use Ctrl + wheel or pinch in the editor.',
   '原稿と PDF の移動 (SyncTeX)': 'Source–PDF navigation (SyncTeX)',
-  'PowerShell で次のコマンドを実行し，設定を開き直して SyncTeX のパスを確認してください．': 'Run these commands in PowerShell, then reopen Settings to check the SyncTeX path.',
-  '次のコマンドを {value0} で実行し，設定を開き直して SyncTeX のパスを確認してください．': 'Run these commands in {value0}, then reopen Settings to check the SyncTeX path.',
   'ターミナル': 'Terminal',
   'コマンドをコピー': 'Copy commands',
   '既定のメイン文書': 'Default main document',

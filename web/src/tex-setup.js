@@ -96,11 +96,14 @@ export function createTeXSetup({ api, getMeta, home, indicator, getCompileTarget
   const sample = translated('button', 'サンプルを作成…', { id: 'tex-setup-sample', type: 'button', class: 'button button-primary', hidden: '' });
   ui.footer.append(close, retry, stop, start, compile, sample);
 
-  const homeTitle = translated('h2', 'TeX の準備');
+  const homeTitle = translated('h2', 'TeX の導入と管理');
   const homeStatus = element('p', { id: 'tex-setup-home-status' });
   const homeNote = translated('p', 'Markdown は，TeX を導入せずに編集できます．', { class: 'field-help' });
   const homeOpen = translated('button', 'TeX をセットアップ…', { id: 'home-tex-setup', type: 'button', class: 'button' });
-  if (home) { home.classList.add('tex-setup-home'); home.append(homeTitle, homeStatus, homeNote, homeOpen); }
+  const homeManage = translated('button', 'TeX を管理…', { id: 'home-tex-management', type: 'button', class: 'button' });
+  const homeActions = element('div', { class: 'tex-setup-home-actions' });
+  homeActions.append(homeOpen, homeManage);
+  if (home) { home.classList.add('tex-setup-home'); home.append(homeTitle, homeStatus, homeNote, homeActions); }
 
   let session;
   let view = 'review';
@@ -239,11 +242,14 @@ export function createTeXSetup({ api, getMeta, home, indicator, getCompileTarget
     if (error) ui.showError(error); else ui.clearError();
     if (home) {
       const missing = missingTeXPrograms(meta);
-      home.hidden = !snapshot || (!working && !missing.length && !['failed', 'cancelled'].includes(snapshot.status));
+      const current = teXEnvironment(snapshot);
+      home.hidden = !snapshot;
       homeStatus.textContent = working || ['failed', 'cancelled'].includes(snapshot?.status) ? describeStatus()
-        : t('必要なプログラムが見つかりません: {programs}', { programs: missing.join(', ') });
+        : missing.length ? t('必要なプログラムが見つかりません: {programs}', { programs: missing.join(', ') })
+          : t('利用中: {path}', { path: current.directory || current.bin || meta.texBin || meta.latexmk });
       homeOpen.textContent = t(working ? 'セットアップの進捗を見る' : 'TeX をセットアップ…');
       homeOpen.disabled = locked;
+      homeManage.disabled = locked || working || session.checking || !(current.directory || meta.latexmk);
     }
     if (indicator) {
       indicator.hidden = !snapshot?.id || !snapshot || snapshot.status === 'idle';
@@ -334,6 +340,7 @@ export function createTeXSetup({ api, getMeta, home, indicator, getCompileTarget
   });
   sample.addEventListener('click', () => { if (!sample.disabled) { ui.close(); onCreateSample(); } });
   homeOpen.addEventListener('click', () => { void open({ reason: 'home', progress: session.busy }); });
+  homeManage.addEventListener('click', () => { if (!homeManage.disabled) onManage(); });
   const openProgress = () => { void open({ reason: 'status', progress: true }); };
   indicator?.addEventListener('click', openProgress);
   ui.dialog.addEventListener('close', () => {
