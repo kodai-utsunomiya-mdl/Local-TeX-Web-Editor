@@ -123,6 +123,29 @@ test('外部の本文と選択の更新では通知せず，同じ本文では�
   assert.deepEqual(editor.notifications, []); assert.deepEqual(editor.selections, []); assert.deepEqual(editor.errors, []);
 });
 
+test('ピンチの最初の指で移動したカーソルと，入力前に選んだ装飾を元へ戻す', () => {
+  const editor = editorFor('First paragraph.');
+  editor.selectSource(6); editor.command('bold'); editor.command('italic');
+  const saved = editor.captureZoomSelection(null), original = editor.view.state.doc;
+  editor.selectSource(2);
+  assert.equal(editor.view.state.storedMarks, null);
+  editor.restoreZoomSelection(saved);
+  assert.equal(editor.view.state.doc, original); assert.ok(editor.view.state.selection.eq(saved.selection));
+  assert.deepEqual(editor.view.state.storedMarks.map(mark => mark.type.name), ['em', 'strong']);
+  assert.deepEqual(editor.notifications, []);
+  // Changing only the input marks also needs restoration, including an
+  // explicit empty set, which differs from inheriting marks at the cursor.
+  editor.command('bold'); editor.command('italic');
+  const plain = editor.captureZoomSelection(null);
+  assert.deepEqual(plain.storedMarks, []);
+  editor.command('bold'); editor.restoreZoomSelection(plain);
+  assert.deepEqual(editor.view.state.storedMarks, []);
+  editor.restoreZoomSelection(saved); typeText(editor, 'new');
+  const inserted = editor.view.state.doc.firstChild.child(1);
+  assert.equal(inserted.text, 'new'); assert.deepEqual(inserted.marks.map(mark => mark.type.name), ['em', 'strong']);
+  assertNotifications(editor, 'First paragraph.');
+});
+
 test('IME の入力中に別の画面から変更が来ても，双方の変更を本文へ反映する', () => {
   const editor = editorFor('alpha\n\nbeta\n');
   editor.selectSource(5); editor.view.composing = true;

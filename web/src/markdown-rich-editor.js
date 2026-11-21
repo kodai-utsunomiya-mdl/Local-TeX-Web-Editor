@@ -1,6 +1,6 @@
 import { EditorState, TextSelection, NodeSelection, Selection, Plugin } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
-import { Fragment, Slice } from 'prosemirror-model';
+import { Fragment, Slice, Mark } from 'prosemirror-model';
 import { baseKeymap, chainCommands, toggleMark, setBlockType, wrapIn, lift, exitCode, newlineInCode } from 'prosemirror-commands';
 import { keymap } from 'prosemirror-keymap';
 import { inputRules, InputRule, wrappingInputRule, textblockTypeInputRule, undoInputRule } from 'prosemirror-inputrules';
@@ -11,6 +11,7 @@ import { ChangeSet, Text } from '@codemirror/state';
 import katex from 'katex';
 import { MarkdownSource, markdownSchema, parseMarkdown } from './markdown-rich-document.js';
 import { resolveMarkdownReference } from './markdown-preview.js';
+import { attachFontZoom, prepareRichEditorResize } from './editor-zoom.js';
 import { t, getLanguage, onLanguageChange, translateElements } from './i18n.js';
 
 const imageData = /^data:image\/(?:png|jpeg|gif|webp|avif);base64,[a-z\d+/=\s]+$/i;
@@ -430,6 +431,12 @@ export class MarkdownRichEditor {
     this.focusListener = () => this.options.onFocus?.();
     this.keyListener = event => this.handleShortcut(event);
     this.host.addEventListener('focusin', this.focusListener); this.host.addEventListener('keydown', this.keyListener, true);
+    this.stopZoom = options.zoom ? attachFontZoom(this.host, {
+      ...options.zoom,
+      isComposing: () => this.composing || options.zoom.isComposing?.(),
+      captureSelection: event => this.captureZoomSelection(event.target),
+      restoreSelection: saved => this.restoreZoomSelection(saved),
+    }) : null;
     this.stopLanguage = onLanguageChange(() => {
       translateElements(this.host); this.view.dom.setAttribute('aria-label', t('Markdown の直接編集')); this.updateTableTools();
     });
@@ -437,6 +444,23 @@ export class MarkdownRichEditor {
   }
   get text() { return this.pendingExternal?.text ?? this.source.text; }
   get composing() { return this.view?.composing || [...this.embeddedViews].some(view => view.composing); }
+  prepareResize(origin = null) { return prepareRichEditorResize(this.view, this.host, origin); }
+  captureZoomSelection(target) {
+    const field = target?.closest?.('textarea, input'), { doc, selection, storedMarks } = this.view.state;
+    return { document: doc, selection, storedMarks,
+      field: Number.isInteger(field?.selectionStart) ? { element: field, value: field.value,
+        start: field.selectionStart, end: field.selectionEnd, direction: field.selectionDirection } : null };
+  }
+  restoreZoomSelection(saved) {
+    if (this.destroyed || this.view.state.doc !== saved.document) return;
+    const { state } = this.view;
+    const sameMarks = state.storedMarks === saved.storedMarks || (state.storedMarks && saved.storedMarks && Mark.sameSet(state.storedMarks, saved.storedMarks));
+    if (!state.selection.eq(saved.selection) || !sameMarks) {
+      this.view.dispatch(state.tr.setSelection(saved.selection).setStoredMarks(saved.storedMarks).setMeta('addToHistory', false));
+    }
+    const field = saved.field;
+    if (field?.element.isConnected && field.element.value === field.value) field.element.setSelectionRange(field.start, field.end, field.direction);
+  }
   reportError(error) { this.options.onError?.(error); }
   notifyStateChange() { this.options.onStateChange?.(); }
 
@@ -825,7 +849,7 @@ export class MarkdownRichEditor {
   }
   destroy() {
     if (this.destroyed) return;
-    this.destroyed = true; this.window.clearTimeout(this.compositionTimer); this.stopLanguage();
+    this.destroyed = true; this.window.clearTimeout(this.compositionTimer); this.stopLanguage(); this.stopZoom?.();
     this.host.removeEventListener('focusin', this.focusListener); this.host.removeEventListener('keydown', this.keyListener, true);
     this.view.destroy();
     for (const asset of this.assets.values()) { asset.controller.abort(); if (asset.url) this.window.URL.revokeObjectURL(asset.url); }

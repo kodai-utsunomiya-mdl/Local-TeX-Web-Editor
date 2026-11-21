@@ -27,8 +27,16 @@ test.beforeAll(async () => {
         window.openRich = (text, path = 'notes/main.md', projectRoot = '/project/原稿') => {
           window.rich?.destroy();
           richChanges.length = richSelections.length = richErrors.length = richLinks.length = 0; richStateChanges = 0;
+          window.richFontSize = 14; window.richZooms = [];
+          document.documentElement.style.setProperty('--editor-font-size', '14px');
           canonical = EditorState.create({ doc: text, extensions: [history()] });
           window.rich = new MarkdownRichEditor({ host: document.getElementById('rich-host'), text, path, projectRoot, token: 'rich-test-token',
+            zoom: { getSize: () => richFontSize, onSize: (size, origin) => {
+              const restore = rich.prepareResize(origin);
+              window.richFontSize = Math.round(size * 10) / 10;
+              document.documentElement.style.setProperty('--editor-font-size', richFontSize + 'px');
+              restore(); richZooms.push(richFontSize);
+            } },
             onChange: change => {
               if (change.beforeText !== canonical.doc.toString()) throw new Error('The canonical source changed.');
               const transaction = canonical.update({ changes: change.changes, selection: change.selection, userEvent: change.userEvent,
@@ -83,6 +91,89 @@ async function openEditor(page, text) {
   return requests;
 }
 async function checkErrors(page) { expect(await page.evaluate(() => richErrors)).toEqual([]); }
+
+test('wheel，ピンチ，Safari のジェスチャーで文字を拡大し，本文と選択範囲と Undo を続ける', async ({ page }) => {
+  const original = Array.from({ length: 70 }, (_, index) => `Paragraph ${index + 1}: text for the visual editor.\n\n`).join('');
+  await openEditor(page, original);
+  const paragraph = page.locator('.markdown-rich-document p').filter({ hasText: 'Paragraph 35:' });
+  await paragraph.scrollIntoViewIfNeeded();
+  await page.evaluate(() => { selectRichText('Paragraph 35'); rich.command('bold'); });
+  await expect(paragraph.locator('strong')).toHaveText('Paragraph 35');
+  const before = await page.evaluate(() => {
+    window.zoomDocument = rich.view.state.doc; window.zoomSelection = rich.view.state.selection;
+    const box = rich.view.coordsAtPos(zoomSelection.from);
+    return { top: box.top, x: box.left + 2, y: (box.top + box.bottom) / 2, browserScale: window.visualViewport.scale };
+  });
+  await page.mouse.move(before.x, before.y);
+  await page.keyboard.down('Control'); await page.mouse.wheel(0, -80); await page.keyboard.up('Control');
+  await expect.poll(() => page.evaluate(() => richFontSize)).toBe(16.4);
+  expect(await page.evaluate(() => rich.view.state.doc === zoomDocument && rich.view.state.selection.eq(zoomSelection))).toBe(true);
+  expect(Math.abs(await page.evaluate(() => rich.view.coordsAtPos(zoomSelection.from).top) - before.top)).toBeLessThan(2);
+
+  const point = await paragraph.evaluate(element => { const box = element.getBoundingClientRect(); return { x: box.left + 110, y: box.top + 12 }; });
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 2 });
+  try {
+    const points = distance => [{ x: point.x - distance, y: point.y, id: 1 }, { x: point.x + distance, y: point.y, id: 2 }];
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: points(20) });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: points(30) });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await expect.poll(() => page.evaluate(() => richFontSize)).toBe(24.6);
+  } finally { await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: false }); await cdp.detach(); }
+  expect(await page.evaluate(() => rich.view.state.doc === zoomDocument && rich.view.state.selection.eq(zoomSelection))).toBe(true);
+  await page.evaluate(point => {
+    for (const [type, scale] of [['gesturestart', 1], ['gesturechange', .75], ['gestureend', .75]]) {
+      const event = new Event(type, { bubbles: true, cancelable: true });
+      Object.assign(event, { scale, clientX: point.x, clientY: point.y }); rich.host.dispatchEvent(event);
+    }
+  }, point);
+  await expect.poll(() => page.evaluate(() => richFontSize)).toBe(18.5);
+  expect(await page.evaluate(() => rich.view.state.doc === zoomDocument && rich.view.state.selection.eq(zoomSelection))).toBe(true);
+  expect(await page.evaluate(() => window.visualViewport.scale)).toBe(before.browserScale);
+  expect(await page.evaluate(() => richChanges.length)).toBe(1);
+  await page.keyboard.press('Control+z'); await expect(paragraph.locator('strong')).toHaveCount(0);
+  expect(await page.evaluate(() => sourceText())).toBe(original);
+  await page.keyboard.press('Control+Shift+Z'); await expect(paragraph.locator('strong')).toHaveText('Paragraph 35');
+  await checkErrors(page);
+});
+
+test('数式の TeX とコード言語で IME を入力中は拡大を止め，確定後も同じ入力欄と選択範囲を使う', async ({ page }) => {
+  await openEditor(page, 'Before\n\n$$\nx^2\n$$\n\n```js\nconst n = 1;\n```\n');
+  await page.locator('.rich-math-preview').click();
+  for (const selector of ['.rich-math-input', '.rich-code-language']) {
+    const field = page.locator(selector); await field.focus();
+    await field.evaluate(element => {
+      window.compositionField = element;
+      element.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true, data: '' }));
+      element.value = '日本語'; element.setSelectionRange(1, 2);
+      element.dispatchEvent(new InputEvent('input', { bubbles: true, data: '日本語', inputType: 'insertCompositionText', isComposing: true }));
+    });
+    await expect.poll(() => page.evaluate(() => rich.composing)).toBe(true);
+    const size = await page.evaluate(() => richFontSize);
+    expect(await field.evaluate(element => {
+      const wheel = new WheelEvent('wheel', { bubbles: true, cancelable: true, metaKey: true, deltaY: -120 });
+      element.dispatchEvent(wheel);
+      const start = new Event('gesturestart', { bubbles: true, cancelable: true }); element.dispatchEvent(start);
+      const change = Object.assign(new Event('gesturechange', { bubbles: true, cancelable: true }), { scale: 2 }); element.dispatchEvent(change);
+      element.dispatchEvent(new Event('gestureend', { bubbles: true, cancelable: true }));
+      return wheel.defaultPrevented && start.defaultPrevented && change.defaultPrevented;
+    })).toBe(true);
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
+    expect(await page.evaluate(() => richFontSize)).toBe(size);
+    expect(await field.evaluate(element => element === compositionField && document.activeElement === element && element.value === '日本語' && element.selectionStart === 1 && element.selectionEnd === 2)).toBe(true);
+    await field.evaluate(element => element.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, data: '日本語' })));
+    await expect.poll(() => page.evaluate(() => rich.composing)).toBe(false);
+    await field.evaluate(element => {
+      const box = element.getBoundingClientRect();
+      element.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, ctrlKey: true, deltaY: -60, clientX: box.left + 30, clientY: box.top + 20 }));
+    });
+    await expect.poll(() => page.evaluate(() => richFontSize)).toBeGreaterThan(size);
+    expect(await field.evaluate(element => element === compositionField && document.activeElement === element && element.value === '日本語' && element.selectionStart === 1 && element.selectionEnd === 2)).toBe(true);
+  }
+  expect(await page.locator('.rich-math-input').evaluate(element => parseFloat(getComputedStyle(element).fontSize))).toBe(await page.evaluate(() => richFontSize));
+  expect(await page.evaluate(() => sourceText())).toContain('日本語');
+  await checkErrors(page);
+});
 
 test('開いた Markdown を変えずに表示し，装飾と入力を原稿の Undo で戻せる', async ({ page }) => {
   const original = '#  Title\n\nA sentence.\n\n~~~txt\nunchanged\n~~~\n\n[reference]: next.md\n';

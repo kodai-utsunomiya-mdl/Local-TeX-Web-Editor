@@ -160,6 +160,7 @@ func (a *App) openProjectLocked(rawPath string) error {
 	a.lastPDFMain, a.lastPDFChanged = "", false
 	a.lastPDFMarkdownInputs = nil
 	a.pdfVersions = make(map[string]string)
+	a.pdfMains = make(map[string]string)
 	a.pdfOrder = nil
 	a.compiledPDFs = make(map[string]CompiledPDF)
 	a.synctexVersions = make(map[string]*synctexVersion)

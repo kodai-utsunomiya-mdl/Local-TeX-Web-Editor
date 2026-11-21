@@ -59,9 +59,9 @@ PDF tools include continuous scrolling, search, zoom and SyncTeX navigation. Bac
 
 Search and replace across the project, compare local edit history, inspect citation and reference uses, and edit two source documents. Select multiple changes from a recorded version and restore them together, or select unneeded versions and confirm their deletion. Tabs and their order reopen with your project. Filter compilation errors and warnings.
 
-Paste images, create or paste tables, and start from built-in or custom templates. Markdown opens in visual editing for headings, text, tables, tasks, and equations. Switch to source notation, show or hide the preview, and synchronize source and preview scrolling. Create linked Markdown pages, save Markdown as PDF using browser printing, or extract PDF text to TXT.
+Paste images, create or paste tables, and start from built-in or custom templates. Markdown opens in visual editing for headings, text, tables, tasks, and equations. Use pinch or Ctrl + wheel to change its text size; visual and source editing share the chosen size and remember it next time. Switch to source notation, show or hide the preview, and synchronize source and preview scrolling. Create linked Markdown pages, save Markdown as PDF using browser printing, or extract PDF text to TXT.
 
-Manage project files from the context menu and copy multiple files from your computer. Create copies of files or folders from their saved contents while continuing to edit the originals. Sort by name or date, drag entries into a manual order, or drop onto a folder to move them. New files can start empty or use one previewed text file from a built-in or custom template. Each TeX document's latest successful PDF appears in the file list with its output name and TeX path; open it, save it, or copy it into the project.
+Manage project files from the context menu and copy multiple files from your computer. Create copies of files or folders from their saved contents while continuing to edit the originals. Sort by name or date, drag entries into a manual order, or drop onto a folder to move them. New files can start empty or use one previewed text file from a built-in or custom template. Each TeX document's latest successful PDF appears in the file list with its output name and TeX path; open it, save it, or copy it into the project. Delete a compiled result after reviewing its document and file count. This clears that document's cached previews and compilation files; source documents and PDFs saved or copied as ordinary files stay in place. Compile again to recreate the result.
 
 Edit Python, JavaScript and other program files. Home checks current and recent folders and explains missing locations; remove an entry while leaving its files and drafts in place. Open documents without unsaved edits load external changes. Documents being edited offer a comparison; a deleted file's text and draft stay available for review. The TeX logo opens Home with current and recent projects. Review a project's contents and enter its name before deleting it. Close all tabs together. The local app keeps running while the browser tab sleeps; use Quit to stop it.
 
@@ -76,9 +76,9 @@ Enter each line as one feature, without adding a bullet character to the Store f
 
 ```text
 Compile local TeX projects with your installed TeX Live and latexmk
-Read PDFs with continuous scrolling, search and zoom, or open each TeX document's latest compiled PDF
+Read PDFs with continuous scrolling, search and zoom, and open or delete each TeX document's saved previews
 Move between corresponding source and PDF positions with SyncTeX
-Edit rendered Markdown directly or switch to source and preview
+Edit rendered Markdown, resize its text with pinch or Ctrl + wheel, or switch to source and preview
 Search project text, review replacements, and include unsaved edits
 Return to earlier source and PDF positions with Back and Forward
 Select several history changes to restore, or review and delete unneeded versions
@@ -121,20 +121,11 @@ Document-specific TeX packages, fonts and bibliography tools
 ### What's new
 
 ```text
-Version 0.1.10
+Version 0.1.11
 
-- Insert inline or display math in both Markdown modes, with rendered TeX and source previews. Choose GitHub, dollar, or parenthesis notation.
-- Type inline equations to render them; Enter or Space after --- creates a horizontal rule.
-- See active formatting, including choices made before typing and mixed selections. Japanese italics and strikethrough display correctly.
-- Insert images, tables, and linked pages from icons. Right-click TeX or Markdown for insertion tools at that position.
-- Copy a project file or folder's saved contents while continuing to edit the original.
-- Sort by name or date, or drag into manual order. Alt + Up/Down also reorders entries. Drop onto a folder's center to move; existing names stop the move.
-- Create an empty file or preview one text file from a built-in or custom template. The context menu sets the initial destination.
-- Find each TeX document's latest successful PDF by its output name and TeX path. Open it, save it, or copy it into the project.
-- Read notifications and menus with clearer backgrounds, borders, shadows, and text in light and dark modes.
-- Save and apply settings using the renamed button.
-- Refresh recent folders and explain missing locations; remove list entries while keeping files and drafts.
-- Load external changes into unedited documents, compare edited versions, and review open text if a file was deleted.
+- Change text size while editing Markdown visually with Ctrl + wheel, a trackpad pinch, or a two-finger pinch on a touchscreen. The size is shared with Source and the second editor pane, and is remembered next time.
+- Right-click a result under Compiled PDFs and choose Delete… to review the TeX document and file count before deleting. This clears its earlier previews, SyncTeX data, compilation output and auxiliary files.
+- Your source and PDFs saved or copied as ordinary files stay in place. Compile the TeX document again to return its PDF to the list.
 ```
 
 ## 日本語の掲載内容
@@ -158,13 +149,13 @@ PDF は連続スクロール，文字の検索・選択，拡大・縮小に対�
 
 編集履歴から以前の版と比較し，複数の箇所を選んでまとめて原稿へ戻せます．不要な版も複数選択し，確認画面から削除できます．「編集の操作 → 編集履歴を開く → 履歴の設定」で，初期値の 30 日・合計 50 MiB を変更したり，記録を停止したりできます．自動保存と草稿も使えます．
 
-PNG・JPEG・PDF を 8 MiB まで取り込み，表計算ソフトからコピーした表や，行数と列数から作った表を挿入できます．標準のテンプレートからプロジェクトを作成し，自分の原稿や画像をテンプレートへ追加できます．Markdown は表示された見出し，本文，表，タスク，数式を直接編集する画面で開きます．ソースの記法を編集する表示や，プレビューの表示・非表示にも切り替えられます．ソースとプレビューでは両方向のスクロール同期を使えます．
+PNG・JPEG・PDF を 8 MiB まで取り込み，表計算ソフトからコピーした表や，行数と列数から作った表を挿入できます．標準のテンプレートからプロジェクトを作成し，自分の原稿や画像をテンプレートへ追加できます．Markdown は表示された見出し，本文，表，タスク，数式を直接編集する画面で開きます．ピンチや Ctrl + ホイールで文字サイズを変えられ，ソース編集と共通のサイズを次回の起動にも使います．ソースの記法を編集する表示や，プレビューの表示・非表示にも切り替えられます．ソースとプレビューでは両方向のスクロール同期を使えます．
 
 新しい Markdown ページを作り，現在の文書にリンクを挿入できます．Markdown はブラウザの印刷画面から PDF に保存でき，PDF の文字はページ順に取り出して TXT に保存できます．
 
 ファイル一覧の右クリックで作成，コピー，名前の変更，削除，パスのコピーを行えます．ファイルやフォルダーのコピーには保存済みの内容を使い，元の原稿を引き続き編集できます．コンピューターから複数のファイルを選んで追加する操作もあります．名前順・日時順・手動の順序を選べ，ドラッグで並び替え，フォルダーの中央へのドロップで移動できます．新規ファイルは空で作るか，標準・ユーザーのテンプレートからテキストファイルを 1 個選び，内容を確認して作れます．
 
-各 TeX 文書の最新のコンパイル成功結果を，実際の PDF 名と TeX のパス付きで一覧に表示します．プレビューへ開く，PC へ保存する，プロジェクトへコピーする操作を選べます．
+各 TeX 文書の最新のコンパイル成功結果を，実際の PDF 名と TeX のパス付きで一覧に表示します．プレビューへ開く，PC へ保存する，プロジェクトへコピーする操作を選べます．右クリックの「削除…」では，文書とファイルの件数を確認して，その文書の表示用キャッシュとコンパイルの出力・補助ファイルを削除できます．原稿と，通常のファイルとして保存・コピーした PDF はそのまま残り，再コンパイルで結果を作り直せます．
 
 TeX のロゴからホームへ移り，現在と最近使ったプロジェクトを管理できます．フォルダーの状態を読み直し，見つからない場合は案内を表示します．一覧から外しても原稿と草稿は残ります．未保存の編集がない原稿には外部で変更された本文を読み込み，編集中の場合は内容を比較できます．外部で削除されたファイルも本文と草稿を残して確認できます．プロジェクトの削除には，中身の確認と名前の入力が必要です．Python，JavaScript などのプログラムも編集でき，すべてのタブをまとめて閉じる操作もあります．ブラウザのタブが休止してもアプリは動作を続け，終了ボタンで終了します．
 
@@ -181,9 +172,9 @@ MIT ライセンスで公開されている無料のアプリです．アプリ�
 
 ```text
 導入済みの TeX Live と latexmk で PC の原稿をコンパイル
-PDF の連続スクロール，文字の検索・選択，拡大・縮小と，TeX 文書ごとの最新の PDF の一覧
+PDF を連続スクロールし，検索・拡大し，TeX 文書ごとの結果を一覧から開く・削除
 SyncTeX による原稿と PDF の対応位置への相互移動
-Markdown を表示した形で直接編集し，ソースとプレビューにも切替
+Markdown を直接編集し，ピンチや Ctrl + ホイールで文字サイズを変え，ソースにも切替
 未保存の内容も含めてプロジェクト全体を検索し，選んだ箇所を置換
 原稿や PDF の移動前の位置へ「戻る」「進む」で移動
 履歴から複数の箇所をまとめて復元し，不要な版は選んで確認して削除
@@ -226,20 +217,11 @@ TeX のコンパイルには latexmk を含む TeX Live
 ### このバージョンの最新情報
 
 ```text
-バージョン 0.1.10
+バージョン 0.1.11
 
-・Markdown の両モードでインライン数式と独立した数式を挿入できる．TeX の表示と原文を確認し，GitHub 向け，ドル記号，丸括弧の記法を選べる．
-・直接編集で行内数式を入力すると式へ変換する．--- の後の Enter や Space で横線になる．
-・現在の装飾，入力前に選んだ装飾，一部だけ装飾した範囲をボタンに表示する．日本語の斜体と取り消し線にも対応する．
-・画像，表，新規ページをアイコンから挿入できる．TeX や Markdown の右クリックでも挿入メニューを開ける．
-・ファイルやフォルダーの保存済みの内容をコピーし，元の原稿を引き続き編集できる．
-・名前順，日時順，手動の順序を選べる．ドラッグや Alt + 上下矢印で並び替え，フォルダーの中央へのドロップで移動する．移動先に同名の項目がある場合は止める．
-・空のファイルか，標準・ユーザーのテンプレートのテキストファイルを 1 個選び，プレビューして作成できる．右クリックした場所を最初の作成先にする．
-・各 TeX 文書の最新のコンパイル成功結果を，実際の PDF 名と TeX のパス付きで一覧に表示する．開く，保存，プロジェクトへのコピーを選べる．
-・通知とメニューの背景，枠，影，文字色を調整し，ライトとダークで読みやすくした．
-・設定画面の実行ボタンを「設定を保存して反映」に変更した．
-・最近のフォルダーを読み直し，見つからない場所を案内する．一覧から外しても原稿と草稿は残る．
-・未保存の編集がない原稿には外部の変更を読み込み，編集中の場合は内容を比較する．外部で削除されたファイルも本文と草稿を残して確認できる．
+・Markdown の直接編集で，Ctrl + ホイール，トラックパッドのピンチ，タッチ画面の 2 本指のピンチによる文字の拡大・縮小に対応する．ソース編集と両ペインで文字サイズを共有し，次回の起動にも使う．
+・「コンパイルした PDF」の右クリックから「削除…」を選び，TeX 文書とファイルの件数を確認して削除できる．その文書の過去分を含む PDF と SyncTeX のキャッシュ，コンパイルの出力と補助ファイルを片付ける．
+・原稿と，通常のファイルとして保存・コピーした PDF はそのまま残る．TeX 文書を再コンパイルすると，PDF が一覧へ戻る．
 ```
 
 ## Images and captions
@@ -282,13 +264,17 @@ Sample project: https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/down
 8. Open notes.md, use Show preview if it is closed, and choose PDF in the preview toolbar. Editing and saving the Markdown keeps the PDF visible. Select Auto to return to the Markdown preview.
 9. Save the files and close the browser tab. The local app keeps running. Launch the same app again to reopen the running editor. Use Quit at the top right to stop it.
 
+For version 0.1.11, open notes.md in Visual editing and use Ctrl + wheel over its text. Also try a trackpad pinch or a two-finger pinch on a touchscreen. Check the new font size in Settings, switch to Source, and open the second editor pane to confirm that they use the same size. Reopen the app to check that the size was saved.
+
+After compiling main.tex, right-click its entry under Compiled PDFs and use Copy into project… to create saved-main.pdf. Open Delete… on the compiled entry, review the TeX document and file count, and try Cancel. Open the confirmation again and choose Delete. Check that main.tex and the ordinary saved-main.pdf remain in the file list. Compile main.tex again and confirm that its result returns under Compiled PDFs.
+
 Also try Search project with an unsaved edit and review a selected replacement; use Back after following a source or PDF link; and open the second source editor. In Editing tools, try Document history, References and citations, Insert an image, Insert a table, and Manage templates. History settings explains the storage limits and allows recording to be disabled. The Markdown toolbar in notes.md adds formatting, links, code blocks and tables; in Source mode, Sync scrolling links source and preview in both directions. Reopen the app to review the saved tabs and layout. F1 opens Help, and Settings > Appearance provides the color scheme and editor font.
 
 In main.tex, type \b, accept \begin, type i inside the braces, and accept itemize; Tab / Shift+Tab moves between fields. In Settings, try Enable TeX completion and Show suggestions while typing; with automatic suggestions off, Ctrl+Space opens the list. Add \subsection{Details} below the sample section. Fold the section with its line-number arrow or Ctrl+Shift+[, then select Details in Outline: its source should unfold with space above it. Ctrl+Shift+] unfolds at the cursor. Use the Outline arrows to collapse and expand child headings, and also try folding a heading in notes.md. For the compiled PDF, toggle Dark PDF view, narrow the preview, and use the always-visible +/− and Save PDF buttons, and … (PDF actions) for the zoom selector and search. Confirm that the toolbar stays on one row and the saved PDF uses its original colors.
 
-For version 0.1.10, leave the editor in a background browser tab, return, and continue editing. In Settings, selecting a language changes the dialog immediately; Cancel restores the saved language, and Save and apply settings confirms it. The label always shows Language / 言語設定. Try Close all tabs with Save, Discard and Cancel. Right-click a project entry to create a file/folder, copy a path, rename it, or delete a disposable file or folder. A folder's confirmation lists its contents. Add files from your computer opens the file picker and copies the selected files into the project after reviewing conflicts. Click the TeX logo to see Home, then Return to editing to resume unsaved text. To test project deletion, create a disposable project and review its path, file list, and drafts; the acknowledgment and exact project name are required. A .py file can be edited and saved with syntax highlighting. In notes.md, use Image, Table and New page in the formatting toolbar. The same actions remain available in Editing tools. Then use Editing tools > Save Markdown as PDF > Print / Save as PDF. Display the compiled PDF and choose Editing tools > Convert PDF to text > Download TXT. The conversion extracts existing PDF text, with no OCR.
+Leave the editor in a background browser tab, return, and continue editing. In Settings, selecting a language changes the dialog immediately; Cancel restores the saved language, and Save and apply settings confirms it. The label always shows Language / 言語設定. Try Close all tabs with Save, Discard and Cancel. Right-click a project entry to create a file/folder, copy a path, rename it, or delete a disposable file or folder. A folder's confirmation lists its contents. Add files from your computer opens the file picker and copies the selected files into the project after reviewing conflicts. Click the TeX logo to see Home, then Return to editing to resume unsaved text. To test project deletion, create a disposable project and review its path, file list, and drafts; the acknowledgment and exact project name are required. A .py file can be edited and saved with syntax highlighting. In notes.md, use the Insert an image, Insert a table and New Markdown page icons in the formatting toolbar. The same actions remain available in Editing tools. Then use Editing tools > Save Markdown as PDF > Print / Save as PDF. Display the compiled PDF and choose Editing tools > Convert PDF to text > Download TXT. The conversion extracts existing PDF text, with no OCR.
 
-In notes.md, insert inline equations using each notation in the math dialog, then switch between visual and source editing. Type --- followed by Enter to add a horizontal rule, and check active toolbar buttons before typing formatted text. Check Japanese italic and strikethrough text next to punctuation. Right-click in TeX and Markdown to open insertion commands, and use Shift+right-click for the browser menu. Try all four file sort orders, save a file, and reopen the app to check the selected order. Save and apply settings should show a clearly visible notification in light and dark themes.
+In notes.md, insert inline equations using each notation in the math dialog, then switch between visual and source editing. Type --- followed by Enter to add a horizontal rule, and check active toolbar buttons before typing formatted text. Check Japanese italic and strikethrough text next to punctuation. Right-click in TeX and Markdown to open insertion commands, and use Shift+right-click for the browser menu. Try sorting files by name and date, then drag entries into a manual order. Save a file and reopen the app to check the selected order. Save and apply settings should show a clearly visible notification in light and dark themes.
 
 TeX Live is an external prerequisite for TeX compilation. Markdown editing and preview work without it. The app prepares package-install commands for the user to run; it does not install TeX or packages automatically.
 
@@ -317,13 +303,17 @@ Local TeX Web Editor は，ブラウザを画面として使う Windows のデ�
 8. notes.md を開き，閉じている場合は「プレビューを表示」を押します．プレビューを PDF にすると，Markdown の編集・保存中も PDF を表示します．Auto に戻すと Markdown を表示します．
 9. 原稿を保存してブラウザのタブを閉じても，アプリは動作を続けます．同じアプリを起動すると，起動中の編集画面へ戻ります．右上の終了ボタンで終了します．
 
+v0.1.11 では，notes.md を「直接編集」で開き，本文の上で Ctrl + ホイールを使います．トラックパッドのピンチや，タッチ画面の 2 本指のピンチも試してください．設定の文字サイズを確認し，「ソース」へ切り替え，二つ目のペインも開いて，同じサイズが使われることを確認します．アプリを開き直し，選んだサイズで再開することも確認できます．
+
+main.tex をコンパイルした後，「コンパイルした PDF」の項目を右クリックし，「プロジェクトへコピー…」から saved-main.pdf を作ります．同じコンパイル結果で「削除…」を開き，TeX 文書とファイルの件数を確認して「キャンセル」を試します．もう一度確認画面を開いて「削除」を押し，main.tex と通常のファイルの saved-main.pdf が一覧に残ることを確認します．main.tex を再コンパイルすると，その結果が「コンパイルした PDF」に戻ります．
+
 未保存の編集を含む Search project と選んだ箇所の置換，原稿や PDF のリンクから Back で戻る操作，二つ目のエディタを開く操作も確認できます．Editing tools には Document history，References and citations，Insert an image，Insert a table，Manage templates があります．History settings で上限を確認し，記録を停止できます．notes.md の Markdown ツールバーから装飾・リンク・コードブロック・表を挿入できます．「ソース」の Sync scrolling では原稿とプレビューが両方向に動きます．アプリを開き直すと，タブと配置を読み戻します．F1 ではヘルプ，Settings → Appearance では配色と原稿のフォントを確認できます．
 
 main.tex で \b から \begin を選び，中括弧に i と入力して itemize を選びます．Tab / Shift + Tab で入力箇所を移動できます．「設定」の「TeX の入力補完を使う」と「入力中に候補を自動で表示する」を試し，自動表示をオフにした状態で Ctrl + Space から候補を開きます．サンプルのセクションの下に \subsection{Details} を追加し，行番号の横の矢印か Ctrl + Shift + [ でセクションを折りたたみます．アウトラインの Details を選び，原稿が展開され，上側に余白を付けて表示されることを確認します．Ctrl + Shift + ] でも展開できます．アウトラインの矢印で下位の見出しを開閉し，notes.md の見出しも折りたたんでください．コンパイルした PDF で「PDF を暗く表示」を切り替え，表示欄を狭くして常に表示される +/− と保存ボタン，「… (PDF の操作)」内の倍率の選択と検索を試します．操作欄が 1 行に収まり，保存した PDF が元の配色であることを確認します．
 
-v0.1.10 では，別のブラウザタブで作業してから編集画面へ戻り，編集を続けてください．設定で言語を選ぶと直ちに表示が切り替わり，キャンセルで元へ戻り，「設定を保存して反映」で確定します．項目名は「Language / 言語設定」です．「すべてのタブを閉じる」の保存・破棄・キャンセルも確認できます．ファイル一覧の右クリックで新規ファイル・フォルダー，パスのコピー，名前の変更を試し，不要なテスト用ファイルやフォルダーを削除してください．フォルダーの確認画面には中身の一覧が表示されます．「コンピューターからファイルを追加…」では選択画面からファイルを選び，同名の項目を確認してプロジェクトへコピーします．TeX のロゴからホームへ移り，「編集に戻る」で未保存の本文から続けられます．プロジェクト削除はテスト用のフォルダーで試し，パス，中身，草稿を確認してください．チェックと正確なプロジェクト名が必要です．.py ファイルも色付けして編集・保存できます．notes.md の書式ツールバーで「画像」「表」「新規ページ」を試します．同じ操作は「編集の操作」からも開けます．続いて「編集の操作 → Markdown を PDF に保存 → 印刷画面で PDF に保存」を試します．コンパイルした PDF を表示して「編集の操作 → PDF をテキストに変換 → TXT をダウンロード」を使えます．この変換は PDF の文字情報を読み取り，OCR は行いません．
+別のブラウザタブで作業してから編集画面へ戻り，編集を続けてください．設定で言語を選ぶと直ちに表示が切り替わり，キャンセルで元へ戻り，「設定を保存して反映」で確定します．項目名は「Language / 言語設定」です．「すべてのタブを閉じる」の保存・破棄・キャンセルも確認できます．ファイル一覧の右クリックで新規ファイル・フォルダー，パスのコピー，名前の変更を試し，不要なテスト用ファイルやフォルダーを削除してください．フォルダーの確認画面には中身の一覧が表示されます．「コンピューターからファイルを追加…」では選択画面からファイルを選び，同名の項目を確認してプロジェクトへコピーします．TeX のロゴからホームへ移り，「編集に戻る」で未保存の本文から続けられます．プロジェクト削除はテスト用のフォルダーで試し，パス，中身，草稿を確認してください．チェックと正確なプロジェクト名が必要です．.py ファイルも色付けして編集・保存できます．notes.md の書式ツールバーで「画像を挿入」「表を挿入」「新しい Markdown ページ」のアイコンを試します．同じ操作は「編集の操作」からも開けます．続いて「編集の操作 → Markdown を PDF に保存 → 印刷画面で PDF に保存」を試します．コンパイルした PDF を表示して「編集の操作 → PDF をテキストに変換 → TXT をダウンロード」を使えます．この変換は PDF の文字情報を読み取り，OCR は行いません．
 
-notes.md の数式ダイアログでインライン数式の 3 形式を試し，直接編集とソースを切り替えます．--- の後で Enter を押して水平線を追加し，文字を入力する前に選んだ書式もボタンに表示されることを確認します．句読点に接した日本語の斜体と取り消し線を試してください．TeX と Markdown の原稿で右クリックから挿入を選び，Shift + 右クリックでブラウザのメニューを開きます．ファイルの並び順を 4 通り試し，保存後と起動し直した後の順番を確認します．「設定を保存して反映」の後に，ライトとダークの両方で通知が読みやすいことを確認します．
+notes.md の数式ダイアログでインライン数式の 3 形式を試し，直接編集とソースを切り替えます．--- の後で Enter を押して水平線を追加し，文字を入力する前に選んだ書式もボタンに表示されることを確認します．句読点に接した日本語の斜体と取り消し線を試してください．TeX と Markdown の原稿で右クリックから挿入を選び，Shift + 右クリックでブラウザのメニューを開きます．名前や日時でファイルを並べた後，ドラッグで手動の順序へ並べ替え，保存後と起動し直した後の順番を確認します．「設定を保存して反映」の後に，ライトとダークの両方で通知が読みやすいことを確認します．
 
 TeX Live はコンパイルに使う外部のソフトウェアです．Markdown の編集とプレビューは TeX Live がなくても使えます．アプリはパッケージ追加用のコマンドを用意し，ユーザーが必要に応じて実行します．TeX やパッケージの自動導入は行いません．
 
