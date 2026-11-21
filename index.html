@@ -54,7 +54,7 @@
       <div class="intro-grid">
         <div class="intro-copy">
           <h1 id="app-title">Local TeX Web Editor</h1>
-          <p>Write TeX and edit Markdown directly in your browser. Compile with TeX Live on your computer and read the PDF alongside your manuscript.</p>
+          <p>Edit TeX and Markdown in your browser. If TeX is not installed, this app can download and install it, then select it automatically when setup finishes. If you already have TeX, you can select that installation. Compile TeX documents to view their PDFs, or edit rendered Markdown directly.</p>
           <p class="local-note">Launching the app opens a <code>localhost</code> page. Documents stay in the project folder on your computer.</p>
         </div>
         <div class="download-options" aria-label="Install or download the app">
@@ -63,18 +63,18 @@
             <span><span class="download-label">Get it from Microsoft Store</span><small>Windows x64 · Free · Store updates</small></span>
             <span class="download-arrow" aria-hidden="true">↗</span>
           </a>
-          <a class="download" href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.13/local-tex-web-editor-0.1.13-windows-x64.zip">
+          <a class="download" href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.14/local-tex-web-editor-0.1.14-windows-x64.zip">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 4.4 10.7 3v8.2H2zm9.7-1.6L22 1.2v10H11.7zM2 12.3h8.7v8.2L2 19.1zm9.7 0H22v10l-10.3-1.6z"/></svg>
-            <span><span class="download-label">Download the Windows ZIP</span><small>v0.1.13 · x64 · ZIP</small></span>
+            <span><span class="download-label">Download the Windows ZIP</span><small>v0.1.14 · x64 · ZIP</small></span>
             <span class="download-arrow" aria-hidden="true">↓</span>
           </a>
-          <a class="download" href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.13/local-tex-web-editor-0.1.13-macos-universal.zip">
+          <a class="download" href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.14/local-tex-web-editor-0.1.14-macos-universal.zip">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="13" rx="1.4"/><path d="M8 21h8M12 16v5M3 12.5h18"/></svg>
-            <span><span class="download-label">Download for macOS</span><small>v0.1.13 · Apple Silicon + Intel · ZIP</small></span>
+            <span><span class="download-label">Download for macOS</span><small>v0.1.14 · Apple Silicon + Intel · ZIP</small></span>
             <span class="download-arrow" aria-hidden="true">↓</span>
           </a>
-          <p class="release-note"><span class="version-badge">v0.1.13</span> <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.13">Release notes and downloads</a></p>
-          <p class="store-release-note">The ZIP downloads are v0.1.13. The Microsoft Store update becomes available after Store review and publication.</p>
+          <p class="release-note"><span class="version-badge">v0.1.14</span> <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.14">Release notes and downloads</a></p>
+          <p class="store-release-note">The ZIP downloads are v0.1.14. The Microsoft Store update becomes available after Store review and publication.</p>
         </div>
       </div>
 
@@ -93,117 +93,64 @@
       <nav class="contents" aria-label="On this page">
         <p>On this page</p>
         <ul>
-          <li><a href="#whats-new">New in v0.1.13</a></li>
           <li><a href="#requirements">Requirements &amp; size</a></li>
-          <li><a href="#get-started">Get started</a></li>
-          <li><a href="#tex">Set up &amp; manage TeX</a></li>
+          <li><a href="#get-started">Get the app and open it</a></li>
+          <li><a href="#tex">Prepare TeX &amp; create a PDF</a></li>
+          <li><a href="#projects">Open &amp; manage projects</a></li>
           <li><a href="#editing">Editing &amp; preview</a></li>
           <li><a href="#writing">Search, compare &amp; reuse</a></li>
           <li><a href="#updates">Updates &amp; help</a></li>
         </ul>
       </nav>
       <div class="guide">
-        <section id="whats-new" aria-labelledby="whats-new-title">
-          <h2 id="whats-new-title">New in v0.1.13</h2>
-          <p>Set up TeX with clear steps and reset the information the app remembers.</p>
-          <ul class="release-highlights">
-            <li><strong>Find setup and management together.</strong> Home and Settings show both actions. Explanations and buttons have more space, and package additions proceed through the app’s review screen.</li>
-            <li><strong>Follow the setup guide with screenshots.</strong> See the actual screens for the package selection, destination, progress and completion, then compile your first document.</li>
-            <li><strong>Reset saved information from Settings.</strong> Review file counts and sizes, then choose settings, drafts, history, templates or preview caches. Project documents and installed TeX remain available.</li>
-          </ul>
-          <p class="small-note">See the <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.13">v0.1.13 release notes</a> for the complete changes.</p>
-        </section>
-
         <section id="requirements" aria-labelledby="requirements-title">
           <h2 id="requirements-title">Requirements and app size</h2>
-          <p>Use a current version of Chrome or Edge. For TeX compilation, use <strong>Set up TeX…</strong> in the app or select an existing TeX Live installation. If your project already compiles in another editor, choose that same TeX folder. Markdown editing and preview work without TeX.</p>
+          <p>Use a current version of Chrome or Edge on one of the systems below. After opening the app, follow <a href="#tex-install">TeX setup in the app</a>. If TeX already works on your computer, go directly to <a href="#tex-existing">selecting that installation</a>. Markdown editing and preview work without TeX.</p>
           <div class="table-scroll">
             <table class="requirements-table">
-              <thead><tr><th scope="col">Platform</th><th scope="col">Operating system</th><th scope="col">Example TeX folder</th></tr></thead>
+              <thead><tr><th scope="col">Platform</th><th scope="col">Operating system</th></tr></thead>
               <tbody>
-                <tr><th scope="row">Windows</th><td>Windows 10 / 11, x64</td><td><code>C:\texlive\2025\bin\windows</code></td></tr>
-                <tr><th scope="row">macOS</th><td>macOS 12 or later,<br>Apple Silicon or Intel</td><td><code>/Library/TeX/texbin</code></td></tr>
+                <tr><th scope="row">Windows</th><td>Windows 10 / 11, x64</td></tr>
+                <tr><th scope="row">macOS</th><td>macOS 12 or later,<br>Apple Silicon or Intel</td></tr>
               </tbody>
             </table>
           </div>
           <p class="small-note">The Microsoft Store edition requires Windows 10 version 2004 (build 19041) or later, or Windows 11, on an x64 PC.</p>
-          <p>The app uses <code>latexmk</code> to compile and <code>synctex</code> to move between source and PDF. If your project uses a <code>latexmkrc</code> or <code>.latexmkrc</code> file, keep it with the source files.</p>
           <div class="table-scroll">
             <table class="size-table">
-              <thead><tr><th scope="col">v0.1.13</th><th scope="col">ZIP download</th><th scope="col">App after extraction</th></tr></thead>
+              <thead><tr><th scope="col">v0.1.14</th><th scope="col">ZIP download</th><th scope="col">App after extraction</th></tr></thead>
               <tbody>
                 <tr><th scope="row">Windows x64</th><td>About 9 MB</td><td>About 18 MB</td></tr>
                 <tr><th scope="row">macOS, both CPUs</th><td>About 17 MB</td><td>About 36 MB</td></tr>
               </tbody>
             </table>
           </div>
-          <p class="small-note">Sizes are rounded to the nearest MB; see the <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.13">v0.1.13 release assets</a> for each download's size. 1 MB = 1,000,000 bytes. TeX Live, documents, drafts, edit history, templates and compilation files use additional space. The app includes its editor and PDF viewer; it runs without installing Python, Node.js, Go or VS Code.</p>
-          <details>
-            <summary>Install TeX yourself with a smaller package selection</summary>
-            <p>On Windows, the <a href="https://tug.org/texlive/acquire-netinstall.html">TeX Live installer</a> lets you choose a smaller installation scheme. On Mac, <a href="https://tug.org/mactex/morepackages.html">BasicTeX</a> provides a small starting point. Add <code>latexmk</code>, <code>synctex</code> and packages needed by your documents.</p>
-            <p>Select that installation in Settings, then use <strong>Manage TeX…</strong> to add packages. The app shows the package names and destination before you choose <strong>Add these packages</strong>. For a shared installation managed through the official TeX tool, open that tool from the app. See <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/blob/main/README.md#use-an-existing-tex-installation">Use an existing TeX installation</a> in the README.</p>
-          </details>
+          <p class="small-note">Sizes are rounded to the nearest MB; see the <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.14">v0.1.14 release assets</a> for each download's size. 1 MB = 1,000,000 bytes. TeX Live, documents, drafts, edit history, templates and compilation files use additional space. The app includes its editor and PDF viewer; it runs without installing Python, Node.js, Go or VS Code.</p>
         </section>
 
         <section id="get-started" aria-labelledby="get-started-title">
-          <h2 id="get-started-title">Get started</h2>
-          <ol class="steps">
-            <li>
-              <h3>Install or download the app, then open it</h3>
-              <p><strong>Windows (Microsoft Store):</strong> install the app from <a href="https://apps.microsoft.com/detail/9P6QF32N19HG">Microsoft Store</a>, then open <strong>Local TeX Web Editor</strong> from the Start menu.</p>
-              <p><strong>Windows (ZIP):</strong> extract the ZIP and double-click <code>local-tex-web-editor.exe</code>.</p>
-              <p><strong>Mac:</strong> extract the ZIP, move <code>Local TeX Web Editor.app</code> to Applications, then open it from Finder or Spotlight.</p>
-              <p class="file-note">The editor opens in your default browser. Home and Settings offer <strong>Set up TeX…</strong> for a new installation and <strong>Manage TeX…</strong> for the selected installation. Follow the <a href="#tex-install">illustrated setup guide</a> below to prepare TeX.</p>
-              <p class="file-note">The interface starts in English. Open <strong>Settings → Language / 言語設定</strong> and select <strong>日本語</strong> to see it change immediately. Choose <strong>設定を保存して反映 (Save and apply settings)</strong> to use Japanese next time, or <strong>キャンセル (Cancel)</strong> to return to the saved language.</p>
-            </li>
-            <li>
-              <h3>Open your project folder</h3>
-              <p>Choose <strong>Open project folder</strong> on Home, then use <strong>Browse…</strong> or enter the path to the folder containing your <code>.tex</code> and <code>.bib</code> files, images and project settings. Click <strong>Open</strong>. To use an Overleaf project, download its source ZIP and extract it first.</p>
-              <p>For a new project, choose <strong>Create from a template</strong> on Home, select a template, and choose a parent folder and a new folder name. Click <strong>Create and open</strong>. The <a href="#tex-first-compile">first-document steps</a> below show each field.</p>
-              <p>For a new TeX installation, open <strong>Set up TeX…</strong> from Home or Settings and review the download before starting. Successful setup selects the installed environment. To use an existing installation, select its program folder in <strong>Settings</strong> and choose <strong>Save and apply settings</strong>.</p>
-            </li>
-            <li>
-              <h3>Open a TeX document and compile</h3>
-              <p class="file-note">For an existing project, set <strong>Settings → Compiler</strong> before compiling: choose <strong>Use latexmkrc settings</strong> when the project includes <code>latexmkrc</code> or <code>.latexmkrc</code>, or choose the required TeX engine. Click <strong>Save and apply settings</strong>.</p>
-              <p>Select the document in the file list and click <strong>Compile</strong>, or press <span class="shortcut"><kbd>Ctrl</kbd> + <kbd>Enter</kbd></span> on Windows or <span class="shortcut"><kbd>Cmd</kbd> + <kbd>Enter</kbd></span> on Mac. The resulting PDF appears on the right.</p>
-            </li>
-          </ol>
-          <details>
+          <h2 id="get-started-title">Get the app and open it</h2>
+          <p><strong>Windows (Microsoft Store):</strong> install the app from <a href="https://apps.microsoft.com/detail/9P6QF32N19HG">Microsoft Store</a>, then open <strong>Local TeX Web Editor</strong> from the Start menu.</p>
+          <p><strong>Windows (ZIP):</strong> extract the ZIP and double-click <code>local-tex-web-editor.exe</code>.</p>
+          <p><strong>Mac:</strong> extract the ZIP, move <code>Local TeX Web Editor.app</code> to Applications, then open it from Finder or Spotlight.</p>
+          <details id="first-launch">
             <summary>If Windows or macOS blocks an app downloaded as a ZIP</summary>
-            <p>For the Windows ZIP edition and SmartScreen, see the <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/blob/main/README.md#windows">Windows launch instructions</a> and <a href="https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/publish-first-app">Microsoft's guidance</a>.</p>
+            <p>If SmartScreen shows <strong>Windows protected your PC</strong> when opening the Windows ZIP edition, choose <strong>More info</strong>, check the app name, then choose <strong>Run anyway</strong>.</p>
+            <p>For details, see the <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/blob/main/README.md#windows">Windows launch instructions</a> and <a href="https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/publish-first-app">Microsoft's guidance</a>.</p>
             <p>On Mac, see the <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/blob/main/README.md#macos">macOS launch instructions</a> and <a href="https://support.apple.com/en-us/102445">Apple's guide to opening an app</a>.</p>
           </details>
-          <p class="small-note" style="margin-top: 1.2rem;">The Microsoft Store installation adds the app to the Windows Start menu. In the Windows ZIP edition, the app's Settings can create Start menu or desktop shortcuts. On Mac, open the app from Applications or Spotlight.</p>
-          <div class="usage-block">
-            <h3>Manage projects from Home</h3>
-            <p>Click the <strong>TeX logo</strong> to open Home. Cards show the current and recent projects with their full folder paths. <strong>Return to editing</strong> resumes the same workspace, including unsaved text, open tabs, and cursor positions.</p>
-            <p>Opening Home or returning to the browser window checks the folders again. Missing or unreadable locations show an explanation and <strong>Check again</strong>. Choose a moved project's new folder from the project picker. On a card for another project, <strong>Remove from recent</strong> removes the entry while its files, settings, and drafts stay on your computer. If the current folder is unavailable, you can continue editing and recording drafts; saving and compilation resume when it is available again. Saved PDF previews remain readable.</p>
-            <p>Choose <strong>Delete…</strong> on a project card to review its files, folders, hidden items, and saved drafts. Check the acknowledgment and enter the exact folder name, then choose <strong>Delete project</strong> to delete the folder and its contents from your computer.</p>
-            <p>If files or drafts change after the review, the app asks you to review the updated list. Deletion also removes the project's recent entry, saved drafts, editing session, and saved PDF previews.</p>
-          </div>
-          <div class="usage-block">
-            <h3>Return to the editor and finish a session</h3>
-            <p>The local app keeps running when its browser tab sleeps, is discarded, or closes. Returning to the tab reconnects to the same local address. Launching the same version again opens the existing editor.</p>
-            <p>To finish, choose <strong>Quit</strong> in the app and follow the save prompt. This stops the local app and its background work.</p>
-          </div>
+          <p class="file-note" style="margin-top: 1.2rem;">The app opens Home in your default browser.</p>
+          <p class="file-note">The interface starts in English. Open <strong>Settings → Language / 言語設定</strong> and select <strong>日本語</strong> to see it change immediately. Choose <strong>設定を保存して反映 (Save and apply settings)</strong> to use Japanese next time, or <strong>キャンセル (Cancel)</strong> to return to the saved language.</p>
+          <p><strong>If TeX is not installed:</strong> continue with the <a href="#tex-install">illustrated setup steps</a>. The app downloads and installs TeX, then selects it automatically when setup finishes.</p>
+          <p><strong>If TeX is already installed:</strong> go to <a href="#tex-existing">selecting that installation in Settings</a>.</p>
+          <p>For Markdown only, choose <strong>Create from a template → Markdown notes</strong> on Home and create a project, or <a href="#project-open">open an existing folder</a>. You can then <a href="#markdown-editing">edit Markdown directly</a>.</p>
         </section>
 
         <section id="tex" aria-labelledby="tex-title">
-          <h2 id="tex-title">Set up and manage TeX</h2>
-          <p>Use the TeX installation already on your computer, or let the app install one. Home and Settings show both <strong>Set up TeX…</strong> and <strong>Manage TeX…</strong>, so you can choose installation or maintenance directly. Markdown editing works while you prepare TeX.</p>
-          <ul class="reading-links" aria-label="TeX setup topics">
-            <li><a href="#tex-existing">Use existing TeX</a></li>
-            <li><a href="#tex-install">Install TeX step by step</a></li>
-            <li><a href="#tex-packages">Add packages</a></li>
-            <li><a href="#settings-reset">Reset app settings</a></li>
-          </ul>
-          <div class="usage-block" id="tex-existing">
-            <h3>Use an existing TeX installation</h3>
-            <p>Open <strong>Settings</strong> and check <strong>TeX Live bin folder</strong>. An empty field lets the app search automatically. If TeX already works in another editor, enter the same program folder here: for example, <code>C:\texlive\2025\bin\windows</code> on Windows or <code>/Library/TeX/texbin</code> on Mac. Use the folder containing programs such as <code>latexmk</code>.</p>
-            <p>Choose <strong>Save and apply settings</strong>, then open Settings again to check the displayed <code>latexmk</code> and SyncTeX paths. <strong>Manage TeX…</strong> opens the selected environment and its installed packages. You can now <a href="#tex-first-compile">open a project and compile</a>. If a required tool is missing, use <strong>Add SyncTeX…</strong> or <strong>Add TeX packages</strong> in Settings to continue with the app's available operations.</p>
-          </div>
+          <h2 id="tex-title">Prepare TeX and create your first PDF</h2>
+          <p>If TeX is not installed, use the app’s setup to download and install it; the app selects it automatically on completion. If TeX is already installed, <a href="#tex-existing">select your current installation</a>. You can then create a document from a template and compile it.</p>
           <div class="usage-block" id="tex-install">
-            <h3>Install TeX from the app: from Home to the first PDF</h3>
+            <h3>If TeX is not installed: use the app’s setup</h3>
             <p>The following screens show the English interface. You can select Japanese in <strong>Settings → Language / 言語設定</strong>. Each image opens at full size.</p>
             <ol class="steps setup-steps">
               <li>
@@ -252,7 +199,7 @@
               <li>
                 <h4>Check that TeX setup is complete</h4>
                 <p>Wait for <strong>TeX setup is complete.</strong> The app selects the installed environment and checks its programs, so you can compile immediately. The destination and setup log remain available on this screen.</p>
-                <p>When you started from Home without a project, click <strong>Create a sample…</strong> to open <strong>Start from a template</strong>. To use an existing project, click <strong>Close</strong>.</p>
+                <p>When you started from Home without a project, click <strong>Create a sample…</strong> to open <strong>Start from a template</strong>.</p>
                 <figure class="screenshot secondary-shot setup-dialog-shot">
                   <a href="assets/tex-setup-complete.png" aria-label="Open the completed TeX setup at full size">
                     <img src="assets/tex-setup-complete.png" width="1600" height="1000" alt="The completed TeX setup, showing the completion message, installation location and the next available actions." loading="lazy" decoding="async">
@@ -261,11 +208,10 @@
                 </figure>
               </li>
               <li id="tex-first-compile">
-                <h4>Open a project and compile its TeX document</h4>
+                <h4>Create your first document from a template and compile</h4>
                 <p>For a first document, select <strong>English article</strong> or <strong>Japanese document</strong> in the template chooser. You can also open this chooser from <strong>Home → Create from a template</strong>. Click <strong>Choose a folder</strong> beside <strong>Destination folder</strong> and choose a parent folder, such as Documents. Enter an unused name, such as <code>my-first-paper</code>, in <strong>New project folder name</strong>, then click <strong>Create and open</strong>. The project opens with its compiler selected. Choose <code>main.tex</code> in the file list.</p>
-                <p>For an existing project, choose <strong>Open project folder</strong> on Home, use <strong>Browse…</strong> or enter its folder path, then click <strong>Open</strong>. Select the main <code>.tex</code> document. Before compiling, open <strong>Settings → Compiler</strong>, choose <strong>Use latexmkrc settings</strong> for a project with <code>latexmkrc</code> or <code>.latexmkrc</code>, or choose the required TeX engine. Click <strong>Save and apply settings</strong>.</p>
                 <p>Click <strong>Compile</strong> in the top toolbar. You can also use <span class="shortcut"><kbd>Ctrl</kbd> + <kbd>Enter</kbd></span> on Windows or <span class="shortcut"><kbd>Cmd</kbd> + <kbd>Enter</kbd></span> on Mac. The app saves the document and runs TeX.</p>
-                <p>The PDF appears beside the source. Double-click text in the PDF to move to its source line with SyncTeX. If compilation reports a missing package, <a href="#tex-packages">add it from the app</a> and compile again.</p>
+                <p>The PDF appears beside the source. Double-click text in the PDF to move to its source line with SyncTeX. If compilation reports a missing package, <a href="#tex-packages">add it from the app</a> and compile again. Continue with <a href="#editing">Editing and preview</a> for the next steps.</p>
                 <figure class="screenshot secondary-shot">
                   <a href="assets/editor-tex-dark.png" aria-label="Open the compiled TeX document and PDF at full size">
                     <img src="assets/editor-tex-dark.png" width="1600" height="1000" alt="A TeX document open in the editor with its successfully compiled PDF beside the source." loading="lazy" decoding="async">
@@ -275,6 +221,11 @@
               </li>
             </ol>
             <p class="small-note">Setup and later package downloads use an internet connection. The app checks the TinyTeX archive's SHA-256 before extraction. Project documents stay on your computer; the <a href="privacy/">privacy policy</a> explains download requests and stored data.</p>
+          </div>
+          <div class="usage-block" id="tex-existing">
+            <h3>If TeX is already installed: select it in Settings</h3>
+            <p>Open <strong>Settings</strong> and check <strong>TeX Live bin folder</strong>. An empty field lets the app search automatically. If TeX already works in another editor, enter the same program folder here: for example, <code>C:\texlive\2025\bin\windows</code> on Windows or <code>/Library/TeX/texbin</code> on Mac. Use the folder containing programs such as <code>latexmk</code>.</p>
+            <p>Choose <strong>Save and apply settings</strong>, then open Settings again to check the displayed <code>latexmk</code> and SyncTeX paths. <strong>Manage TeX…</strong> opens the selected environment and its installed packages. Continue by <a href="#tex-first-compile">creating a document from a template</a> or <a href="#project-open">opening an existing project</a>. If a required tool is missing, use <strong>Add SyncTeX…</strong> or <strong>Add TeX packages</strong> in Settings to continue with the app's available operations.</p>
           </div>
           <div class="usage-block" id="tex-packages">
             <h3>Manage packages in the selected installation</h3>
@@ -296,6 +247,31 @@
             <p>For TeX installed by the app, additional files beyond its recorded installation stop removal for review. Existing installations use the official Windows uninstaller or the operating system's Trash or Recycle Bin. For a shared installation requiring administrator access, the Store edition opens <strong>Uninstall in Windows Settings…</strong>; choose removal in Windows and refresh the environment afterward.</p>
             <p>Other editors using the same environment will need another TeX installation or the restored environment. Keep manuscripts and personal files in their project folders. See the <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/blob/main/README.md#manage-tex-packages-and-installations">README's TeX management instructions</a> for the available operations.</p>
           </details>
+        </section>
+
+        <section id="projects" aria-labelledby="projects-title">
+          <h2 id="projects-title">Open and manage projects</h2>
+          <div class="usage-block" id="project-open">
+            <h3>Open an existing project</h3>
+            <p>If the setup completion screen is still open, choose <strong>Close</strong> to return to Home.</p>
+            <p>Choose <strong>Open project folder</strong> on Home, then use <strong>Browse…</strong> or enter the path to the folder containing your <code>.tex</code>, <code>.bib</code> or <code>.md</code> files, images and project settings. Click <strong>Open</strong>. To use an Overleaf project, download its source ZIP and extract it first.</p>
+            <p>For a TeX document, open its main <code>.tex</code> file and set <strong>Settings → Compiler</strong> before compiling: choose <strong>Use latexmkrc settings</strong> when the project includes <code>latexmkrc</code> or <code>.latexmkrc</code>, or choose the required TeX engine. Click <strong>Save and apply settings</strong>.</p>
+            <p>Select the TeX document in the file list and click <strong>Compile</strong>, or press <span class="shortcut"><kbd>Ctrl</kbd> + <kbd>Enter</kbd></span> on Windows or <span class="shortcut"><kbd>Cmd</kbd> + <kbd>Enter</kbd></span> on Mac. The resulting PDF appears on the right.</p>
+            <p>For a Markdown document, select its <code>.md</code> or <code>.markdown</code> file to start <a href="#markdown-editing">editing it directly</a>.</p>
+          </div>
+          <div class="usage-block">
+            <h3>Manage projects from Home</h3>
+            <p>Click the <strong>TeX logo</strong> to open Home. Cards show the current and recent projects with their full folder paths. <strong>Return to editing</strong> resumes the same workspace, including unsaved text, open tabs, and cursor positions.</p>
+            <p>Opening Home or returning to the browser window checks the folders again. Missing or unreadable locations show an explanation and <strong>Check again</strong>. Choose a moved project's new folder from the project picker. On a card for another project, <strong>Remove from recent</strong> removes the entry while its files, settings, and drafts stay on your computer. If the current folder is unavailable, you can continue editing and recording drafts; saving and compilation resume when it is available again. Saved PDF previews remain readable.</p>
+            <p>Choose <strong>Delete…</strong> on a project card to review its files, folders, hidden items, and saved drafts. Check the acknowledgment and enter the exact folder name, then choose <strong>Delete project</strong> to delete the folder and its contents from your computer.</p>
+            <p>If files or drafts change after the review, the app asks you to review the updated list. Deletion also removes the project's recent entry, saved drafts, editing session, and saved PDF previews.</p>
+          </div>
+          <div class="usage-block">
+            <h3>Return to the editor and finish a session</h3>
+            <p>The local app keeps running when its browser tab sleeps, is discarded, or closes. Returning to the tab reconnects to the same local address. Launching the same version again opens the existing editor.</p>
+            <p>To finish, choose <strong>Quit</strong> in the app and follow the save prompt. This stops the local app and its background work.</p>
+            <p class="small-note" style="margin-top: 1.2rem;">The Microsoft Store installation adds the app to the Windows Start menu. In the Windows ZIP edition, the app's Settings can create Start menu or desktop shortcuts. On Mac, open the app from Applications or Spotlight.</p>
+          </div>
         </section>
 
         <section id="editing" aria-labelledby="editing-title">
@@ -346,9 +322,15 @@
             <p>Choose <strong>Dark PDF view</strong> to change the PDF colors on screen, including figures and photographs. Saved PDFs use their original colors.</p>
           </div>
 
-          <div class="usage-block">
+          <div class="usage-block" id="markdown-editing">
             <h3>Edit Markdown directly or work in its source</h3>
             <p>Opening a <code>.md</code> or <code>.markdown</code> file starts in <strong>Visual editing</strong>. Edit rendered headings, paragraphs, lists, table cells, and code; tick task checkboxes; or select an equation to edit its TeX. The result is saved as Markdown.</p>
+            <figure class="screenshot secondary-shot">
+              <a href="assets/editor-markdown-light.png" aria-label="Open the Markdown visual editor screenshot at full size">
+                <img src="assets/editor-markdown-light.png" width="1600" height="1000" alt="Markdown being edited directly in light mode, with headings, equations, task checkboxes and a table in the document." loading="lazy" decoding="async">
+              </a>
+              <figcaption><span>Edit Markdown directly, with equations, task lists and tables in the document.</span><span>Click to view at full size.</span></figcaption>
+            </figure>
             <p>Choose <strong>Visual editing / Source</strong> above the document to switch to the Markdown notation. Both modes share saving, autosave, drafts, and Undo. Switching modes leaves the text unchanged; visual edits rewrite the affected blocks and keep the original Markdown of the other blocks. Each pane remembers its mode, so the same document can be shown visually and as source side by side.</p>
             <p>Use the formatting toolbar in either mode for headings, bold, italics, strikethrough, lists, quotes, inline code, links, and code blocks. In Visual editing, the buttons show the formatting at the cursor, including formatting selected before typing. They also indicate when only part of a selection has a particular format, and update as you move the cursor or use keyboard shortcuts. Japanese italics and strikethrough display in both Visual editing and the Markdown preview.</p>
             <p>The <strong>∑ (Insert math)</strong> button opens a dialog in both modes. Choose <strong>Inline math</strong> or <strong>Display math</strong>, enter TeX, and check the rendered equation and <strong>Markdown to insert</strong>. Inline math offers GitHub's <code class="notation">$`…`$</code>, <code class="notation">$…$</code>, and <code class="notation">\(…\)</code>; the initial choice is the GitHub notation. Display math uses <code class="notation">$$</code>. In a table cell in Visual editing, use inline math. The dialog remembers your chosen form while the editor is open.</p>
@@ -358,12 +340,6 @@
             <p>Open <strong>Show preview</strong> when you want another view beside the document. Set it to <strong>PDF</strong> to read the compiled paper while editing notes, <strong>Markdown</strong> to keep your notes visible, or <strong>Auto</strong> to follow the file being edited. In visual editing, use <kbd>Ctrl</kbd> + click on Windows or <kbd>Cmd</kbd> + click on Mac to follow a link.</p>
             <p>In Source mode, use that same click shortcut, or the navigation button above the editor, to move to the corresponding preview passage. Double-click a paragraph or heading in the preview to return to its source line. <strong>Sync scrolling</strong> in the Markdown preview toolbar links scrolling in both directions; it starts enabled and saves your choice for future sessions.</p>
             <p>Choose the <strong>New Markdown page</strong> icon or <strong>Editing tools → New Markdown page</strong> to add another page. Enter its title and a path in an existing project folder, review the relative link, and choose whether to open the new page. The file starts with its title as a heading, and the link replaces the current selection. Undo in the original document removes the inserted link; the new page remains in the project.</p>
-            <figure class="screenshot secondary-shot">
-              <a href="assets/editor-markdown-light.png" aria-label="Open the Markdown editor screenshot at full size">
-                <img src="assets/editor-markdown-light.png" width="1600" height="1000" alt="Markdown source on the left and its preview on the right in light mode, with headings, equations, task checkboxes and a table." loading="lazy" decoding="async">
-              </a>
-              <figcaption><span>Edit Markdown source alongside its preview, with equations, task lists and tables.</span><span>Click to view at full size.</span></figcaption>
-            </figure>
           </div>
           <div class="usage-block">
             <h3>Save Markdown as PDF and extract PDF text</h3>
@@ -408,18 +384,18 @@
           <h2 id="updates-title">Updates and help</h2>
           <p>Click the app's <strong>? (Help)</strong> button or press <kbd>F1</kbd> for the user guide, keyboard shortcuts, release notes, and troubleshooting steps. Help also opens the compilation log, Settings, and the update page for your edition.</p>
           <p>Use Microsoft Store to update the Windows Store edition. New versions become available after Store review and publication. Launch the updated app from the Start menu.</p>
-          <p>For the Windows ZIP edition and macOS, download updates from <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.13">GitHub Releases</a>. On Windows, extract the new ZIP and run its <code>.exe</code>; follow the prompt if an older version is running. On Mac, save your work, quit the app and replace the copy in Applications.</p>
+          <p>For the Windows ZIP edition and macOS, download updates from <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.14">GitHub Releases</a>. On Windows, extract the new ZIP and run its <code>.exe</code>; follow the prompt if an older version is running. On Mac, save your work, quit the app and replace the copy in Applications.</p>
           <p>App updates use the same settings and drafts for each edition. The first Store launch copies valid settings and drafts from an existing Windows ZIP installation. Your documents stay in their project folders.</p>
           <p>Use the app's <strong>Quit</strong> action to finish a session. Closing browser tabs leaves the local app running so you can reopen the editor later.</p>
           <p>For a problem or suggestion, choose <strong>Open GitHub Issues</strong> in Help. Under <strong>About the app</strong>, use <strong>Copy environment information</strong> to copy the app version, operating system, architecture, edition, and available TeX programs. Include the steps to reproduce a problem; a short log excerpt or a small sample project can help explain a compilation problem.</p>
           <div class="usage-block" id="settings-reset">
             <h3>Reset settings and remembered information</h3>
             <p>Open <strong>Settings</strong> and scroll to <strong>Information saved by the app</strong> near the bottom. Choose <strong>Reset settings and remembered information…</strong> to review the available items, file counts and sizes.</p>
-            <p><strong>Settings and remembered actions</strong> resets appearance, editing preferences, recent projects, tabs, editing positions and the selected TeX installation. You can also select <strong>Unsaved drafts</strong>, edit history, <strong>Your templates</strong>, or the <strong>PDF and SyncTeX cache</strong>. Review these choices, select the confirmation checkbox, then choose <strong>Reset selected information</strong>.</p>
+            <p><strong>Settings and remembered actions</strong> resets appearance, editing preferences, recent projects, tabs, editing positions and the selected TeX installation. You can also select <strong>Unsaved drafts</strong>, <strong>Edit history</strong>, <strong>Your templates</strong>, or the <strong>PDF and SyncTeX cache</strong>. Review these choices, select the confirmation checkbox, then choose <strong>Reset selected information</strong>.</p>
             <p>If you have unsaved text, the app offers the relevant save or draft options before proceeding. Project files and installed TeX remain on your computer. The app reloads after the reset; open your project and select the TeX environment again when needed. To remove TeX itself, use the environment removal action in <a href="#tex-packages">Manage TeX…</a>.</p>
           </div>
           <ul class="reading-links">
-            <li><a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.13">Downloads and release notes</a></li>
+            <li><a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.14">Downloads and release notes</a></li>
             <li><a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/issues">Report an issue</a></li>
             <li><a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/blob/main/README.md">Full README</a></li>
           </ul>
