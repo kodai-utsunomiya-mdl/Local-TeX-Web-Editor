@@ -67,8 +67,6 @@ kbd { padding: .12em .38em; border: 1px solid #cdd6ce; border-bottom-width: 2px;
 .release-note a { margin-left: .5rem; }
 .version-badge { display: inline-block; padding: .13em .55em; border: 1px solid var(--line); border-radius: 999px; color: var(--ink); background: var(--surface); font-weight: 650; white-space: nowrap; }
 .store-release-note { margin: .2rem 0 0; color: var(--muted); font-size: .76rem; line-height: 1.55; }
-.release-highlights { padding-left: 1.2rem; margin-bottom: 1.3rem; }
-.release-highlights li { margin-bottom: .7rem; }
 .screenshot { margin: 0; }
 .screenshot a { display: block; border: 1px solid #becbc3; border-radius: 7px; overflow: hidden; background: var(--surface); }
 .screenshot img { display: block; width: 100%; height: auto; }
@@ -116,6 +114,7 @@ details p:last-child { margin-bottom: 0; }
 .shortcut-list dt { font-weight: 600; font-size: .9rem; }
 .shortcut-list dd { margin: 0; font-size: .9rem; }
 .secondary-shot { margin-top: 24px; }
+#markdown-editing .screenshot { margin-bottom: 24px; }
 .setup-steps > li { padding-left: 0; margin-bottom: 2.8rem; }
 .setup-steps > li > h4 { min-height: 30px; margin: 0 0 .85rem; padding-left: 46px; font-size: 1.05rem; line-height: 1.45; font-weight: 650; }
 .setup-steps > li > p { margin-bottom: .8rem; }

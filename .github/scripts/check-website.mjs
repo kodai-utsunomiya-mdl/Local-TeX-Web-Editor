@@ -86,6 +86,10 @@ try {
           await captureSection(steps.nth(index), `${route.name}-${size.name}-setup-${index + 1}.png`);
         }
         await captureSection(page.locator('#settings-reset'), `${route.name}-${size.name}-settings-reset.png`);
+        await captureSection(page.locator('#markdown-editing .screenshot'), `${route.name}-${size.name}-markdown-editing.png`);
+        const firstLaunch = page.locator('#get-started details').first();
+        await firstLaunch.locator('summary').click();
+        await captureSection(firstLaunch, `${route.name}-${size.name}-first-launch.png`);
       }
       results.push({ page: route.name, language, viewport: size.name, ...layout, sectionScreenshots, errors });
       await context.close();

@@ -93,7 +93,6 @@
       <nav class="contents" aria-label="On this page">
         <p>On this page</p>
         <ul>
-          <li><a href="#whats-new">New in v0.1.13</a></li>
           <li><a href="#requirements">Requirements &amp; size</a></li>
           <li><a href="#get-started">Get started</a></li>
           <li><a href="#tex">Set up &amp; manage TeX</a></li>
@@ -103,17 +102,6 @@
         </ul>
       </nav>
       <div class="guide">
-        <section id="whats-new" aria-labelledby="whats-new-title">
-          <h2 id="whats-new-title">New in v0.1.13</h2>
-          <p>Set up TeX with clear steps and reset the information the app remembers.</p>
-          <ul class="release-highlights">
-            <li><strong>Find setup and management together.</strong> Home and Settings show both actions. Explanations and buttons have more space, and package additions proceed through the app’s review screen.</li>
-            <li><strong>Follow the setup guide with screenshots.</strong> See the actual screens for the package selection, destination, progress and completion, then compile your first document.</li>
-            <li><strong>Reset saved information from Settings.</strong> Review file counts and sizes, then choose settings, drafts, history, templates or preview caches. Project documents and installed TeX remain available.</li>
-          </ul>
-          <p class="small-note">See the <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.13">v0.1.13 release notes</a> for the complete changes.</p>
-        </section>
-
         <section id="requirements" aria-labelledby="requirements-title">
           <h2 id="requirements-title">Requirements and app size</h2>
           <p>Use a current version of Chrome or Edge. For TeX compilation, use <strong>Set up TeX…</strong> in the app or select an existing TeX Live installation. If your project already compiles in another editor, choose that same TeX folder. Markdown editing and preview work without TeX.</p>
@@ -170,7 +158,8 @@
           </ol>
           <details>
             <summary>If Windows or macOS blocks an app downloaded as a ZIP</summary>
-            <p>For the Windows ZIP edition and SmartScreen, see the <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/blob/main/README.md#windows">Windows launch instructions</a> and <a href="https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/publish-first-app">Microsoft's guidance</a>.</p>
+            <p>If SmartScreen shows <strong>Windows protected your PC</strong> when opening the Windows ZIP edition, choose <strong>More info</strong>, check the app name, then choose <strong>Run anyway</strong>.</p>
+            <p>For details, see the <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/blob/main/README.md#windows">Windows launch instructions</a> and <a href="https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/publish-first-app">Microsoft's guidance</a>.</p>
             <p>On Mac, see the <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/blob/main/README.md#macos">macOS launch instructions</a> and <a href="https://support.apple.com/en-us/102445">Apple's guide to opening an app</a>.</p>
           </details>
           <p class="small-note" style="margin-top: 1.2rem;">The Microsoft Store installation adds the app to the Windows Start menu. In the Windows ZIP edition, the app's Settings can create Start menu or desktop shortcuts. On Mac, open the app from Applications or Spotlight.</p>
@@ -346,9 +335,15 @@
             <p>Choose <strong>Dark PDF view</strong> to change the PDF colors on screen, including figures and photographs. Saved PDFs use their original colors.</p>
           </div>
 
-          <div class="usage-block">
+          <div class="usage-block" id="markdown-editing">
             <h3>Edit Markdown directly or work in its source</h3>
             <p>Opening a <code>.md</code> or <code>.markdown</code> file starts in <strong>Visual editing</strong>. Edit rendered headings, paragraphs, lists, table cells, and code; tick task checkboxes; or select an equation to edit its TeX. The result is saved as Markdown.</p>
+            <figure class="screenshot secondary-shot">
+              <a href="assets/editor-markdown-light.png" aria-label="Open the Markdown visual editor screenshot at full size">
+                <img src="assets/editor-markdown-light.png" width="1600" height="1000" alt="Markdown being edited directly in light mode, with headings, equations, task checkboxes and a table in the document." loading="lazy" decoding="async">
+              </a>
+              <figcaption><span>Edit Markdown directly, with equations, task lists and tables in the document.</span><span>Click to view at full size.</span></figcaption>
+            </figure>
             <p>Choose <strong>Visual editing / Source</strong> above the document to switch to the Markdown notation. Both modes share saving, autosave, drafts, and Undo. Switching modes leaves the text unchanged; visual edits rewrite the affected blocks and keep the original Markdown of the other blocks. Each pane remembers its mode, so the same document can be shown visually and as source side by side.</p>
             <p>Use the formatting toolbar in either mode for headings, bold, italics, strikethrough, lists, quotes, inline code, links, and code blocks. In Visual editing, the buttons show the formatting at the cursor, including formatting selected before typing. They also indicate when only part of a selection has a particular format, and update as you move the cursor or use keyboard shortcuts. Japanese italics and strikethrough display in both Visual editing and the Markdown preview.</p>
             <p>The <strong>∑ (Insert math)</strong> button opens a dialog in both modes. Choose <strong>Inline math</strong> or <strong>Display math</strong>, enter TeX, and check the rendered equation and <strong>Markdown to insert</strong>. Inline math offers GitHub's <code class="notation">$`…`$</code>, <code class="notation">$…$</code>, and <code class="notation">\(…\)</code>; the initial choice is the GitHub notation. Display math uses <code class="notation">$$</code>. In a table cell in Visual editing, use inline math. The dialog remembers your chosen form while the editor is open.</p>
@@ -358,12 +353,6 @@
             <p>Open <strong>Show preview</strong> when you want another view beside the document. Set it to <strong>PDF</strong> to read the compiled paper while editing notes, <strong>Markdown</strong> to keep your notes visible, or <strong>Auto</strong> to follow the file being edited. In visual editing, use <kbd>Ctrl</kbd> + click on Windows or <kbd>Cmd</kbd> + click on Mac to follow a link.</p>
             <p>In Source mode, use that same click shortcut, or the navigation button above the editor, to move to the corresponding preview passage. Double-click a paragraph or heading in the preview to return to its source line. <strong>Sync scrolling</strong> in the Markdown preview toolbar links scrolling in both directions; it starts enabled and saves your choice for future sessions.</p>
             <p>Choose the <strong>New Markdown page</strong> icon or <strong>Editing tools → New Markdown page</strong> to add another page. Enter its title and a path in an existing project folder, review the relative link, and choose whether to open the new page. The file starts with its title as a heading, and the link replaces the current selection. Undo in the original document removes the inserted link; the new page remains in the project.</p>
-            <figure class="screenshot secondary-shot">
-              <a href="assets/editor-markdown-light.png" aria-label="Open the Markdown editor screenshot at full size">
-                <img src="assets/editor-markdown-light.png" width="1600" height="1000" alt="Markdown source on the left and its preview on the right in light mode, with headings, equations, task checkboxes and a table." loading="lazy" decoding="async">
-              </a>
-              <figcaption><span>Edit Markdown source alongside its preview, with equations, task lists and tables.</span><span>Click to view at full size.</span></figcaption>
-            </figure>
           </div>
           <div class="usage-block">
             <h3>Save Markdown as PDF and extract PDF text</h3>
