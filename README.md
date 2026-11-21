@@ -4,47 +4,76 @@ English | [日本語](README.ja.md) · [Website and guide](https://kodai-utsunom
 
 [![Get the free Windows app from Microsoft Store](docs/download-store.svg)](https://apps.microsoft.com/detail/9P6QF32N19HG)
 &nbsp;&nbsp;
-[![Download Windows ZIP](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.13/local-tex-web-editor-0.1.13-windows-x64.zip)
+[![Download Windows ZIP](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.14/local-tex-web-editor-0.1.14-windows-x64.zip)
 &nbsp;&nbsp;
-[![Download for macOS](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.13/local-tex-web-editor-0.1.13-macos-universal.zip)
+[![Download for macOS](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.14/local-tex-web-editor-0.1.14-macos-universal.zip)
 
-**v0.1.13** · [All downloads and release notes](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [Requirements](#requirements) · [App size](#app-files-and-storage) · [Get started](#download-and-launch)
+**v0.1.14** · [All downloads and release notes](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [Get started](#first-document) · [Download and launch](#download-and-launch) · [Requirements](#requirements) · [App size](#app-files-and-storage)
 
-The ZIP downloads are v0.1.13. The Microsoft Store update becomes available after Store review and publication.
+The ZIP downloads are v0.1.14. The Microsoft Store update becomes available after Store review and publication.
 
-Edit TeX documents in your browser on Windows or macOS, and compile them with TeX Live on your computer. The editor and PDF preview appear in the same window. Launching the app opens a `localhost` page in your default browser. Markdown editing and preview are also supported.
+Edit TeX and Markdown documents in your browser on Windows or macOS. On a computer without TeX, start this app and choose **Home → Set up TeX…**. The app downloads and installs TeX, selects the new environment when setup finishes, and uses it to compile your documents. Launching the app opens a `localhost` page in your default browser, with the editor and PDF preview in the same window.
 
 ![Local TeX Web Editor showing a TeX document and its PDF in dark mode](docs/screenshots/editor-tex-dark.png)
 
-Documents stay in the project folder on your computer. The app uses your TeX Live installation and the project's `latexmkrc`, and displays compilation logs and the resulting PDF. The distributed app runs without installing Python, Node.js, Go, or VS Code.
+Documents stay in the project folder on your computer. Compilation uses the TeX environment selected in the app and the project's `latexmkrc`; the app displays the logs and resulting PDF. The distributed app runs without installing Python, Node.js, Go, or VS Code.
 
-## Why this editor exists
+## First document
 
-Local TeX Web Editor brings a browser editing workflow to the TeX Live installation on your computer.
+1. **Get and open the app.** Choose Microsoft Store or the Windows ZIP, or download the macOS app. Follow [Download and launch](#download-and-launch) below.
+2. **Choose a TeX environment.** If TeX is not installed, open **Set up TeX…** on Home and follow the [setup guide](#set-up-tex-from-the-app). The app selects the installed environment when setup finishes. If you already have TeX, [select your existing installation](#use-an-existing-tex-installation) in Settings.
+3. **Create a sample.** On Home, click **Create from a template** and choose **English article** or **Japanese document**. Choose a destination folder, enter a new project name, and click **Create and open**. Immediately after TeX setup, **Create a sample…** on the completion screen opens the same chooser.
+4. **Compile.** Select `main.tex` and click **Compile**. The PDF appears beside the editor.
 
-Long documents can reach Overleaf's compilation time limit. Compiling on the computer allows work to continue with the available local resources. Multiline search also makes it possible to paste a block of prose or TeX code directly into the search field.
-
-VS Code provides a broad set of development features. For editing TeX documents, starting a full desktop development environment can add more features and memory use than the task needs. This editor brings document editing, compilation, and preview together in a browser window.
-
-Continuous PDF scrolling, SyncTeX, and Markdown preview support writing and reviewing documents while using the project files and TeX installation already on the computer.
+To start with Markdown, choose its template under **Home → Create from a template**; you can edit it before installing TeX.
 
 ## Requirements
 
-Compilation uses TeX Live on your computer. **Home → Set up TeX…** or **Settings → Set up TeX…** downloads and installs a suitable environment after you review the details and choose to proceed. If you already compile your project in another editor, select that same TeX installation in Settings. Markdown editing and preview work without TeX.
+Use a supported Windows PC or Mac with a current Chrome or Edge browser. Download and launch the app first; its Home screen provides TeX setup. Markdown editing and preview are available as soon as the app opens.
 
 | Requirement | Windows | macOS |
 | --- | --- | --- |
 | OS and CPU | Windows 10 / 11, 64-bit (x64) | macOS 12 Monterey or later, Apple Silicon or Intel |
 | Browser | Current Chrome or Edge | Current Chrome or Edge |
-| TeX distribution | Install TinyTeX from the app, or select an existing [TeX Live](https://tug.org/texlive/windows.html) | Install TinyTeX from the app, or select [BasicTeX / MacTeX](https://tug.org/mactex/) or another TeX Live installation |
-| Example TeX folder | `C:\texlive\2026\bin\windows` | `/Library/TeX/texbin` |
-| Documents | A project folder on your computer | A project folder on your computer |
+| Internet connection | For TeX and package downloads | For TeX and package downloads |
+| Free space for TeX setup | About 2 GB during installation | About 2 GB during installation |
+| Documents | Create a sample or open an existing project folder | Create a sample or open an existing project folder |
 
 The Microsoft Store edition requires Windows 10 version 2004 (build 19041) or later, or Windows 11, on an x64 PC.
 
-The macOS requirement follows the [operating systems supported by Go 1.25](https://go.dev/doc/go1.25#darwin), which is used to build the app. MacTeX documents `/Library/TeX/texbin` as the TeX location for GUI applications in [What Is Installed](https://tug.org/mactex/What_Is_Installed.pdf).
+The macOS requirement follows the [operating systems supported by Go 1.25](https://go.dev/doc/go1.25#darwin), which is used to build the app.
 
-### Set up TeX from the app
+## Download and launch
+
+### Windows
+
+#### Microsoft Store
+
+1. Open [Local TeX Web Editor in Microsoft Store](https://apps.microsoft.com/detail/9P6QF32N19HG) and install the free app.
+2. Launch **Local TeX Web Editor** from the Windows Start menu. The editor opens in your default browser.
+3. On Home, [set up TeX from the app](#set-up-tex-from-the-app) if TeX is not installed, or [select your existing installation](#use-an-existing-tex-installation) if you already use TeX. Then choose **Create from a template** on Home to create a sample.
+
+Microsoft Store manages installation and app updates. The setup guide below continues from the Home screen.
+
+#### ZIP download
+
+1. Open [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) and select the latest version.
+2. Under **Assets**, download `local-tex-web-editor-0.1.14-windows-x64.zip`. The **Source code** archives contain the files for development.
+3. Extract the ZIP and double-click `local-tex-web-editor.exe`.
+4. On Home, [set up TeX from the app](#set-up-tex-from-the-app) if TeX is not installed, or [select your existing installation](#use-an-existing-tex-installation) if you already use TeX. Then choose **Create from a template** on Home to create a sample.
+
+The Windows executable in the ZIP download does not have a code signature. If SmartScreen displays **Windows protected your PC** when opening the file downloaded from this repository's release, select **More info**, check the app name, and choose **Run anyway**. See [Microsoft's guidance](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/publish-first-app).
+
+### macOS
+
+1. Under **Assets** in [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases), download `local-tex-web-editor-0.1.14-macos-universal.zip`. The same ZIP supports Apple Silicon and Intel.
+2. Extract the ZIP and move `Local TeX Web Editor.app` to **Applications**.
+3. Open **Local TeX Web Editor** from Finder or Spotlight. The editor opens in your browser.
+4. On Home, [set up TeX from the app](#set-up-tex-from-the-app) if TeX is not installed, or [select your existing installation](#use-an-existing-tex-installation) if you already use TeX. Then choose **Create from a template** on Home to create a sample.
+
+The macOS app does not have an Apple Developer ID signature or notarization. If macOS blocks the first launch, confirm that you downloaded it from this repository's release, then use **System Settings → Privacy & Security → Open Anyway**. See [Apple's instructions](https://support.apple.com/en-us/102445).
+
+## Set up TeX from the app
 
 First [download and launch the app](#download-and-launch). The first launch uses **English**. To switch to Japanese, open **Settings** at the top right, choose **日本語** under **Language / 言語設定**, and click **Save and apply settings (設定を保存して反映)**. The same setup screens are available in both languages.
 
@@ -67,13 +96,13 @@ First [download and launch the app](#download-and-launch). The first launch uses
 | Create and open | 作成して開く |
 | Compile | コンパイル / コンパイルする |
 
-#### 1. Open TeX setup from Home
+### 1. Open TeX setup from Home
 
 On the **Projects** home screen, find **TeX installation and management** and click **Set up TeX…**. You can return to Home by clicking the TeX logo at the top left. Home and Settings both show **Set up TeX…** and **Manage TeX…**. Setup creates a new environment; management opens the selected environment. **Manage TeX…** becomes available once a TeX environment has been found.
 
 ![Home with Set up TeX and Manage TeX](docs/screenshots/tex-setup-home.png)
 
-#### 2. Review the programs and packages
+### 2. Review the programs and packages
 
 The upper part of the setup dialog shows **Current TeX environment** and **What will be installed**. On a computer without TeX, the program list shows **Not found**. Review the TinyTeX release and the package list below it. If you already use TeX, the dialog explains that a new installation will use another folder and become this app's selection after setup finishes. To keep using your existing installation, follow [Use an existing TeX installation](#use-an-existing-tex-installation).
 
@@ -81,7 +110,7 @@ The upper part of the setup dialog shows **Current TeX environment** and **What 
 
 The initial environment includes pdfLaTeX, upLaTeX, XeLaTeX and LuaLaTeX; `latexmk`, SyncTeX and `dvipdfmx`; Japanese classes and Harano Aji fonts; and BibTeX, upBibTeX, Biber and `upmendex`. Common mathematics, figures and theorem packages include `amsmath`, `mathtools`, `mathrsfs`, `dsfont`, TikZ, `tcolorbox` with its `most` libraries, `algorithm`, `algpseudocode`, `hyperref`, `pxjahyper` and `cleveref`.
 
-#### 3. Check the download sources, space and destination
+### 3. Check the download sources, space and destination
 
 Scroll down within the setup dialog to **Download sources**. The app uses the official [TinyTeX v2026.11](https://github.com/rstudio/tinytex-releases/releases/tag/v2026.11) archive and checks its SHA-256 before extraction. The dialog also shows the source for additional TeX Live packages.
 
@@ -91,7 +120,7 @@ Under **Parent folder for installation**, use the suggested location or click **
 
 ![Download sources, estimated space and the parent folder for the TeX installation](docs/screenshots/tex-setup-location.png)
 
-#### 4. Start installation and follow its progress
+### 4. Start installation and follow its progress
 
 Click **Download and install** after reviewing the contents and destination. An internet connection is needed for this step. The download shows completed and total sizes with a progress bar. Extraction, package installation and checks show the current stage and an activity bar. Open **Setup log** to see the output from the running step.
 
@@ -101,7 +130,7 @@ Click **Download and install** after reviewing the contents and destination. An 
 
 The setup supports Windows x64 and both Apple Silicon and Intel Macs. It runs in your user folder with your normal permissions. Setup downloads TeX programs and packages; project documents stay on your computer. See the [privacy policy](docs/privacy.md).
 
-#### 5. Wait for the completion message
+### 5. Wait for the completion message
 
 Wait until the dialog says **TeX setup is complete.** and the program checks have finished. The app selects the installed environment, so you can compile immediately. **Current TeX environment** and the destination show the selected paths.
 
@@ -109,7 +138,7 @@ Wait until the dialog says **TeX setup is complete.** and the program checks hav
 
 If you started from Home with no project open, click **Create a sample…** to open **Start from a template**. You can also open this chooser from **Home → Create from a template**. If you already have a project, click **Close** to return to its editor. When the completion screen offers **Compile** for the same document you were preparing, that button starts its compilation.
 
-#### 6. Open a document and compile
+### 6. Open a document and compile
 
 For a first document, select **English article** or **Japanese document** in the template chooser. Click **Choose a folder** beside **Destination folder** and select a parent folder, such as Documents. Enter an unused name, such as `my-first-paper`, in **New project folder name**, then click **Create and open**. The app creates the project inside that parent folder and selects the compiler for its template. Select `main.tex` in the file list.
 
@@ -118,6 +147,8 @@ For an existing document, choose **Open project folder** on Home, use **Browse�
 Click **Compile** in the top toolbar. The app saves the document and runs TeX. The resulting PDF appears beside the source. If compilation reports a missing package, follow [Manage TeX packages and installations](#manage-tex-packages-and-installations), then compile again.
 
 ![An installed TeX environment compiling a document with the PDF beside the source](docs/screenshots/editor-tex-dark.png)
+
+## TeX installations and packages
 
 ### TeX programs used by the app
 
@@ -134,8 +165,6 @@ An upLaTeX project usually needs `uplatex` and `dvipdfmx`, and may use `upbibtex
 ### Use an existing TeX installation
 
 If your documents already compile with TeX Live, BasicTeX, MacTeX or TinyTeX, open **Settings** and enter that installation's **TeX Live bin folder**. Typical locations are `C:\texlive\2026\bin\windows` on Windows and `/Library/TeX/texbin` on Mac. Click **Save and apply settings** to use it.
-
-You can also install a distribution with its own installer: [TeX Live for Windows](https://tug.org/texlive/windows.html) or [BasicTeX / MacTeX](https://tug.org/mactex/) for Mac. Follow its installation guide, then select its bin folder in the app. The app's package controls can add the programs and packages your documents need to supported installations.
 
 A smaller TeX installation can be extended later. **Settings → Add TeX packages** includes **latexmk and SyncTeX** and **Japanese typesetting** presets. The Japanese preset includes `collection-langjapanese`, which supplies Japanese engines, classes, fonts and their dependencies. Mathematics, figures and bibliography packages can be added by name.
 
@@ -169,39 +198,7 @@ Open **Settings** to review the selected **TeX Live bin folder** and the availab
 
 If a required program is missing, use **Add TeX packages** to review and add it to the selected installation. The dedicated **Add SyncTeX…** button appears when source–PDF navigation needs SyncTeX. After adding packages, compile the document again so its PDF and SyncTeX data match the source.
 
-## Download and launch
-
-### Windows
-
-#### Microsoft Store
-
-1. Open [Local TeX Web Editor in Microsoft Store](https://apps.microsoft.com/detail/9P6QF32N19HG) and install the free app.
-2. Launch **Local TeX Web Editor** from the Windows Start menu. The editor opens in your default browser.
-3. Choose your project folder. Use **Set up TeX…** to install TeX from the app, or select an existing folder containing `latexmk.exe` in Settings, for example `C:\texlive\2026\bin\windows`.
-4. Open the `.tex` document you want to compile and click **Compile**.
-
-Microsoft Store manages installation and app updates. TeX setup is available inside the app as described under [Requirements](#requirements). Markdown editing and preview work without TeX Live.
-
-#### ZIP download
-
-1. Open [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) and select the latest version.
-2. Under **Assets**, download `local-tex-web-editor-0.1.13-windows-x64.zip`. The **Source code** archives contain the files for development.
-3. Extract the ZIP and double-click `local-tex-web-editor.exe`.
-4. In the browser window, choose your project folder. You can also enter its path.
-5. Use **Set up TeX…** to install TeX, or select an existing folder containing `latexmk.exe` in Settings, for example `C:\texlive\2026\bin\windows`.
-6. Open the `.tex` document you want to compile and click **Compile**.
-
-The Windows executable in the ZIP download does not have a code signature. If SmartScreen displays **Windows protected your PC** when opening the file downloaded from this repository's release, select **More info**, check the app name, and choose **Run anyway**. See [Microsoft's guidance](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/publish-first-app).
-
-### macOS
-
-1. Under **Assets** in [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases), download `local-tex-web-editor-0.1.13-macos-universal.zip`. The same ZIP supports Apple Silicon and Intel.
-2. Extract the ZIP and move `Local TeX Web Editor.app` to **Applications**.
-3. Open **Local TeX Web Editor** from Finder or Spotlight. The editor opens in your browser.
-4. Open your project folder. Use **Set up TeX…** to install TeX, or select an existing installation in Settings, such as `/Library/TeX/texbin` for MacTeX / BasicTeX.
-5. Open the `.tex` document you want to compile and click **Compile**.
-
-The macOS app does not have an Apple Developer ID signature or notarization. If macOS blocks the first launch, confirm that you downloaded it from this repository's release, then use **System Settings → Privacy & Security → Open Anyway**. See [Apple's instructions](https://support.apple.com/en-us/102445).
+## Projects and app updates
 
 ### Open a project and finish a session
 
@@ -543,6 +540,16 @@ On the first launch, the Store edition imports valid settings, drafts, and view 
 
 The server listens only on a loopback address such as `127.0.0.1`. File and compilation APIs use a token generated when the app starts.
 
+## Why this editor exists
+
+Local TeX Web Editor brings a browser editing workflow to the TeX Live installation on your computer.
+
+Long documents can reach Overleaf's compilation time limit. Compiling on the computer allows work to continue with the available local resources. Multiline search also makes it possible to paste a block of prose or TeX code directly into the search field.
+
+VS Code provides a broad set of development features. For editing TeX documents, starting a full desktop development environment can add more features and memory use than the task needs. This editor brings document editing, compilation, and preview together in a browser window.
+
+Continuous PDF scrolling, SyncTeX, and Markdown preview support writing and reviewing documents while using the project files and TeX installation already on the computer.
+
 ## Development
 
 These instructions are for building and developing the app. The distributed `.exe` and `.app` include their runtime and can be launched directly.
@@ -563,7 +570,7 @@ go build -o bin/local-tex-web-editor.exe ./cmd/local-tex-editor
 Build a Windows distribution executable:
 
 ```sh
-go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.13" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
+go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.14" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
 ```
 
 `build:windows-resources` generates Windows x64 resources from the bundled ICO. The executable embeds nine icon sizes from 16 to 256 px.
@@ -579,7 +586,7 @@ npx playwright install chromium
 node scripts/build-macos.mjs
 ```
 
-This creates `dist/local-tex-web-editor-0.1.13-macos-universal.zip` with an app supporting Apple Silicon and Intel, the English and Japanese READMEs, and license files.
+This creates `dist/local-tex-web-editor-0.1.14-macos-universal.zip` with an app supporting Apple Silicon and Intel, the English and Japanese READMEs, and license files.
 
 Command-line options:
 
