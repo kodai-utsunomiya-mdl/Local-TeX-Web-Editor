@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>プライバシーポリシー — Local TeX Web Editor</title>
-  <meta name="description" content="Local TeX Web Editor の文書，草稿，編集履歴，テンプレート，設定，PC 内の通信と外部リンクの扱い．">
+  <meta name="description" content="Local TeX Web Editor における原稿，PC に保存するデータ，TeX の導入，パッケージの取得，外部リンクの扱い．">
   <link rel="canonical" href="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/ja/privacy/">
   <link rel="alternate" hreflang="en" href="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/privacy/">
   <link rel="alternate" hreflang="ja" href="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/ja/privacy/">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Local TeX Web Editor">
   <meta property="og:title" content="プライバシーポリシー — Local TeX Web Editor">
-  <meta property="og:description" content="Local TeX Web Editor における原稿，草稿，編集履歴，テンプレート，設定，PC 内の通信，外部リンクの扱い．">
+  <meta property="og:description" content="Local TeX Web Editor における原稿，PC に保存するデータ，TeX の導入，パッケージの取得，外部リンクの扱い．">
   <meta property="og:url" content="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/ja/privacy/">
   <meta property="og:image" content="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/assets/social-preview.png">
   <meta property="og:image:type" content="image/png">
@@ -22,7 +22,7 @@
   <meta property="og:locale:alternate" content="en_US">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="プライバシーポリシー — Local TeX Web Editor">
-  <meta name="twitter:description" content="Local TeX Web Editor における原稿，草稿，設定，PC 内の通信，外部リンクの扱い．">
+  <meta name="twitter:description" content="Local TeX Web Editor における原稿，PC に保存するデータ，TeX の導入，パッケージの取得，外部リンクの扱い．">
   <meta name="twitter:image" content="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/assets/social-preview.png">
   <meta name="twitter:image:alt" content="Local TeX Web Editor のアイコンとアプリ名，TeX の編集画面と PDF のプレビュー">
   <link rel="icon" href="../../assets/app-icon.svg" type="image/svg+xml">
@@ -41,7 +41,7 @@
     </nav>
   </div></header>
   <main id="main" class="wrap privacy-page"><h1>Local TeX Web Editor のプライバシーポリシー</h1>
-<p>更新日: 2026 年 11 月 20 日</p>
+<p>更新日: 2026 年 11 月 21 日</p>
 <p>Local TeX Web Editor は，PC にある文書を編集し，PC の TeX でコンパイルするアプリです．原稿をアップロードするサービス，広告，利用状況の解析，自動で送信するクラッシュレポートはありません．アプリ用のアカウントも不要です．</p>
 <h2>原稿と PC に保存するデータ</h2>
 <p>アプリは，選んだプロジェクトフォルダーの文書を読み書きします．ファイル一覧，アウトライン，検索結果，引用・相互参照の定義と使用箇所，画像と PDF のプレビューを表示するためにも，プロジェクト内のファイルを読み込みます．コンパイルには PC 上のファイルを使います．</p>
@@ -54,18 +54,25 @@
 <li>編集履歴がオンの場合，過去の原稿を圧縮した内容と，版に付けた名前．</li>
 <li>テンプレートへの登録時に選んだプロジェクトのファイルのコピーと，テンプレートの名前・説明．</li>
 <li>コンパイルした PDF のコピー，SyncTeX のデータ，対応する原稿の情報．</li>
+<li>TeX のセットアップや管理を使った場合は，導入先とその記録，パッケージの情報とログ．セットアップでは，取得した TeX のプログラムとパッケージも保存します．</li>
 </ul>
 <p>これらはエディタの動作と前回の作業の再開に使います．アプリを通じて開発者へ内容を送る処理はありません．</p>
 <p>設定，草稿，編集履歴，テンプレート，プレビューのコピーは，アプリのユーザーデータフォルダーに保存します．Windows の Microsoft Store 版では，そのパッケージの <code>LocalState</code> フォルダーを使います．ZIP 版の既定の場所は <code>%APPDATA%\LocalTeXEditor</code>，Mac では <code>~/Library/Application Support/LocalTeXEditor</code> です．コンパイル中のファイルとログは，プロジェクト内の <code>.local-tex-editor/build</code> または TeX の設定で指定した出力先にも書き込みます．</p>
+<p>アプリから導入する TeX の既定の保存先は，Windows の ZIP 版では <code>%LOCALAPPDATA%\LocalTeXEditor\tex</code>，Store 版ではパッケージ内の <code>LocalState\LocalTeXEditor\tex</code>，Mac では <code>~/Library/Application Support/LocalTeXEditor/tex</code> です．この下に導入ごとのフォルダーを作ります．セットアップの開始前に，自分のユーザーフォルダー内の別の場所へ変更できます．</p>
 <p>コンピューターからファイルを追加するときや，貼り付け，ドロップ，ファイル選択で画像を取り込むときは，選んだファイルを読み，プロジェクトフォルダーへコピーを書き込みます．ファイル追加の画面では，同名のファイルを置き換えるか，別名で追加するか，スキップするかを選べます．これらの操作には PC 内の接続を使います．</p>
 <p>Store 版の初回起動時には，既存の ZIP 版にある設定，草稿，表示位置などを Store 版のユーザーデータフォルダーへコピーできます．ZIP 版の元のデータはその場所に残ります．原稿のファイルも，ユーザーが置いた場所にあります．</p>
 <p>ブラウザにもテーマの設定を保存します．草稿をアプリのフォルダーへ書き込む間は，ブラウザに一時的な草稿のコピーを置く場合があります．アプリが保存の完了を返すと，そのコピーを削除します．PC 内の接続に使うトークンは，ブラウザタブのセッションストレージに置きます．</p>
 <h2>PC 内の通信</h2>
 <p>起動すると，<code>127.0.0.1</code> などの loopback アドレスでサーバーを動かし，同じ PC のブラウザで開きます．編集，保存，コンパイル，プレビューの操作には，この PC 内の接続を使います．ファイルとコンパイルの API へ接続する際には，起動時に生成したトークンが必要です．</p>
 <p>エディタのプログラム，フォント，PDF の表示に使うファイルはアプリに含まれています．編集やプレビューのために，これらを外部サービスから読み込む必要はありません．</p>
+<h2>TeX の導入とパッケージの取得</h2>
+<p>TeX のセットアップは，取得元，導入先，パッケージを確認して「ダウンロードしてインストール」を選ぶと始まります．GitHub から公式の TinyTeX の配布物をダウンロードして SHA-256 を照合し，追加の TeX パッケージは CTAN のミラー，または TeX Live の年度に合う過去の配布元から取得します．後でパッケージを追加する際も，内容を確認して開始します．既存の TeX Live，MacTeX，TinyTeX へ追加する場合は，その環境の <code>tlmgr</code> に設定された取得先を使います．<code>tlmgr</code> が導入済みの年度と CTAN の現行年度の不一致を報告した場合は，導入済みの年度の公式 <code>tlnet-final</code> へ再試行し，環境に保存された取得先の設定はそのまま使います．独自の取得先，ローカルの取得先，複数の取得先が設定された場合は，その設定で実行します．オンラインの配布元からのダウンロードにはインターネット接続を使い，通常の原稿の編集には前述の PC 内の接続を使います．</p>
+<p>取得先には，IP アドレスと，取得する配布物やパッケージのパスなど，ダウンロードのための通信内容が伝わります．TeX の導入やパッケージ管理のために，原稿，草稿，PDF，参考文献の内容を取得先へ送信する処理はありません．GitHub の通信には <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub のプライバシーステートメント</a> が適用されます．パッケージの配布元とミラーは，それぞれの運営者と方針に従います．<a href="https://github.com/rstudio/tinytex-releases/releases/tag/v2026.11">TinyTeX の配布ページ</a> と <a href="https://ctan.org/mirrors">CTAN のミラー一覧</a> で取得先を確認できます．</p>
+<p>パッケージの案内画面では，ターミナルに入力するコマンドも用意できます．実行すると，指定された TeX の配布元へ接続します．導入済みのパッケージの一覧と削除の確認には，PC にある導入先の情報を使います．アプリから公式の TeX 管理ツールを開いた場合は，そのツールの取得先と通信の設定が使われます．</p>
+<p>他のアプリと共用する TeX を変更する際には，OS の承認が必要な場合があります．承認画面は Windows または macOS が表示し，このアプリが管理者のパスワードを求めたり受け取ったりすることはありません．Store 版では，管理者権限が必要な操作には既存の公式 TeX 管理ツール，または Windows のアプリ設定を開きます．</p>
 <h2>外部リンクと他のソフトウェア</h2>
 <p>文書やヘルプにある外部リンクを選ぶと，ブラウザでリンク先のサイトを開きます．そのアクセスには，リンク先のプライバシーポリシーが適用されます．Markdown の外部画像はリンクとして表示し，プレビューから自動で取得しません．プロジェクト内の画像は PC から読み込みます．</p>
-<p>TeX のエンジン，文献処理のプログラム，プロジェクトで指定したコマンドは，別のプログラムとして動作します．ファイルやネットワークへのアクセスは，それらの設定によります．TeX パッケージの案内は，ユーザーがターミナルで実行するコマンドを用意します．追加コマンドを実行すると，パッケージ管理のプログラムが設定された配布元へ接続します．</p>
+<p>TeX のエンジン，文献処理のプログラム，プロジェクトで指定したコマンドは，別のプログラムとして動作します．ファイルやネットワークへのアクセスは，それらの設定によります．</p>
 <p>OneDrive，iCloud などの同期・バックアップ用のフォルダーへ原稿やアプリのデータを置いた場合は，そのサービスの設定に従ってファイルがコピーされることがあります．</p>
 <p>Microsoft Store から導入した場合は，Microsoft が Store のインストールと更新を管理し，<a href="https://www.microsoft.com/ja-jp/privacy/privacystatement">Microsoft のプライバシーステートメント</a> が適用されます．ブラウザと OS にもそれぞれのプライバシー設定があります．このアプリが Microsoft アカウントの認証情報を求めたり受け取ったりすることはありません．</p>
 <h2>データを管理する</h2>
@@ -73,6 +80,8 @@
 <p>草稿を確認する画面からは，その草稿を削除できます．設定で自動保存をオン／オフにできますが，PC への草稿の記録は自動保存の設定とは別に行います．</p>
 <p>編集履歴の画面では，不要な版を複数選択し，名前と日時を確認してその記録を削除できます．保存する日数・容量を変更し，新しい記録を停止する操作もあります．設定した上限に達すると，古い版から削除します．テンプレートの管理画面では登録済みのテンプレートを削除できます．そのテンプレートから作成済みのプロジェクトは，作成先のフォルダーに残ります．</p>
 <p>設定，草稿，編集履歴，テンプレート，プレビューのコピーを削除する場合は，必要な原稿を保存してアプリを終了し，アプリのユーザーデータフォルダーを削除します．ブラウザのサイトデータの設定からは，テーマや残っている草稿のコピーを削除できます．プロジェクトの原稿や，以前使っていた ZIP 版のデータフォルダーは，それぞれの場所で管理します．</p>
+<p>「設定 → TeX を管理…」には，選択中の TeX の環境とパッケージを表示します．アプリから導入した TeX と，既存の TeX Live，MacTeX，TinyTeX が対象です．パッケージは削除する内容を確認してから実行します．アプリ内から環境全体の削除を開始する場合は，実際の保存先と中身，他のアプリへの影響を確認し，フォルダー名を入力します．アプリが導入したファイルの削除，Windows の公式アンインストーラーの起動，選んだフォルダーをごみ箱へ移す操作のうち，使う方法を確認画面に表示します．Store 版で共用の環境を扱う場合は Windows のアプリ設定を開き，Windows 側で削除を選びます．設定画面を開く段階では削除を始めず，アプリでのフォルダー名の入力も不要です．TinyTeX の削除時には，その環境を指す PATH などの登録も解除します．公式アンインストーラーが設定などを残す場合には，そのファイルをアプリのログに表示します．プロジェクトの原稿は，それぞれの保存先で引き続き使えます．</p>
+<p>Windows の ZIP 版では TeX を <code>LocalAppData</code> に保存するため，<code>AppData\Roaming</code> の設定を削除した後もその TeX は残ります．Mac と Store 版では既定の TeX の場所がアプリのデータフォルダー内にあるため，フォルダー全体を削除すると TeX も削除されます．アプリのデータフォルダー外にある既存の TeX は，その場所で管理します．</p>
 <h2>問い合わせとプロジェクトのサイト</h2>
 <p>紹介ページ，ダウンロード，Issue は GitHub 上にあります．これらを開く際のアクセスは，<a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub のプライバシーステートメント</a> に従って扱われます．</p>
 <p>公開リポジトリの Issue，コメント，添付ファイルとして自分で送った内容は，GitHub に保存され，他の人にも表示されます．報告に含める文章，スクリーンショット，ファイルは，ユーザーが選びます．</p>
