@@ -96,6 +96,7 @@ export function createTeXManagement({ api, getMeta, getSetup, isBusy = () => fal
   const acknowledge = element('input', { id: 'tex-environment-delete-acknowledge', type: 'checkbox' });
   acknowledgeLabel.append(acknowledge, translated('span', '表示したフォルダー内の TeX のファイルとフォルダーを全て削除する'));
   const confirmation = labelledInput('tex-environment-delete-name', '確認のため TinyTeX と入力', 'input', { autocomplete: 'off', spellcheck: 'false' });
+  confirmation.label.removeAttribute('data-i18n');
   const deleteDescription = element('p', { id: 'tex-environment-delete-description' });
   deletion.body.append(deleteDescription,
     deletePath, deleteCounts, deleteShared, deleteElevation, uninstaller, systemDirectories, deleteNotice, unknownList, acknowledgeLabel, confirmation.group);
@@ -185,16 +186,17 @@ export function createTeXManagement({ api, getMeta, getSetup, isBusy = () => fal
     update();
   }
 
-  async function read(endpoint, options = {}) {
+  async function read(endpoint, options = {}, dialog = ui.dialog) {
     if (destroyed || loading || mutating) return null;
     const opened = generation, request = ++sequence;
     const abort = new AbortController(); controller = abort; readEndpoint = endpoint; loading = true; update();
+    const isCurrent = () => !destroyed && dialog.open && opened === generation && request === sequence && !abort.signal.aborted;
     try {
       const result = await api(endpoint, { ...options, projectRoot: null, signal: abort.signal,
         timeout: endpoint.startsWith('/api/tex/setup/') ? 660000 : 120000 });
-      return !destroyed && opened === generation && request === sequence && !abort.signal.aborted ? result : null;
+      return isCurrent() ? result : null;
     } catch (error) {
-      if (destroyed || opened !== generation || request !== sequence || abort.signal.aborted) return null;
+      if (!isCurrent()) return null;
       throw error;
     } finally {
       if (controller === abort) { controller = null; readEndpoint = ''; loading = false; update(); }
@@ -250,7 +252,8 @@ export function createTeXManagement({ api, getMeta, getSetup, isBusy = () => fal
       : method === 'uninstaller' ? '表示した TeX の公式アンインストーラーを起動します．画面の案内を確認して削除を進めます．'
         : method === 'settings' ? 'Windows の設定を開き，表示した TeX の環境のアンインストールへ進みます．'
           : 'この削除は元に戻せません．再び TeX を使う場合は，環境の導入が必要です．');
-    deleteConfirm.textContent = t(method === 'trash' ? 'TeX の環境をごみ箱へ移す' : method === 'uninstaller' ? 'アンインストーラーで削除する' : 'TeX の環境全体を削除');
+    deleteConfirm.dataset.i18n = method === 'trash' ? 'TeX の環境をごみ箱へ移す' : method === 'uninstaller' ? 'アンインストーラーで削除する' : 'TeX の環境全体を削除';
+    deleteConfirm.textContent = t(deleteConfirm.dataset.i18n);
     confirmation.label.textContent = t('確認のため {name} と入力', { name: next.confirmation || 'TinyTeX' });
     deleteShared.hidden = !!current.managed;
     deleteElevation.hidden = !current.requiresElevation;
@@ -273,11 +276,12 @@ export function createTeXManagement({ api, getMeta, getSetup, isBusy = () => fal
 
   async function inspectEnvironment() {
     if (busy()) return;
-    (deletion.dialog.open ? deletion : ui).clearError();
+    const view = deletion.dialog.open ? deletion : ui;
+    view.clearError();
     try {
-      const result = await read('/api/tex/setup/delete');
+      const result = await read('/api/tex/setup/delete', {}, view.dialog);
       if (result) showInspection(result);
-    } catch (error) { if (ui.dialog.open && error.name !== 'AbortError') (deletion.dialog.open ? deletion : ui).showError(error); }
+    } catch (error) { if (view.dialog.open && error.name !== 'AbortError') view.showError(error); }
   }
 
   async function execute(action, operation) {
@@ -334,7 +338,7 @@ export function createTeXManagement({ api, getMeta, getSetup, isBusy = () => fal
     if (openUninstaller.disabled) return;
     deletion.clearError();
     try {
-      const result = await read('/api/tex/setup/uninstaller', { method: 'POST', body: { directory: inspection.directory, revision: inspection.revision } });
+      const result = await read('/api/tex/setup/uninstaller', { method: 'POST', body: { directory: inspection.directory, revision: inspection.revision } }, deletion.dialog);
       if (result && deletion.dialog.open) deleteNotice.textContent = t('Windows のアプリ設定を開きました．Windows 側でアンインストールした後，この画面を閉じて環境を再確認してください．');
     } catch (error) {
       if (deletion.dialog.open && error.status === 409 && error.data?.inspection) showInspection(error.data.inspection, true);

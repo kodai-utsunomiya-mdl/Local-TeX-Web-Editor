@@ -31,7 +31,9 @@ export function texSetupProgress(snapshot) {
 // A browser tab observes a server-owned job. Closing the tab or aborting a GET
 // does not stop installation; stopping always requires the dedicated POST.
 export class TeXSetupSession {
-  constructor({ api, onState = () => {}, onComplete = async () => {}, setTimer = setTimeout, clearTimer = clearTimeout, pollInterval = 1000 }) {
+  constructor({ api, onState = () => {}, onComplete = async () => {},
+    setTimer = (callback, delay) => globalThis.setTimeout(callback, delay),
+    clearTimer = timer => globalThis.clearTimeout(timer), pollInterval = 1000 }) {
     Object.assign(this, { api, onState, onComplete, setTimer, clearTimer, pollInterval });
     this.snapshot = null;
     this.error = null;

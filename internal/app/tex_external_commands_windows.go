@@ -147,7 +147,7 @@ if($code -eq 0){
     $u=New-Object System.Diagnostics.Process
 ` +
 		"    $u.StartInfo.FileName=" + quoteExternalTeXPowerShell(externalTeXSystemProgram("cmd.exe")) + "\n" +
-		"    $u.StartInfo.Arguments='/d /e:on /v:off /c updater-w32.bat'\n" +
+		"    $u.StartInfo.Arguments='/d /e:on /v:off /c call updater-w32.bat'\n" +
 		"    $u.StartInfo.WorkingDirectory=" + quoteExternalTeXPowerShell(filepath.Join(commandRoot, "temp")) + "\n" +
 		`    $u.StartInfo.UseShellExecute=$false
     foreach($key in @($u.StartInfo.EnvironmentVariables.Keys)){if($key -like 'PERL*'){$u.StartInfo.EnvironmentVariables.Remove($key)}}

@@ -91,7 +91,9 @@ func (a *App) prepareTeXSetupSelfUpdate(run *texSetupRun, name string, arguments
 		if err != nil {
 			return err
 		}
-		command := exec.CommandContext(ctx, externalTeXSystemProgram("cmd.exe"), "/d", "/e:on", "/v:off", "/c", path)
+		// CALL makes cmd return the updater's ERRORLEVEL when its outer
+		// script finishes with GOTO :EOF after running the nested command.
+		command := exec.CommandContext(ctx, externalTeXSystemProgram("cmd.exe"), "/d", "/e:on", "/v:off", "/c", "call", path)
 		command.Env = commandEnvironment(run.bin)
 		if run.external == nil {
 			command.Env = isolatedTeXEnvironment(command.Env, filepath.Dir(filepath.Dir(run.bin)))

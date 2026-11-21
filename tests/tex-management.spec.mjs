@@ -187,6 +187,7 @@ test('既存の MacTeX では保存先と共用の影響を示し，ごみ箱へ
   await page.locator('#tex-environment-delete').click();
   await expect(page.locator('#tex-environment-delete-description')).toContainText('ごみ箱へ移します');
   await expect(page.locator('#tex-environment-delete-description')).not.toContainText('元に戻せません');
+  await expect(page.locator('label[for="tex-environment-delete-name"]')).toHaveText('確認のため 2026 と入力');
   await expect(page.locator('#tex-environment-system-directories')).toContainText('/usr/local/texlive/2026/texmf-var');
   await page.locator('#tex-environment-delete-acknowledge').check();
   await page.locator('#tex-environment-delete-name').fill('TinyTeX');
@@ -194,6 +195,9 @@ test('既存の MacTeX では保存先と共用の影響を示し，ごみ箱へ
   await page.locator('#tex-environment-delete-name').fill('2026');
   await expect(page.locator('#tex-environment-delete-confirm')).toBeEnabled();
   await expect(page.locator('#tex-environment-delete-confirm')).toHaveText('TeX の環境をごみ箱へ移す');
+  await page.evaluate(() => setLanguage('en'));
+  await expect(page.locator('label[for="tex-environment-delete-name"]')).toHaveText('Type 2026 to confirm');
+  await expect(page.locator('#tex-environment-delete-confirm')).toHaveText('Move the TeX environment to Trash');
 });
 
 test('Store で直接変更できない既存環境は公式ツールと Windows の設定へ進み，削除完了にはしない', async ({ page }) => {
