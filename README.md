@@ -18,6 +18,16 @@ Edit TeX and Markdown documents in your browser on Windows or macOS. On a comput
 
 Documents stay in the project folder on your computer. Compilation uses the TeX environment selected in the app and the project's `latexmkrc`; the app displays the logs and resulting PDF. The distributed app runs without installing Python, Node.js, Go, or VS Code.
 
+## Why this editor exists
+
+Local TeX Web Editor brings a browser editing workflow to the TeX Live installation on your computer.
+
+- Long documents can reach Overleaf's compilation time limit. Compiling on the computer allows work to continue with the available local resources. Multiline search also makes it possible to paste a block of prose or TeX code directly into the search field.
+
+- VS Code provides a broad set of development features. For editing TeX documents, starting a full desktop development environment can add more features and memory use than the task needs. This editor brings document editing, compilation, and preview together in a browser window.
+
+Continuous PDF scrolling, SyncTeX, and Markdown preview support writing and reviewing documents while using the project files and TeX installation already on the computer.
+
 ## First document
 
 1. **Get and open the app.** Choose Microsoft Store or the Windows ZIP, or download the macOS app. Follow [Download and launch](#download-and-launch) below.
@@ -539,16 +549,6 @@ TeX installed from the app uses a separate installation folder under the followi
 On the first launch, the Store edition imports valid settings, drafts, and view preferences from the ZIP edition when available. The ZIP edition's original data stays in its folder. Source files are saved in the project folder you selected. Using a copy of the PDF lets you keep reading while TeX writes the next version.
 
 The server listens only on a loopback address such as `127.0.0.1`. File and compilation APIs use a token generated when the app starts.
-
-## Why this editor exists
-
-Local TeX Web Editor brings a browser editing workflow to the TeX Live installation on your computer.
-
-Long documents can reach Overleaf's compilation time limit. Compiling on the computer allows work to continue with the available local resources. Multiline search also makes it possible to paste a block of prose or TeX code directly into the search field.
-
-VS Code provides a broad set of development features. For editing TeX documents, starting a full desktop development environment can add more features and memory use than the task needs. This editor brings document editing, compilation, and preview together in a browser window.
-
-Continuous PDF scrolling, SyncTeX, and Markdown preview support writing and reviewing documents while using the project files and TeX installation already on the computer.
 
 ## Development
 
