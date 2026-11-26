@@ -1,0 +1,87 @@
+name: Publish Store downloads for v0.1.15
+
+on:
+  push:
+    branches: [publish-store-files-v0.1.15]
+    paths: ['.github/workflows/publish-store-files-v0.1.15.yml']
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: publish-store-files-v0.1.15
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Check the tested build and release
+        shell: bash
+        run: |
+          gh api "repos/$GH_REPO/actions/runs/45844360603" > tested-run.json
+          gh api "repos/$GH_REPO/releases/tags/v0.1.15" > release.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          tested = json.loads(Path('tested-run.json').read_text())
+          release = json.loads(Path('release.json').read_text())
+          expected = 'ffab82070c68c22917f3aba34615931119233b73'
+          assert tested['conclusion'] == 'success'
+          assert tested['head_sha'] == expected
+          assert tested['head_branch'] == 'main'
+          assert release['tag_name'] == 'v0.1.15'
+          assert release['target_commitish'] == expected
+          assert not release['draft']
+          PY
+
+      - name: Download the tested Store artifacts
+        shell: bash
+        run: |
+          gh api "repos/$GH_REPO/actions/artifacts/15132077224/zip" > submission.zip
+          gh api "repos/$GH_REPO/actions/artifacts/15131772235/zip" > microsoft-store-listing.zip
+
+      - name: Verify and publish the two requested files
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+          import subprocess
+          import zipfile
+
+          archives = {
+              'submission.zip': 'fa7d7bcaddce089b7543115801b4a7582a080ebd6a8d58d5dd281e83174f6730',
+              'microsoft-store-listing.zip': '6d90ad64bd142ced3a65531d6bc53b2bf01002debf81795d003eb82df02ccf62',
+          }
+          for name, digest in archives.items():
+              assert hashlib.sha256(Path(name).read_bytes()).hexdigest() == digest, name
+
+          package = 'local-tex-web-editor-0.1.15-windows-x64.msix'
+          with zipfile.ZipFile('submission.zip') as archive:
+              assert archive.testzip() is None
+              Path(package).write_bytes(archive.read(package))
+          with zipfile.ZipFile('microsoft-store-listing.zip') as archive:
+              assert archive.testzip() is None
+
+          expected = {
+              package: ('250a279e13d9c3ad534e839ef2b97f7edd10e45d56327c30a6c089f5a36b29b1', 'Microsoft Store submission package'),
+              'microsoft-store-listing.zip': (archives['microsoft-store-listing.zip'], 'Microsoft Store screenshots and listing text'),
+          }
+          release = json.loads(Path('release.json').read_text())
+          assets = {asset['name']: asset for asset in release['assets']}
+          for name, (digest, label) in expected.items():
+              assert hashlib.sha256(Path(name).read_bytes()).hexdigest() == digest, name
+              if name in assets:
+                  assert assets[name]['digest'] == f'sha256:{digest}', name
+                  print(f'Already published with the expected SHA-256: {name}')
+                  continue
+              subprocess.run(['gh', 'release', 'upload', 'v0.1.15', f'{name}#{label}'], check=True)
+              print(f'Published: {name}')
+          PY
