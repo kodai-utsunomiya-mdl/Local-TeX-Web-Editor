@@ -85,24 +85,39 @@ func createShortcutAt(source, localAppData, shortcutDirectory string) (ShortcutR
 	}
 	target := filepath.Join(directory, shortcutExecutableName)
 	shortcut := filepath.Join(shortcutDirectory, shortcutName)
-	existed := false
-	if info, err := shortcutRegularFile(shortcut); err == nil {
-		if info.Size() > 1<<20 {
-			return ShortcutResult{}, messages.Errorf("同名の別ファイルがあります (%s)．%w", shortcut, ErrShortcutConflict)
-		}
-		link, err := readShellShortcut(shortcut)
-		if err != nil || (!shortcutSameFile(link.Target, target) && !shortcutSameFile(link.Target, source)) {
-			return ShortcutResult{}, messages.Errorf("同名の別のショートカットがあります (%s)．%w", shortcut, ErrShortcutConflict)
-		}
-		existed = true
-	} else if !errors.Is(err, os.ErrNotExist) {
+	existed, err := inspectShortcutDestination(shortcut, target, source)
+	if err != nil {
 		return ShortcutResult{}, err
 	}
 	installed, err := installShortcutExecutable(source, directory)
 	if err != nil {
 		return ShortcutResult{}, err
 	}
-	icon, iconCreated, err := installShortcutIcon(directory)
+	return writeInstalledShortcut(installed, shortcutDirectory, existed)
+}
+
+func inspectShortcutDestination(shortcut, target, source string) (bool, error) {
+	existed := false
+	if info, err := shortcutRegularFile(shortcut); err == nil {
+		if info.Size() > 1<<20 {
+			return false, messages.Errorf("同名の別ファイルがあります (%s)．%w", shortcut, ErrShortcutConflict)
+		}
+		link, err := readShellShortcut(shortcut)
+		if err != nil || (!shortcutSameFile(link.Target, target) && !shortcutSameFile(link.Target, source)) {
+			return false, messages.Errorf("同名の別のショートカットがあります (%s)．%w", shortcut, ErrShortcutConflict)
+		}
+		existed = true
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return false, err
+	}
+	return existed, nil
+}
+
+// The caller checks the existing link and holds the installation lock. A
+// refresh can write several links after installing the executable once.
+func writeInstalledShortcut(installed, shortcutDirectory string, existed bool) (ShortcutResult, error) {
+	shortcut := filepath.Join(shortcutDirectory, shortcutName)
+	icon, iconCreated, err := installShortcutIcon(filepath.Dir(installed))
 	if err != nil {
 		return ShortcutResult{}, messages.Errorf("ショートカットのアイコンを保存できません: %w", err)
 	}
@@ -174,6 +189,10 @@ func shortcutCOMError(action string, result uintptr) error {
 }
 
 func writeShellShortcut(path, target, iconPath string) error {
+	return writeShellShortcutWithArguments(path, target, iconPath, "")
+}
+
+func writeShellShortcutWithArguments(path, target, iconPath, arguments string) error {
 	return withShellShortcut(func(link, persistent *nativeCOMObject) error {
 		for _, field := range []struct {
 			index int
@@ -181,7 +200,7 @@ func writeShellShortcut(path, target, iconPath string) error {
 		}{
 			{20, target}, // IShellLinkW::SetPath
 			{9, filepath.Dir(target)},
-			{11, ""},
+			{11, arguments},
 			{7, "ブラウザで TeX 原稿を編集する"},
 		} {
 			wide, err := syscall.UTF16PtrFromString(field.value)

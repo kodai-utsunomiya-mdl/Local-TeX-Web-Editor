@@ -64,7 +64,7 @@ func (a *App) serveSettingsRequest(next http.Handler, w http.ResponseWriter, r *
 	if r.Context().Err() != nil {
 		return
 	}
-	picker := r.Method == http.MethodPost && (r.URL.Path == "/api/project/pick" || r.URL.Path == "/api/tex/setup/pick")
+	picker := r.Method == http.MethodPost && (r.URL.Path == "/api/project/pick" || r.URL.Path == "/api/tex/setup/pick" || r.URL.Path == "/api/file/save-as")
 	a.mu.Lock()
 	if !a.settingsGenerationMatchesLocked(r) {
 		a.writeSettingsConflictLocked(w, r, true, "別の画面で保存情報が初期化されました．未保存の原稿を確認してから，画面を読み込み直してください．")
@@ -205,6 +205,14 @@ func (a *App) settingsResetHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	a.config = config
 	if input.Settings {
+		if err := a.resetStartupRegistration(); err != nil {
+			startupWarning := messages.Errorf("設定は初期化しましたが，ログイン時の起動を変更できませんでした: %w", err)
+			if warning == nil {
+				warning = startupWarning
+			} else {
+				warning = messages.Errorf("%v\n%v", warning, startupWarning)
+			}
+		}
 		a.clearDeletedProjectLocked()
 		a.texSetup, a.texEnvironment = nil, nil
 	} else if input.Cache {

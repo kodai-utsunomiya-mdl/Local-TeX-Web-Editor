@@ -1,16 +1,13 @@
 import { t, onLanguageChange, translateElements } from './i18n.js';
-import { PDFFindController, FindState } from 'pdfjs-dist/web/pdf_viewer.mjs';
 import { shortcutModifier } from './platform-keys.js';
 
 // Use PDF.js's text extraction and text-layer highlights, including pages that
 // have not yet been drawn. Searching does not allocate canvases for every page.
 export class PDFSearch {
-  constructor({ eventBus, linkService, pane, toolbar, scroll }) {
-    this.eventBus = eventBus;
+  constructor({ pane, toolbar, scroll }) {
     this.scroll = scroll;
     this.enabled = false;
     this.composing = false;
-    this.controller = new PDFFindController({ eventBus, linkService, delay: 200 });
 
     this.toggle = document.createElement('button');
     this.toggle.type = 'button';
@@ -67,6 +64,15 @@ export class PDFSearch {
     scroll.addEventListener('pointerdown', event => {
       if (!event.target.closest('input, textarea, select, button, a')) scroll.focus({ preventScroll: true });
     });
+    this.setEnabled(false);
+    this.refreshLanguage();
+    this.unsubscribeLanguage = onLanguageChange(() => this.refreshLanguage());
+  }
+
+  attachRuntime({ PDFFindController, FindState }, eventBus, linkService) {
+    this.eventBus = eventBus;
+    this.FindState = FindState;
+    this.controller = new PDFFindController({ eventBus, linkService, delay: 200 });
     eventBus.on('updatefindcontrolstate', event => {
       if (event.source !== this.controller) return;
       this.findState = event.state;
@@ -78,9 +84,6 @@ export class PDFSearch {
     });
     eventBus.on('updatefindmatchescount', event => { if (event.source === this.controller) this.showCount(event.matchesCount); });
     eventBus.on('pagesinit', () => this.reset());
-    this.setEnabled(false);
-    this.refreshLanguage();
-    this.unsubscribeLanguage = onLanguageChange(() => this.refreshLanguage());
   }
 
   refreshLanguage() {
@@ -89,8 +92,8 @@ export class PDFSearch {
     this.toggle.title = t('PDF 内を検索 (PDF にフォーカスして {value0}+F)', { value0: shortcutModifier });
     this.bar.setAttribute('aria-label', t('PDF 内を検索'));
     if (!this.input.value) this.count.textContent = '';
-    else if (this.findState === FindState.PENDING) this.count.textContent = t('検索しています…');
-    else if (this.findState === FindState.NOT_FOUND) this.count.textContent = t('見つかりません');
+    else if (this.FindState && this.findState === this.FindState.PENDING) this.count.textContent = t('検索しています…');
+    else if (this.FindState && this.findState === this.FindState.NOT_FOUND) this.count.textContent = t('見つかりません');
     else this.showCount(this.matches);
   }
 
@@ -114,7 +117,7 @@ export class PDFSearch {
   close(focus = true) {
     this.bar.hidden = true;
     this.toggle.setAttribute('aria-expanded', 'false');
-    this.eventBus.dispatch('findbarclose', { source: this });
+    this.eventBus?.dispatch('findbarclose', { source: this });
     if (focus) this.scroll.focus({ preventScroll: true });
   }
 

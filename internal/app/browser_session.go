@@ -84,6 +84,7 @@ func (a *App) requestShutdown() {
 	a.shutdownOnce.Do(func() {
 		a.CloseBrowserSessions()
 		platform.CancelFolderPicker()
+		platform.CancelSavePicker()
 		a.cancelTeXSetup()
 		_ = a.stopBuild()
 		if a.options.Shutdown != nil {

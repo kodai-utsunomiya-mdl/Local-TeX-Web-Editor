@@ -24,7 +24,7 @@ async function menu(page, main, action) {
   await page.locator(`.compiled-pdf-context-menu [data-action="${action}"]`).click();
 }
 
-test('文書ごとの PDF を保存・コピー・削除し，再起動と再コンパイルに反映する', async ({ page, context, session }, testInfo) => {
+test('文書ごとの PDF をダウンロード，保存，コピー，削除し，再起動と再コンパイルに反映する', async ({ page, context, session }, testInfo) => {
   test.setTimeout(240_000);
   await page.setViewportSize({ width: 1600, height: 1000 });
   const rc = await readFile(path.join(session.project, 'latexmkrc'), 'utf8');
@@ -63,6 +63,20 @@ test('文書ごとの PDF を保存・コピー・削除し，再起動と再コ
   const secondBytes = Buffer.from(await (await request(session, `/api/pdf?build=${second.pdfBuildId}`)).arrayBuffer());
   expect(await readFile(downloadedPath)).toEqual(secondBytes);
   await expect(page.getByTestId('pdf-canvas')).toHaveAttribute('data-build-id', first.pdfBuildId);
+
+  const savedBuilds = [];
+  await page.route('**/api/file/save-as', async route => {
+    savedBuilds.push(route.request().postDataJSON().buildId);
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ cancelled: true }) });
+  });
+  await menu(page, 'second.tex', 'saveAs');
+  await expect.poll(() => savedBuilds).toEqual([second.pdfBuildId]);
+  await expect(page.getByTestId('pdf-canvas')).toHaveAttribute('data-build-id', first.pdfBuildId);
+  await showPDFControls(page);
+  await page.getByRole('button', { name: '名前を付けて保存…', exact: true }).click();
+  await expect.poll(() => savedBuilds).toEqual([second.pdfBuildId, first.pdfBuildId]);
+  await expect(page.locator('#pdf-menu')).toBeHidden();
+  await page.unroute('**/api/file/save-as');
 
   await menu(page, 'third.tex', 'copy');
   await expect(page.locator('#file-import-dialog')).toBeVisible();

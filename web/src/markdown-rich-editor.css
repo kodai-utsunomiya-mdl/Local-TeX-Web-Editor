@@ -1,6 +1,6 @@
 .markdown-rich-editor { position: relative; flex: 1 1 auto; min-width: 0; min-height: 0; overflow: auto; overflow-anchor: none; touch-action: pan-x pan-y; overscroll-behavior: contain; background: var(--surface, #fff); color: var(--text, #253342); scrollbar-width: thin; scrollbar-color: var(--border-strong, #cbd4dd) transparent; }
 .rich-document-mount { min-width: 0; min-height: 100%; }
-.markdown-rich-document { box-sizing: border-box; width: 100%; max-width: 920px; min-height: 100%; margin: 0 auto; padding: 32px clamp(18px, 3vw, 52px) 160px; outline: none; font: var(--editor-font-size, 14px)/1.85 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "Yu Gothic UI", Meiryo, sans-serif; font-synthesis: weight style; white-space: pre-wrap; overflow-wrap: anywhere; caret-color: var(--accent, #0d766e); }
+.markdown-rich-document { box-sizing: border-box; width: 100%; max-width: 920px; min-height: 100%; margin: 0 auto; padding: 32px clamp(18px, 3vw, 52px) 160px; outline: none; font: var(--editor-font-size, 14px)/1.85 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "Yu Gothic UI", Meiryo, sans-serif; font-synthesis: weight style; white-space: pre-wrap; overflow-wrap: anywhere; caret-color: var(--accent, #2463b7); }
 .markdown-rich-document :is(em, i) { font-style: italic; }
 .markdown-rich-document :is(s, del) { text-decoration-line: line-through; }
 .markdown-rich-document ::selection { background: var(--selection, #b9d9ef); }
@@ -18,7 +18,7 @@
 .markdown-rich-document li :is(p, ul, ol) { margin-bottom: .35em; }
 .markdown-rich-document .rich-list-content > :last-child { margin-bottom: 0; }
 .markdown-rich-document .rich-task-item { list-style: none; }
-.markdown-rich-document .rich-task-checkbox { position: absolute; top: .43em; left: -1.55em; width: 14px; height: 14px; margin: 0; accent-color: var(--accent, #0d766e); cursor: pointer; }
+.markdown-rich-document .rich-task-checkbox { position: absolute; top: .43em; left: -1.55em; width: 14px; height: 14px; margin: 0; accent-color: var(--accent, #2463b7); cursor: pointer; }
 .markdown-rich-document .rich-task-checkbox:disabled { cursor: default; }
 .markdown-rich-document .rich-task-item.is-checked > .rich-list-content > p { color: var(--muted); }
 .markdown-rich-document blockquote { padding: .1em 0 .1em 1em; border-left: 3px solid var(--border-strong); color: var(--secondary); }

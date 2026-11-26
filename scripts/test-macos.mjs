@@ -131,6 +131,17 @@ try {
   await execute('/usr/bin/open', [application]);
   await delay(300);
   assert.equal(JSON.parse(await readFile(readyPath, 'utf8')).pid, ready.pid, 'Reopening the app must reuse the server.');
+
+  await page.getByTestId('file-main.tex').click({ button: 'right' });
+  await expect(page.locator('#file-context-menu [data-action="saveAs"]')).toBeVisible();
+  const downloading = page.waitForEvent('download');
+  await page.locator('#file-context-menu [data-action="download"]').click();
+  const downloaded = await downloading;
+  assert.equal(downloaded.suggestedFilename(), 'main.tex');
+  assert.deepEqual(await readFile(await downloaded.path()), await readFile(path.join(project, 'main.tex')));
+  await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+  await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+  const previousConnection = { ...ready };
   assert.deepEqual(errors, []);
 
   // Use the editor's existing shutdown flow after saving and compiling.
@@ -138,7 +149,32 @@ try {
   await waitFor(() => stat(readyPath).then(() => false, error => { if (error.code === 'ENOENT') return true; throw error; }), value => value, 'The editor did not finish shutdown.');
   await waitFor(() => opening.exitCode, value => value !== null, 'The macOS launcher did not exit with the server.');
   assert.equal(opening.exitCode, 0, launchError);
-  await writeFile(path.join(output, 'result.json'), JSON.stringify({ version, architecture: process.arch, checks: ['universal-bundle', 'icon', 'signature', 'launch-services', 'api', 'command-save', 'japanese-tex', 'synctex', 'active-document', 'markdown', 'reopen', 'shutdown'] }, null, 2));
+
+  // Recreate a browser tab before the background application has restarted.
+  page = await context.newPage();
+  page.on('pageerror', error => errors.push(error.message));
+  await page.goto(previousConnection.url, { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('#connection-title')).toBeVisible();
+  await page.screenshot({ path: path.join(output, 'macos-waiting-for-app.png') });
+  launchError = '';
+  opening = spawn('/usr/bin/open', [...launchArgs, '--background'], { stdio: ['ignore', 'pipe', 'pipe'] });
+  opening.stderr.on('data', data => { launchError += data; });
+  ready = await waitFor(async () => {
+    if (opening.exitCode !== null) throw new Error(`Background launch exited before the app started: ${launchError}`);
+    try { return JSON.parse(await readFile(readyPath, 'utf8')); }
+    catch (error) { if (error.code === 'ENOENT' || error instanceof SyntaxError) return null; throw error; }
+  }, result => Boolean(result?.url && result?.token), 'The background macOS application did not start.');
+  assert.equal(ready.url, previousConnection.url);
+  assert.equal(ready.token, previousConnection.token);
+  await expect(page.getByTestId('editor').locator('.cm-content')).toBeVisible({ timeout: 20000 });
+  await expect(page.locator('#connection-status')).toHaveClass(/connected/);
+  assert.equal(page.url(), previousConnection.url);
+  await page.screenshot({ path: path.join(output, 'macos-restored-editor.png') });
+  await api('/api/shutdown', {});
+  await waitFor(() => opening.exitCode, value => value !== null, 'The background macOS launcher did not exit.');
+  assert.equal(opening.exitCode, 0, launchError);
+  assert.deepEqual(errors, []);
+  await writeFile(path.join(output, 'result.json'), JSON.stringify({ version, architecture: process.arch, checks: ['universal-bundle', 'icon', 'signature', 'launch-services', 'api', 'command-save', 'japanese-tex', 'synctex', 'active-document', 'markdown', 'reopen', 'file-download', 'shutdown', 'offline-waiting', 'background-launch', 'restored-tab'] }, null, 2));
   passed = true;
   console.log(`macOS ${process.arch}: application launch, editing, TeX, previews, and shutdown passed.`);
 } finally {

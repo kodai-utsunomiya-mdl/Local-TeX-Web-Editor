@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Local TeX Web Editor</title>
+  <link rel="icon" href="/app-icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/offline.css">
+  <script src="/offline.js" defer></script>
+</head>
+<body>
+  <main class="connection-card" aria-labelledby="connection-title">
+    <img src="/app-icon.svg" width="64" height="64" alt="">
+    <p class="app-name">Local TeX Web Editor</p>
+    <h1 id="connection-title">Waiting for the application</h1>
+    <p id="connection-description">This tab will reopen your editor when Local TeX Web Editor starts on this computer.</p>
+    <p id="connection-help">Open the application from its icon. You can also enable automatic startup in Settings to reconnect after signing in to your computer.</p>
+    <div class="connection-status"><span class="connection-spinner" aria-hidden="true"></span><span id="connection-state" role="status">Checking the connection…</span></div>
+    <button id="connection-retry" type="button">Check again</button>
+  </main>
+</body>
+</html>

@@ -14,6 +14,7 @@ import { sourceSearch, openSourceSearchPanel } from './source-search.js';
 import { attachEditorZoom, prepareEditorResize } from './editor-zoom.js';
 import { createPanelLayout, normalizePanelLayout } from './panel-layout.js';
 import { normalizeAppearance, normalizeHexColor, resolveAppearance } from './appearance.js';
+import { createStartupSettings } from './startup-settings.js';
 import { createHelp } from './help.js';
 import { stateForOtherView, restoredTabPaths } from './shared-editor.js';
 import { NavigationHistory, afterNavigationFrame } from './navigation-history.js';
@@ -36,6 +37,7 @@ import { createCompiledPDFList } from './compiled-pdfs.js';
 import { createCompiledPDFDeletion } from './compiled-pdf-deletion.js';
 import { buildFileTree, captureFileOrder, fileModificationTime, mapFileOrder, normalizeFileOrder, normalizeFileSort, placeInFileOrder, projectListingSignature } from './file-sorting.js';
 import { completionPresentation } from './completion-ui.js';
+import { combineCompletionItems } from './completion-index.js';
 import { createTeXCompletionSource } from './tex-completion.js';
 import { sourceFolding, revealSourceRange } from './source-folding.js';
 import { createOutlineTree } from './outline-tree.js';
@@ -44,6 +46,7 @@ import { createFileActions, fileActionText, fileDestinationConflict, entryContai
 import { tags } from '@lezer/highlight';
 import { SessionStore } from './session-store.js';
 import { BrowserSession } from './browser-session.js';
+import { browserTokenKey, restoreBrowserToken, rememberBrowserLanguage, registerConnectionPage } from './browser-connection.js';
 import { isMac, shortcutModifier } from './platform-keys.js';
 import { renderTeXPackagesHelp } from './tex-packages.js';
 import { createTeXSetup, isTeXSetupRunning, missingTeXPrograms, teXEnvironment } from './tex-setup.js';
@@ -52,13 +55,9 @@ import { createSettingsReset } from './settings-reset.js';
 import { extractTexMetadata, extractCitations, compileTarget } from './tex-tools.js';
 
 const $ = id => document.getElementById(id);
-const TOKEN_KEY = 'local-tex-editor-token';
+const TOKEN_KEY = browserTokenKey;
 const fragment = new URLSearchParams(location.hash.slice(1));
-let token = fragment.get('token') || '';
-try {
-  if (token) sessionStorage.setItem(TOKEN_KEY, token);
-  else token = sessionStorage.getItem(TOKEN_KEY) || '';
-} catch { /* The current tab can work even when browser storage is disabled. */ }
+let token = restoreBrowserToken(fragment.get('token'));
 if (fragment.has('token')) history.replaceState(null, '', location.pathname + location.search);
 
 const state = {
@@ -68,6 +67,9 @@ const state = {
   resetDetected: false,
   resetInProgress: false,
   reloadAfterReset: false,
+  reloadForUpdate: false,
+  loadedVersion: '',
+  updateNoticeVersion: '',
   documents: new Map(),
   assets: new Map(),
   tabOrder: [],
@@ -146,6 +148,7 @@ let templateManager = null;
 let texSetup = null;
 let texManagement = null;
 let settingsReset = null;
+let startupSettings = null;
 let fileTemplatePicker = null;
 let logIssues = null;
 let markdownEditing = null;
@@ -209,7 +212,7 @@ function setConnected(connected) {
   label.textContent = state.closed ? t("アプリを終了しました") : connected ? t("この PC に接続済み") : t("接続を確認してください");
 }
 
-async function api(path, { method = 'GET', body, binary = false, headers: additionalHeaders = {}, timeout = 15000, projectRoot = state.meta?.project?.root, signal, keepalive = false } = {}) {
+async function api(path, { method = 'GET', body, binary = false, responseType = 'json', headers: additionalHeaders = {}, timeout = 15000, projectRoot = state.meta?.project?.root, signal, keepalive = false } = {}) {
   if (state.resetDetected) throw new DOMException(t('初期化後の状態を使うため，アプリを開き直してください．'), 'AbortError');
   if (state.closed) throw new Error(t("アプリは終了しています．実行ファイルから開き直してください．"));
   if (!token) throw new APIError(t("接続に必要な情報が見つかりません．アプリの実行ファイルを起動して開いたページを使用してください．"), 401);
@@ -223,6 +226,12 @@ async function api(path, { method = 'GET', body, binary = false, headers: additi
   const timer = timeout ? setTimeout(() => controller.abort(), timeout) : null;
   try {
     const response = await fetch(path, { method, headers, body: body === undefined ? undefined : binary ? body : JSON.stringify(body), cache: 'no-store', signal: controller.signal, keepalive });
+    if (response.ok && responseType === 'blob') {
+      const blob = await response.blob();
+      if (state.resetDetected) throw new DOMException(t('初期化後の状態を使うため，アプリを開き直してください．'), 'AbortError');
+      setConnected(true);
+      return blob;
+    }
     const text = await response.text();
     let data;
     try { data = text ? JSON.parse(text) : null; }
@@ -1579,6 +1588,40 @@ function updateApplicationDetails(meta) {
   $('app-version').textContent = meta.version ? `v${meta.version}` : '';
   $('application-version').textContent = meta.version ? `v${meta.version}` : '';
   $('application-executable').textContent = meta.executablePath || '';
+  notifyApplicationUpdate(meta);
+  if (meta.installationError && meta.installationError !== state.installationNotice) {
+    state.installationNotice = meta.installationError;
+    showError(new Error(meta.installationError));
+  }
+}
+function notifyApplicationUpdate(meta) {
+  if (!state.loadedVersion) state.loadedVersion = meta.version || '';
+  if (!meta.version || meta.version === state.loadedVersion) return false;
+  $('application-reload').hidden = false;
+  if (state.updateNoticeVersion !== meta.version) {
+    state.updateNoticeVersion = meta.version;
+    showError(new Error(t('アプリが {value0} に更新されました．「新しい版で開く」から画面を読み込み直せます．', { value0: `v${meta.version}` })), {
+      label: t('新しい版で開く'), run: reloadUpdatedApplication,
+    });
+  }
+  return true;
+}
+function updatedApplicationAction() {
+  return state.updateNoticeVersion && state.updateNoticeVersion !== state.loadedVersion
+    ? { label: t('新しい版で開く'), run: reloadUpdatedApplication } : null;
+}
+async function reloadUpdatedApplication() {
+  if (state.operation || isRunning() || state.texSetupBusy || document.querySelector('dialog[open]')) {
+    toast(t('実行中の操作が終わってから，新しい版で開いてください．'));
+    return;
+  }
+  setOperation('updating');
+  try {
+    if (!await confirmUnsaved(t('新しい版で開く前に，変更を保存しますか？'))) return;
+    syncDrafts(); persistSession(); await sessionStore.flush();
+    state.reloadForUpdate = true;
+    location.reload();
+  } finally { if (!state.reloadForUpdate) setOperation(''); }
 }
 function updateTools(meta) {
   if (!state.meta) return;
@@ -1615,6 +1658,7 @@ async function showSettings() {
   $('shortcut-settings').hidden = state.meta?.platform !== 'windows' || state.meta?.shortcutsSupported === false;
   $('store-installation-note').hidden = !state.meta?.packageIdentity;
   $('settings-error').hidden = true; $('settings-dialog').showModal();
+  void startupSettings.refresh();
   try {
     const meta = await api('/api/state');
     if (generation !== state.projectGeneration || toolsGeneration !== state.toolsGeneration) return;
@@ -1697,7 +1741,7 @@ async function resetSavedInformation(selection) {
     const result = await api('/api/settings/reset', { method: 'POST', body: selection, projectRoot: '', timeout: 60000 });
     stopForSettingsReset();
     if (selection.settings) {
-      try { localStorage.removeItem('local-tex-editor-appearance'); localStorage.removeItem('local-tex-editor-theme'); }
+      try { localStorage.removeItem('local-tex-editor-appearance'); localStorage.removeItem('local-tex-editor-theme'); localStorage.removeItem('local-tex-editor-language'); }
       catch { /* Browser caching is optional. */ }
     }
     removePreviousDraftBackups(result.draftsGeneration || '');
@@ -2070,7 +2114,7 @@ function applyBuild(build, { compiledSnapshot = false } = {}) {
     viewer.reset().catch(showError); viewer.restorePosition(null, positions);
   }
   if (nextPDF) loadCompiledPDF(nextPDF).catch(showError);
-  else if (!build?.pdfReady && !state.meta?.compiledPDFs?.length && (viewer.document || viewer.loadingTask)) {
+  else if (!build?.pdfReady && !state.meta?.compiledPDFs?.length && (viewer.document || viewer.loadingTask || viewer.requestedBuildId)) {
     state.previewPDF = null; viewer.reset().catch(showError);
   }
   if (compiledSnapshot) { viewer.forgetMissingDocuments(entries.map(entry => entry.main)); scheduleSession(); }
@@ -2174,7 +2218,8 @@ function renderControls() {
   $('file-sort').disabled = busy || !project;
   $('close-all-tabs').disabled = busy || !state.tabOrder.length;
   $('refresh-files').disabled = busy || !project;
-  $('download-pdf').disabled = !pdf || state.closed;
+  $('download-pdf').disabled = !pdf || busy;
+  $('save-as-pdf').disabled = !pdf || busy;
   $('copy-log').disabled = !state.fullLog;
   $('theme-toggle').disabled = state.closed;
   $('help-button').disabled = state.closed;
@@ -2208,10 +2253,39 @@ async function fetchCompiledPDF(entry, projectRoot) {
 }
 function compiledPDFFileName(entry) { return entry.name || basename(entry.main).replace(/\.tex$/i, '') + '.pdf'; }
 async function downloadPDF(entry = currentCompiledPDF()) {
-  if (!entry || !state.meta?.project || state.closed) return;
-  const blob = await fetchCompiledPDF(entry, state.meta.project.root); const url = URL.createObjectURL(blob);
-  const link = document.createElement('a'); link.href = url; link.download = compiledPDFFileName(entry); link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  if (entry) await exportFile({ buildId: entry.buildId }, compiledPDFFileName(entry), false);
+}
+async function savePDFAs(entry = currentCompiledPDF()) {
+  if (entry) await exportFile({ buildId: entry.buildId }, compiledPDFFileName(entry), true);
+}
+async function exportFile(input, name, saveAs) {
+  if (state.operation || state.closed || state.externalProjectChanged || !state.meta?.project) return;
+  const projectRoot = state.meta.project.root;
+  const popup = $('pdf-menu');
+  if (popup.matches(':popover-open')) popup.hidePopover();
+  try {
+    await beginFileAction();
+    const doc = input.path ? state.documents.get(input.path) : null;
+    const snapshot = doc?.state.doc, edited = isDirty(doc);
+    if (edited) input = { ...input, content: documentText(doc), revision: doc.revision, lineEnding: doc.lineEnding };
+    if (saveAs) {
+      const result = await api('/api/file/save-as', { method: 'POST', body: input, projectRoot, timeout: 0 });
+      if (result.cancelled) return;
+      if (result.document && doc) {
+        doc.revision = result.document.revision;
+        doc.lineEnding = result.document.lineEnding || doc.lineEnding;
+        doc.savedDoc = snapshot; doc.conflict = null; doc.diskMissing = false;
+        markPDFSourceChanged(doc.path); updatePreviewNote(); syncDrafts(); updateDocumentIndicators(doc);
+      }
+      toast(result.document?.historyWarning || t(edited ? '編集中の内容を含めて保存しました: {path}' : 'ファイルを保存しました: {path}', { path: result.path }));
+    } else {
+      const blob = await api('/api/file/download', { method: 'POST', body: input, projectRoot, responseType: 'blob', timeout: 120000 });
+      const url = URL.createObjectURL(blob), link = document.createElement('a');
+      link.href = url; link.download = name; document.body.append(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      if (edited) toast(t('編集中の内容を含めてダウンロードしました．'));
+    }
+  } finally { setOperation(''); }
 }
 async function copyCompiledPDF(entry) {
   if (state.operation || isRunning() || state.closed || !state.meta?.project) return;
@@ -2248,7 +2322,7 @@ async function reconnect() {
   const meta = await api('/api/state');
   if (generation !== state.projectGeneration || sequence < state.statusAppliedSequence) return;
   if (state.meta?.project && meta.project?.root !== state.meta.project.root) { handleExternalProjectChange(); return; }
-  if (await applyMeta(meta, !state.meta, sequence)) clearError();
+  if (await applyMeta(meta, !state.meta, sequence) && !notifyApplicationUpdate(meta)) clearError();
 }
 
 async function heartbeat({ forceFiles = false } = {}) {
@@ -2264,6 +2338,7 @@ async function heartbeat({ forceFiles = false } = {}) {
   try {
     const meta = await api('/api/state');
     if (state.closed || generation !== state.projectGeneration) return;
+    notifyApplicationUpdate(meta);
     if (!applyProjectStatuses(meta, sequence)) return;
     if (state.meta?.project && meta.project?.root !== state.meta.project.root) { if (!state.externalProjectChanged) handleExternalProjectChange(); return; }
     let compiledSnapshot = false;
@@ -2334,7 +2409,12 @@ const sessionStore = new SessionStore(api, (status, key, error) => {
     showError(new Error(t("{value0}を記録できませんでした．{value1}", { value0: item, value1: error.message || error })), { label: t("再保存"), run: () => sessionStore.flush({ retryConflicts: true }) });
   }
 }, { getDraftsGeneration: () => state.draftsGeneration });
-const browserSession = new BrowserSession({ token, onConnectionChange: connected => { if (!state.closed && !state.resetDetected) setConnected(connected); } });
+const browserSession = new BrowserSession({ token, onConnectionChange: connected => {
+  if (state.closed || state.resetDetected) return;
+  const reconnecting = connected && !state.connected;
+  setConnected(connected);
+  if (reconnecting && state.operation !== 'initialising') runTask(() => state.meta ? heartbeat({ forceFiles: true }) : initialise());
+} });
 const panelLayout = createPanelLayout({
   workbench: $('workbench'), shell: $('app-shell'),
   handles: { sidebar: $('sidebar-splitter'), editor: $('splitter'), log: $('log-splitter') },
@@ -2350,7 +2430,7 @@ function editorLanguageExtension() {
 }
 function applyLanguage(language, { preview = false } = {}) {
   const selected = setLanguage(language);
-  if (!preview) state.preferences.language = selected;
+  if (!preview) { state.preferences.language = selected; rememberBrowserLanguage(selected); }
   $('language-setting').value = selected;
   for (const doc of state.documents.values()) {
     const transaction = doc.state.update({ effects: editorLanguage.reconfigure(editorLanguageExtension()) });
@@ -2899,10 +2979,12 @@ function updateIndex(path, content, rebuild = true) {
   if (rebuild) rebuildIndex();
 }
 function rebuildIndex() {
-  const values = [...state.texIndex.values()];
-  state.completionItems = { citations: values.flatMap(item => item.citations), labels: values.flatMap(item => item.labels) };
-  viewer.citationTitles.refresh();
-  assetPreview.citationTitles?.refresh();
+  const previous = state.completionItems;
+  state.completionItems = combineCompletionItems(previous, state.texIndex.values());
+  if (state.completionItems.citations !== previous.citations) {
+    viewer.citationTitles?.refresh();
+    assetPreview.citationTitles?.refresh();
+  }
   renderOutline();
 }
 function scheduleIndex(doc) {
@@ -3063,14 +3145,16 @@ async function syncInverse(position) {
 const viewer = new PDFViewer({
   token,
   getCitations: () => state.completionItems.citations,
-  onError: error => showError(error, { label: t("PDF を再表示"), run: async () => { clearError(); await viewer.retry(); } }),
+  onError: error => showError(error, updatedApplicationAction() || { label: t("PDF を再表示"), run: async () => { clearError(); await viewer.retry(); } }),
   onReady: () => { updatePreviewNote(); renderControls(); },
   onPositionChange: () => scheduleSession(),
   onInverse: position => runTask(() => navigate(() => syncInverse(position))),
   onNavigate: action => navigate(action),
   onDarkModeChange: changePDFDarkMode,
 });
-const assetPreview = new AssetPreview({ token, onNavigate: action => navigate(action), onDarkModeChange: changePDFDarkMode, getCitations: () => state.completionItems.citations });
+const assetPreview = new AssetPreview({ token, onNavigate: action => navigate(action), onDarkModeChange: changePDFDarkMode, getCitations: () => state.completionItems.citations,
+  onError: error => { const action = updatedApplicationAction(); if (action) showError(error, action); },
+});
 const markdownPreview = new MarkdownPreview({
   container: $('markdown-preview-container'), token,
   onUserScroll: scrollSourceWithMarkdown,
@@ -3219,7 +3303,7 @@ const fileImporter = createFileImporter({
   onImported: applyImportedFile, onError: showError, onNotice: toast,
 });
 compiledPDFList = createCompiledPDFList({
-  onOpen: openCompiledPDF, onDownload: downloadPDF, onCopy: copyCompiledPDF, onDelete: entry => compiledPDFDeletion.open(entry), onError: showError,
+  onOpen: openCompiledPDF, onDownload: downloadPDF, onSaveAs: savePDFAs, onCopy: copyCompiledPDF, onDelete: entry => compiledPDFDeletion.open(entry), onError: showError,
   isBlocked: () => !!state.operation || state.closed || state.externalProjectChanged || isRunning() || !!document.querySelector('dialog[open]'),
 });
 const compiledPDFDeletion = createCompiledPDFDeletion({
@@ -3237,6 +3321,8 @@ createFileActions({
   getCopyPath: entry => suggestEntryCopyPath(entry, [...(state.meta?.project?.files || []).map(file => file.path), ...(state.meta?.project?.directories || []), ...openProjectPaths()], { platform: state.meta?.platform }),
   getUnsavedPaths: entry => [...new Set([...state.documents.values()].filter(doc => isDirty(doc) && entryContains(entry, doc.path)).map(doc => doc.path).concat((state.drafts.entries || []).filter(draft => entryContains(entry, draft.path)).map(draft => draft.path)))],
   onChanged: applyEntryChange, onNewFile: showNewFile, onImportFiles: folder => fileImporter.open(folder), onError: showError, onNotice: toast,
+  onDownload: entry => exportFile({ path: entry.path }, basename(entry.path), false),
+  onSaveAs: entry => exportFile({ path: entry.path }, basename(entry.path), true),
 });
 fileTreeDrag = createFileTreeDrag({
   tree: $('file-tree'), getProjectRoot: () => state.meta?.project?.root || '',
@@ -3296,12 +3382,14 @@ systemColorScheme.addEventListener('change', () => {
 onClick('show-project', showProjectDialog); onClick('welcome-open', showProjectDialog);
 onClick('go-home', showHome);
 settingsReset = createSettingsReset({ api, onReset: resetSavedInformation, reload: reloadAfterSettingsReset });
+startupSettings = createStartupSettings({ api });
 onClick('settings-reset-data', () => {
   if (state.operation || state.resetDetected) return;
   $('settings-dialog').close();
   return settingsReset.open();
 });
 onClick('settings-button', showSettings); onClick('main-document', showSettings);
+onClick('application-reload', () => { $('settings-dialog').close(); return reloadUpdatedApplication(); });
 onClick('settings-tex-setup', () => texSetup.open({ reason: 'settings', progress: state.texSetupBusy }));
 onClick('settings-tex-management', () => texManagement.open());
 onClick('install-synctex', () => {
@@ -3432,7 +3520,7 @@ $('markdown-scroll-sync').addEventListener('change', () => {
   savePreferences();
   if (state.preferences.markdownScrollSync) scheduleMarkdownScrollSync();
 });
-onClick('refresh-files', refreshFiles); onClick('download-pdf', downloadPDF); onClick('copy-log', copyLog);
+onClick('refresh-files', refreshFiles); onClick('download-pdf', downloadPDF); onClick('save-as-pdf', savePDFAs); onClick('copy-log', copyLog);
 onClick('synctex-forward', () => navigate(() => syncForward()));
 onClick('files-tab', () => { $('file-filter').value = ''; setSidebar('files'); });
 onClick('outline-tab', () => { $('file-filter').value = ''; setSidebar('outline'); });
@@ -3495,7 +3583,7 @@ document.addEventListener('keydown', event => {
   else if (event.key === 'Enter') { event.preventDefault(); runTask(startBuild); }
 });
 window.addEventListener('beforeunload', event => {
-  if (state.closed || state.reloadAfterReset) return;
+  if (state.closed || state.reloadAfterReset || state.reloadForUpdate) return;
   if (!state.resetDetected && !state.resetInProgress) { syncDrafts(); persistSession(); sessionStore.flush().catch(() => {}); }
   if (dirtyDocuments().length || [...state.documents.values()].some(doc => doc.saving)) { event.preventDefault(); event.returnValue = ''; }
 });
@@ -3532,8 +3620,8 @@ async function initialise() {
     state.draftsGeneration = meta.draftsGeneration || '';
     await loadPreferences();
     await applyMeta(meta, true, sequence);
-    if (meta.installationError) showError(new Error(meta.installationError));
     state.heartbeat = setInterval(() => runTask(heartbeat), 30000);
+    registerConnectionPage();
   } catch (error) { showError(error); }
   finally { setOperation(''); runTask(openInitialFile); }
 }

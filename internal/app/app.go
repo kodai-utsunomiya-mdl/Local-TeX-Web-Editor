@@ -41,8 +41,11 @@ type App struct {
 	mu                    sync.Mutex
 	cacheMu               sync.RWMutex
 	shortcutMu            sync.Mutex
+	startupMu             sync.Mutex
+	startupHooks          *startupHooks
 	templateMu            sync.Mutex
 	shortcutCreator       func(string) (platform.ShortcutResult, error)
+	saveFilePicker        fileSavePicker
 	options               Options
 	packageIdentity       *platform.PackageIdentity
 	config                configuration
@@ -180,6 +183,7 @@ func (a *App) Close() error {
 	a.mu.Unlock()
 	a.CloseBrowserSessions()
 	platform.CancelFolderPicker()
+	platform.CancelSavePicker()
 	a.cancelTeXSetup()
 	_ = a.stopBuild()
 	if setupDone != nil {
@@ -218,8 +222,12 @@ func (a *App) Handler() http.Handler {
 	mux.HandleFunc("/api/tex/packages/remove-preview", a.texPackageRemovalPreviewHandler)
 	mux.HandleFunc("/api/tex/packages/manager", a.texPackageManagerHandler)
 	mux.HandleFunc("/api/shortcuts", a.shortcutsHandler)
+	mux.HandleFunc("/api/startup", a.startupHandler)
+	mux.HandleFunc("/api/startup/settings", a.startupSettingsHandler)
 	mux.HandleFunc("/api/storage", a.storageHandler)
 	mux.HandleFunc("/api/file", a.fileHandler)
+	mux.HandleFunc("/api/file/download", a.fileDownloadHandler)
+	mux.HandleFunc("/api/file/save-as", a.fileSaveAsHandler)
 	mux.HandleFunc("/api/entry", a.entryHandler)
 	mux.HandleFunc("/api/project/search", a.projectSearchHandler)
 	mux.HandleFunc("/api/project/replace", a.projectReplaceHandler)

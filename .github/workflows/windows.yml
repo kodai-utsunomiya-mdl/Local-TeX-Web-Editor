@@ -108,17 +108,17 @@ jobs:
           LOCAL_TEX_EDITOR_TEST_PHASE: after-tex
         run: npm test
 
-      - name: Test the Windows folder selection dialog
+      - name: Test the Windows folder and Save As dialogs
         if: ${{ !cancelled() }}
         shell: pwsh
         env:
           LOCAL_TEX_EDITOR_TEST_NATIVE_PICKER: '1'
         run: |
           New-Item -ItemType Directory -Force test-results | Out-Null
-          go test -p 1 -count=1 -timeout 90s -v -run NativeFolderPicker ./internal/platform ./internal/app 2>&1 | Tee-Object -FilePath native-folder-picker.log
+          go test -p 1 -count=1 -timeout 120s -v -run 'Native(Folder|Save)Picker' ./internal/platform ./internal/app 2>&1 | Tee-Object -FilePath native-folder-picker.log
           $testExitCode = $LASTEXITCODE
           Copy-Item native-folder-picker.log test-results/native-folder-picker.log
-          if ($testExitCode -ne 0) { throw 'The Windows folder selection test failed.' }
+          if ($testExitCode -ne 0) { throw 'The Windows file dialog test failed.' }
 
       - name: Remove the app-managed TeX environment after the checks
         run: node scripts/test-tex-setup.mjs --remove
@@ -257,14 +257,14 @@ jobs:
       - name: Test the packaged app, editing, compilation, and shutdown
         run: node scripts/test-macos.mjs
 
-      - name: Test the native macOS folder selection dialog
+      - name: Test the native macOS folder and Save As dialogs
         if: ${{ !cancelled() }}
         shell: bash
         env:
           LOCAL_TEX_EDITOR_TEST_NATIVE_PICKER: '1'
         run: |
           mkdir -p test-results/macos
-          go test -count=1 -timeout 45s -v -run NativeFolderPickerMac ./internal/platform 2>&1 | tee test-results/macos/native-folder-picker.log
+          go test -count=1 -timeout 60s -v -run 'Native(Folder|Save)PickerMac' ./internal/platform 2>&1 | tee test-results/macos/native-folder-picker.log
 
       - name: Remove the app-managed TeX environment after the checks
         run: node scripts/test-tex-setup.mjs --remove

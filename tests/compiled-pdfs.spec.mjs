@@ -27,7 +27,7 @@ test.beforeAll(async () => {
         if (window.compiledFail === name) throw new Error('Cannot complete ' + name);
         window.compiledActions.push({ action: name, buildId: entry.buildId, main: entry.main });
       };
-      const component = createCompiledPDFList({ onOpen: action('open'), onDownload: action('download'), onCopy: action('copy'), onDelete: action('delete'),
+      const component = createCompiledPDFList({ onOpen: action('open'), onDownload: action('download'), onSaveAs: action('saveAs'), onCopy: action('copy'), onDelete: action('delete'),
         isBlocked: () => window.compiledBlocked, onError: error => { window.compiledError = error.message; } });
       const tree = document.querySelector('#file-tree');
       tree.addEventListener('contextmenu', () => { window.treeContextEvents++; });
@@ -85,23 +85,26 @@ test('PDF 名とコンパイル元を 2 行で表示し，検索と表示言語�
   await expect(row(page, 'old').locator('.compiled-pdf-name')).toHaveText('PDF from 旧版の原稿.tex');
 });
 
-test('クリックと独自のメニューから対象の PDF を開き，保存，コピー，削除を選べる', async ({ page }) => {
+test('対象の PDF を開き，ダウンロード，名前を付けて保存，コピー，削除を選べる', async ({ page }) => {
   await openList(page);
   const target = row(page, 'second');
   await target.click();
   await expect.poll(() => page.evaluate(() => window.compiledActions)).toEqual([{ action: 'open', buildId: 'second', main: entries[0].main }]);
   await target.click({ button: 'right' });
   await expect(menu(page)).toBeVisible();
-  await expect(menu(page).getByRole('menuitem')).toHaveText(['開く', 'PDF を保存', 'プロジェクトへコピー…', '削除…']);
+  await expect(menu(page).getByRole('menuitem')).toHaveText(['開く', 'ダウンロード', '名前を付けて保存…', 'プロジェクトへコピー…', '削除…']);
   await expect(menu(page).getByRole('menuitem', { name: '開く', exact: true })).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(menu(page)).toBeHidden();
   await expect(target).toBeFocused();
   await target.press('Shift+F10');
   await page.keyboard.press('ArrowDown');
-  await expect(menu(page).getByRole('menuitem', { name: 'PDF を保存', exact: true })).toBeFocused();
+  await expect(menu(page).getByRole('menuitem', { name: 'ダウンロード', exact: true })).toBeFocused();
   await page.keyboard.press('Enter');
   await expect.poll(() => page.evaluate(() => window.compiledActions.at(-1))).toEqual({ action: 'download', buildId: 'second', main: entries[0].main });
+  await target.click({ button: 'right' });
+  await menu(page).getByRole('menuitem', { name: '名前を付けて保存…', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.compiledActions.at(-1))).toEqual({ action: 'saveAs', buildId: 'second', main: entries[0].main });
   await target.click({ button: 'right' });
   await menu(page).getByRole('menuitem', { name: 'プロジェクトへコピー…', exact: true }).click();
   await expect.poll(() => page.evaluate(() => window.compiledActions.at(-1))).toEqual({ action: 'copy', buildId: 'second', main: entries[0].main });

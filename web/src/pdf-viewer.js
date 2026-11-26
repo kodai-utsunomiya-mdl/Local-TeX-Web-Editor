@@ -1,13 +1,11 @@
 import { t, getLanguage, onLanguageChange } from './i18n.js';
-import * as pdfjs from 'pdfjs-dist/build/pdf.mjs';
-import { EventBus, PDFViewer as DocumentViewer, PDFLinkService, LinkTarget, RenderingStates } from 'pdfjs-dist/web/pdf_viewer.mjs';
+import { loadPDFRuntime } from './pdf-loader.js';
 import { PDFSearch } from './pdf-search.js';
 import { zoomPDFAt } from './pdf-zoom.js';
 import { afterNavigationFrame, connectPDFNavigation } from './navigation-history.js';
 import { PDFDarkMode, PDFToolbar } from './pdf-appearance.js';
 import { PDFCitationTitles } from './pdf-citations.js';
 
-pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 const cancelled = error => /RenderingCancelledException|AbortException/.test(error?.name || '') || /destroyed|cancelled/i.test(error?.message || '');
 const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
 
@@ -19,6 +17,7 @@ export class PDFViewer {
     this.onPositionChange = onPositionChange;
     this.onInverse = onInverse;
     this.onNavigate = onNavigate;
+    this.getCitations = getCitations;
     this.document = null;
     this.loadingTask = null;
     this.loadCompletion = Promise.resolve(false);
@@ -45,49 +44,12 @@ export class PDFViewer {
       this.elements.empty.querySelector('h3').textContent = t(this.emptyError ? 'PDF を表示できませんでした' : 'PDF をここに表示します');
       this.elements.empty.querySelector('p').textContent = this.emptyError?.message || (this.emptyError ? String(this.emptyError) : t('原稿を保存し，コンパイルしてください．'));
     });
-    this.eventBus = new EventBus();
-    this.citationTitles = new PDFCitationTitles({ container: this.elements.stage, eventBus: this.eventBus, getCitations });
-    this.linkService = new PDFLinkService({ eventBus: this.eventBus, externalLinkTarget: LinkTarget.BLANK, externalLinkRel: 'noopener noreferrer', ignoreDestinationZoom: true });
-    connectPDFNavigation(this.linkService, action => this.navigate(action), async () => { await afterNavigationFrame(); this.pageViewer.update(); });
-    this.search = new PDFSearch({ eventBus: this.eventBus, linkService: this.linkService, pane: document.getElementById('pdf-preview') || document.getElementById('pdf-pane'), toolbar: document.querySelector('.pdf-toolbar'), scroll: this.elements.scroll });
+    this.search = new PDFSearch({ pane: document.getElementById('pdf-preview') || document.getElementById('pdf-pane'), toolbar: document.querySelector('.pdf-toolbar'), scroll: this.elements.scroll });
     const toolbar = document.querySelector('.pdf-toolbar');
     this.toolbar = new PDFToolbar({ toolbar, panel: document.getElementById('pdf-view-controls'), button: document.getElementById('pdf-more'), menu: document.getElementById('pdf-menu'), compactWidth: 640,
       alwaysVisible: [this.elements['zoom-out'], this.elements['zoom-in'], document.getElementById('download-pdf')],
       moveWhenNarrow: [{ element: toolbar?.querySelector('.preview-choice'), below: 500 },
         { element: this.elements.prev, below: 420 }, { element: this.elements.next, below: 420 }] });
-    this.pageViewer = new DocumentViewer({
-      container: this.elements.scroll,
-      viewer: this.elements.stage,
-      eventBus: this.eventBus,
-      linkService: this.linkService,
-      findController: this.search.controller,
-      annotationEditorMode: pdfjs.AnnotationEditorType.DISABLE,
-      annotationMode: pdfjs.AnnotationMode.ENABLE,
-      imageResourcesPath: '/images/',
-      maxCanvasPixels: 3_000_000,
-      maxCanvasDim: 8192,
-      enableDetailCanvas: true,
-      enableAutoLinking: false,
-      minDurationToUpdateCanvas: 100,
-    });
-    this.linkService.setViewer(this.pageViewer);
-    this.pageViewer.renderingQueue.onIdle = () => this.pageViewer.cleanup();
-    this.eventBus.on('pagesinit', () => this.initialisePages().catch(error => this.report(error)));
-    this.eventBus.on('pagechanging', () => { this.updateControls(); this.markCurrentCanvas(); });
-    this.eventBus.on('scalechanging', event => {
-      this.zoomSetting = event.presetValue || String(event.scale);
-      this.updateControls(); this.drawHighlight();
-    });
-    this.eventBus.on('pagerender', event => {
-      if (event.source === this.pageViewer.getPageView(event.pageNumber - 1) && event.source.canvas) event.source.canvas.dataset.ready = 'false';
-    });
-    this.eventBus.on('pagerendered', event => this.pageRendered(event));
-    this.eventBus.on('updateviewarea', event => {
-      if (!this.ready || !this.document) return;
-      this.lastLocation = { ...event.location };
-      this.markCurrentCanvas();
-      this.onPositionChange?.(this.getViewState());
-    });
     this.elements.prev.addEventListener('click', () => this.goToPage(this.pageNumber - 1));
     this.elements.next.addEventListener('click', () => this.goToPage(this.pageNumber + 1));
     this.elements.page.addEventListener('change', () => this.goToPage(Number(this.elements.page.value)));
@@ -128,7 +90,52 @@ export class PDFViewer {
     this.updateControls();
   }
 
-  get pageNumber() { return this.pageViewer.currentPageNumber || 1; }
+  ensurePDFViewer(runtime) {
+    if (this.pageViewer) return;
+    const { pdfjs, EventBus, PDFViewer: DocumentViewer, PDFLinkService, LinkTarget, RenderingStates } = runtime;
+    this.RenderingStates = RenderingStates;
+    this.eventBus = new EventBus();
+    this.citationTitles = new PDFCitationTitles({ container: this.elements.stage, eventBus: this.eventBus, getCitations: this.getCitations });
+    this.linkService = new PDFLinkService({ eventBus: this.eventBus, externalLinkTarget: LinkTarget.BLANK, externalLinkRel: 'noopener noreferrer', ignoreDestinationZoom: true });
+    connectPDFNavigation(this.linkService, action => this.navigate(action), async () => { await afterNavigationFrame(); this.pageViewer.update(); });
+    this.search.attachRuntime(runtime, this.eventBus, this.linkService);
+    this.pageViewer = new DocumentViewer({
+      container: this.elements.scroll,
+      viewer: this.elements.stage,
+      eventBus: this.eventBus,
+      linkService: this.linkService,
+      findController: this.search.controller,
+      annotationEditorMode: pdfjs.AnnotationEditorType.DISABLE,
+      annotationMode: pdfjs.AnnotationMode.ENABLE,
+      imageResourcesPath: '/images/',
+      maxCanvasPixels: 3_000_000,
+      maxCanvasDim: 8192,
+      enableDetailCanvas: true,
+      enableAutoLinking: false,
+      minDurationToUpdateCanvas: 100,
+    });
+    this.linkService.setViewer(this.pageViewer);
+    this.pageViewer.renderingQueue.onIdle = () => this.pageViewer.cleanup();
+    this.eventBus.on('pagesinit', () => this.initialisePages().catch(error => this.report(error)));
+    this.eventBus.on('pagechanging', () => { this.updateControls(); this.markCurrentCanvas(); });
+    this.eventBus.on('scalechanging', event => {
+      this.zoomSetting = event.presetValue || String(event.scale);
+      this.updateControls(); this.drawHighlight();
+    });
+    this.eventBus.on('pagerender', event => {
+      if (event.source === this.pageViewer.getPageView(event.pageNumber - 1) && event.source.canvas) event.source.canvas.dataset.ready = 'false';
+    });
+    this.eventBus.on('pagerendered', event => this.pageRendered(event));
+    this.eventBus.on('updateviewarea', event => {
+      if (!this.ready || !this.document) return;
+      this.lastLocation = { ...event.location };
+      this.markCurrentCanvas();
+      this.onPositionChange?.(this.getViewState());
+    });
+    this.updateControls();
+  }
+
+  get pageNumber() { return this.pageViewer?.currentPageNumber || 1; }
   get darkMode() { return this.pdfAppearance.darkMode; }
   setDarkMode(enabled) { this.pdfAppearance.setDarkMode(enabled); }
 
@@ -144,11 +151,11 @@ export class PDFViewer {
     this.elements.next.disabled = !enabled || this.pageNumber >= count;
     this.elements.page.disabled = !enabled;
     this.elements.zoom.disabled = !enabled;
-    this.elements['zoom-in'].disabled = !enabled || this.pageViewer.currentScale >= 25;
-    this.elements['zoom-out'].disabled = !enabled || this.pageViewer.currentScale <= 0.1;
+    this.elements['zoom-in'].disabled = !enabled || this.pageViewer?.currentScale >= 25;
+    this.elements['zoom-out'].disabled = !enabled || this.pageViewer?.currentScale <= 0.1;
     const select = this.elements.zoom;
     const custom = select.querySelector('[data-custom-zoom]');
-    const scale = this.pageViewer.currentScale;
+    const scale = this.pageViewer?.currentScale || 1;
     const preset = [...select.options].find(option => option !== custom && option.value === this.zoomSetting);
     if (preset) { custom.hidden = true; select.value = preset.value; }
     else { custom.hidden = false; custom.value = String(scale); custom.textContent = `${Math.round(scale * 100)}%`; select.value = custom.value; }
@@ -225,7 +232,7 @@ export class PDFViewer {
   }
 
   async loadDocument(buildId, projectRoot, main, generation, cancelledWait) {
-    this.citationTitles.hide();
+    this.citationTitles?.hide();
     this.requestedBuildId = buildId;
     this.lastRequest = { buildId, projectRoot, main };
     this.elements.loading.hidden = false;
@@ -235,7 +242,10 @@ export class PDFViewer {
     if (generation !== this.generation) return;
     let task;
     try {
-      task = pdfjs.getDocument({
+      const runtime = await loadPDFRuntime();
+      if (generation !== this.generation) return false;
+      this.ensurePDFViewer(runtime);
+      task = runtime.pdfjs.getDocument({
         url: `/api/pdf?build=${encodeURIComponent(buildId)}`,
         httpHeaders: { 'X-Local-Token': this.token, 'X-Project-Root': encodeURIComponent(projectRoot), 'Accept-Language': getLanguage() },
         cMapUrl: '/cmaps/', cMapPacked: true,
@@ -322,7 +332,7 @@ export class PDFViewer {
         this.pageViewer.update();
         this.updateControls();
         this.markCurrentCanvas();
-        if (view.renderingState === RenderingStates.FINISHED && view.canvas) this.notifyReady();
+        if (view.renderingState === this.RenderingStates.FINISHED && view.canvas) this.notifyReady();
       } catch (error) {
         if (generation === this.generation && document === this.document) throw error;
       }
@@ -464,7 +474,7 @@ export class PDFViewer {
   }
 
   async reset() {
-    this.citationTitles.hide();
+    this.citationTitles?.hide();
     this.emptyError = null;
     ++this.generation;
     this.cancelLoadWait?.(); this.cancelLoadWait = null; this.loadCompletion = Promise.resolve(false);
@@ -477,7 +487,7 @@ export class PDFViewer {
     delete this.elements.stage.dataset.buildId;
     this.clearHighlight();
     this.search.reset();
-    this.pageViewer.setDocument(null); this.linkService.setDocument(null);
+    this.pageViewer?.setDocument(null); this.linkService?.setDocument(null);
     this.elements.stage.hidden = true; this.elements.empty.hidden = false;
     this.elements.empty.querySelector('h3').textContent = t("PDF をここに表示します");
     this.elements.empty.querySelector('p').textContent = t("原稿を保存し，コンパイルしてください．");
