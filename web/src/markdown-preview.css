@@ -1,11 +1,11 @@
 .markdown-preview-panel { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; min-width: 0; }
 .markdown-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 3px 8px; min-height: 36px; flex: 0 0 auto; padding: 4px 6px; background: var(--surface); border-bottom: 1px solid var(--border); }
 .markdown-scroll-sync { display: inline-flex; align-items: center; flex: 0 0 auto; gap: 5px; min-height: 26px; white-space: nowrap; font-size: 11px; color: var(--secondary, #586e7b); cursor: pointer; }
-.markdown-scroll-sync input { width: 13px; height: 13px; margin: 0; accent-color: var(--accent, #0d7b70); }
+.markdown-scroll-sync input { width: 13px; height: 13px; margin: 0; accent-color: var(--accent, #2463b7); }
 .markdown-document-name { flex: 1 1 120px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; line-height: 20px; color: var(--muted); }
 .markdown-preview-container { display: flex; flex: 1 1 auto; min-height: 0; min-width: 0; flex-direction: column; }
 .markdown-preview { flex: 1 1 auto; min-height: 0; min-width: 0; overflow: auto; padding: 26px clamp(20px, 4vw, 48px) 64px; background: var(--surface, #fff); color: var(--text, #243341); scrollbar-width: thin; scrollbar-color: #b4c2ce transparent; overscroll-behavior: contain; }
-.markdown-preview:focus-visible { outline: 2px solid var(--accent, #0d7b70); outline-offset: -2px; }
+.markdown-preview:focus-visible { outline: 2px solid var(--accent, #2463b7); outline-offset: -2px; }
 .markdown-body { width: 100%; max-width: 920px; flex: 0 0 auto; margin: 0 auto; font: 14px/1.85 "Segoe UI", "Yu Gothic UI", Meiryo, sans-serif; font-synthesis: weight style; overflow-wrap: anywhere; }
 .markdown-body :is(em, i) { font-style: italic; }
 .markdown-body :is(s, del) { text-decoration-line: line-through; }
@@ -22,7 +22,7 @@
 .markdown-body li + li { margin-top: .25em; }
 .markdown-body ul, .markdown-body ol { padding-left: 1.8em; }
 .markdown-body ul ul, .markdown-body ol ul, .markdown-body ul ol, .markdown-body ol ol { margin-bottom: .35em; }
-.markdown-body a { color: var(--accent, #0d7b70); text-decoration: underline; text-underline-offset: 2px; }
+.markdown-body a { color: var(--accent, #2463b7); text-decoration: underline; text-underline-offset: 2px; }
 .markdown-body a:not([href]) { color: inherit; text-decoration: none; }
 .markdown-body a:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 .markdown-body blockquote { padding: .1em 0 .1em 1em; margin-left: 0; margin-right: 0; border-left: 3px solid var(--border-strong, #bacbd5); color: var(--secondary, #586e7b); }
@@ -41,7 +41,7 @@
 .markdown-image-frame > img[data-state="error"] { min-width: 0; min-height: 0; }
 .markdown-body .markdown-image-link { display: inline-flex; padding: .2em .6em; border: 1px solid var(--border, #dce3e9); border-radius: 4px; font-size: .9em; }
 .markdown-body .markdown-task { list-style-type: none; margin-left: -1.35em; }
-.markdown-body .markdown-task > input { margin-right: .55em; vertical-align: middle; accent-color: var(--accent, #0d7b70); }
+.markdown-body .markdown-task > input { margin-right: .55em; vertical-align: middle; accent-color: var(--accent, #2463b7); }
 .markdown-body .katex { font-size: 1.08em; }
 .markdown-body .katex-display { overflow-x: auto; overflow-y: hidden; padding: .25em 0; margin: 1.1em 0; }
 .markdown-body .katex-error { color: var(--danger, #bd3c4d) !important; }
@@ -49,7 +49,7 @@
 .markdown-body .eqno > div { min-width: 0; flex: 1; }
 .markdown-body .eqno > span { flex: 0 0 auto; }
 .markdown-body ::selection { background: #90c8f580; color: inherit; }
-.markdown-body .markdown-source-highlight { outline: 2px solid var(--accent, #0d7b70); outline-offset: 4px; border-radius: 2px; background-color: #0d7b7014; }
+.markdown-body .markdown-source-highlight { outline: 2px solid var(--accent, #2463b7); outline-offset: 4px; border-radius: 2px; background-color: #2463b714; }
 [data-theme="dark"] .markdown-preview { scrollbar-color: #506b7d transparent; }
 [data-theme="dark"] .markdown-body ::selection { background: #437eaeaa; }
-[data-theme="dark"] .markdown-body .markdown-source-highlight { background-color: #76cbb21a; }
+[data-theme="dark"] .markdown-body .markdown-source-highlight { background-color: #83b5ff1a; }

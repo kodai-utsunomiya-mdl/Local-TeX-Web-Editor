@@ -21,6 +21,7 @@
 :is(.pdf-view-controls, .asset-view-controls)[popover] .pdf-zoom-controls { gap: 8px; }
 .pdf-menu { position: fixed; inset: auto; width: 320px; max-width: calc(100vw - 16px); max-height: calc(100vh - 16px); margin: 0; padding: 12px; overflow: auto; border: 1px solid var(--border-strong); border-radius: 7px; background: var(--surface); color: var(--text); box-shadow: 0 8px 24px #0003; }
 .pdf-menu:not(:popover-open) { display: none; }
+.pdf-menu > #save-as-pdf { margin-bottom: 12px; }
 .pdf-document-details { display: grid; gap: 10px; margin: 0; font-size: 12px; }
 .pdf-document-details dt { margin-bottom: 3px; color: var(--muted); font-size: 11px; }
 .pdf-document-details dd { margin: 0; overflow-wrap: anywhere; white-space: normal; user-select: text; }

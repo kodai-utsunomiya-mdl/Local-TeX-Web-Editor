@@ -32,7 +32,7 @@ export function visibleCompiledPDFs(entries, { filter = '', sort = 'name-asc', l
   });
 }
 
-export function createCompiledPDFList({ onOpen, onDownload, onCopy, onDelete, isBlocked = () => false, onError = () => {} }) {
+export function createCompiledPDFList({ onOpen, onDownload, onSaveAs, onCopy, onDelete, isBlocked = () => false, onError = () => {} }) {
   const document = globalThis.document, window = document.defaultView;
   const make = (tag, className, text) => {
     const element = document.createElement(tag);
@@ -48,7 +48,8 @@ export function createCompiledPDFList({ onOpen, onDownload, onCopy, onDelete, is
   menu.role = 'menu'; menu.hidden = true; document.body.append(menu);
   const actions = [
     { id: 'open', label: '開く', callback: onOpen },
-    { id: 'download', label: 'PDF を保存', callback: onDownload },
+    { id: 'download', label: 'ダウンロード', callback: onDownload },
+    { id: 'saveAs', label: '名前を付けて保存…', callback: onSaveAs },
     { id: 'copy', label: 'プロジェクトへコピー…', callback: onCopy },
     { id: 'delete', label: '削除…', callback: onDelete },
   ];

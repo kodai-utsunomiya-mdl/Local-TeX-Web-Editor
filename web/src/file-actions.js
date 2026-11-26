@@ -6,6 +6,7 @@ const labels = {
   importFiles: ['コンピューターからファイルを追加…', 'Add files from your computer…'],
   rename: ['名前を変更', 'Rename'], remove: ['削除…', 'Delete…'],
   duplicate: ['コピーを作成…', 'Create a copy…'], copy: ['コピーを作成', 'Create a copy'],
+  download: ['ダウンロード', 'Download'], saveAs: ['名前を付けて保存…', 'Save As…'],
   relative: ['相対パスをコピー', 'Copy relative path'], absolute: ['絶対パスをコピー', 'Copy full path'],
   cancel: ['キャンセル', 'Cancel'], close: ['閉じる', 'Close'], create: ['作成', 'Create'], delete: ['削除', 'Delete'],
   path: ['プロジェクト内のパス', 'Path in the project'],
@@ -74,7 +75,7 @@ export function suggestEntryCopyPath(entry, paths, { platform = '' } = {}) {
   }
 }
 
-export function createFileActions({ tree, getProject, getCopyPath, isBlocked, begin, end, inspectOpenDocuments, checkDestination, getUnsavedPaths, api, onChanged, onNewFile, onImportFiles = null, onError, onNotice }) {
+export function createFileActions({ tree, getProject, getCopyPath, isBlocked, begin, end, inspectOpenDocuments, checkDestination, getUnsavedPaths, api, onChanged, onNewFile, onImportFiles = null, onDownload = null, onSaveAs = null, onError, onNotice }) {
   const menu = make('div', 'file-context-menu'); menu.id = 'file-context-menu'; menu.role = 'menu'; menu.hidden = true;
   const dialog = make('dialog', 'dialog file-action-dialog'); dialog.id = 'file-action-dialog'; dialog.setAttribute('aria-labelledby', 'file-action-title');
   const form = make('form');
@@ -209,6 +210,11 @@ export function createFileActions({ tree, getProject, getCopyPath, isBlocked, be
     if (onImportFiles) item('importFiles', () => { if (returnFocus?.isConnected) returnFocus.focus(); onImportFiles(folder); });
     const separator = () => { const rule = make('div', 'file-menu-separator'); rule.role = 'separator'; menu.append(rule); };
     separator();
+    if (target.path && !target.directory) {
+      if (onDownload) item('download', () => { if (returnFocus?.isConnected) returnFocus.focus(); return onDownload(target); });
+      if (onSaveAs) item('saveAs', () => { if (returnFocus?.isConnected) returnFocus.focus(); return onSaveAs(target); });
+      if (onDownload || onSaveAs) separator();
+    }
     if (target.path) item('relative', async () => { await navigator.clipboard.writeText(target.path); onNotice(text('copied')); });
     item('absolute', async () => { await navigator.clipboard.writeText(absoluteProjectPath(getProject().root, target.path)); onNotice(text('copied')); });
     if (target.path) { separator(); item('duplicate', () => openDialog('copy', target)); item('rename', () => openDialog('rename', target)); item('remove', () => openDialog('delete', target), true); }

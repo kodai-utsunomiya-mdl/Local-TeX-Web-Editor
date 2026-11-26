@@ -4,13 +4,13 @@ English | [日本語](README.ja.md) · [Website and guide](https://kodai-utsunom
 
 [![Get the free Windows app from Microsoft Store](docs/download-store.svg)](https://apps.microsoft.com/detail/9P6QF32N19HG)
 &nbsp;&nbsp;
-[![Download Windows ZIP](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.14/local-tex-web-editor-0.1.14-windows-x64.zip)
+[![Download Windows ZIP](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.15/local-tex-web-editor-0.1.15-windows-x64.zip)
 &nbsp;&nbsp;
-[![Download for macOS](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.14/local-tex-web-editor-0.1.14-macos-universal.zip)
+[![Download for macOS](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.15/local-tex-web-editor-0.1.15-macos-universal.zip)
 
-**v0.1.14** · [All downloads and release notes](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [Get started](#first-document) · [Download and launch](#download-and-launch) · [Requirements](#requirements) · [App size](#app-files-and-storage)
+**v0.1.15** · [All downloads and release notes](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [Get started](#first-document) · [Download and launch](#download-and-launch) · [Requirements](#requirements) · [App size](#app-files-and-storage)
 
-The ZIP downloads are v0.1.14. The Microsoft Store update becomes available after Store review and publication.
+The ZIP downloads are v0.1.15. The Microsoft Store update becomes available after Store review and publication.
 
 Edit TeX and Markdown documents in your browser on Windows or macOS. On a computer without TeX, start this app and choose **Home → Set up TeX…**. The app downloads and installs TeX, selects the new environment when setup finishes, and uses it to compile your documents. Launching the app opens a `localhost` page in your default browser, with the editor and PDF preview in the same window.
 
@@ -68,7 +68,7 @@ Microsoft Store manages installation and app updates. The setup guide below cont
 #### ZIP download
 
 1. Open [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) and select the latest version.
-2. Under **Assets**, download `local-tex-web-editor-0.1.14-windows-x64.zip`. The **Source code** archives contain the files for development.
+2. Under **Assets**, download `local-tex-web-editor-0.1.15-windows-x64.zip`. The **Source code** archives contain the files for development.
 3. Extract the ZIP and double-click `local-tex-web-editor.exe`.
 4. On Home, [set up TeX from the app](#set-up-tex-from-the-app) if TeX is not installed, or [select your existing installation](#use-an-existing-tex-installation) if you already use TeX. Then choose **Create from a template** on Home to create a sample.
 
@@ -76,7 +76,7 @@ The Windows executable in the ZIP download does not have a code signature. If Sm
 
 ### macOS
 
-1. Under **Assets** in [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases), download `local-tex-web-editor-0.1.14-macos-universal.zip`. The same ZIP supports Apple Silicon and Intel.
+1. Under **Assets** in [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases), download `local-tex-web-editor-0.1.15-macos-universal.zip`. The same ZIP supports Apple Silicon and Intel.
 2. Extract the ZIP and move `Local TeX Web Editor.app` to **Applications**.
 3. Open **Local TeX Web Editor** from Finder or Spotlight. The editor opens in your browser.
 4. On Home, [set up TeX from the app](#set-up-tex-from-the-app) if TeX is not installed, or [select your existing installation](#use-an-existing-tex-installation) if you already use TeX. Then choose **Create from a template** on Home to create a sample.
@@ -218,6 +218,18 @@ The app keeps running when an editor browser tab sleeps, is discarded, or closes
 
 Use the exit button at the top right to stop the app and any running compilation. If there are unsaved edits, choose whether to save them to the project files or leave them as drafts. If the browser does not allow the tab to close automatically, the page shows that the app has stopped. Close the tab with `Ctrl + W` on Windows or `Cmd + W` on Mac.
 
+### Restore the editor after restarting the computer
+
+The app remembers its local address so a browser tab can reconnect after the app restarts. To make it available when you sign in to your computer:
+
+1. Open **Settings → Start at login**.
+2. Choose **Enable start at login**. If the operating system asks for approval, follow the explanation shown there. **Open system startup settings…** opens the relevant OS settings when needed.
+3. After restarting your computer, restore your previous browser tabs as usual. The editor opens the project and its recorded tabs and positions. If the browser opens first, a waiting page reconnects when the app is ready.
+
+Start at login runs the app in the background and opens no additional browser tab. **Disable** turns it off for later logins. **Quit** still stops the current app session; opening the app starts it again. You can also leave start at login disabled and open the app yourself before returning to the restored tab.
+
+After updating from v0.1.14 or earlier, open the app once and use the newly opened tab for future browser restores. A tab left over from an older version uses its former temporary address. If another app takes the remembered address, the editor opens at an available address and explains which tab to use.
+
 ### Update the app
 
 For the **Microsoft Store edition**, use Microsoft Store to install app updates, then open the app from the Start menu.
@@ -240,7 +252,7 @@ For the **ZIP edition**, create a shortcut from the app:
 
 This places the app at `%LOCALAPPDATA%\Programs\LocalTeXEditor\local-tex-web-editor.exe`. The shortcut continues to work if you move the original download folder. Copies of the ZIP edition use the same settings and drafts.
 
-The executable, shortcuts, and browser tab use a white TeX icon on a green background.
+The executable, shortcuts, and browser tab use a white TeX icon on a blue background.
 
 Launching the `.exe` from a new ZIP updates the installed copy and the Start menu or desktop shortcuts you have already created. The same shortcuts then launch the new version.
 
@@ -292,6 +304,8 @@ The app checks the folders again when you open Home or return to the browser win
 Right-click a file, folder, or the empty area of the file list to create a file or folder at that location, or choose **Add files from your computer…** to select existing files. The same file picker is available beside the **＋** button. Selected files are copied into the project; choose the destination folder and review any existing filenames. For each conflict, choose to replace the file, add a copy under another name, or skip it. Files with open tabs or saved drafts must be closed or reviewed before replacement. Multiple files can be selected, with a limit of **128 MiB per file**. The **＋** button continues to accept a project-relative path for a new file.
 
 The context menu also offers relative and full path copying, renaming, and **Delete…**. From the keyboard, focus the entry and press `Shift + F10` or the context-menu key. Use the arrow keys to select an action, `F2` to rename, and `Delete` to open the deletion confirmation. A folder's confirmation shows its contents and unsaved documents, and can delete the folder together with those contents. Renaming updates the open tabs and their editing state, including unsaved text. References written inside other documents remain as written, so update those links when needed.
+
+For a file, **Download** saves a copy using your browser's download settings. **Save as…** opens the Windows or Mac save dialog so you can choose any destination folder and file name; the dialog asks before replacing an existing file. If the file has unsaved edits in the editor, both actions use its current text. Saving a copy elsewhere leaves the original document open with its unsaved edits. If you select the original project file in Save as…, the app saves it through the usual conflict and edit-history checks. These actions also work with images, PDFs and other files.
 
 Choose **Create a copy…** to copy a file or a folder within the project. Review the destination path and any files with unsaved edits before creating the copy. Copies use the contents saved on disk; the original tabs remain available with their unsaved edits. Choose a different destination if that name already exists.
 
@@ -369,7 +383,7 @@ Use the color picker or enter a hexadecimal color code to choose the background,
 
 Notifications and floating menus use their own background and border colors with a visible shadow. Their text colors follow the chosen background in light and dark modes, including custom colors.
 
-The initial appearance uses **System** mode, the **Gray** color scheme, and **Consolas** for the editor. Gray and Consolas appear first in their lists and are marked as the defaults. Your previously saved appearance continues to apply. If Consolas is unavailable, the editor tries Cascadia Code, Menlo, DejaVu Sans Mono, and the browser's monospace font in that order.
+The initial appearance uses **System** mode, the **Gray** color scheme, the **Blue** accent, and **Consolas** for the editor. Gray and Consolas appear first in their lists and are marked as the defaults. Your previously saved appearance continues to apply. If Consolas is unavailable, the editor tries Cascadia Code, Menlo, DejaVu Sans Mono, and the browser's monospace font in that order.
 
 Changes appear immediately. Choose **Save appearance** to use them in future sessions. **Cancel**, `Esc`, or **×** restores the appearance you had when opening the dialog. **Reset appearance** previews the defaults; choose **Save appearance** to apply them.
 
@@ -399,7 +413,7 @@ Open **Settings → Information saved by the app → Reset settings and remember
 
 | Choice | Selected initially | Effect |
 | --- | --- | --- |
-| Settings and remembered actions | Yes | Returns appearance, editing preferences, recent projects, open tabs, editing positions and the selected TeX installation to their defaults |
+| Settings and remembered actions | Yes | Returns appearance, editing preferences, recent projects, open tabs, editing positions and the selected TeX installation to their defaults; disables start at login |
 | Unsaved drafts | No | Deletes the app's copies of text that has not been saved to project files |
 | Edit history | No | Deletes the recorded earlier versions of documents |
 | Your templates | No | Deletes templates you added |
@@ -455,13 +469,13 @@ Relative links in the preview can open other project documents. In visual editin
 
 ## Read the PDF and navigate to source
 
-The file list includes **Compiled PDFs**, with the latest successful result for each TeX document. Each entry shows the actual PDF name and the path of the TeX document used to compile it. Select an entry to open it in the PDF preview while leaving the manuscript tabs in place. Its context menu offers **Open**, **Save PDF**, **Copy into project…**, and **Delete…**. Copying lets you choose a project destination and review any existing name. The list is available again when you reopen the project; a failed compilation leaves its previous successful PDF available.
+The file list includes **Compiled PDFs**, with the latest successful result for each TeX document. Each entry shows the actual PDF name and the path of the TeX document used to compile it. Select an entry to open it in the PDF preview while leaving the manuscript tabs in place. Its context menu offers **Open**, **Download**, **Save as…**, **Copy into project…**, and **Delete…**. Copying lets you choose a project destination and review any existing name. The list is available again when you reopen the project; a failed compilation leaves its previous successful PDF available.
 
 To remove a compiled result, right-click its entry, choose **Delete…**, review the TeX document and the number of files, and choose **Delete**. This removes that document's stored PDF previews and SyncTeX data, including earlier versions, together with its compilation output and auxiliary files under `.local-tex-editor/build`. The TeX source and PDFs saved or copied as ordinary files stay in place. If the displayed result is deleted, the preview opens the most recent remaining PDF or becomes empty when none remain. Compile the TeX document again to create a new PDF and return it to the list.
 
 The PDF scrolls continuously across pages. The app prioritizes rendering the visible page and nearby pages, so a long document does not require rendering every page into an image at once. You can select and copy PDF text and follow links inside the PDF. After following an internal reference link, use **←** above the PDF to return to the position you were reading; **→** moves forward again. `Alt + Left` and `Alt + Right` provide the same navigation from the source or preview. Source links, search results, outline entries, and SyncTeX jumps also participate in this navigation.
 
-The PDF toolbar uses one row. **Back**, **Forward**, **＋**, **−**, **Save PDF**, and the page-number field stay visible in a narrow preview. **… (PDF actions)** is available at every width and shows the PDF file name, the path of the TeX document compiled to produce it, and its update status. As space decreases, the zoom selector, dark display, search, preview selector, and previous/next page buttons move into that menu.
+The PDF toolbar uses one row. **Back**, **Forward**, **＋**, **−**, **Download**, and the page-number field stay visible in a narrow preview. **… (PDF actions)** includes **Save as…** for choosing a destination folder and file name. It is available at every width and shows the PDF file name, the path of the TeX document compiled to produce it, and its update status. As space decreases, the zoom selector, dark display, search, preview selector, and previous/next page buttons move into that menu.
 
 Hover over a citation link in the PDF, or focus it with `Tab`, to see the title, author, and year from the project's `.bib` files. This works with citation links created by hyperref, natbib, and biblatex, in both the compiled preview and project PDF tabs. Clicking the citation still opens its destination. Press `Esc` to close the tooltip. Bibliography entries become available as the project files are read and update when their text is edited.
 
@@ -473,7 +487,8 @@ Hover over a citation link in the PDF, or focus it with `Tab`, to see the title,
 | Search PDF text | Click **Find in PDF** or press `Ctrl + F` while the PDF has focus. Use `Enter` / `Shift + Enter` for the next / previous result |
 | Go from PDF to source | Double-click text in the PDF. The corresponding `.tex` file opens, with space above the destination line near the top of the editor; the line is briefly highlighted |
 | Go from source to PDF | `Ctrl + click` a source line, or place the cursor and click the arrow button above the editor to show that position in the PDF. The corresponding PDF position is briefly highlighted |
-| Export the PDF | Click **Save PDF** |
+| Download the PDF | Click **Download** |
+| Choose a PDF destination and name | Open **… (PDF actions) → Save as…** |
 | Read with a dark background | Toggle **Dark PDF view** in the PDF toolbar. The choice also applies to project PDFs and is saved for the next session |
 
 Dark PDF view changes the colors shown on screen, including figures and photographs. Saving the PDF uses the original file and colors.
@@ -519,7 +534,7 @@ The app does not impose a compilation time limit. Use the stop button to stop a 
 
 ## App files and storage
 
-The table below records the measured **v0.1.14** files, rounded to the nearest MB (1 MB = 1,000,000 bytes). The Assets section of the [current release](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) shows each current download's size.
+The table below records the measured **v0.1.15** files, rounded to the nearest MB (1 MB = 1,000,000 bytes). The Assets section of the [current release](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) shows each current download's size.
 
 | Platform | ZIP download | App after extraction |
 | --- | ---: | ---: |
@@ -548,7 +563,7 @@ TeX installed from the app uses a separate installation folder under the followi
 
 On the first launch, the Store edition imports valid settings, drafts, and view preferences from the ZIP edition when available. The ZIP edition's original data stays in its folder. Source files are saved in the project folder you selected. Using a copy of the PDF lets you keep reading while TeX writes the next version.
 
-The server listens only on a loopback address such as `127.0.0.1`. File and compilation APIs use a token generated when the app starts.
+The server listens only on a loopback address such as `127.0.0.1`. The connection address and randomly generated token are recorded in the app's configuration folder and reused after restarting. File and compilation APIs require that token.
 
 ## Development
 
@@ -570,7 +585,7 @@ go build -o bin/local-tex-web-editor.exe ./cmd/local-tex-editor
 Build a Windows distribution executable:
 
 ```sh
-go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.14" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
+go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.15" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
 ```
 
 `build:windows-resources` generates Windows x64 resources from the bundled ICO. The executable embeds nine icon sizes from 16 to 256 px.
@@ -586,7 +601,7 @@ npx playwright install chromium
 node scripts/build-macos.mjs
 ```
 
-This creates `dist/local-tex-web-editor-0.1.14-macos-universal.zip` with an app supporting Apple Silicon and Intel, the English and Japanese READMEs, and license files.
+This creates `dist/local-tex-web-editor-0.1.15-macos-universal.zip` with an app supporting Apple Silicon and Intel, the English and Japanese READMEs, and license files.
 
 Command-line options:
 
@@ -594,6 +609,7 @@ Command-line options:
 --project PATH       Project folder to open
 --tex-bin PATH       Folder containing TeX Live executables
 --no-browser         Do not open the browser automatically
+--background         Start for this login without opening a browser; reuse a running instance
 --listen ADDRESS     Loopback address and port (default: 127.0.0.1:0)
 --config-dir PATH    Folder for settings and cache
 --ready-file PATH    File to receive the server URL and token

@@ -79,7 +79,7 @@ func showNativeFolderDialog(request *folderPickRequest) (string, error) {
 	if result = dialog.call(17, uintptr(unsafe.Pointer(title))); int32(result) < 0 {
 		return "", folderDialogError("設定", result)
 	}
-	controller, err := newFolderDialogController(request, owner)
+	controller, err := newFileDialogController(request, owner, nativeWideString(title))
 	if err != nil {
 		return "", err
 	}
@@ -138,6 +138,7 @@ type nativeWindowClass struct {
 type folderDialogController struct {
 	hwnd    uintptr
 	request *folderPickRequest
+	title   string
 }
 
 var folderControllerClassOnce sync.Once
@@ -158,7 +159,7 @@ func registerFolderControllerClass() error {
 	return folderControllerClassError
 }
 
-func newFolderDialogController(request *folderPickRequest, owner uintptr) (*folderDialogController, error) {
+func newFileDialogController(request *folderPickRequest, owner uintptr, title string) (*folderDialogController, error) {
 	if err := registerFolderControllerClass(); err != nil {
 		return nil, err
 	}
@@ -178,7 +179,7 @@ func newFolderDialogController(request *folderPickRequest, owner uintptr) (*fold
 	if hwnd == 0 {
 		return nil, messages.Errorf("フォルダーの選択画面を準備できません: %w", err)
 	}
-	return &folderDialogController{hwnd: hwnd, request: request}, nil
+	return &folderDialogController{hwnd: hwnd, request: request, title: title}, nil
 }
 
 func (controller *folderDialogController) forwardRequests() func() {
@@ -258,7 +259,7 @@ type nativeWindowMessage struct {
 }
 
 func (controller *folderDialogController) dialogWindow() uintptr {
-	title := syscall.StringToUTF16Ptr(messages.Text(messages.LanguageFromContext(controller.request.ctx), folderDialogTitle))
+	title := syscall.StringToUTF16Ptr(controller.title)
 	var previous uintptr
 	for {
 		hwnd, _, _ := user32.NewProc("FindWindowExW").Call(0, previous, 0, uintptr(unsafe.Pointer(title)))

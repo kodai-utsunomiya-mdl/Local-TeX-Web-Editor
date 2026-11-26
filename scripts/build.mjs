@@ -1,6 +1,7 @@
 import { build } from 'esbuild';
 import { cp, mkdir, readFile, readdir, writeFile, rm } from 'node:fs/promises';
 import path from 'node:path';
+import { frontendBuildOptions, initialJavaScript } from './frontend-build.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const out = path.join(root, 'web/dist');
@@ -8,17 +9,14 @@ await rm(out, { recursive: true, force: true });
 await mkdir(out, { recursive: true });
 await writeFile(path.join(out, '.keep'), '');
 const bundle = await build({
-  entryPoints: [path.join(root, 'web/src/main.js')],
-  outfile: path.join(out, 'app.js'),
-  bundle: true,
-  minify: true,
-  format: 'esm',
-  target: ['chrome120', 'edge120', 'firefox128'],
-  legalComments: 'linked',
-  metafile: true,
+  ...frontendBuildOptions(root),
   logLevel: 'info'
 });
+console.log(`JavaScript loaded at startup: ${initialJavaScript(bundle.metafile).bytes.toLocaleString('en-US')} bytes.`);
 await cp(path.join(root, 'web/src/index.html'), path.join(out, 'index.html'));
+for (const name of ['offline.html', 'offline.js']) await cp(path.join(root, 'web/src', name), path.join(out, name));
+const version = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8')).version;
+await writeFile(path.join(out, 'service-worker.js'), (await readFile(path.join(root, 'web/src/service-worker.js'), 'utf8')).replaceAll('__APP_VERSION__', version));
 await cp(path.join(root, 'internal/branding/app-icon.svg'), path.join(out, 'app-icon.svg'));
 for (const file of await readdir(path.join(root, 'web/src'))) {
   if (file.endsWith('.css')) await cp(path.join(root, 'web/src', file), path.join(out, file));

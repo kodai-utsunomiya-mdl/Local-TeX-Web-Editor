@@ -1,10 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="252" height="60" viewBox="0 0 252 60" role="img" aria-labelledby="title desc">
   <title id="title">Microsoft Store</title>
   <desc id="desc">Free Windows app in Microsoft Store, Windows 10 version 2004 or later and Windows 11, x64</desc>
-  <rect width="252" height="60" rx="9" fill="#0f766e"/>
+  <rect width="252" height="60" rx="9" fill="#2463b7"/>
   <path d="M27 17v17m-6-6 6 6 6-6M18 37v5h18v-5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
   <g fill="#fff" font-family="Segoe UI, Helvetica, Arial, sans-serif">
     <text x="49" y="26" font-size="16" font-weight="600">Microsoft Store</text>
-    <text x="49" y="45" font-size="12" fill="#ccfbf1">Free · Windows 10 / 11 · x64</text>
+    <text x="49" y="45" font-size="12" fill="#eaf2ff">Free · Windows 10 / 11 · x64</text>
   </g>
 </svg>

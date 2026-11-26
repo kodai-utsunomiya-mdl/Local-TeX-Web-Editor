@@ -910,7 +910,9 @@ test('自動で閉じられないタブに終了を表示し，草稿を次回�
   await page.screenshot({ path: testInfo.outputPath('closed-tab.png') });
 
   await session.restart();
-  await page.goto(`${session.url}#token=${encodeURIComponent(session.token)}`);
+  // The restarted app uses the same address; changing only its token fragment
+  // leaves the closed page in place. Load a new document for draft recovery.
+  expect((await page.reload())?.ok()).toBe(true);
   await page.getByTestId('review-drafts').click();
   await page.getByTestId('restore-draft').click();
   await expect(page.getByTestId('editor').locator('.cm-content')).toContainText('終了後に草稿から戻す内容');
@@ -2389,7 +2391,7 @@ test('日本語のファイル名で原稿と PDF の位置を行き来する', 
   expect(restored.pdfReady).toBe(true);
   expect(restored.synctexReady).toBe(true);
   expect(restored.pdfBuildId).toBe(finished.pdfBuildId);
-  await page.goto(`${session.url}#token=${encodeURIComponent(session.token)}`);
+  expect((await page.reload())?.ok()).toBe(true);
   await expect(canvas).toHaveAttribute('data-ready', 'true');
   await expect(canvas).toHaveAttribute('data-build-id', finished.pdfBuildId);
   const restoredForward = await json(session, '/api/synctex/forward', {
@@ -2445,7 +2447,7 @@ test('自動保存，補完，アウトラインを使い，草稿を再起動�
   expect(await readFile(path.join(session.project, 'main.tex'), 'utf8')).not.toContain(draftComment.trim());
 
   await session.restart();
-  await page.goto(`${session.url}#token=${encodeURIComponent(session.token)}`);
+  expect((await page.reload())?.ok()).toBe(true);
   await page.getByTestId('review-drafts').click();
   await expect(page.getByTestId('recovery-dialog')).toBeVisible();
   await page.getByTestId('recovery-file').selectOption(savedDraft.id);

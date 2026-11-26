@@ -77,8 +77,8 @@ func refreshInstalledShortcutsAt(source, localAppData string, directories []stri
 	if err != nil {
 		return err
 	}
+	defer release()
 	installed, err := refreshInstalledExecutable(source, directory)
-	release()
 	if err != nil {
 		return err
 	}
@@ -108,7 +108,11 @@ func refreshInstalledShortcutsAt(source, localAppData string, directories []stri
 			if link.Arguments != "" || !shortcutSameFile(link.WorkingDirectory, filepath.Dir(installed)) {
 				continue
 			}
-			if _, err := createShortcutAt(source, localAppData, folder); err != nil {
+			existed, err := inspectShortcutDestination(filepath.Join(folder, shortcutName), installed, source)
+			if err != nil {
+				return err
+			}
+			if _, err := writeInstalledShortcut(installed, folder, existed); err != nil {
 				return err
 			}
 			if name == legacyShortcutName {

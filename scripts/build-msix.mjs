@@ -101,10 +101,11 @@ Compress-Archive -LiteralPath @('packaging/windows/review-sample/main.tex', 'pac
 const xml = value => String(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[character]);
 const manifest = `<?xml version="1.0" encoding="utf-8"?>
 <Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+         xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
          xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
          xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10"
          xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
-         IgnorableNamespaces="uap uap10 rescap">
+         IgnorableNamespaces="desktop uap uap10 rescap">
   <Identity Name="${xml(identity.name)}" Publisher="${xml(identity.publisher)}" Version="${storeVersion}" ProcessorArchitecture="x64" />
   <Properties>
     <DisplayName>Local TeX Web Editor</DisplayName>
@@ -123,6 +124,11 @@ const manifest = `<?xml version="1.0" encoding="utf-8"?>
     <Application Id="App" Executable="local-tex-web-editor.exe" uap10:RuntimeBehavior="packagedClassicApp" uap10:TrustLevel="mediumIL">
       <uap:VisualElements DisplayName="Local TeX Web Editor" Description="Edit TeX and Markdown with a local TeX installation."
                           Square150x150Logo="Assets\\Square150x150Logo.png" Square44x44Logo="Assets\\Square44x44Logo.png" BackgroundColor="transparent" />
+      <Extensions>
+        <desktop:Extension Category="windows.startupTask" Executable="local-tex-web-editor.exe" EntryPoint="Windows.FullTrustApplication" uap10:Parameters="--background">
+          <desktop:StartupTask TaskId="LocalTeXWebEditorBackground" Enabled="false" DisplayName="Local TeX Web Editor" />
+        </desktop:Extension>
+      </Extensions>
     </Application>
   </Applications>
   <Capabilities>

@@ -16,6 +16,7 @@ import { projectSyncEnglish } from './locales/project-sync-en.js';
 import { texSetupEnglish } from './locales/tex-setup-en.js';
 import { texManagementEnglish } from './locales/tex-management-en.js';
 import { settingsResetEnglish } from './locales/settings-reset-en.js';
+import { startupEnglish } from './locales/startup-en.js';
 import { shortcutModifier } from './platform-keys.js';
 
 Object.assign(english, importsEnglish, writingEnglish, markdownEditingEnglish, markdownRichEnglish, projectHomeEnglish, pdfAppearanceEnglish, outlineEnglish, documentToolsEnglish, fileSortingEnglish, fileTreeDragEnglish, editorContextMenuEnglish, compiledPDFsEnglish);
@@ -25,6 +26,7 @@ Object.assign(english, projectSyncEnglish);
 Object.assign(english, texSetupEnglish);
 Object.assign(english, texManagementEnglish);
 Object.assign(english, settingsResetEnglish);
+Object.assign(english, startupEnglish);
 
 let language = 'en';
 const listeners = new Set();

@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -39,10 +37,14 @@ func run() error {
 	texBin := flag.String("tex-bin", "", "TeX Live executables folder")
 	listen := flag.String("listen", "127.0.0.1:0", "loopback address to listen on")
 	flag.BoolVar(&noBrowser, "no-browser", false, "do not open a browser automatically")
+	background := flag.Bool("background", false, "start for restored browser tabs without opening a window")
 	readyFile := flag.String("ready-file", "", "write server information to this file")
 	configDir := flag.String("config-dir", "", "application settings and cache folder")
 	showVersion := flag.Bool("version", false, "show application version")
 	flag.Parse()
+	if *background {
+		noBrowser = true
+	}
 	if *showVersion {
 		fmt.Println(version)
 		return nil
@@ -72,6 +74,9 @@ func run() error {
 	runContext, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stopSignals()
 	releaseInstance, update, err := acquireStartupInstance(runContext, *configDir, *readyFile, noBrowser, platform.OpenBrowser)
+	if *background && errors.Is(err, platform.ErrLocked) {
+		return nil
+	}
 	if err != nil {
 		return fmt.Errorf("アプリを起動できません: %w", err)
 	}
@@ -87,26 +92,17 @@ func run() error {
 			return fmt.Errorf("could not import settings from the ZIP version: %w", err)
 		}
 	}
-	var installationError error
-	if !noBrowser {
-		if err := platform.RefreshInstalledShortcuts(); err != nil {
-			installationError = err
-		}
-	}
-	listener, err := net.ListenTCP("tcp", address)
+	connection, err := listenForBrowser(*configDir, address)
 	if err != nil {
-		return fmt.Errorf("could not start the local server: %w", err)
-	}
-	defer listener.Close()
-	secret := make([]byte, 32)
-	if _, err = rand.Read(secret); err != nil {
 		return err
 	}
-	token := hex.EncodeToString(secret)
+	listener := connection.listener
+	defer listener.Close()
+	token := connection.token
 	quit := make(chan struct{})
 	var stopOnce sync.Once
 	stop := func() { stopOnce.Do(func() { close(quit) }) }
-	application, err := app.New(app.Options{ConfigDir: *configDir, ProjectPath: *project, TexBin: *texBin, Token: token, Version: version, Shutdown: stop, InstallationError: installationError})
+	application, err := app.New(app.Options{ConfigDir: *configDir, ProjectPath: *project, TexBin: *texBin, Token: token, Version: version, Shutdown: stop, InstallationError: connection.notice})
 	if err != nil {
 		return err
 	}
@@ -145,6 +141,9 @@ func run() error {
 		if err = platform.OpenBrowser(url + "#token=" + token); err != nil {
 			return err
 		}
+	}
+	if !noBrowser {
+		application.StartInstallationUpdate(platform.RefreshInstalledShortcuts, func() error { return platform.RefreshStartupRegistration(*configDir) })
 	}
 	select {
 	case <-quit:

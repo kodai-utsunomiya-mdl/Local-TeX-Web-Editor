@@ -1,21 +1,20 @@
 import { t, getLanguage, onLanguageChange } from './i18n.js';
-import * as pdfjs from 'pdfjs-dist/build/pdf.mjs';
-import { EventBus, PDFViewer, PDFLinkService, LinkTarget } from 'pdfjs-dist/web/pdf_viewer.mjs';
+import { loadPDFRuntime } from './pdf-loader.js';
 import { zoomPDFAt } from './pdf-zoom.js';
 import { afterNavigationFrame, connectPDFNavigation } from './navigation-history.js';
 import { PDFDarkMode, PDFToolbar } from './pdf-appearance.js';
 import { PDFCitationTitles } from './pdf-citations.js';
 
-pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
 const bytes = value => value < 1024 ? `${value} B` : value < 1024 ** 2 ? `${(value / 1024).toFixed(1)} KB` : `${(value / 1024 ** 2).toFixed(1)} MB`;
 
 // The selected image or PDF has its own view. Source documents stay in the
 // editor's state map, and decoded assets are released when their tab is left.
 export class AssetPreview {
-  constructor({ token, onNavigate, darkMode = false, onDarkModeChange, getCitations }) {
+  constructor({ token, onNavigate, darkMode = false, onDarkModeChange, getCitations, onError }) {
     this.token = token;
     this.onNavigate = onNavigate;
+    this.onError = onError;
     this.getCitations = getCitations;
     this.root = document.getElementById('asset-preview');
     this.elements = Object.fromEntries(['info', 'page-controls', 'prev', 'next', 'page', 'pages', 'zoom-out', 'zoom-in', 'zoom', 'reload', 'scroll', 'image-stage', 'image', 'pdf-stage', 'message', 'dark-mode'].map(id => [id, document.getElementById(`asset-${id}`)]));
@@ -182,7 +181,10 @@ export class AssetPreview {
         image.dataset.ready = 'true'; this.root.dataset.state = 'ready'; this.message('');
         this.updateControls();
       } else {
-        this.ensurePDFViewer(); this.elements['pdf-stage'].hidden = false;
+        const runtime = await loadPDFRuntime();
+        if (generation !== this.generation) return false;
+        const { pdfjs } = runtime;
+        this.ensurePDFViewer(runtime); this.elements['pdf-stage'].hidden = false;
         const task = pdfjs.getDocument({
           url, httpHeaders: headers, cMapUrl: '/cmaps/', cMapPacked: true,
           standardFontDataUrl: '/standard_fonts/', wasmUrl: '/wasm/',
@@ -203,7 +205,7 @@ export class AssetPreview {
     return false;
   }
 
-  ensurePDFViewer() {
+  ensurePDFViewer({ pdfjs, EventBus, PDFViewer, PDFLinkService, LinkTarget }) {
     if (this.pdfViewer) return;
     this.eventBus = new EventBus();
     this.citationTitles = new PDFCitationTitles({ container: this.elements['pdf-stage'], eventBus: this.eventBus, getCitations: this.getCitations });
@@ -277,6 +279,7 @@ export class AssetPreview {
     this.ready = false; this.root.dataset.state = 'error';
     this.lastError = error;
     this.message(t("{value0} を表示できませんでした．\n{value1}", { value0: this.file.path, value1: error?.message || error }), true);
+    this.onError?.(error);
     this.updateControls();
   }
 

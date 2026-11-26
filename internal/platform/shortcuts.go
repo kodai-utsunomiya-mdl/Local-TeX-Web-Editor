@@ -184,9 +184,14 @@ func installShortcutExecutable(source, directory string) (string, error) {
 	}
 	copyNeeded := !exists
 	if exists {
-		targetHash, err := shortcutFileHash(target)
-		if err != nil {
-			return "", err
+		targetHash := sourceHash
+		// Launching the installed executable reads the same file through both
+		// paths. Its contents have already been hashed for this operation.
+		if !shortcutSameFile(source, target) {
+			targetHash, err = shortcutFileHash(target)
+			if err != nil {
+				return "", err
+			}
 		}
 		copyNeeded = targetHash != sourceHash
 		if copyNeeded && (manifest == nil || manifest.SHA256 != targetHash) {

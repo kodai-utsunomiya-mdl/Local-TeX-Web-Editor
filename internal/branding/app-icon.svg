@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Local TeX Web Editor">
-  <rect x="8" y="8" width="240" height="240" rx="48" fill="#0d766e"/>
+  <rect x="8" y="8" width="240" height="240" rx="48" fill="#2463b7"/>
   <g fill="#fff" transform="translate(-4)">
     <path d="M28 71h80v25h-8l-4-14H78v75l12 2v9H45v-9l12-2V82H40l-4 14h-8z"/>
     <path d="M90 98h64v23h-8l-4-12h-25v24h19l3-10h8v29h-8l-3-10h-19v31h27l7-17h8l-3 28H90v-9l10-2v-64l-10-2z"/>

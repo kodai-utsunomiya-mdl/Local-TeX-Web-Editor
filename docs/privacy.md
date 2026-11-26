@@ -1,6 +1,6 @@
 # Privacy policy for Local TeX Web Editor
 
-Last updated: 21 November 2026
+Last updated: 26 November 2026
 
 [日本語](privacy.ja.md)
 
@@ -29,13 +29,15 @@ TeX installed through the app uses `%LOCALAPPDATA%\LocalTeXEditor\tex` in the Wi
 
 On its first launch, the Store edition can copy settings, drafts and view preferences from an existing ZIP installation into its own user-data folder. The original files remain in the ZIP edition's folder. Project source files remain where you placed them.
 
-The browser stores a copy of the appearance settings locally. While a draft is being written to the app's data folder, it may also store a temporary draft backup. That backup is removed after the app confirms the save. The local connection token is stored in the browser tab's session storage.
+The browser stores a copy of the appearance settings and the display language locally. While a draft is being written to the app's data folder, it may also store a temporary draft backup. That backup is removed after the app confirms the save. The local connection token is also recorded in browser site data so restored tabs can reconnect. The app's user-data folder stores the connection port and the same token. The browser stores a small waiting page that reloads the editor when the app starts. This waiting-page cache does not store documents or file API responses.
 
 ## Local communication
 
-Launching the app starts a server on a loopback address such as `127.0.0.1` and opens the browser on the same computer. Editing, saving, compiling and previewing use this local connection. Access to the file and compilation APIs requires a token generated when the app starts.
+Launching the app starts a server on a loopback address such as `127.0.0.1` and opens the browser on the same computer. Editing, saving, compiling and previewing use this local connection. Access to the file and compilation APIs requires a token generated on first use and recorded on the computer.
 
 The editor's scripts, fonts and PDF-viewing resources are included with the app. Editing and previewing do not require loading these resources from an external service.
+
+Enabling **Start at login** registers the app with the operating system so it can start in the background at your next login. It opens no additional browser tab. You can disable it in Settings; resetting **Settings and remembered actions** also disables this registration.
 
 ## TeX setup and package downloads
 
@@ -67,11 +69,11 @@ You choose which files to register as a custom template. Open **Editing tools �
 
 Open **Settings → Information saved by the app → Reset settings and remembered information…** to choose what to reset. The dialog shows the app-data location and the file count and size for each category. **Settings and remembered actions** is selected initially. **Unsaved drafts**, **Edit history**, **Your templates**, and **PDF and SyncTeX cache** are initially unchecked. Choose the categories, check the confirmation, then click **Reset selected information**.
 
-The settings choice restores appearance, editing preferences, recent projects, tabs and editing positions, and the selected TeX installation to their defaults. Other categories delete their corresponding saved copies. The reset applies to the data folder shown in the dialog. In the Store edition, the ZIP edition's original data from a previous migration remains at its own location. Your project files and installed TeX remain available, including TeX installed inside the app-data folder.
+The settings choice restores appearance, editing preferences, recent projects, tabs and editing positions, and the selected TeX installation to their defaults and disables start at login. Other categories delete their corresponding saved copies. The reset applies to the data folder shown in the dialog. In the Store edition, the ZIP edition's original data from a previous migration remains at its own location. Your project files and installed TeX remain available, including TeX installed inside the app-data folder.
 
 Before resetting, the app offers to save unsaved documents to their project files or leave them as drafts. If you selected drafts for deletion, it offers to save or discard those changes. After a successful reset, the page reloads. Other open tabs ask to reload when they next connect and offer downloads of their unsaved documents first. When drafts were deleted, older browser draft backups are also removed when a tab reconnects or reads its drafts.
 
-Browser site-data controls can remove the saved appearance and any remaining browser draft backups. Project files can be managed in their original folders.
+Browser site-data controls can remove the saved appearance, remaining browser draft backups, connection token and waiting page. Open the screen from the app again to reconnect afterward. Project files can be managed in their original folders.
 
 **Settings → Manage TeX…** shows the selected TeX installation and its packages. This includes TeX installed by the app and existing TeX Live, MacTeX and TinyTeX installations. Package removal shows the proposed changes before you confirm. Starting removal of an entire environment inside the app requires reviewing its actual location and contents, acknowledging the effect on other applications, and entering its folder name. The confirmation explains whether the action deletes app-managed files, runs the official Windows uninstaller, or moves the selected folder to Trash or Recycle Bin. For a shared installation in the Store edition, opening Windows app settings leaves the removal decision to Windows; opening the settings screen does not start deletion or require entering the folder name in the app. TinyTeX removal also removes path registrations that point to that installation. An official uninstaller can leave settings or other files, which the app reports. Project documents in their own folders remain available.
 

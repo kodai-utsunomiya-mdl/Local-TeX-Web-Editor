@@ -3,11 +3,12 @@ import assert from 'node:assert/strict';
 import { normalizeAppearance, normalizeHexColor, resolveAppearance } from '../web/src/appearance.js';
 
 test('外観の初期値を選び，既存のライトとダークの設定を引き継ぐ', () => {
-  const defaults = { mode: 'system', palette: 'gray', accent: 'teal', editorFont: 'consolas' };
+  const defaults = { mode: 'system', palette: 'gray', accent: 'blue', editorFont: 'consolas' };
   assert.deepEqual(normalizeAppearance(), defaults);
   assert.deepEqual(normalizeAppearance(null, 'dark'), { ...defaults, mode: 'dark' });
   assert.deepEqual(normalizeAppearance(undefined, 'light'), { ...defaults, mode: 'light' });
   assert.deepEqual(normalizeAppearance({ palette: 'black' }), { ...defaults, palette: 'black' });
+  assert.deepEqual(normalizeAppearance({ accent: 'teal' }), { ...defaults, accent: 'teal' });
   assert.deepEqual(normalizeAppearance({ mode: 'system', palette: 'warm', accent: 'purple', editorFont: 'menlo' }, 'dark'),
     { mode: 'system', palette: 'warm', accent: 'purple', editorFont: 'menlo' });
   assert.deepEqual(normalizeAppearance({ mode: 'unknown', palette: '__proto__', accent: 'constructor', editorFont: 'url(example)' }), defaults);

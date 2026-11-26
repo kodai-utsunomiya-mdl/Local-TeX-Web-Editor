@@ -64,6 +64,8 @@ async function api(endpoint, data, method) {
 }
 
 let browser, context, page, passed = false;
+let startupMayBeEnabled = false;
+const startupStates = [];
 const errors = [];
 async function compile() {
   const [response] = await Promise.all([
@@ -82,6 +84,26 @@ async function compile() {
 
 try {
   assert.equal(ready.version, version);
+  const startupInitial = await api('/api/startup');
+  assert.equal(startupInitial.supported, true);
+  assert.equal(startupInitial.status, 'disabled');
+  assert.equal(startupInitial.enabled, false);
+  assert.equal(startupInitial.canEnable, true);
+  startupStates.push(startupInitial.status);
+  startupMayBeEnabled = true;
+  const startupEnabled = await api('/api/startup', { enabled: true });
+  assert.equal(startupEnabled.status, 'enabled');
+  assert.equal(startupEnabled.enabled, true);
+  assert.equal(startupEnabled.canDisable, true);
+  startupStates.push(startupEnabled.status);
+  assert.equal((await api('/api/startup')).enabled, true);
+  const startupDisabled = await api('/api/startup', { enabled: false });
+  assert.equal(startupDisabled.status, 'disabled');
+  assert.equal(startupDisabled.enabled, false);
+  assert.equal(startupDisabled.canEnable, true);
+  startupStates.push(startupDisabled.status);
+  assert.equal((await api('/api/startup')).enabled, false);
+  startupMayBeEnabled = false;
   browser = await chromium.launch({ headless: true });
   context = await browser.newContext({ viewport: { width: 1600, height: 1000 }, locale: 'en-US' });
   await context.tracing.start({ screenshots: true, snapshots: true });
@@ -382,7 +404,8 @@ $\widehat w$ & Estimated coefficient vector \\
   await writeFile(path.join(output, 'result.json'), JSON.stringify({
     version, packageVersion: identity.packageVersion, architecture: process.arch,
     packageIdentity: initial.packageIdentity,
-    checks: ['package-identity', 'package-localstate', 'store-shortcuts', 'optional-tex-setup', 'thesis-preambles', 'external-source-save', 'japanese-tex', 'bibliography', 'synctex', 'synctex-ui', 'pdf', 'active-document', 'markdown', 'markdown-direct-editing-save', 'shutdown'],
+    checks: ['package-identity', 'package-localstate', 'store-shortcuts', 'startup-task', 'optional-tex-setup', 'thesis-preambles', 'external-source-save', 'japanese-tex', 'bibliography', 'synctex', 'synctex-ui', 'pdf', 'active-document', 'markdown', 'markdown-direct-editing-save', 'shutdown'],
+    startupTask: { states: startupStates },
     texSetup: { release: setup.release, directory: setup.directory, checks: [...setup.checks, ...removed.checks] },
   }, null, 2));
   passed = true;
@@ -390,6 +413,7 @@ $\widehat w$ & Estimated coefficient vector \\
 } finally {
   if (!passed && page && !page.isClosed()) await page.screenshot({ path: path.join(output, 'failure.png') }).catch(() => {});
   if (context) await context.tracing.stop({ path: path.join(output, 'trace.zip') }).catch(() => {});
+  if (startupMayBeEnabled) await request('/api/startup', { enabled: false }).catch(() => {});
   await request('/api/shutdown', {}).catch(() => {});
   await browser?.close();
 }
