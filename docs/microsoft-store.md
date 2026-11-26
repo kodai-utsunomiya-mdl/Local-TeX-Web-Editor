@@ -85,6 +85,8 @@ The listing opens with the TeX dependency and the choice of in-app setup or an e
 
 ## Submit the app
 
+For subsequent releases, [set up submission through GitHub Actions](microsoft-store-automation.ja.md). The workflow prepares the tested MSIX and listing files, then submits them through Microsoft's API after account setup and the repository's automatic-submission setting are complete.
+
 Use [the prepared listing and reviewer notes](microsoft-store-listing.md) for the English and Japanese pages. They include a simple TeX/Markdown sample, requirements, feature descriptions, support URLs and the reason for `runFullTrust`.
 
 The reviewer notes link to [the published sample ZIP](https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/downloads/store-review-sample.zip). Check that it downloads and contains the expected `main.tex` and `notes.md` before submitting. If the sample files have changed, update that download with `store-review-sample.zip` from the listing artifact.

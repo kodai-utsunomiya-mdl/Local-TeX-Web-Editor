@@ -1,0 +1,88 @@
+# Microsoft Store の更新を自動で提出する
+
+公開済みの Local TeX Web Editor に対して，テスト済みの MSIX，英語・日本語の説明文，画像を GitHub Actions から提出する．製品 ID は `9P6QF32N19HG` である．Microsoft が審査を完了すると，更新を Store に公開する．
+
+最初に Partner Center と自動提出用の Microsoft Entra アプリを関連付け，GitHub に接続情報を登録する．その後は，新しいバージョンのテストと GitHub Release の公開が完了すると，同じバージョンを Store へ提出する．[Microsoft の提出 API の説明](https://learn.microsoft.com/en-us/windows/uwp/monetize/create-and-manage-submissions-using-windows-store-services)
+
+## 初回に用意するもの
+
+対象のアプリについて，Partner Center で最初の提出と年齢区分の回答を済ませ，Store で公開済みであることを確認する．次に **Account settings → User management → Microsoft Entra applications** を開けることを確認する．
+
+Entra アプリの登録に使える画面や権限は，開発者アカウントによって異なる．特に個人アカウントでは，この項目を利用できることを先に確認する．Microsoft は個人アカウントに複数のユーザーを追加できないと説明しているが，その説明だけではサービス用アプリの登録可否までは確認できない．項目が見つからない場合は，登録しているアカウントで MSIX submission API を利用できるかを [Microsoft の開発者サポート](https://developer.microsoft.com/windows/support/) へ確認する．[ユーザー管理の説明](https://learn.microsoft.com/en-us/windows/apps/publish/partner-center/manage-users-in-partner-center)
+
+### 1. Microsoft Entra アプリを関連付ける
+
+1. Partner Center の **Account settings** から，使用する Microsoft Entra テナントを関連付ける．既存のテナントがある場合は，そのテナントの管理者権限を持つアカウントで進める．
+2. Microsoft Entra の **App registrations** で，自動提出に使うアプリを登録する．表示名は，例えば `Local TeX Web Editor Store publishing` とする．
+3. Partner Center の **User management → Microsoft Entra applications** で，そのアプリを追加し，**Manager** の役割を付ける．
+4. 登録したアプリの **Directory (tenant) ID** と **Application (client) ID** を控える．
+5. アプリの **Client secrets** で新しい secret を作る．作成直後に表示される **Value** を，次の GitHub の Secret 欄に直接入力する．有効期限も控える．
+
+画面の操作と必要な権限は，[提出 API の初回設定](https://learn.microsoft.com/en-us/windows/uwp/monetize/create-and-manage-submissions-using-windows-store-services#step-1-complete-prerequisites-for-using-the-microsoft-store-submission-api) を参照する．
+
+### 2. GitHub に接続情報を登録する
+
+[このリポジトリの Actions secrets](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/settings/secrets/actions) を開き，**New repository secret** で次の 3 件を登録する．
+
+| Name | 入力する値 |
+| --- | --- |
+| `PARTNER_CENTER_TENANT_ID` | Directory (tenant) ID |
+| `PARTNER_CENTER_CLIENT_ID` | Application (client) ID |
+| `PARTNER_CENTER_CLIENT_SECRET` | Client secret の Value |
+
+Client secret の Value は，リポジトリのファイルやチャットには記載しない．期限を更新したときは，同じ名前の GitHub Secret の値も更新する．
+
+### 3. 提出する内容を確認する
+
+1. [GitHub Actions](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/actions/workflows/submit-microsoft-store.yml) で **Prepare and submit Microsoft Store updates** を開く．
+2. **Run workflow** で `main` を選ぶ．**store_run_id** には，成功した **Build Microsoft Store package** の実行番号を入力する．v0.1.15 の対象は `45844360603` である．
+3. **operation** を `prepare` にして実行する．
+4. 完了した実行の **Artifacts** から `store-submission-v0.1.15` をダウンロードする．`metadata.json` に説明文と各画像の説明，`prepared/plan.json` に提出予定のファイル，`prepared/submission.zip` に MSIX と画像が入っている．
+
+この操作は，GitHub にあるテスト済みファイルを確認し，提出に使うファイルを作る．Microsoft の提出 API への接続は行わないので，接続情報の登録前にも実行できる．Store 用の MSIX と `microsoft-store-listing.zip` は，対象バージョンの GitHub Release にも添付する．
+
+### 4. 自動提出を有効にする
+
+[Actions variables](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/settings/variables/actions) で，次の Repository variable を追加する．
+
+| Name | Value |
+| --- | --- |
+| `MICROSOFT_STORE_AUTOMATIC_SUBMISSION` | `true` |
+
+すでに公開済みの v0.1.15 を提出する際は，同じ workflow をもう一度 **Run workflow** から開き，`store_run_id` を `45844360603`，`operation` を `submit` にして実行する．これが初回の接続と提出の確認になる．
+
+以後のバージョンでは，次の条件がそろったときに自動で進む．
+
+- `main` の同じ commit で，Windows / Mac の **Build and test** と，実際の MSIX をインストールする **Build Microsoft Store package** が成功している．
+- その commit を指す正式な GitHub Release が公開され，最新の正式版になっている．
+- `MICROSOFT_STORE_AUTOMATIC_SUBMISSION` が `true` で，3 件の Secret が登録されている．
+
+この変数を `false` にするか削除すると，その後の実行はファイルの準備まで進む．実行中の提出の停止や，Store で始まっている審査の取り消しには使わない．
+
+## 各バージョンで提出される内容
+
+成功した Store 用 workflow の成果物から，MSIX と画像・説明文を取得する．ダウンロードした成果物の SHA-256，パッケージのバージョンと製品情報，スクリーンショットの取得元を確認する．
+
+英語・日本語の説明文と特徴，画像の説明は，その成果物の `microsoft-store-listing.md` から読む．更新履歴には，同じ文書の **What's new** と **このバージョンの最新情報** を使う．文中のバージョンが MSIX と一致することも確認する．各バージョンの掲載文を直すときは，通常どおり [Store 用の文書](microsoft-store-listing.md) を更新する．
+
+インストールした MSIX から撮影した 8 枚のスクリーンショットと，`store-logo-300.png` を使う．Markdown の画像は直接編集の画面である．価格，公開地域，年齢区分などは，最後に公開した Store の提出の設定を引き継ぐ．
+
+提出 ID と，最後に取得した時点の状態は `prepared/result.json` に記録する．`outcome` が `submitted` で，`published` が `false` の場合は，審査や公開処理が続いている．公開完了は `status` が `Published` になった時点で確認する．[Microsoft の提出の状態](https://learn.microsoft.com/en-us/windows/uwp/monetize/get-status-for-an-app-submission)
+
+## 既存の提出がある場合
+
+Partner Center に編集中または審査中の提出がある場合は，その提出 ID と状態を表示して停止する．既存の提出の完了や処理方針を確認してから，対象の workflow を再実行する．Store で同じバージョンが公開済みなら，その旨を結果に記録する．Store の版より古いパッケージを送る操作は停止する．
+
+API から作成した提出を編集するときは，引き続き API を使用する．Microsoft は，同じ提出を Partner Center の画面から編集すると，API からの変更や確定ができなくなる場合があると説明している．[提出 API に関する注意](https://learn.microsoft.com/en-us/windows/uwp/monetize/create-and-manage-submissions-using-windows-store-services)
+
+## 実装と確認
+
+Workflow は [submit-microsoft-store.yml](../.github/workflows/submit-microsoft-store.yml)，テスト済みリリースの取得は [prepare-store-release.mjs](../scripts/prepare-store-release.mjs)，Microsoft への提出は [submit-microsoft-store.mjs](../scripts/submit-microsoft-store.mjs) にある．
+
+提出処理のテストは Microsoft へ接続せず，API の応答を用意して実行する．実際のアカウントの認証と提出は，初回設定後の `submit` で確認する．
+
+```bash
+node --test tests/prepare-store-release.test.mjs tests/microsoft-store-submission.test.mjs
+```
+
+パッケージ，掲載情報，画像を ZIP にまとめてアップロードし，提出を確定する手順は，[Microsoft の MSIX 用提出 API](https://learn.microsoft.com/en-us/windows/uwp/monetize/manage-app-submissions#create-an-app-submission) に基づく．
