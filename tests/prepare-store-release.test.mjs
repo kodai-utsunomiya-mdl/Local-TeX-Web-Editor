@@ -8,8 +8,10 @@ import {
 const repository = 'kodai-utsunomiya-mdl/Local-TeX-Web-Editor';
 const sha = 'a'.repeat(40);
 const appVersion = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
-const document = readFileSync(new URL('../docs/microsoft-store-listing.md', import.meta.url), 'utf8');
-const releaseBody = readFileSync(new URL(`../release-notes/v${appVersion}.md`, import.meta.url), 'utf8');
+const document = readFileSync(new URL('../docs/microsoft-store-listing.md', import.meta.url), 'utf8')
+  .replaceAll('\r\n', '\n');
+const releaseBody = readFileSync(new URL(`../release-notes/v${appVersion}.md`, import.meta.url), 'utf8')
+  .replaceAll('\r\n', '\n');
 
 function metadata(source = document) {
   return createStoreMetadata(source, releaseBody, appVersion, sha, repository);
