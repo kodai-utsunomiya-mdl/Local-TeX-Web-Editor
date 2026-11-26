@@ -4,8 +4,9 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
 import { PRODUCT_ID, StoreSubmissionError, buildSubmissionPayload, compareVersions,
-  parseArguments, prepareSubmission, submitPrepared } from '../scripts/submit-microsoft-store.mjs';
+  parseArguments, prepareSubmission, readSubmissionStatus, submitPrepared } from '../scripts/submit-microsoft-store.mjs';
 
 const identity = { name: 'KodaiUtsunomiya.LocalTeXWebEditor',
   publisher: 'CN=62DF8CD3-B689-471E-B1B0-C75944260F73', publisherDisplayName: 'Kodai Utsunomiya' };
@@ -92,7 +93,7 @@ function publishedSubmission() {
   };
 }
 
-function mockStore({ pending = null, current = publishedSubmission(), status = 'PreProcessing',
+function mockStore({ pending = null, pendingStatus = 'Certification', current = publishedSubmission(), status = 'PreProcessing',
   failUpload = false, invalidUpload = false, networkFailure = false } = {}) {
   const requests = [];
   const appPath = `/v1.0/my/applications/${PRODUCT_ID}`;
@@ -119,7 +120,8 @@ function mockStore({ pending = null, current = publishedSubmission(), status = '
       packageIdentityName: identity.name, publisherName: identity.publisher,
       lastPublishedApplicationSubmission: { id: '100' }, pendingApplicationSubmission: pending ? { id: pending } : null });
     if (url.pathname === `${appPath}/submissions/100`) return answer(current);
-    if (pending && url.pathname === `${appPath}/submissions/${pending}/status`) return answer({ status: 'Certification' });
+    if (pending && url.pathname === `${appPath}/submissions/${pending}/status`) return answer({ status: pendingStatus });
+    if (url.pathname === `${appPath}/submissions/100/status`) return answer({ status: current.status });
     if (url.pathname === `${appPath}/submissions` && options.method === 'POST') return answer({ ...structuredClone(current),
       id: '101', status: 'PendingCommit', fileUploadUrl: invalidUpload ? 'https://example.com/upload?sig=bad' : uploadUrl });
     if (url.pathname === `${appPath}/submissions/101` && options.method === 'PUT') return answer(JSON.parse(options.body));
@@ -386,4 +388,100 @@ test('the command requires an explicit mode and numeric Store versions use numer
   assert.equal(compareVersions('1.1.9.0', '1.1.15.0'), -1);
   assert.equal(compareVersions('2.0.0.0', '1.100.999.0'), 1);
   assert.throws(() => compareVersions('1.1.65536.0', '1.1.0.0'), StoreSubmissionError);
+  assert.deepEqual(parseArguments(['--status', '--output', 'status-result']), { mode: 'status', output: 'status-result' });
+  assert.throws(() => parseArguments(['--status']), StoreSubmissionError);
+  assert.throws(() => parseArguments(['--status', '--output', 'result', '--metadata', 'listing.json']), StoreSubmissionError);
+});
+
+async function statusDirectory(t) {
+  const output = await fs.mkdtemp(path.join(process.cwd(), '.store-status-test-'));
+  t.after(() => fs.rm(output, { recursive: true, force: true }));
+  return output;
+}
+
+test('status reads the pending or published submission through Store GET requests and records four public fields', async t => {
+  const output = await statusDirectory(t);
+  for (const [pending, expectedStatus, expectedId] of [['999', 'Certification', '999'], [null, 'Published', '100']]) {
+    const mock = mockStore({ pending });
+    const result = await readSubmissionStatus({ output }, { env: environment, ...mock });
+    assert.deepEqual(result, { productId: PRODUCT_ID, submissionId: expectedId, status: expectedStatus,
+      published: expectedStatus === 'Published' });
+    assert.deepEqual(JSON.parse(await fs.readFile(path.join(output, 'result.json'), 'utf8')), result);
+    const storeRequests = mock.requests.filter(item => item.url.hostname === 'manage.devcenter.microsoft.com');
+    assert.deepEqual(storeRequests.map(item => [item.method, item.url.pathname]), [
+      ['GET', `/v1.0/my/applications/${PRODUCT_ID}`],
+      ['GET', `/v1.0/my/applications/${PRODUCT_ID}/submissions/${expectedId}/status`],
+    ]);
+    assert.equal(mock.requests.length, 3);
+  }
+});
+
+test('status records a known failure and rejects unknown states without writing the API response', async t => {
+  const output = await statusDirectory(t);
+  for (const [pendingStatus, expectedCode, resultStatus] of [
+    ['CommitFailed', 'submission-failed', 'CommitFailed'],
+    [`unexpected ${accessToken} ${uploadUrl}`, 'invalid-api-response', 'Unknown'],
+  ]) {
+    const mock = mockStore({ pending: '999', pendingStatus });
+    await assert.rejects(readSubmissionStatus({ output }, { env: environment, ...mock }), { code: expectedCode });
+    const resultText = await fs.readFile(path.join(output, 'result.json'), 'utf8');
+    assert.deepEqual(JSON.parse(resultText), { productId: PRODUCT_ID, submissionId: '999', status: resultStatus, published: false });
+    for (const secret of [accessToken, 'private-upload-signature']) assert.ok(!resultText.includes(secret));
+    assert.ok(mock.requests.filter(item => item.url.hostname === 'manage.devcenter.microsoft.com').every(item => item.method === 'GET'));
+  }
+});
+
+test('status verifies the Store product identity before reading a submission', async t => {
+  const output = await statusDirectory(t);
+  const mock = mockStore();
+  const fetchImpl = async (url, options) => {
+    const response = await mock.fetchImpl(url, options);
+    if (new URL(url).pathname === `/v1.0/my/applications/${PRODUCT_ID}`) {
+      return new Response(JSON.stringify({ ...await response.json(), packageIdentityName: 'Other.Product' }));
+    }
+    return response;
+  };
+  await assert.rejects(readSubmissionStatus({ output }, { env: environment, fetchImpl }), { code: 'store-identity-mismatch' });
+  assert.equal(mock.requests.length, 2);
+});
+
+test('the status CLI needs no preparation files and returns the appropriate exit code using only Store GET requests', async t => {
+  const root = await statusDirectory(t);
+  const mockFile = path.join(root, 'mock-fetch.mjs');
+  await fs.writeFile(mockFile, `import { writeFileSync } from 'node:fs';
+import path from 'node:path';
+const calls = [];
+process.on('exit', () => writeFileSync(path.join(${JSON.stringify(root)}, 'calls.json'), JSON.stringify(calls)));
+globalThis.fetch = async (rawUrl, options) => {
+  const url = new URL(rawUrl);
+  calls.push({ host: url.hostname, path: url.pathname, method: options.method });
+  if (url.hostname === 'login.microsoftonline.com' && options.method === 'POST') {
+    return new Response(JSON.stringify({ access_token: 'cli-test-token' }));
+  }
+  if (url.hostname !== 'manage.devcenter.microsoft.com' || options.method !== 'GET') throw new Error('Unexpected mutation');
+  if (url.pathname === '/v1.0/my/applications/${PRODUCT_ID}') return new Response(JSON.stringify({
+    id: '${PRODUCT_ID}', packageIdentityName: ${JSON.stringify(identity.name)}, publisherName: ${JSON.stringify(identity.publisher)},
+    pendingApplicationSubmission: { id: '999' }, lastPublishedApplicationSubmission: { id: '100' },
+  }));
+  if (url.pathname === '/v1.0/my/applications/${PRODUCT_ID}/submissions/999/status') return new Response(JSON.stringify({
+    status: process.env.STATUS_TEST_REPORT, fileUploadUrl: ${JSON.stringify(uploadUrl)}, access_token: 'cli-test-token',
+  }));
+  throw new Error('Unexpected request');
+};
+`);
+  for (const [status, exitCode] of [['CommitStarted', 0], ['CommitFailed', 1]]) {
+    const output = path.join(root, status);
+    const result = spawnSync(process.execPath, ['--import', pathToFileURL(mockFile).href,
+      path.resolve('scripts/submit-microsoft-store.mjs'), '--status', '--output', output], {
+      encoding: 'utf8', env: { ...process.env, ...environment, STATUS_TEST_REPORT: status },
+    });
+    assert.equal(result.status, exitCode, result.stderr);
+    assert.deepEqual(JSON.parse(await fs.readFile(path.join(output, 'result.json'), 'utf8')),
+      { productId: PRODUCT_ID, submissionId: '999', status, published: false });
+    const calls = JSON.parse(await fs.readFile(path.join(root, 'calls.json'), 'utf8'));
+    assert.equal(calls.length, 3);
+    assert.ok(calls.filter(item => item.host === 'manage.devcenter.microsoft.com').every(item => item.method === 'GET'));
+    assert.ok(!`${result.stdout}${result.stderr}`.includes('cli-test-token'));
+    assert.ok(!`${result.stdout}${result.stderr}`.includes('private-upload-signature'));
+  }
 });

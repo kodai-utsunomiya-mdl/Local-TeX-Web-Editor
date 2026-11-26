@@ -392,6 +392,33 @@ async function writeResult(prepared, values) {
   return result;
 }
 
+function checkStoreApplication(app) {
+  requireValue(app.id === PRODUCT_ID && app.packageIdentityName === IDENTITY_NAME
+    && app.publisherName?.toUpperCase() === PUBLISHER.toUpperCase(),
+  'store-identity-mismatch', 'The connected Store application differs from the published product identity.');
+}
+
+export async function readSubmissionStatus({ output }, { env = process.env, fetchImpl = globalThis.fetch } = {}) {
+  requireValue(typeof output === 'string' && output.length > 0, 'invalid-arguments', 'Provide --output for the Store status result.');
+  await fs.mkdir(output, { recursive: true });
+  const resultFile = path.join(output, 'result.json');
+  let result = { productId: PRODUCT_ID, submissionId: null, status: 'Unknown', published: false };
+  await fs.writeFile(resultFile, `${JSON.stringify(result, null, 2)}\n`);
+  const client = new StoreClient(fetchImpl);
+  await client.authenticate(env);
+  const appPath = `/applications/${PRODUCT_ID}`;
+  const app = await client.api('GET', appPath, 'Reading the Store application');
+  checkStoreApplication(app);
+  const id = submissionId(app.pendingApplicationSubmission?.id ?? app.lastPublishedApplicationSubmission?.id);
+  const report = await client.api('GET', `${appPath}/submissions/${id}/status`, 'Reading the Store submission status');
+  const status = statusName(report?.status);
+  result = { productId: PRODUCT_ID, submissionId: id, status, published: status === 'Published' };
+  await fs.writeFile(resultFile, `${JSON.stringify(result, null, 2)}\n`);
+  requireValue(status !== 'Unknown', 'invalid-api-response', 'Microsoft returned an unknown submission status.');
+  requireValue(!FAILED_STATUSES.has(status), 'submission-failed', `Submission ${id} has status ${status}.`);
+  return result;
+}
+
 export async function submitPrepared(prepared, { env = process.env, fetchImpl = globalThis.fetch,
   sleep = ms => new Promise(resolve => setTimeout(resolve, ms)), pollAttempts = 8, pollInterval = 15000 } = {}) {
   const client = new StoreClient(fetchImpl);
@@ -402,9 +429,7 @@ export async function submitPrepared(prepared, { env = process.env, fetchImpl = 
     await client.authenticate(env);
     const appPath = `/applications/${PRODUCT_ID}`;
     const app = await client.api('GET', appPath, 'Reading the Store application');
-    requireValue(app.id === PRODUCT_ID && app.packageIdentityName === IDENTITY_NAME
-      && app.publisherName?.toUpperCase() === PUBLISHER.toUpperCase(),
-    'store-identity-mismatch', 'The connected Store application differs from the tested package identity.');
+    checkStoreApplication(app);
     if (app.pendingApplicationSubmission?.id) {
       id = submissionId(app.pendingApplicationSubmission.id);
       const existing = await client.api('GET', `${appPath}/submissions/${id}/status`, 'Reading the existing submission status');
@@ -466,25 +491,35 @@ export function parseArguments(args) {
   const keys = { '--package-dir': 'packageDir', '--listing-dir': 'listingDir', '--metadata': 'metadata', '--output': 'output' };
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
-    if (arg === '--prepare' || arg === '--submit') {
-      requireValue(!result.mode, 'invalid-arguments', 'Choose exactly one of --prepare and --submit.');
+    if (arg === '--prepare' || arg === '--submit' || arg === '--status') {
+      requireValue(!result.mode, 'invalid-arguments', 'Choose exactly one of --prepare, --submit and --status.');
       result.mode = arg.slice(2);
     } else if (keys[arg]) {
       requireValue(!result[keys[arg]] && args[index + 1] && !args[index + 1].startsWith('--'),
         'invalid-arguments', `Provide one value for ${arg}.`);
       result[keys[arg]] = args[++index];
     } else {
-      throw new StoreSubmissionError('invalid-arguments', 'Unknown argument. Use --prepare or --submit with --package-dir, --listing-dir, --metadata and --output.');
+      throw new StoreSubmissionError('invalid-arguments', 'Unknown argument. Use --status with --output, or --prepare/--submit with --package-dir, --listing-dir, --metadata and --output.');
     }
   }
-  requireValue(result.mode && Object.values(keys).every(key => result[key]), 'invalid-arguments',
-    'Use --prepare or --submit with --package-dir, --listing-dir, --metadata and --output.');
+  if (result.mode === 'status') {
+    requireValue(result.output && !result.packageDir && !result.listingDir && !result.metadata, 'invalid-arguments',
+      'Use --status with --output only.');
+  } else {
+    requireValue(result.mode && Object.values(keys).every(key => result[key]), 'invalid-arguments',
+      'Use --status with --output, or --prepare/--submit with --package-dir, --listing-dir, --metadata and --output.');
+  }
   return result;
 }
 
 async function main() {
   try {
     const options = parseArguments(process.argv.slice(2));
+    if (options.mode === 'status') {
+      const result = await readSubmissionStatus(options);
+      console.log(`Store submission ${result.submissionId}: ${result.status}.`);
+      return;
+    }
     const prepared = await prepareSubmission(options);
     if (options.mode === 'prepare') {
       console.log(`Prepared ${PRODUCT_ID} version ${prepared.info.storeVersion}: submission.zip and plan.json.`);
