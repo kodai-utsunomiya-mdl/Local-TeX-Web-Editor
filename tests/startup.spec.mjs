@@ -46,7 +46,7 @@ test('PDF の読み込みを待つ間も原稿を開け，必要な時にだけ 
 
 for (const language of ['ja', 'en']) {
   test.describe(`ブラウザの復元 (${language})`, () => {
-    test.use({ interfaceLanguage: language });
+    test.use({ interfaceLanguage: language, serviceWorkers: 'allow' });
     test('アプリが停止中のタブは接続を待ち，同じアドレスで編集画面へ戻る', async ({ page, session }, testInfo) => {
       await openProject(session); await openEditor(page, session);
       await page.evaluate(async () => { await navigator.serviceWorker.ready; });
@@ -86,6 +86,7 @@ test('ブラウザを終了して前回のタブを復元すると，アプリ�
     // https://playwright.dev/docs/browsers#chromium-new-headless-mode
     channel: 'chromium', headless: true,
     viewport: { width: 1600, height: 1000 }, locale: 'ja-JP',
+    serviceWorkers: 'allow',
   };
   const original = { url: session.url, token: session.token };
   const errors = [];
@@ -177,7 +178,7 @@ test('初期読み込みの時間と JavaScript の量を記録する', async ({
   const samples = { eager: [], deferred: [] };
   for (let iteration = 0; iteration < 3; iteration++) {
     for (const mode of iteration % 2 ? ['deferred', 'eager'] : ['eager', 'deferred']) {
-      const context = await browser.newContext({ viewport: { width: 1600, height: 1000 }, locale: 'ja-JP' });
+      const context = await browser.newContext({ viewport: { width: 1600, height: 1000 }, locale: 'ja-JP', serviceWorkers: 'block' });
       const page = await context.newPage();
       try {
         const cdp = await context.newCDPSession(page);
