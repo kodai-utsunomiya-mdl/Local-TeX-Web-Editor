@@ -69,6 +69,16 @@ Client secret の Value は，リポジトリのファイルやチャットに�
 
 提出 ID と，最後に取得した時点の状態は `prepared/result.json` に記録する．`outcome` が `submitted` で，`published` が `false` の場合は，審査や公開処理が続いている．公開完了は `status` が `Published` になった時点で確認する．[Microsoft の提出の状態](https://learn.microsoft.com/en-us/windows/uwp/monetize/get-status-for-an-app-submission)
 
+## 提出後の公開状況を確認する
+
+[Check Microsoft Store publication](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/actions/workflows/check-microsoft-store-publication.yml) は，提出用の workflow が成功した後と，その後は 6 時間ごとに，Microsoft Store の現在の状態を取得する．`MICROSOFT_STORE_AUTOMATIC_SUBMISSION` が `true` のときに動作する．手動で確認する場合も，同じページの **Run workflow** から実行できる．
+
+実行の **Summary** には，製品 ID，提出 ID，状態，公開済みかどうかを表示する．同じ内容を `microsoft-store-publication-status` の `result.json` に保存する．対象は，処理中の提出があればその提出，なければ最後に公開した提出である．提出処理が返した ID と照合して，対象の更新の進行を確認する．
+
+`CommitStarted` は提出内容の受付処理中，`PreProcessing` は前処理中，`Certification` は審査中，`Published` は公開済みを表す．Microsoft が失敗の状態を返した場合，確認用の workflow も失敗として終了する．[各状態の説明](https://learn.microsoft.com/en-us/windows/uwp/monetize/get-status-for-an-app-submission)
+
+状態の取得には GET リクエストを使う．
+
 ## 既存の提出がある場合
 
 Partner Center に編集中または審査中の提出がある場合は，その提出 ID と状態を表示して停止する．既存の提出の完了や処理方針を確認してから，対象の workflow を再実行する．Store で同じバージョンが公開済みなら，その旨を結果に記録する．Store の版より古いパッケージを送る操作は停止する．

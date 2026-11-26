@@ -1,0 +1,72 @@
+name: Check Microsoft Store publication
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ['Prepare and submit Microsoft Store updates']
+    types: [completed]
+    branches: [main]
+  push:
+    branches: [main]
+    paths: ['.github/workflows/check-microsoft-store-publication.yml']
+  schedule:
+    - cron: '23 */6 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  status:
+    name: Read the current Microsoft Store submission status
+    if: >-
+      vars.MICROSOFT_STORE_AUTOMATIC_SUBMISSION == 'true' &&
+      (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    concurrency:
+      group: microsoft-store-publication-status
+      cancel-in-progress: false
+    steps:
+      - name: Check out the status reader
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+      - name: Read the publication status
+        env:
+          PARTNER_CENTER_TENANT_ID: ${{ secrets.PARTNER_CENTER_TENANT_ID }}
+          PARTNER_CENTER_CLIENT_ID: ${{ secrets.PARTNER_CENTER_CLIENT_ID }}
+          PARTNER_CENTER_CLIENT_SECRET: ${{ secrets.PARTNER_CENTER_CLIENT_SECRET }}
+        run: node scripts/submit-microsoft-store.mjs --status --output store-publication-status
+      - name: Summarize the publication status
+        if: always()
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs/promises';
+          const file = 'store-publication-status/result.json';
+          try {
+            const result = JSON.parse(await fs.readFile(file, 'utf8'));
+            const lines = ['## Microsoft Store', '',
+              `- Product: ${result.productId}`,
+              `- Submission: ${result.submissionId ?? 'Unavailable'}`,
+              `- Status: ${result.status ?? 'Unavailable'}`,
+              `- Published: ${result.status === 'Unknown' ? 'Unavailable' : result.published === true ? 'Yes' : result.published === false ? 'No' : 'Unavailable'}`, ''];
+            await fs.appendFile(process.env.GITHUB_STEP_SUMMARY, lines.join('\n'));
+          } catch {
+            await fs.appendFile(process.env.GITHUB_STEP_SUMMARY,
+              'The publication status could not be read. Check the status step for the error code.\n');
+          }
+          NODE
+      - name: Save the publication status
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: microsoft-store-publication-status
+          path: store-publication-status/result.json
+          if-no-files-found: warn
+          retention-days: 14
