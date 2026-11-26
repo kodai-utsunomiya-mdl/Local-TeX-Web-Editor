@@ -348,9 +348,13 @@ func (a *App) texSetupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var input texSetupInput
-	if r.Method == http.MethodGet {
+	if r.Method == http.MethodGet && a.texSetupMu.TryLock() {
+		defer a.texSetupMu.Unlock()
 		a.mu.Lock()
-		inspect := !a.isTeXSetupRunningLocked()
+		// Discover an unrecorded selection once. Discovery creates temporary
+		// files to check write access, so status polling must not repeat it or
+		// run it while a management request is inspecting the installation.
+		inspect := !a.isTeXSetupRunningLocked() && a.texEnvironment == nil
 		a.mu.Unlock()
 		if inspect {
 			_, _ = a.currentTeXEnvironment(r.Context())

@@ -280,14 +280,13 @@ export function registerFileOperationTests({ test, openProject, openEditor, setA
 
   test('停止する直前にコピーが完了した場合も一覧を更新し，応答がない行はもう一度確認する', async ({ page, session }) => {
     await openProject(session); await openEditor(page, session);
-    let notifyCopied, releaseResponse;
-    const copied = new Promise(resolve => { notifyCopied = resolve; });
+    let copiedStatus = null, releaseResponse;
     const release = new Promise(resolve => { releaseResponse = resolve; });
     await page.route('**/api/files/import?*', async route => {
       const request = route.request();
       if (request.method() === 'POST' && new URL(request.url()).searchParams.get('path') === 'second.md') {
-        const response = await route.fetch(); expect(response.status()).toBe(201);
-        notifyCopied(); await release; await route.abort('aborted').catch(() => {});
+        const response = await route.fetch(); copiedStatus = response.status();
+        await release; await route.abort('aborted').catch(() => {});
       } else await route.continue();
     });
     const chooser = page.waitForEvent('filechooser'); await page.locator('#import-files').click();
@@ -295,9 +294,12 @@ export function registerFileOperationTests({ test, openProject, openEditor, setA
       { name: 'first.md', mimeType: 'text/markdown', buffer: Buffer.from('# First\n') },
       { name: 'second.md', mimeType: 'text/markdown', buffer: Buffer.from('# Second\n') },
     ]);
-    await expect(page.locator('#file-import-confirm')).toBeEnabled(); await page.locator('#file-import-confirm').click();
-    await copied;
-    await page.locator('#file-import-dialog .dialog-actions').getByRole('button', { name: '停止', exact: true }).click(); releaseResponse();
+    try {
+      await expect(page.locator('#file-import-confirm')).toBeEnabled(); await page.locator('#file-import-confirm').click();
+      await expect.poll(() => copiedStatus, { message: 'Wait for the intercepted second copy to finish on the server.' }).not.toBeNull();
+      expect(copiedStatus).toBe(201);
+      await page.locator('#file-import-dialog .dialog-actions').getByRole('button', { name: '停止', exact: true }).click();
+    } finally { releaseResponse(); }
     await expect(page.locator('#file-import-progress')).toContainText('処理を停止しました．追加済み: 1 / 2 個');
     await expect(page.locator('#file-import-action-1')).toBeEnabled(); await expect(page.locator('#file-import-action-1')).toHaveValue('');
     await expect(page.getByTestId('file-first.md')).toBeVisible(); await expect(page.getByTestId('file-second.md')).toBeVisible();

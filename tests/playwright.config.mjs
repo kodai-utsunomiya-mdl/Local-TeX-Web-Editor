@@ -24,6 +24,9 @@ export default defineConfig({
     viewport: { width: 1600, height: 1000 },
     deviceScaleFactor: 1,
     locale: 'ja-JP',
+    // Request interception must reach Playwright. The browser restoration tests
+    // enable service workers explicitly to exercise the offline connection page.
+    serviceWorkers: 'block',
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
   },
