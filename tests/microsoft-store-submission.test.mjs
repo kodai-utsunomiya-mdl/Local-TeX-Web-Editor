@@ -302,6 +302,53 @@ test('authentication and connection errors cannot leak credentials or upload URL
   for (const secret of [environment.PARTNER_CENTER_CLIENT_SECRET, accessToken, 'private-upload-signature']) assert.ok(!output.includes(secret));
 });
 
+test('authentication errors report allowed OAuth names and AADSTS numbers without response text or credentials', async t => {
+  const sample = await fixture(t);
+  const prepared = await prepareSubmission(sample.options);
+  for (const [oauthError, aadstsCode] of [['invalid_client', 7000215], ['invalid_resource', 500011]]) {
+    const response = {
+      error: oauthError, error_codes: [aadstsCode],
+      error_description: `AADSTS${aadstsCode}: ${environment.PARTNER_CENTER_CLIENT_SECRET} ${accessToken} ${uploadUrl}`,
+      trace_id: 'trace-value-that-must-not-appear', access_token: accessToken,
+    };
+    const fetchImpl = async () => new Response(JSON.stringify(response), { status: 400 });
+    await assert.rejects(submitPrepared(prepared, submitOptions({ fetchImpl })), error => {
+      assert.equal(error.code, 'http-error');
+      assert.ok(error.message.includes(`OAuth error: ${oauthError}`));
+      assert.ok(error.message.includes(`AADSTS${aadstsCode}`));
+      if (aadstsCode === 7000215) assert.match(error.message, /Set PARTNER_CENTER_CLIENT_SECRET to the client secret value/);
+      return true;
+    });
+    const output = await fs.readFile(path.join(prepared.output, 'result.json'), 'utf8');
+    const result = JSON.parse(output);
+    assert.equal(result.phase, 'authentication');
+    assert.equal(result.error.oauthError, oauthError);
+    assert.deepEqual(result.error.aadstsCodes, [aadstsCode]);
+    for (const secret of [environment.PARTNER_CENTER_CLIENT_SECRET, accessToken, 'private-upload-signature',
+      'trace-value-that-must-not-appear', 'error_description']) assert.ok(!output.includes(secret));
+  }
+});
+
+test('authentication errors ignore unexpected OAuth strings, nonnumeric codes and malformed JSON', async t => {
+  const sample = await fixture(t);
+  const prepared = await prepareSubmission(sample.options);
+  const responses = [
+    JSON.stringify({ error: environment.PARTNER_CENTER_CLIENT_SECRET,
+      error_codes: [accessToken, '7000215', { code: 7000222 }, null, -1, 1.5, 1000000000, 700016, 700016],
+      error_description: uploadUrl }),
+    `<html>${environment.PARTNER_CENTER_CLIENT_SECRET}</html>`,
+  ];
+  for (let index = 0; index < responses.length; index += 1) {
+    const fetchImpl = async () => new Response(responses[index], { status: 400 });
+    await assert.rejects(submitPrepared(prepared, submitOptions({ fetchImpl })), { code: 'http-error' });
+    const output = await fs.readFile(path.join(prepared.output, 'result.json'), 'utf8');
+    const result = JSON.parse(output);
+    assert.equal(result.error.oauthError, undefined);
+    assert.deepEqual(result.error.aadstsCodes, index === 0 ? [700016] : undefined);
+    for (const secret of [environment.PARTNER_CENTER_CLIENT_SECRET, accessToken, 'private-upload-signature']) assert.ok(!output.includes(secret));
+  }
+});
+
 test('missing credentials stop before any network request', async t => {
   const sample = await fixture(t);
   const prepared = await prepareSubmission(sample.options);

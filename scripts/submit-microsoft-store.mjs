@@ -15,6 +15,15 @@ const STATUS_NAMES = new Set(['None', 'Canceled', 'PendingCommit', 'CommitStarte
   'PreProcessingFailed', 'Certification', 'CertificationFailed', 'Release', 'ReleaseFailed']);
 const FAILED_STATUSES = new Set(['Canceled', 'CommitFailed', 'PublishFailed', 'PreProcessingFailed',
   'CertificationFailed', 'ReleaseFailed']);
+const OAUTH_ERROR_NAMES = new Set(['invalid_request', 'invalid_client', 'invalid_grant', 'invalid_resource',
+  'unauthorized_client', 'unsupported_grant_type', 'invalid_scope', 'access_denied',
+  'interaction_required', 'temporarily_unavailable', 'server_error']);
+// https://learn.microsoft.com/entra/identity-platform/reference-error-codes
+const AUTH_ERROR_HELP = new Map([
+  [7000215, 'The client secret was rejected. Set PARTNER_CENTER_CLIENT_SECRET to the client secret value.'],
+  [7000222, 'The client secret has expired. Create a new secret and update the GitHub Actions secret.'],
+  [700016, 'The application was not found in the tenant. Check the application client ID and tenant ID.'],
+]);
 
 export class StoreSubmissionError extends Error {
   constructor(code, message, details = {}) {
@@ -313,13 +322,32 @@ function credentials(env) {
   return { tenantId, clientId, clientSecret };
 }
 
+async function authenticationFailure(response) {
+  let body;
+  try { body = await response.json(); } catch { return {}; }
+  if (!object(body)) return {};
+  const oauthError = OAUTH_ERROR_NAMES.has(body.error) ? body.error : undefined;
+  const aadstsCodes = Array.isArray(body.error_codes) ? [...new Set(body.error_codes.filter(code =>
+    Number.isSafeInteger(code) && code > 0 && code <= 999999999))].slice(0, 8) : [];
+  return { ...(oauthError ? { oauthError } : {}), ...(aadstsCodes.length ? { aadstsCodes } : {}) };
+}
+
 class StoreClient {
   constructor(fetchImpl) { this.fetch = fetchImpl; this.token = null; }
-  async request(url, options, label, { json = true, timeout = 60000 } = {}) {
+  async request(url, options, label, { json = true, timeout = 60000, authentication = false } = {}) {
     let response;
     try { response = await this.fetch(url, { ...options, redirect: 'error', signal: AbortSignal.timeout(timeout) }); }
     catch { throw new StoreSubmissionError('network-error', `${label} did not complete. Retry after checking the connection and the existing submission state.`); }
-    requireValue(response.ok, 'http-error', `${label} returned HTTP ${response.status}.`);
+    if (!response.ok) {
+      const details = authentication ? await authenticationFailure(response) : {};
+      const parts = [`${label} returned HTTP ${response.status}.`];
+      if (details.oauthError) parts.push(`OAuth error: ${details.oauthError}.`);
+      if (details.aadstsCodes) {
+        parts.push(`Error codes: ${details.aadstsCodes.map(code => `AADSTS${code}`).join(', ')}.`);
+        for (const code of details.aadstsCodes) if (AUTH_ERROR_HELP.has(code)) parts.push(AUTH_ERROR_HELP.get(code));
+      }
+      throw new StoreSubmissionError('http-error', parts.join(' '), { authentication: details });
+    }
     if (!json || response.status === 204) return null;
     try { return await response.json(); }
     catch { throw new StoreSubmissionError('invalid-api-response', `${label} returned invalid JSON.`); }
@@ -330,7 +358,7 @@ class StoreClient {
       method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8' },
       body: new URLSearchParams({ grant_type: 'client_credentials', client_id: clientId,
         client_secret: clientSecret, resource: 'https://manage.devcenter.microsoft.com' }),
-    }, 'Microsoft Entra authentication');
+    }, 'Microsoft Entra authentication', { authentication: true });
     requireValue(typeof result.access_token === 'string' && result.access_token.length > 0,
       'invalid-api-response', 'Microsoft Entra did not return an access token.');
     this.token = result.access_token;
@@ -428,7 +456,7 @@ export async function submitPrepared(prepared, { env = process.env, fetchImpl = 
     const details = failure.details ?? {};
     await writeResult(prepared, { outcome: 'blocked', ...(id ? { submissionId: id } : {}),
       ...(details.status ? { status: details.status } : {}), published: false, committed,
-      phase, error: { code: failure.code, message: failure.message } });
+      phase, error: { code: failure.code, message: failure.message, ...details.authentication } });
     throw failure;
   }
 }
