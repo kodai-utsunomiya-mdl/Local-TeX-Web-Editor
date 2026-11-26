@@ -86,6 +86,7 @@ try {
           await captureSection(steps.nth(index), `${route.name}-${size.name}-setup-${index + 1}.png`);
         }
         await captureSection(page.locator('#settings-reset'), `${route.name}-${size.name}-settings-reset.png`);
+        await captureSection(page.locator('#browser-restore'), `${route.name}-${size.name}-browser-restore.png`);
         await captureSection(page.locator('#markdown-editing .screenshot'), `${route.name}-${size.name}-markdown-editing.png`);
         const firstLaunch = page.locator('#first-launch');
         await firstLaunch.locator('summary').click();

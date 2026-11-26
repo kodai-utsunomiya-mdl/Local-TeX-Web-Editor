@@ -32,14 +32,14 @@ const html = `<!doctype html>
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; width: ${width}px; height: ${height}px; overflow: hidden; }
-    body { background: #111c26; color: #f1f5f9; font-family: Arial, Helvetica, sans-serif; }
+    body { background: #101b30; color: #f1f5f9; font-family: Arial, Helvetica, sans-serif; }
     main { width: 100%; height: 100%; display: grid; grid-template-columns: 300px minmax(0, 1fr); align-items: center; gap: 36px; padding: 48px; }
     .brand { min-width: 0; }
     .icon { display: block; width: 82px; height: 82px; margin-left: -3px; }
     h1 { margin: 28px 0 22px; font-size: 48px; line-height: 1.14; font-weight: 700; letter-spacing: -1.3px; }
     h1 span { display: block; white-space: nowrap; }
-    .details { margin: 0; color: #b5c8d4; font-size: 18px; line-height: 1.75; }
-    figure { margin: 0; min-width: 0; overflow: hidden; border: 1px solid #344b5b; border-radius: 12px; background: #192733; box-shadow: 0 18px 36px #00000038; }
+    .details { margin: 0; color: #b6c9e8; font-size: 18px; line-height: 1.75; }
+    figure { margin: 0; min-width: 0; overflow: hidden; border: 1px solid #3a5072; border-radius: 12px; background: #17253d; box-shadow: 0 18px 36px #00000038; }
     .editor { display: block; width: 100%; height: auto; }
   </style>
 </head>
