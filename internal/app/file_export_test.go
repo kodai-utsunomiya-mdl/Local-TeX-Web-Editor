@@ -126,8 +126,15 @@ func TestFileSaveAsUsesTheSelectedDestinationAndCanCancel(t *testing.T) {
 			t.Fatalf("save as: %d %s", response.Code, response.Body.String())
 		}
 		var result struct{ Path string }
-		if err := json.Unmarshal(response.Body.Bytes(), &result); err != nil || result.Path != destination {
+		if err := json.Unmarshal(response.Body.Bytes(), &result); err != nil {
 			t.Fatalf("saved path: %s %v", response.Body.String(), err)
+		}
+		// Windows can expand a temporary folder's short name in the returned
+		// path. The response must identify the file selected by the user.
+		selected, selectedErr := os.Stat(destination)
+		returned, returnedErr := os.Stat(result.Path)
+		if selectedErr != nil || returnedErr != nil || !filepath.IsAbs(result.Path) || !os.SameFile(selected, returned) {
+			t.Fatalf("selected path %q (%v), returned path %q (%v)", destination, selectedErr, result.Path, returnedErr)
 		}
 		actual, err := os.ReadFile(destination)
 		if err != nil || !bytes.Equal(actual, data) {

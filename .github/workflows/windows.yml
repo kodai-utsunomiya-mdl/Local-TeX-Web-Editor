@@ -58,6 +58,18 @@ jobs:
       - name: Run Go tests
         run: go test ./...
 
+      - name: Test the Windows folder and Save As dialogs
+        if: ${{ !cancelled() }}
+        shell: pwsh
+        env:
+          LOCAL_TEX_EDITOR_TEST_NATIVE_PICKER: '1'
+        run: |
+          New-Item -ItemType Directory -Force test-results | Out-Null
+          go test -p 1 -count=1 -timeout 120s -v -run 'Native(Folder|Save)Picker' ./internal/platform ./internal/app 2>&1 | Tee-Object -FilePath native-folder-picker.log
+          $testExitCode = $LASTEXITCODE
+          Copy-Item native-folder-picker.log test-results/native-folder-picker.log
+          if ($testExitCode -ne 0) { throw 'The Windows file dialog test failed.' }
+
       - name: Build the Windows application
         shell: pwsh
         run: |
@@ -107,18 +119,6 @@ jobs:
         env:
           LOCAL_TEX_EDITOR_TEST_PHASE: after-tex
         run: npm test
-
-      - name: Test the Windows folder and Save As dialogs
-        if: ${{ !cancelled() }}
-        shell: pwsh
-        env:
-          LOCAL_TEX_EDITOR_TEST_NATIVE_PICKER: '1'
-        run: |
-          New-Item -ItemType Directory -Force test-results | Out-Null
-          go test -p 1 -count=1 -timeout 120s -v -run 'Native(Folder|Save)Picker' ./internal/platform ./internal/app 2>&1 | Tee-Object -FilePath native-folder-picker.log
-          $testExitCode = $LASTEXITCODE
-          Copy-Item native-folder-picker.log test-results/native-folder-picker.log
-          if ($testExitCode -ne 0) { throw 'The Windows file dialog test failed.' }
 
       - name: Remove the app-managed TeX environment after the checks
         run: node scripts/test-tex-setup.mjs --remove
