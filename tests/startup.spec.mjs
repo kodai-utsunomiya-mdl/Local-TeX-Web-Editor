@@ -89,10 +89,9 @@ test('ブラウザを終了して前回のタブを復元すると，アプリ�
   };
   const original = { url: session.url, token: session.token };
   const errors = [];
-  let context, page, tracing = false;
+  let context, page;
   try {
     context = await chromium.launchPersistentContext(profile, options);
-    await context.tracing.start({ screenshots: true, snapshots: true }); tracing = true;
     page = context.pages()[0];
     page.on('pageerror', error => errors.push(error.message));
     await openEditor(page, session);
@@ -102,14 +101,12 @@ test('ブラウザを終了して前回のタブを復元すると，アプリ�
 
     await json(session, '/api/shutdown', { method: 'POST', data: {} });
     await session.waitForExit();
-    await context.tracing.stop({ path: testInfo.outputPath('before-browser-restart.zip') }); tracing = false;
     // Close the whole browser so Chromium saves its open tabs and profile data.
     await context.close(); context = undefined; page = undefined;
 
     context = await chromium.launchPersistentContext(profile, {
       ...options, args: ['--restore-last-session'], ignoreDefaultArgs: ['about:blank'],
     });
-    await context.tracing.start({ screenshots: true, snapshots: true }); tracing = true;
     // Do not navigate to the editor here: Chromium must restore the saved tab.
     await expect.poll(() => context.pages().map(tab => tab.url()), {
       message: 'Chromium should restore the previous editor tab from its profile.',
@@ -134,7 +131,6 @@ test('ブラウザを終了して前回のタブを復元すると，アプリ�
     expect(errors).toEqual([]);
   } finally {
     if (page && !page.isClosed()) await page.screenshot({ path: testInfo.outputPath('browser-session-final.png') }).catch(() => {});
-    if (tracing) await context?.tracing.stop({ path: testInfo.outputPath('restored-browser-trace.zip') }).catch(() => {});
     await context?.close();
   }
 });

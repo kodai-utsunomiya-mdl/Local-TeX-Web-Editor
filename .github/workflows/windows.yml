@@ -97,6 +97,9 @@ jobs:
           go test ./cmd/local-tex-editor -run '^TestWindowsExecutableIcon$' -count=1 -v
           if ($LASTEXITCODE -ne 0) { throw 'The Windows icon check failed.' }
 
+      - name: Restore the previous browser tab before installing TeX
+        run: npm test -- tests/startup.spec.mjs --grep "ブラウザを終了して前回のタブを復元" --output test-results/browser-session-restore
+
       - name: Install TeX through the application and compile the research preambles
         run: node scripts/test-tex-setup.mjs
 
