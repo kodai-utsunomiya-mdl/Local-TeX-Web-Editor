@@ -85,3 +85,46 @@ jobs:
               subprocess.run(['gh', 'release', 'upload', 'v0.1.15', f'{name}#{label}'], check=True)
               print(f'Published: {name}')
           PY
+
+      - name: Check out the submission automation
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: 50fee5c5125ac663c1d2fafa9734d4ed3afdf8d9
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+      - name: Prepare v0.1.15 from the published release and its tested files
+        run: |
+          node scripts/prepare-store-release.mjs --store-run 45844360603 --output store-submission-files --publish-downloads
+          node scripts/submit-microsoft-store.mjs --prepare --package-dir store-submission-files/package --listing-dir store-submission-files/listing --metadata store-submission-files/metadata.json --output store-submission-files/prepared
+      - name: Save the reviewed submission files
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: store-submission-v0.1.15-review
+          path: |
+            store-submission-files/release.json
+            store-submission-files/metadata.json
+            store-submission-files/prepared/
+          if-no-files-found: error
+          retention-days: 90
+
+  check-windows:
+    name: Check submission automation on Windows
+    runs-on: windows-2022
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the submission automation
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: 50fee5c5125ac663c1d2fafa9734d4ed3afdf8d9
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+      - name: Test the submission scripts with the Windows checkout
+        run: node --test tests/prepare-store-release.test.mjs tests/microsoft-store-submission.test.mjs
