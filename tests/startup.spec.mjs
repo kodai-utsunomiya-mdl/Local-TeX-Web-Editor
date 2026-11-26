@@ -1,4 +1,4 @@
-import { expect } from '@playwright/test';
+import { chromium, expect } from '@playwright/test';
 import { build } from 'esbuild';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -77,6 +77,67 @@ for (const language of ['ja', 'en']) {
     });
   });
 }
+
+test('ブラウザを終了して前回のタブを復元すると，アプリの起動後に原稿を再び編集できる', async ({ session }, testInfo) => {
+  await openProject(session);
+  const profile = path.join(session.temp, 'chromium-profile');
+  const options = {
+    // Session restore uses the regular Chromium browser, including in headless mode.
+    // https://playwright.dev/docs/browsers#chromium-new-headless-mode
+    channel: 'chromium', headless: true,
+    viewport: { width: 1600, height: 1000 }, locale: 'ja-JP',
+  };
+  const original = { url: session.url, token: session.token };
+  const errors = [];
+  let context, page, tracing = false;
+  try {
+    context = await chromium.launchPersistentContext(profile, options);
+    await context.tracing.start({ screenshots: true, snapshots: true }); tracing = true;
+    page = context.pages()[0];
+    page.on('pageerror', error => errors.push(error.message));
+    await openEditor(page, session);
+    await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+    await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+    expect(page.url()).toBe(original.url);
+
+    await json(session, '/api/shutdown', { method: 'POST', data: {} });
+    await session.waitForExit();
+    await context.tracing.stop({ path: testInfo.outputPath('before-browser-restart.zip') }); tracing = false;
+    // Close the whole browser so Chromium saves its open tabs and profile data.
+    await context.close(); context = undefined; page = undefined;
+
+    context = await chromium.launchPersistentContext(profile, {
+      ...options, args: ['--restore-last-session'], ignoreDefaultArgs: ['about:blank'],
+    });
+    await context.tracing.start({ screenshots: true, snapshots: true }); tracing = true;
+    // Do not navigate to the editor here: Chromium must restore the saved tab.
+    await expect.poll(() => context.pages().map(tab => tab.url()), {
+      message: 'Chromium should restore the previous editor tab from its profile.',
+    }).toContain(original.url);
+    page = context.pages().find(tab => tab.url() === original.url);
+    page.on('pageerror', error => errors.push(error.message));
+    await page.bringToFront();
+    await expect(page.locator('#connection-title')).toHaveText('アプリへの接続を待っています');
+    await page.screenshot({ path: testInfo.outputPath('restored-browser-waiting.png') });
+
+    await session.restart();
+    expect(session.url).toBe(original.url); expect(session.token).toBe(original.token);
+    const editor = page.getByTestId('editor').locator('.cm-content');
+    await expect(editor).toBeVisible();
+    await expect(page.locator('#connection-status')).toHaveClass(/connected/);
+    expect(page.url()).toBe(original.url);
+    await editor.click(); await page.keyboard.press(process.platform === 'darwin' ? 'Meta+ArrowUp' : 'Control+Home');
+    await page.keyboard.insertText('% Edited after restoring the browser session.\n');
+    await page.keyboard.press(process.platform === 'darwin' ? 'Meta+s' : 'Control+s');
+    await expect.poll(() => readFile(path.join(session.project, 'main.tex'), 'utf8')).toContain('Edited after restoring the browser session.');
+    await page.screenshot({ path: testInfo.outputPath('restored-browser-editor.png') });
+    expect(errors).toEqual([]);
+  } finally {
+    if (page && !page.isClosed()) await page.screenshot({ path: testInfo.outputPath('browser-session-final.png') }).catch(() => {});
+    if (tracing) await context?.tracing.stop({ path: testInfo.outputPath('restored-browser-trace.zip') }).catch(() => {});
+    await context?.close();
+  }
+});
 
 test('更新後も未保存の本文を編集でき，新しい版へ草稿を引き継げる', async ({ page, session }) => {
   await openProject(session); await openEditor(page, session); await setAutoSave(page, false);

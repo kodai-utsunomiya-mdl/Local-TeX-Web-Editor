@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 	"testing"
@@ -93,6 +94,88 @@ func waitForNativeSaveName(t *testing.T, hwnd uintptr, name string) uintptr {
 	return 0
 }
 
+// INPUT uses the size and alignment of MOUSEINPUT for its union, including when
+// it carries keyboard events. These layouts work on both 32- and 64-bit Windows.
+type nativeTestMouseInput struct {
+	x, y        int32
+	data, flags uint32
+	time        uint32
+	extra       uintptr
+}
+
+type nativeTestInput struct {
+	kind  uint32
+	union nativeTestMouseInput
+}
+
+type nativeTestKeyboardInput struct {
+	key, scan   uint16
+	flags, time uint32
+	extra       uintptr
+}
+
+func nativeTestKey(key, scan uint16, flags uint32) nativeTestInput {
+	input := nativeTestInput{kind: 1} // INPUT_KEYBOARD
+	keyboard := (*nativeTestKeyboardInput)(unsafe.Pointer(&input.union))
+	keyboard.key, keyboard.scan, keyboard.flags = key, scan, flags
+	return input
+}
+
+func sendNativeTestKeys(t *testing.T, inputs ...nativeTestInput) {
+	t.Helper()
+	count, _, err := user32.NewProc("SendInput").Call(uintptr(len(inputs)), uintptr(unsafe.Pointer(&inputs[0])), unsafe.Sizeof(inputs[0]))
+	if count != uintptr(len(inputs)) {
+		t.Fatalf("native keyboard input sent %d of %d events: %v", count, len(inputs), err)
+	}
+}
+
+func focusNativeSaveName(t *testing.T, field uintptr) {
+	t.Helper()
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	// Create this thread's message queue before attaching it to the dialog.
+	var message testWindowMessage
+	user32.NewProc("PeekMessageW").Call(uintptr(unsafe.Pointer(&message)), 0, 0, 0, 0)
+	current, _, _ := kernel32.NewProc("GetCurrentThreadId").Call()
+	target, _, _ := user32.NewProc("GetWindowThreadProcessId").Call(field, 0)
+	if current != target {
+		attached, _, err := user32.NewProc("AttachThreadInput").Call(current, target, 1)
+		if attached == 0 {
+			t.Fatalf("could not focus the Save As name field: %v", err)
+		}
+		defer user32.NewProc("AttachThreadInput").Call(current, target, 0)
+	}
+	user32.NewProc("SetFocus").Call(field)
+	if focused, _, _ := user32.NewProc("GetFocus").Call(); focused != field {
+		t.Fatalf("keyboard focus = %x, want Save As name field %x", focused, field)
+	}
+}
+
+func enterNativeSaveName(t *testing.T, field uintptr, text string) {
+	t.Helper()
+	focusNativeSaveName(t, field)
+	inputs := []nativeTestInput{nativeTestKey(0x11, 0, 0), nativeTestKey('A', 0, 0), nativeTestKey('A', 0, 2), nativeTestKey(0x11, 0, 2)}
+	for _, character := range syscall.StringToUTF16(text) {
+		if character != 0 {
+			inputs = append(inputs, nativeTestKey(0, character, 4), nativeTestKey(0, character, 6)) // KEYEVENTF_UNICODE, KEYEVENTF_KEYUP
+		}
+	}
+	sendNativeTestKeys(t, inputs...)
+	var actual string
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		var value [2048]uint16
+		user32.NewProc("GetWindowTextW").Call(field, uintptr(unsafe.Pointer(&value[0])), uintptr(len(value)))
+		actual = syscall.UTF16ToString(value[:])
+		if actual == text {
+			t.Logf("typed Save As destination = %q", actual)
+			return
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
+	t.Fatalf("Save As name field = %q after keyboard input, want %q", actual, text)
+}
+
 func TestNativeSavePickerSelectsANameAndCanBeCancelled(t *testing.T) {
 	if os.Getenv("LOCAL_TEX_EDITOR_TEST_NATIVE_PICKER") != "1" {
 		t.Skip("set LOCAL_TEX_EDITOR_TEST_NATIVE_PICKER=1 on an interactive Windows runner")
@@ -116,11 +199,8 @@ func TestNativeSavePickerSelectsANameAndCanBeCancelled(t *testing.T) {
 	}
 	selected := filepath.Join(directory, "選択した原稿.tex")
 	// A user can change the visible name while Windows supplies the extension.
-	value := syscall.StringToUTF16Ptr(strings.TrimSuffix(selected, ".tex"))
-	if ok, _, _ := user32.NewProc("SetWindowTextW").Call(nameEdit, uintptr(unsafe.Pointer(value))); ok == 0 {
-		t.Fatal("could not enter the destination in the native name field")
-	}
-	user32.NewProc("PostMessageW").Call(hwnd, 0x0111, 1, 0) // WM_COMMAND, IDOK
+	enterNativeSaveName(t, nameEdit, strings.TrimSuffix(selected, ".tex"))
+	sendNativeTestKeys(t, nativeTestKey(0x0d, 0, 0), nativeTestKey(0x0d, 0, 2)) // Enter
 	if result := pickerResult(t, first); !strings.EqualFold(result.path, selected) || result.err != nil {
 		t.Fatalf("native save destination = %+v, want %q", result, selected)
 	}
