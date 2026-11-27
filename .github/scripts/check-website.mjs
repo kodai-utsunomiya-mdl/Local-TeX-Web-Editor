@@ -78,7 +78,7 @@ try {
         const captureSection = async (locator, name) => {
           await locator.screenshot({
             path: path.join(output, name),
-            style: '.site-header { visibility: hidden !important; }',
+            style: '.site-header, .skip-link { visibility: hidden !important; }',
           });
           sectionScreenshots.push(name);
         };
@@ -87,6 +87,9 @@ try {
         }
         await captureSection(page.locator('#settings-reset'), `${route.name}-${size.name}-settings-reset.png`);
         await captureSection(page.locator('#browser-restore'), `${route.name}-${size.name}-browser-restore.png`);
+        await captureSection(page.locator('#project-zip'), `${route.name}-${size.name}-project-zip.png`);
+        await captureSection(page.locator('#project-zip-export'), `${route.name}-${size.name}-project-zip-export.png`);
+        await captureSection(page.locator('#application-updates'), `${route.name}-${size.name}-application-updates.png`);
         await captureSection(page.locator('#markdown-editing .screenshot'), `${route.name}-${size.name}-markdown-editing.png`);
         const firstLaunch = page.locator('#first-launch');
         await firstLaunch.locator('summary').click();

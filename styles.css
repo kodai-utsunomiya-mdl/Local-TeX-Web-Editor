@@ -120,6 +120,21 @@ details p:last-child { margin-bottom: 0; }
 .setup-steps .screenshot { margin-top: 1.2rem; }
 .setup-dialog-shot { max-width: 800px; margin-inline: auto; }
 .setup-dialog-shot img { aspect-ratio: 4 / 5; object-fit: cover; object-position: center; }
+.project-zip-import-shot, .project-zip-menu-shot { margin-inline: auto; margin-bottom: 24px; }
+.project-zip-import-shot { max-width: 800px; }
+.project-zip-menu-shot { max-width: 420px; }
+.project-zip-import-shot a, .project-zip-menu-shot a { position: relative; }
+.project-zip-import-shot a { aspect-ratio: 1; }
+.project-zip-menu-shot a { aspect-ratio: 12 / 7; }
+/* Show the controls at a readable scale while linking to the full 1600 × 1000 image. */
+.project-zip-import-shot img, .project-zip-menu-shot img { position: absolute; top: 0; left: 0; max-width: none; height: auto; }
+.project-zip-import-shot img { width: 200%; transform: translate(-25%, -10%); }
+/* Show a 360 × 210 region starting at (1030, 0) in English and (1060, 0) in Japanese. */
+.project-zip-menu-shot img { width: 444.444444%; transform: translateX(-64.375%); }
+html[lang="ja"] .project-zip-menu-shot img { transform: translateX(-66.25%); }
+.project-zip-menu-shot figcaption { display: block; }
+.project-zip-menu-shot figcaption span { display: block; }
+.project-zip-menu-shot figcaption span:last-child { margin-top: .35rem; }
 .reading-links { display: flex; flex-wrap: wrap; gap: .6rem 1.5rem; margin-top: 1.2rem; padding: 0; list-style: none; font-size: .91rem; }
 .site-footer { padding: 25px 0 30px; border-top: 1px solid var(--line); }
 .footer-inner { display: flex; align-items: baseline; justify-content: space-between; gap: 1.5rem; color: var(--muted); font-size: .8rem; }
