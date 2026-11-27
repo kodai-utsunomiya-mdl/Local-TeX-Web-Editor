@@ -12,7 +12,7 @@
 
 ZIP は v0.1.20 を配布する．Microsoft Store 版の更新は，Store の審査と公開の完了後に利用できる．
 
-Windows と macOS のブラウザで TeX と Markdown の原稿を編集するアプリ．TeX が入っていない PC でも，まずこのアプリを起動し，**ホーム → TeX をセットアップ…** から導入できる．完了すると，導入した環境が自動で選ばれ，原稿をコンパイルできる．起動時には既定のブラウザで `localhost` の画面が開き，原稿と PDF を同じウィンドウで確認できる．
+Windows と macOS のブラウザで TeX，Markdown，テキストの原稿を編集する **完全無料** のアプリ．アプリ内購入，有料アップグレード，サブスクリプション，試用期限はなく，すべての機能を使える．起動時には既定のブラウザで `localhost` の画面が開き，原稿と PDF を同じウィンドウで確認できる．
 
 ![ダークモードで TeX の原稿と PDF を並べて表示した Local TeX Web Editor](docs/screenshots/editor-tex-dark.png)
 
@@ -20,9 +20,13 @@ Windows と macOS のブラウザで TeX と Markdown の原稿を編集する�
 
 ## 作成した主な経緯
 
-- Overleaf では，無料枠の場合，長い原稿がコンパイル時間の上限に達する場合がある．コンパイルを PC 上で実行すれば，(PC の性能にも依るが基本的には) より高速に，手元の計算資源を使って作業を続けられる．また，複数行の文章や TeX コードをそのまま貼り付けて検索できるようにした．
+- **コンパイルの時間制限を気にせず書ける．** [Overleaf の無料枠にはコンパイル時間の上限がある](https://docs.overleaf.com/getting-started/free-and-premium-plans/plan-limits)．本アプリは PC の TeX を実行し，コンパイル時間の上限を設けていないため，長い原稿も手元の計算資源を使ってコンパイルを続けられる．必要なときは，エディタから処理を停止できる．
 
-- VS Code は幅広い開発用途に対応している．TeX の原稿を編集する目的では，機能の多さやデスクトップアプリのメモリ使用量が負担になる場合がある．このエディタでは，必要十分な原稿の編集・コンパイル・プレビュー機能をまとめており，軽量に動作する．
+- **配布ファイルが小さく，軽量な構成で原稿を編集できる．** [VS Code のデスクトップ版は Electron を使う](https://code.visualstudio.com/docs/editor/whyvscode)．本アプリは Go の実行ファイルと普段のブラウザのタブで動作し，配布ファイルに専用のブラウザエンジンを含めない．TeX の補完，コンパイル，PDF の表示をアプリに備え，追加の拡張機能を入れずに使える．配布ファイルの実測容量は [アプリとデータの保存先](#アプリとデータの保存先) に記載している．
+
+- **TeX もアプリから導入できる．** **ホーム → TeX をセットアップ…** から，必要な TeX のプログラムとパッケージをダウンロードして導入できる．完了すると環境が自動で選ばれ，サンプルの作成とコンパイルへ進める．既存の TeX を選んで使うこともできる．
+
+- **Markdown やテキストの日常的な編集にも使える．** TeX を導入する前から，Markdown のメモや説明文，`.txt` ファイル，コード，設定ファイルを編集できる．Markdown では直接編集，ソースの編集，プレビューを使える．複数行の文章やコードをそのまま貼り付けて検索することもできる．
 
 ## 初めて使う
 
@@ -235,6 +239,8 @@ PC にある原稿は，`.tex`，`.md`，`.txt`，`.bib`，画像，`latexmkrc` 
 [![プロジェクトを ZIP でダウンロードする操作と，ZIP にして名前を付けて保存する操作を示すメニュー](docs/screenshots/project-zip-menu-ja.png)](docs/screenshots/project-zip-menu-ja.png)
 
 ホームの最近開いたプロジェクトでも，各プロジェクトの **ZIP** から両方の書き出しを選べる．編集中のプロジェクトでは，開いている原稿を保存してから ZIP を作る．別のプロジェクトでは，そのフォルダーに保存されたファイルを使う．書き出した後も，現在のプロジェクトで編集を続けられる．
+
+[![ホームの最近開いたプロジェクトにある ZIP のメニュー](docs/screenshots/project-home-zip-ja.png)](docs/screenshots/project-home-zip-ja.png)
 
 Overleaf で使う場合は，**New project → Existing project (.zip)** でこの ZIP を選ぶ．メイン文書とコンパイラーを，元のプロジェクトに合わせて選ぶ．手順は Overleaf の [Uploading a project](https://docs.overleaf.com/managing-projects-and-files/uploading-a-project) で確認できる．
 

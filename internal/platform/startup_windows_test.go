@@ -26,17 +26,26 @@ func TestWindowsStartupCreatesUpdatesAndRemovesOnlyItsOwnLink(t *testing.T) {
 	}
 	linkPath := filepath.Join(folder, shortcutName)
 	link, err := readShellShortcut(linkPath)
-	if err != nil || link.Arguments != "--background" || !startupPathsEqual(link.Target, state.Executable) {
+	if err != nil || link.Arguments != "--startup" || !startupPathsEqual(link.Target, state.Executable) {
 		t.Fatalf("startup link: %#v %v", link, err)
 	}
 	icon, err := os.ReadFile(link.IconPath)
 	if err != nil || !bytes.Equal(icon, branding.Icon) {
 		t.Fatalf("startup icon: %v", err)
 	}
+	if err := writeShellShortcutWithArguments(linkPath, link.Target, link.IconPath, "--background"); err != nil {
+		t.Fatal(err)
+	}
+	if state, err := windowsStartupStatusAt(local, folder); err != nil || !state.Enabled {
+		t.Fatalf("legacy startup link: %#v %v", state, err)
+	}
 	newer := filepath.Join(root, "New Download", "editor.exe")
 	writeShortcutTestFile(t, newer, []byte("MZ second app"))
-	if _, err := setWindowsStartupAt(newer, local, folder, true); err != nil {
+	if err := refreshWindowsStartupAt(newer, local, folder); err != nil {
 		t.Fatal(err)
+	}
+	if updated, err := readShellShortcut(linkPath); err != nil || updated.Arguments != "--startup" {
+		t.Fatalf("updated startup argument: %#v %v", updated, err)
 	}
 	installed, err := os.ReadFile(state.Executable)
 	if err != nil || string(installed) != "MZ second app" {
@@ -51,6 +60,12 @@ func TestWindowsStartupCreatesUpdatesAndRemovesOnlyItsOwnLink(t *testing.T) {
 	}
 	if _, err := os.Stat(link.Target); err != nil {
 		t.Fatalf("disabling startup removed the application: %v", err)
+	}
+	if err := refreshWindowsStartupAt(newer, local, folder); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(linkPath); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("refresh recreated the disabled startup link: %v", err)
 	}
 }
 

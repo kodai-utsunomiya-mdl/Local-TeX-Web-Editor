@@ -109,12 +109,20 @@ try {
   await execute('/usr/bin/ditto', ['-c', '-k', '--sequesterRsrc', '--keepParent', nextApp, archiveFile]);
   archive = await readFile(archiveFile);
 
-  opening = spawn('/usr/bin/open', ['-W', '-n', installedApp, '--args', '--background', '--config-dir', configuration, '--ready-file', readyFile], { stdio: ['ignore', 'pipe', 'pipe'] });
+  opening = spawn('/usr/bin/open', ['-W', '-n', installedApp, '--args', '--startup', '--config-dir', configuration, '--ready-file', readyFile], { stdio: ['ignore', 'pipe', 'pipe'] });
   let launchError = '';
   opening.stderr.on('data', data => { launchError += data; });
   ready = await waitFor(readReady, value => value?.version === previousVersion, 'The previous application did not start.');
   const previous = { ...ready };
   await api('/api/project/open', { path: project });
+  // A temporary configuration saves the preference, then reports that it cannot
+  // change the runner's actual login registration. The update must still resume.
+  const disableResponse = await fetch(new URL('/api/startup', ready.url), {
+    method: 'POST', headers: { Origin: new URL(ready.url).origin, 'X-Local-Token': ready.token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled: false }), signal: AbortSignal.timeout(15000),
+  });
+  assert.equal(disableResponse.status, 501, await disableResponse.text());
+  assert.equal(JSON.parse(await readFile(path.join(configuration, 'settings.json'), 'utf8')).startupEnabled, false);
   assert.equal((await api('/api/updates')).automatic, true);
   browser = await chromium.launch({ headless: true });
   context = await browser.newContext({ viewport: { width: 1500, height: 960 }, locale: 'ja-JP' });
@@ -156,6 +164,10 @@ try {
 
   assert.equal(ready.url, previous.url, 'The update must return to the original browser address.');
   assert.equal(ready.token, previous.token, 'The restored tab must reconnect to the same local session.');
+  const resumedArguments = (await execute('/bin/ps', ['-ww', '-p', String(ready.pid), '-o', 'args='])).stdout.trim();
+  assert.match(resumedArguments, /(?:^|\s)--background(?:\s|$)/);
+  assert.doesNotMatch(resumedArguments, /(?:^|\s)--startup(?:\s|$)/);
+  assert.equal(JSON.parse(await readFile(path.join(configuration, 'settings.json'), 'utf8')).startupEnabled, false);
   await expect(page.locator('#app-version')).toHaveText(`v${version}`, { timeout: 30000 });
   await expect(editor).toContainText('Saved before the automatic update.');
   await expect(page.locator('#connection-status')).toHaveClass(/connected/);
@@ -166,7 +178,7 @@ try {
   assert.equal(installedMetadata.CFBundleVersion, version);
   assert.deepEqual(pageErrors, []);
   await page.screenshot({ path: path.join(output, 'after-update.png') });
-  await writeFile(path.join(output, 'result.json'), JSON.stringify({ from: previousVersion, to: version, architecture: process.arch, checks: ['signed-feed', 'signed-archive', 'automatic-download', 'automatic-install', 'original-configuration', 'restored-browser-tab', 'saved-manuscript'], transitions }, null, 2));
+  await writeFile(path.join(output, 'result.json'), JSON.stringify({ from: previousVersion, to: version, architecture: process.arch, checks: ['signed-feed', 'signed-archive', 'automatic-download', 'automatic-install', 'original-configuration', 'restored-browser-tab', 'saved-manuscript', 'startup-disabled-during-update'], startupEnabled: false, resumedWith: '--background', transitions }, null, 2));
   passed = true;
   console.log(`Sparkle updated ${previousVersion} to ${version} and restored the original editor.`);
 } finally {

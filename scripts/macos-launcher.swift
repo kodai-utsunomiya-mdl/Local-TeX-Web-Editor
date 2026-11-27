@@ -30,7 +30,9 @@ final class EditorApplication: NSObject, NSApplicationDelegate {
     }
 
     private func rememberUpdateRelaunch() {
-        var nextArguments = arguments
+        // The update resumes the current editor even when the user has turned
+        // off future launches at login during this session.
+        var nextArguments = arguments.filter { $0 != "--startup" }
         if !nextArguments.contains("--background") { nextArguments.append("--background") }
         UserDefaults.standard.set([
             "application": Bundle.main.bundleURL.path,
@@ -40,10 +42,12 @@ final class EditorApplication: NSObject, NSApplicationDelegate {
         UserDefaults.standard.synchronize()
     }
 
-    private func command() -> Process {
+    private func command(reopening: Bool = false) -> Process {
         let process = Process()
         process.executableURL = Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/local-tex-web-editor")
-        process.arguments = arguments
+        process.arguments = reopening
+            ? arguments.filter { !["--startup", "--background", "--no-browser"].contains($0) }
+            : arguments
         return process
     }
 
@@ -139,7 +143,7 @@ final class EditorApplication: NSObject, NSApplicationDelegate {
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         guard backend?.isRunning == true, opening?.isRunning != true else { return false }
         // The server's existing instance handling opens another editor tab.
-        let process = command()
+        let process = command(reopening: true)
         do {
             try process.run()
             opening = process

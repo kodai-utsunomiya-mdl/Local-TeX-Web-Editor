@@ -3,6 +3,7 @@
 package platform
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -174,9 +175,21 @@ func RefreshStartupRegistration(configDir string) error {
 	if err != nil {
 		return nil
 	}
+	return refreshMacStartupRegistrationAt(path, executable)
+}
+
+func refreshMacStartupRegistrationAt(path, executable string) error {
 	state, err := macStartupStateAt(path)
-	if err != nil || !state.Enabled || state.Executable == executable {
+	if err != nil || !state.Enabled {
 		return err
 	}
-	return writeStartupFile(path, startupLaunchAgent(executable), true)
+	previous, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	next := startupLaunchAgent(executable)
+	if bytes.Equal(previous, next) {
+		return nil
+	}
+	return writeStartupFile(path, next, true)
 }

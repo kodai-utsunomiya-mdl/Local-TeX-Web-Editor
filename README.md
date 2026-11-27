@@ -12,7 +12,7 @@ English | [日本語](README.ja.md) · [Website and guide](https://kodai-utsunom
 
 The ZIP downloads are v0.1.20. The Microsoft Store update becomes available after Store review and publication.
 
-Edit TeX and Markdown documents in your browser on Windows or macOS. On a computer without TeX, start this app and choose **Home → Set up TeX…**. The app downloads and installs TeX, selects the new environment when setup finishes, and uses it to compile your documents. Launching the app opens a `localhost` page in your default browser, with the editor and PDF preview in the same window.
+Edit TeX, Markdown, and plain text in your browser on Windows or macOS. The app is **completely free**, with all features included and no in-app purchases, paid upgrades, subscriptions, or trial expiry. Launching the app opens a `localhost` page in your default browser, with the editor and PDF preview in the same window.
 
 ![Local TeX Web Editor showing a TeX document and its PDF in dark mode](docs/screenshots/editor-tex-dark.png)
 
@@ -20,13 +20,13 @@ Documents stay in the project folder on your computer. Compilation uses the TeX 
 
 ## Why this editor exists
 
-Local TeX Web Editor brings a browser editing workflow to the TeX Live installation on your computer.
+- **Compile without an app time limit.** [Overleaf's free plan has a compilation timeout](https://docs.overleaf.com/getting-started/free-and-premium-plans/plan-limits). This app runs TeX on your computer and sets no time limit on compilation, so long documents can keep compiling with your local resources. You can stop a run from the editor at any time.
 
-- Long documents can reach Overleaf's compilation time limit. Compiling on the computer allows work to continue with the available local resources. Multiline search also makes it possible to paste a block of prose or TeX code directly into the search field.
+- **A small download and a lightweight setup for writing.** [VS Code's desktop app uses Electron](https://code.visualstudio.com/docs/editor/whyvscode). This editor runs a compiled Go server and uses a tab in your existing browser; its download includes no separate browser engine. TeX completion, compilation, and PDF preview are built in and work without installing editor extensions. See the [measured app sizes](#app-files-and-storage).
 
-- VS Code provides a broad set of development features. For editing TeX documents, starting a full desktop development environment can add more features and memory use than the task needs. This editor brings document editing, compilation, and preview together in a browser window.
+- **Set up TeX from the app.** Choose **Home → Set up TeX…** to download and install the TeX programs and packages. The app selects the new environment when setup finishes, so you can create a sample and compile it. You can also select an existing TeX installation.
 
-Continuous PDF scrolling, SyncTeX, and Markdown preview support writing and reviewing documents while using the project files and TeX installation already on the computer.
+- **Use it for Markdown and everyday text editing.** Write notes and documentation in Markdown, or edit `.txt` files, code, and configuration files before installing TeX. Markdown supports visual editing, source editing, and preview. Multiline search lets you paste a block of prose or code directly into the search field.
 
 ## First document
 
@@ -239,6 +239,8 @@ Choose another name if a folder with that name already exists. Japanese filename
 [![The ZIP menu with Download project as ZIP and Save project ZIP as…](docs/screenshots/project-zip-menu-en.png)](docs/screenshots/project-zip-menu-en.png)
 
 On Home, each recent project also has a **ZIP** menu with both export actions. For the project being edited, the app saves the open documents before creating the archive. For another recent project, it exports the files saved in that folder. You can continue editing the current project after the export.
+
+[![The ZIP menu beside a recent project on Home](docs/screenshots/project-home-zip-en.png)](docs/screenshots/project-home-zip-en.png)
 
 To use the ZIP in Overleaf, choose **New project → Existing project (.zip)** and select the file. Set the main document and compiler to match the original project. See Overleaf's [Uploading a project](https://docs.overleaf.com/managing-projects-and-files/uploading-a-project) guide.
 

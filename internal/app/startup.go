@@ -15,6 +15,16 @@ type startupHooks struct {
 	open   func() error
 }
 
+// StartupEnabled reads the saved login preference without opening a project or
+// changing settings. The caller holds the application lock before reading it.
+func StartupEnabled(configDir string) (bool, error) {
+	config, _, err := readConfig(configDir)
+	if err != nil {
+		return false, err
+	}
+	return config.StartupEnabled == nil || *config.StartupEnabled, nil
+}
+
 func (a *App) startupFunctions() startupHooks {
 	functions := startupHooks{platform.StartupStatus, platform.SetStartupEnabled, platform.OpenStartupSettings}
 	if a.startupHooks != nil {

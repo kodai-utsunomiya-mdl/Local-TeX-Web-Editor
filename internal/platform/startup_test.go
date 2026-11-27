@@ -9,19 +9,19 @@ import (
 	"testing"
 )
 
-func TestStartupLaunchAgentUsesTheApplicationPathAndBackgroundArgument(t *testing.T) {
+func TestStartupLaunchAgentUsesTheApplicationPathAndStartupArgument(t *testing.T) {
 	executable := "/Users/test/Applications/文章 & TeX.app/Contents/MacOS/local-tex-web-editor"
 	data := startupLaunchAgent(executable)
 	actual, err := startupLaunchAgentExecutable(data)
 	if err != nil || actual != executable {
 		t.Fatalf("read startup application: %q %v", actual, err)
 	}
-	if !bytes.Contains(data, []byte("文章 &amp; TeX.app")) || bytes.Contains(data, []byte("KeepAlive")) {
+	if !bytes.Contains(data, []byte("文章 &amp; TeX.app")) || !bytes.Contains(data, []byte("<string>--startup</string>")) || bytes.Contains(data, []byte("KeepAlive")) {
 		t.Fatalf("unexpected launch agent: %s", data)
 	}
 	for _, change := range []struct{ from, to string }{
 		{startupAgentLabel, "another.application"},
-		{"--background", "--other"},
+		{"--startup", "--other"},
 		{"<true/>", "<false/>"},
 		{"local-tex-web-editor</string>", "another-program</string>"},
 		{"<key>Label</key>", "<key>Label</key><string>duplicate</string><key>Label</key>"},
@@ -29,6 +29,15 @@ func TestStartupLaunchAgentUsesTheApplicationPathAndBackgroundArgument(t *testin
 		if _, err := startupLaunchAgentExecutable(bytes.Replace(data, []byte(change.from), []byte(change.to), 1)); !errors.Is(err, ErrStartupConflict) {
 			t.Fatalf("accepted changed registration %q: %v", change.from, err)
 		}
+	}
+}
+
+func TestStartupLaunchAgentReadsTheLegacyBackgroundArgument(t *testing.T) {
+	executable := "/Applications/Local TeX Web Editor.app/Contents/MacOS/LocalTeXWebEditor"
+	legacy := bytes.Replace(startupLaunchAgent(executable), []byte("--startup"), []byte("--background"), 1)
+	actual, err := startupLaunchAgentExecutable(legacy)
+	if err != nil || actual != executable {
+		t.Fatalf("legacy startup argument: %q %v", actual, err)
 	}
 }
 
