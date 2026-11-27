@@ -32,6 +32,29 @@ func TestStartupLaunchAgentUsesTheApplicationPathAndBackgroundArgument(t *testin
 	}
 }
 
+func TestStartupLaunchAgentAcceptsTheNativeLauncherAndMigratesTheOldPath(t *testing.T) {
+	directory := t.TempDir()
+	registration := filepath.Join(directory, "editor.plist")
+	legacy := "/Applications/Local TeX Web Editor.app/Contents/MacOS/local-tex-web-editor"
+	launcher := "/Applications/Local TeX Web Editor.app/Contents/MacOS/LocalTeXWebEditor"
+	if err := writeStartupFile(registration, startupLaunchAgent(legacy), false); err != nil {
+		t.Fatal(err)
+	}
+	for _, executable := range []string{legacy, launcher} {
+		if err := writeStartupFile(registration, startupLaunchAgent(executable), true); err != nil {
+			t.Fatal(err)
+		}
+		data, err := os.ReadFile(registration)
+		if err != nil {
+			t.Fatal(err)
+		}
+		actual, err := startupLaunchAgentExecutable(data)
+		if err != nil || actual != executable {
+			t.Fatalf("read registered launcher: %q %v", actual, err)
+		}
+	}
+}
+
 func TestStartupFileUpdatesOnlyTheReviewedRegularFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "LaunchAgents", startupAgentLabel+".plist")
 	first := startupLaunchAgent("/Applications/Local TeX Web Editor.app/Contents/MacOS/local-tex-web-editor")

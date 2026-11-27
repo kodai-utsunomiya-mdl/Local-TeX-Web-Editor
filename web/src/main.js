@@ -15,6 +15,7 @@ import { attachEditorZoom, prepareEditorResize } from './editor-zoom.js';
 import { createPanelLayout, normalizePanelLayout } from './panel-layout.js';
 import { normalizeAppearance, normalizeHexColor, resolveAppearance } from './appearance.js';
 import { createStartupSettings } from './startup-settings.js';
+import { createApplicationUpdates, UpdatePreparation } from './application-updates.js';
 import { createHelp } from './help.js';
 import { stateForOtherView, restoredTabPaths } from './shared-editor.js';
 import { NavigationHistory, afterNavigationFrame } from './navigation-history.js';
@@ -149,6 +150,12 @@ let texSetup = null;
 let texManagement = null;
 let settingsReset = null;
 let startupSettings = null;
+let applicationUpdates = null;
+const browserClientId = crypto.randomUUID();
+let lastUpdateInteraction = Date.now();
+let manualUpdateConsent = false;
+let manualUpdateTimer = null;
+let applicationUpdateLocked = false;
 let fileTemplatePicker = null;
 let logIssues = null;
 let markdownEditing = null;
@@ -1597,6 +1604,11 @@ function updateApplicationDetails(meta) {
 function notifyApplicationUpdate(meta) {
   if (!state.loadedVersion) state.loadedVersion = meta.version || '';
   if (!meta.version || meta.version === state.loadedVersion) return false;
+  if (applicationUpdatePreparation.prepared) {
+    state.reloadForUpdate = true;
+    location.reload();
+    return true;
+  }
   $('application-reload').hidden = false;
   if (state.updateNoticeVersion !== meta.version) {
     state.updateNoticeVersion = meta.version;
@@ -1622,6 +1634,61 @@ async function reloadUpdatedApplication() {
     state.reloadForUpdate = true;
     location.reload();
   } finally { if (!state.reloadForUpdate) setOperation(''); }
+}
+
+async function prepareApplicationUpdate({ automatic }) {
+  const manual = !automatic && manualUpdateConsent && state.operation === 'update-request';
+  if (state.closed || state.resetDetected || !state.persistenceReady || !state.meta ||
+    (state.operation && !manual) || isRunning() || state.texSetupBusy || state.folderPicker ||
+    state.fileSyncInProgress || state.pendingFiles.size || state.externalProjectChanged || document.querySelector('dialog[open]')) {
+    return { ready: false, reason: t('実行中の操作が終わるまで，アプリの更新を待っています．') };
+  }
+  if (anyEditorComposing()) return { ready: false, reason: t('入力中の文字が確定するまで，アプリの更新を待っています．') };
+  if ([...state.documents.values()].some(doc => doc.saving) || (dirtyDocuments().length && !manual)) {
+    return { ready: false, reason: t('未保存の原稿があるため，アプリの更新を待っています．') };
+  }
+  if (automatic && Date.now() - lastUpdateInteraction < 60000) {
+    return { ready: false, reason: t('編集や画面の操作が落ち着くまで，アプリの更新を待っています．') };
+  }
+  clearTimeout(manualUpdateTimer); manualUpdateTimer = null;
+  applicationUpdateLocked = true;
+  setOperation('updating');
+  rememberEditorPosition(); syncDrafts(); persistSession();
+  await sessionStore.flush();
+  return { ready: true };
+}
+
+function releaseApplicationUpdate() {
+  clearTimeout(manualUpdateTimer); manualUpdateTimer = null; manualUpdateConsent = false;
+  applicationUpdateLocked = false;
+  if (['updating', 'update-request'].includes(state.operation) && !state.reloadForUpdate) setOperation('');
+  void applicationUpdates?.refresh();
+}
+
+async function installApplicationUpdate() {
+  if (state.closed || state.operation || isRunning() || state.texSetupBusy || state.folderPicker || anyEditorComposing()) {
+    throw new Error(t('実行中の処理が終わってから，アプリを更新してください．'));
+  }
+  $('settings-dialog').close();
+  if (document.querySelector('dialog[open]')) return;
+  setOperation('update-request');
+  try {
+    if (!await confirmUnsaved(t('アプリを更新する前に，変更を保存しますか？'))) { releaseApplicationUpdate(); return; }
+    manualUpdateConsent = true;
+    manualUpdateTimer = setTimeout(() => {
+      if (state.operation === 'update-request') releaseApplicationUpdate();
+    }, 30000);
+    return await api('/api/updates/install', { method: 'POST', projectRoot: null, body: {} });
+  } catch (error) { releaseApplicationUpdate(); throw error; }
+}
+
+async function reconnectAfterApplicationUpdate() {
+  try {
+    const meta = await api('/api/state', { projectRoot: null });
+    if (state.closed || !applicationUpdatePreparation.prepared || notifyApplicationUpdate(meta)) return;
+    const update = await api('/api/updates', { projectRoot: null });
+    if (!['preparing', 'applying'].includes(update?.phase)) applicationUpdatePreparation.cancel();
+  } catch { /* The browser session will retry while the updated process starts. */ }
 }
 function updateTools(meta) {
   if (!state.meta) return;
@@ -1659,6 +1726,7 @@ async function showSettings() {
   $('store-installation-note').hidden = !state.meta?.packageIdentity;
   $('settings-error').hidden = true; $('settings-dialog').showModal();
   void startupSettings.refresh();
+  void applicationUpdates?.refresh({ reportError: true });
   try {
     const meta = await api('/api/state');
     if (generation !== state.projectGeneration || toolsGeneration !== state.toolsGeneration) return;
@@ -1677,6 +1745,8 @@ function stopForSettingsReset() {
   ++state.projectGeneration; ++state.openSequence; ++state.toolsGeneration;
   sessionStore.stop();
   browserSession.stop();
+  applicationUpdates?.stop();
+  applicationUpdatePreparation.cancel();
   texSetup?.destroy(); texManagement?.destroy();
   for (const timer of [state.pollTimer, state.autoSaveTimer, state.draftTimer, state.sessionTimer, state.outlineTimer, toastTimer, lineFlashTimer]) clearTimeout(timer);
   clearInterval(state.heartbeat);
@@ -2382,6 +2452,8 @@ async function shutdown() {
     texSetup?.destroy();
     texManagement?.destroy();
     browserSession.stop();
+    applicationUpdates?.stop();
+    applicationUpdatePreparation.cancel();
     for (const timer of [state.pollTimer, state.autoSaveTimer, state.draftTimer, state.sessionTimer, state.outlineTimer, toastTimer, lineFlashTimer]) clearTimeout(timer);
     clearInterval(state.heartbeat); state.build = null; setConnected(false);
     try { sessionStorage.removeItem(TOKEN_KEY); } catch { /* No persistent storage is required. */ }
@@ -2409,10 +2481,17 @@ const sessionStore = new SessionStore(api, (status, key, error) => {
     showError(new Error(t("{value0}を記録できませんでした．{value1}", { value0: item, value1: error.message || error })), { label: t("再保存"), run: () => sessionStore.flush({ retryConflicts: true }) });
   }
 }, { getDraftsGeneration: () => state.draftsGeneration });
-const browserSession = new BrowserSession({ token, onConnectionChange: connected => {
+const applicationUpdatePreparation = new UpdatePreparation({
+  clientId: browserClientId, api, prepare: prepareApplicationUpdate,
+  release: () => { if (applicationUpdateLocked) releaseApplicationUpdate(); },
+  onApplying: () => { void applicationUpdates?.refresh(); },
+  onError: () => { void applicationUpdates?.refresh(); },
+});
+const browserSession = new BrowserSession({ token, clientId: browserClientId, onMessage: message => applicationUpdatePreparation.handle(message), onConnectionChange: connected => {
   if (state.closed || state.resetDetected) return;
   const reconnecting = connected && !state.connected;
   setConnected(connected);
+  if (connected && applicationUpdatePreparation.prepared) { void reconnectAfterApplicationUpdate(); return; }
   if (reconnecting && state.operation !== 'initialising') runTask(() => state.meta ? heartbeat({ forceFiles: true }) : initialise());
 } });
 const panelLayout = createPanelLayout({
@@ -3383,6 +3462,13 @@ onClick('show-project', showProjectDialog); onClick('welcome-open', showProjectD
 onClick('go-home', showHome);
 settingsReset = createSettingsReset({ api, onReset: resetSavedInformation, reload: reloadAfterSettingsReset });
 startupSettings = createStartupSettings({ api });
+applicationUpdates = createApplicationUpdates({
+  api, onInstall: installApplicationUpdate,
+  onOpenSettings: () => runTask(async () => {
+    await showSettings();
+    if ($('settings-dialog').open) $('application-updates').scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }),
+});
 onClick('settings-reset-data', () => {
   if (state.operation || state.resetDetected) return;
   $('settings-dialog').close();
@@ -3591,16 +3677,22 @@ function pauseBrowserSession() {
   if (state.closed || state.resetDetected || state.resetInProgress) return;
   syncDrafts(); persistSession(); sessionStore.flushOnHide();
   browserSession.stop();
+  applicationUpdates?.stop();
 }
 function resumeBrowserSession(replaceConnection = false) {
   if (state.closed || state.resetDetected || state.resetInProgress) return;
   if (replaceConnection) browserSession.resume();
   else browserSession.start();
+  if (state.persistenceReady) applicationUpdates?.start();
   runTask(() => sessionStore.resume());
   runTask(() => heartbeat({ forceFiles: true })); scheduleAutoSave();
 }
 window.addEventListener('pagehide', pauseBrowserSession);
 window.addEventListener('pageshow', () => resumeBrowserSession());
+for (const type of ['keydown', 'pointerdown', 'wheel', 'input', 'compositionstart']) {
+  document.addEventListener(type, () => { lastUpdateInteraction = Date.now(); }, { capture: true, passive: true });
+}
+window.addEventListener('focus', () => { lastUpdateInteraction = Date.now(); });
 window.addEventListener('focus', () => { if (state.persistenceReady) runTask(() => heartbeat({ forceFiles: true })); });
 document.addEventListener('freeze', pauseBrowserSession);
 document.addEventListener('resume', () => resumeBrowserSession(true));
@@ -3623,7 +3715,7 @@ async function initialise() {
     state.heartbeat = setInterval(() => runTask(heartbeat), 30000);
     registerConnectionPage();
   } catch (error) { showError(error); }
-  finally { setOperation(''); runTask(openInitialFile); }
+  finally { setOperation(''); runTask(openInitialFile); applicationUpdates?.start(); }
 }
 browserSession.start();
 initialise();

@@ -125,10 +125,11 @@ About 2 GB free for initial TeX setup; extra packages may need more space
 ### What's new
 
 ```text
-Version 0.1.16
+Version 0.1.17
 
-- Fixed an issue where a TeX status refresh could interrupt removal confirmation by reporting that the installation folder had changed.
-- Reduced repeated environment checks when refreshing the TeX status.
+- Automatic app updates are enabled by default and use Microsoft Store updates available for this app.
+- Added update progress, Check now, and an option to postpone an update for one hour.
+- Updates wait for saved documents and completed operations across the open editors before restarting.
 ```
 
 ## 日本語の掲載内容
@@ -224,10 +225,11 @@ TeX の導入と追加パッケージの取得にはインターネット接続
 ### このバージョンの最新情報
 
 ```text
-バージョン 0.1.16
+バージョン 0.1.17
 
-・TeX 環境の削除時に，状態の自動更新が原因でフォルダーが変更されたというエラーが表示され，確認をやり直す必要があった問題を修正した．
-・TeX の状態の更新に伴う繰り返しの検査を減らした．
+・アプリの自動更新を初期状態で有効にし，Microsoft Store から利用可能な更新を取得する．
+・更新の進捗，「今すぐ確認」，「1 時間後に更新」を追加した．
+・開いている編集画面の原稿の保存と実行中の操作を確認してから更新し，再起動する．
 ```
 
 ## Images and captions
@@ -269,7 +271,7 @@ Sample project: https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/down
 1. Launch Local TeX Web Editor and use Open to select that folder.
 2. Open notes.md. It starts in Visual editing with the preview closed. Edit a rendered sentence and save with Ctrl+S. Switch to Source to edit the Markdown notation and use the separate preview. Show preview / Hide preview controls its visibility.
 3. Open Settings, switch Language between English and Japanese, and change the theme. These changes do not alter document contents.
-4. To test setup in version 0.1.16, open Home or Settings > Set up TeX…. Review TinyTeX v2026.11, the packages, about 250 MB of downloads and the destination under the app's LocalState folder. Choose Download and install. Allow about 2 GB of free space and an internet connection. Follow the progress log; Close and continue editing allows editing while setup continues. On a disposable first attempt, Stop setup and confirm that it can be started again.
+4. To test setup in version 0.1.17, open Home or Settings > Set up TeX…. Review TinyTeX v2026.11, the packages, about 250 MB of downloads and the destination under the app's LocalState folder. Choose Download and install. Allow about 2 GB of free space and an internet connection. Follow the progress log; Close and continue editing allows editing while setup continues. On a disposable first attempt, Stop setup and confirm that it can be started again.
 5. After setup succeeds, the app selects the new environment. Choose pdfLaTeX as the compilation mode for the sample. An existing TeX installation can also be selected in Settings, for example C:\texlive\2026\bin\windows.
 6. Open main.tex, set the preview to Auto, and click Compile. A PDF appears on the right.
 7. Double-click a sentence in the PDF to open its source line. Ctrl-click that source line to navigate back to the PDF.
@@ -312,7 +314,7 @@ Local TeX Web Editor は，ブラウザを画面として使う Windows のデ�
 1. アプリを起動し，Open からそのフォルダーを選びます．
 2. notes.md を開きます．初期状態は「直接編集」で，プレビューは閉じています．表示された文章を編集し，Ctrl + S で保存します．「ソース」へ切り替えると Markdown の記法とプレビューを使えます．「プレビューを表示 / プレビューを閉じる」で表示を変更できます．
 3. Settings の Language で英語と日本語を切り替え，テーマも変更します．原稿の内容は変わりません．
-4. v0.1.16 のセットアップを確認するため，ホームまたは「設定 → TeX をセットアップ…」を開きます．TinyTeX v2026.11，パッケージ，約 250 MB のダウンロード，アプリの LocalState 内の導入先を確認し，「ダウンロードしてインストール」を選びます．インターネット接続と約 2 GB の空き容量が必要です．進捗とログを確認し，「閉じて編集を続ける」で導入中も編集できます．試験用の最初の操作では「セットアップを停止」も試し，再度開始できることを確認します．
+4. v0.1.17 のセットアップを確認するため，ホームまたは「設定 → TeX をセットアップ…」を開きます．TinyTeX v2026.11，パッケージ，約 250 MB のダウンロード，アプリの LocalState 内の導入先を確認し，「ダウンロードしてインストール」を選びます．インターネット接続と約 2 GB の空き容量が必要です．進捗とログを確認し，「閉じて編集を続ける」で導入中も編集できます．試験用の最初の操作では「セットアップを停止」も試し，再度開始できることを確認します．
 5. 導入が成功すると，新しい環境が選ばれます．このサンプルのコンパイル方法には pdfLaTeX を選びます．設定で C:\texlive\2026\bin\windows などの既存の TeX を選ぶこともできます．
 6. main.tex を開き，プレビューを Auto にして Compile を押します．右側に PDF が表示されます．
 7. PDF の文章をダブルクリックして原稿の行へ移動し，その行を Ctrl + クリックして PDF へ移動します．

@@ -20,6 +20,7 @@
   <link rel="stylesheet" href="/tex-setup.css">
   <link rel="stylesheet" href="/tex-management.css">
   <link rel="stylesheet" href="/settings-reset.css">
+  <link rel="stylesheet" href="/application-updates.css">
   <link rel="stylesheet" href="/help.css">
   <link rel="stylesheet" href="/writing-workspace.css">
   <link rel="stylesheet" href="/writing-tools.css">
@@ -74,6 +75,11 @@
     </div>
 
     <div id="recovery-banner" class="recovery-banner" role="status" hidden><span id="recovery-summary"></span><button type="button" id="review-drafts" data-testid="review-drafts" class="button button-small"><span data-i18n="草稿を確認">Review drafts</span></button><button type="button" id="dismiss-recovery" class="icon-button" aria-label="Dismiss the draft notice" data-i18n-aria-label="草稿の案内を閉じる">×</button></div>
+
+    <div id="application-update-banner" class="application-update-banner" role="status" hidden>
+      <span id="application-update-message"></span>
+      <div class="application-update-banner-actions"><button type="button" id="application-update-install" class="button button-small" data-i18n="保存して更新・再起動" hidden>Save, update and restart</button><a id="application-update-notes" href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest" target="_blank" rel="noopener noreferrer" data-i18n="更新内容を見る">View release notes</a><button type="button" id="application-update-defer" class="button button-small" data-i18n="1 時間後に更新">Update in one hour</button></div>
+    </div>
 
     <main id="welcome" class="welcome">
       <div class="welcome-card">
@@ -235,7 +241,7 @@
       </section>
     </main>
 
-    <footer class="status-bar"><span id="cursor-status" data-testid="cursor-status"></span><span id="document-encoding"></span><span id="save-status" class="save-status"></span><span id="autosave-status"></span><span class="toolbar-spacer"></span><button type="button" id="tex-setup-status" hidden></button><div class="build-summary"><span id="build-status" data-testid="build-status" class="build-status" role="status" data-status="idle"><span data-i18n="コンパイル前">Not compiled yet</span></span><span id="build-elapsed" class="muted"></span></div><span id="draft-status" data-testid="draft-status"></span><span id="connection-status" class="connection-status" role="status"><span data-i18n="接続しています…">Connecting…</span></span><span id="app-version"></span></footer>
+    <footer class="status-bar"><span id="cursor-status" data-testid="cursor-status"></span><span id="document-encoding"></span><span id="save-status" class="save-status"></span><span id="autosave-status"></span><span class="toolbar-spacer"></span><button type="button" id="application-update-open" class="application-update-open" data-i18n="更新の状況を開く" hidden>Open app update status</button><button type="button" id="tex-setup-status" hidden></button><div class="build-summary"><span id="build-status" data-testid="build-status" class="build-status" role="status" data-status="idle"><span data-i18n="コンパイル前">Not compiled yet</span></span><span id="build-elapsed" class="muted"></span></div><span id="draft-status" data-testid="draft-status"></span><span id="connection-status" class="connection-status" role="status"><span data-i18n="接続しています…">Connecting…</span></span><span id="app-version"></span></footer>
   </div>
 
   <dialog id="project-dialog" class="dialog project-dialog" aria-labelledby="project-dialog-title">
@@ -290,6 +296,18 @@
         <div class="startup-actions"><button id="startup-enable" type="button" class="button" data-i18n="ログイン時の起動を有効にする" disabled>Enable start at login</button><button id="startup-disable" type="button" class="button" data-i18n="無効にする" disabled>Disable</button><button id="startup-system-settings" type="button" class="button" data-i18n="OS の起動設定を開く…" hidden>Open system startup settings…</button></div>
         <p class="field-help" data-i18n="この欄の変更はその場で反映します．自動起動を無効にした後も，現在の画面で編集を続けられます．">Changes in this section apply immediately. You can continue editing in the current session after disabling start at login.</p>
         <p id="startup-error" class="form-error" role="alert" hidden></p>
+      </section>
+      <section id="application-updates" class="application-updates" aria-labelledby="application-updates-title">
+        <h3 id="application-updates-title" data-i18n="アプリの更新">App updates</h3>
+        <label class="checkbox-field"><input type="checkbox" id="application-updates-automatic" checked disabled><span data-i18n="アプリを自動で更新する (推奨)">Update the app automatically (recommended)</span></label>
+        <p class="field-help" data-i18n="新しい版をバックグラウンドで取得し，原稿の保存と実行中の処理が済んで，操作が落ち着いたときに更新します．更新後は同じ編集画面へ戻ります．">Download new versions in the background. Updates are applied after documents are saved, running tasks finish, and editing pauses. Return to the same editor after the update.</p>
+        <p id="application-updates-store-note" class="field-help" data-i18n="Store から入手した更新を利用します．Microsoft Store 自体の自動更新設定も適用されます．" hidden>Use updates available through the Store. The Microsoft Store automatic update settings also apply.</p>
+        <p id="application-updates-status" class="field-help" role="status"></p>
+        <progress id="application-updates-progress" max="1" aria-label="App update download" data-i18n-aria-label="アプリの更新" hidden></progress>
+        <p id="application-updates-checked" class="field-help" hidden></p>
+        <div class="application-updates-actions"><button type="button" id="application-updates-check" class="button" data-i18n="今すぐ確認" disabled>Check now</button><button type="button" id="application-updates-install" class="button" data-i18n="保存して更新・再起動" hidden>Save, update and restart</button><a id="application-updates-notes" href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest" target="_blank" rel="noopener noreferrer" data-i18n="更新内容を見る">View release notes</a></div>
+        <p class="field-help" data-i18n="この欄の変更はその場で反映します．">Changes in this section apply immediately.</p>
+        <p id="application-updates-error" class="form-error" role="alert" hidden></p>
       </section>
       <section class="application-details" aria-label="About the app" data-i18n-aria-label="アプリの情報"><dl><div><dt><span data-i18n="アプリのバージョン">App version</span></dt><dd id="application-version"></dd></div><div><dt><span data-i18n="起動中の実行ファイル">Running executable</span></dt><dd id="application-executable"></dd></div></dl><button type="button" id="application-reload" class="button" data-i18n="新しい版で開く" hidden>Open the new version</button></section>
       <section class="settings-reset-section" aria-labelledby="settings-reset-heading"><h3 id="settings-reset-heading" data-i18n="アプリに保存した情報">Information saved by the app</h3><p class="field-help" data-i18n="初期化する内容を確認し，設定や草稿などを選んで削除できます．">Review the saved information and choose the settings, drafts, or other data to reset.</p><button type="button" id="settings-reset-data" class="button" data-i18n="設定と記憶した情報を初期化…">Reset settings and remembered information…</button></section>

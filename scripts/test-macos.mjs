@@ -70,6 +70,13 @@ try {
   const metadata = JSON.parse((await execute('/usr/bin/plutil', ['-convert', 'json', '-o', '-', path.join(application, 'Contents/Info.plist')])).stdout);
   assert.equal(metadata.CFBundleShortVersionString, version);
   assert.equal(metadata.LSMinimumSystemVersion, '12.0');
+  assert.equal(metadata.SUEnableAutomaticChecks, true);
+  assert.equal(metadata.SUAutomaticallyUpdate, true);
+  assert.equal(metadata.SUVerifyUpdateBeforeExtraction, true);
+  assert.equal(metadata.SURequireSignedFeed, true);
+  assert.equal(Buffer.from(metadata.SUPublicEDKey, 'base64').length, 32);
+  assert.equal(metadata.SUFeedURL, 'https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest/download/appcast.xml');
+  await execute('/usr/bin/lipo', [path.join(application, 'Contents/Frameworks/Sparkle.framework/Sparkle'), '-verify_arch', 'arm64', 'x86_64']);
   const launchArgs = ['-W', '-n', application, '--args', '--ready-file', readyPath, '--config-dir', path.join(temporary, 'config')];
   if (process.env.LOCAL_TEX_EDITOR_TEST_TEX_BIN) launchArgs.push('--tex-bin', process.env.LOCAL_TEX_EDITOR_TEST_TEX_BIN);
   opening = spawn('/usr/bin/open', launchArgs, { stdio: ['ignore', 'pipe', 'pipe'] });
@@ -83,6 +90,22 @@ try {
   assert.equal(ready.version, version);
   const initial = await api('/api/state');
   assert.equal(initial.platform, 'darwin');
+  const updates = await api('/api/updates');
+  assert.equal(updates.channel, 'macos');
+  assert.equal(updates.supported, true);
+  assert.equal(updates.automatic, true);
+  const nativeResponse = await fetch(new URL('/api/updates/native', ready.url), { headers: { 'X-Local-Token': ready.token } });
+  assert.equal(nativeResponse.status, 403, 'The browser token alone must not authorize the native updater.');
+  await api('/api/updates/settings', { automatic: false });
+  await waitFor(async () => {
+    try { return (await execute('/usr/bin/defaults', ['read', metadata.CFBundleIdentifier, 'SUEnableAutomaticChecks'])).stdout.trim(); }
+    catch { return null; }
+  }, value => value === '0', 'The native updater did not receive the saved automatic-update setting.');
+  await api('/api/updates/settings', { automatic: true });
+  await waitFor(async () => {
+    try { return (await execute('/usr/bin/defaults', ['read', metadata.CFBundleIdentifier, 'SUEnableAutomaticChecks'])).stdout.trim(); }
+    catch { return null; }
+  }, value => value === '1', 'The native updater did not resume automatic updates.');
   assert.ok(initial.latexmk, 'The selected TeX Live installation must provide latexmk.');
   assert.ok(initial.synctex, 'The selected TeX Live installation must provide SyncTeX.');
   await api('/api/project/open', { path: project });
@@ -174,7 +197,7 @@ try {
   await waitFor(() => opening.exitCode, value => value !== null, 'The background macOS launcher did not exit.');
   assert.equal(opening.exitCode, 0, launchError);
   assert.deepEqual(errors, []);
-  await writeFile(path.join(output, 'result.json'), JSON.stringify({ version, architecture: process.arch, checks: ['universal-bundle', 'icon', 'signature', 'launch-services', 'api', 'command-save', 'japanese-tex', 'synctex', 'active-document', 'markdown', 'reopen', 'file-download', 'shutdown', 'offline-waiting', 'background-launch', 'restored-tab'] }, null, 2));
+  await writeFile(path.join(output, 'result.json'), JSON.stringify({ version, architecture: process.arch, checks: ['universal-bundle', 'icon', 'signature', 'sparkle-signatures-required', 'native-update-bridge', 'launch-services', 'api', 'command-save', 'japanese-tex', 'synctex', 'active-document', 'markdown', 'reopen', 'file-download', 'shutdown', 'offline-waiting', 'background-launch', 'restored-tab'] }, null, 2));
   passed = true;
   console.log(`macOS ${process.arch}: application launch, editing, TeX, previews, and shutdown passed.`);
 } finally {

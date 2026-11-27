@@ -297,6 +297,8 @@ jobs:
 
       - name: Create a release when the version is new
         shell: bash
+        env:
+          APP_UPDATE_PRIVATE_KEY: ${{ secrets.APP_UPDATE_PRIVATE_KEY }}
         run: |
           version=$(node -p "require('./package.json').version")
           tag="v$version"
@@ -311,6 +313,7 @@ jobs:
           mac_archive="local-tex-web-editor-$version-macos-universal.zip"
           cp "macos-release/$mac_archive" "$mac_archive"
           sha256sum "$archive" "$mac_archive" > SHA256SUMS.txt
-          gh release create "$tag" "$archive" "$mac_archive" SHA256SUMS.txt \
+          node scripts/app-update-release.mjs .
+          gh release create "$tag" "$archive" "$mac_archive" SHA256SUMS.txt app-update.json app-update.json.sig appcast.xml \
             --target "$GITHUB_SHA" --title "Local TeX Web Editor $version" \
             --notes-file "release-notes/$tag.md"

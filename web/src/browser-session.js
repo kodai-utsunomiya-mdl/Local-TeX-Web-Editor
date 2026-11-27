@@ -3,10 +3,12 @@ import { getLanguage } from './i18n.js';
 // Observe the local application's availability while the editor is open.
 // Freezing, discarding or closing a tab does not end the local application.
 export class BrowserSession {
-  constructor({ token, fetch: request = globalThis.fetch.bind(globalThis), onConnectionChange, retryDelays = [250, 500, 1000] }) {
+  constructor({ token, clientId = '', fetch: request = globalThis.fetch.bind(globalThis), onConnectionChange, onMessage, retryDelays = [250, 500, 1000] }) {
     this.token = token;
+    this.clientId = clientId;
     this.request = request;
     this.onConnectionChange = onConnectionChange;
+    this.onMessage = onMessage;
     this.retryDelays = retryDelays;
     this.retry = 0;
     this.controller = null;
@@ -42,7 +44,7 @@ export class BrowserSession {
     this.controller = controller;
     let reader;
     try {
-      const response = await this.request('/api/session', {
+      const response = await this.request(`/api/session${this.clientId ? `?clientId=${encodeURIComponent(this.clientId)}` : ''}`, {
         headers: { 'X-Local-Token': this.token, Accept: 'text/event-stream', 'Accept-Language': getLanguage() },
         cache: 'no-store', signal: controller.signal,
       });
@@ -51,7 +53,22 @@ export class BrowserSession {
       this.retry = 0;
       this.onConnectionChange?.(true);
       reader = response.body.getReader();
-      while (!(await reader.read()).done) { /* Reading the stream also observes a disconnected server. */ }
+      const decoder = new TextDecoder();
+      let pending = '';
+      while (this.controller === controller && this.active) {
+        const { value, done } = await reader.read();
+        if (done || this.controller !== controller || !this.active) break;
+        pending = (pending + decoder.decode(value, { stream: true })).replaceAll('\r\n', '\n');
+        let boundary;
+        while ((boundary = pending.indexOf('\n\n')) >= 0) {
+          const event = pending.slice(0, boundary); pending = pending.slice(boundary + 2);
+          const data = event.split('\n').filter(line => line.startsWith('data:')).map(line => line.slice(5).trimStart()).join('\n');
+          if (!data) continue;
+          try { Promise.resolve(this.onMessage?.(JSON.parse(data))).catch(() => {}); }
+          catch { /* A malformed event does not interrupt the connection. */ }
+        }
+        if (pending.length > 65536) throw new Error('The browser session event is too large.');
+      }
     } catch { /* A short retry covers a temporary interruption on the loopback connection. */ }
     finally {
       reader?.releaseLock();

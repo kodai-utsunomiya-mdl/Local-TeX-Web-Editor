@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/messages"
 )
@@ -55,7 +56,7 @@ func (a *App) settingsGenerationMatchesLocked(r *http.Request) bool {
 // A reset waits for finite requests to finish before changing their saved data.
 // Streams observe availability only and must not hold that wait open forever.
 func (a *App) serveSettingsRequest(next http.Handler, w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path == "/api/session" || (r.URL.Path == "/api/settings/reset" && r.Method == http.MethodPost) {
+	if r.URL.Path == "/api/session" || r.URL.Path == "/api/updates/native" || (r.URL.Path == "/api/settings/reset" && r.Method == http.MethodPost) {
 		next.ServeHTTP(w, r)
 		return
 	}
@@ -66,6 +67,11 @@ func (a *App) serveSettingsRequest(next http.Handler, w http.ResponseWriter, r *
 	}
 	picker := r.Method == http.MethodPost && (r.URL.Path == "/api/project/pick" || r.URL.Path == "/api/tex/setup/pick" || r.URL.Path == "/api/file/save-as")
 	a.mu.Lock()
+	if a.updateApplying && r.URL.Path != "/api/shutdown" && r.URL.Path != "/api/updates" {
+		a.mu.Unlock()
+		writeError(w, fail(http.StatusServiceUnavailable, "アプリを更新しています．編集画面は自動で再接続します．"))
+		return
+	}
 	if !a.settingsGenerationMatchesLocked(r) {
 		a.writeSettingsConflictLocked(w, r, true, "別の画面で保存情報が初期化されました．未保存の原稿を確認してから，画面を読み込み直してください．")
 		a.mu.Unlock()
@@ -188,6 +194,9 @@ func (a *App) settingsResetHandler(w http.ResponseWriter, r *http.Request) {
 	config := cloneConfig(a.config)
 	if input.Settings {
 		config.TexBin, config.RecentProjects, config.Projects = "", []string{}, map[string]projectSettings{}
+		config.AutomaticAppUpdates = nil
+		config.LastAppUpdateCheck = time.Time{}
+		config.AppUpdateDeferredUntil = time.Time{}
 	}
 	config.SettingsGeneration = generation
 	if input.Drafts {
@@ -205,6 +214,16 @@ func (a *App) settingsResetHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	a.config = config
 	if input.Settings {
+		if a.updates != nil {
+			a.updates.mu.Lock()
+			a.updates.nextCheck = time.Time{}
+			a.updates.deferredUntil = time.Time{}
+			a.updates.state.LastCheckedAt = ""
+			if a.updates.attempt != nil {
+				a.cancelUpdateAttemptLocked("編集画面との接続を確認してから更新します．")
+			}
+			a.updates.mu.Unlock()
+		}
 		if err := a.resetStartupRegistration(); err != nil {
 			startupWarning := messages.Errorf("設定は初期化しましたが，ログイン時の起動を変更できませんでした: %w", err)
 			if warning == nil {
