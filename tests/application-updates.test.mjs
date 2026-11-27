@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { setTimeout as delay } from 'node:timers/promises';
-import { UpdatePreparation, applicationUpdateMessage, updateReleaseNotesURL } from '../web/src/application-updates.js';
+import { UpdatePreparation, applicationUpdateMessage, createApplicationUpdates, updateReleaseNotesURL } from '../web/src/application-updates.js';
 import { setLanguage } from '../web/src/i18n.js';
 
 function deferred() {
@@ -168,6 +168,45 @@ test('Store update details link to this application in the Microsoft Store', () 
   assert.equal(updateReleaseNotesURL(listing), listing);
   assert.equal(updateReleaseNotesURL('https://apps.microsoft.com/detail/another-application'), fallback);
   assert.equal(updateReleaseNotesURL(`${listing}?next=https://example.org/`), fallback);
+});
+
+test('an automatic update choice stays visible while saving and after an older read finishes', async () => {
+  const elements = new Map();
+  const document = { getElementById(id) {
+    if (!elements.has(id)) elements.set(id, {
+      dataset: {}, events: {},
+      addEventListener(event, callback) { this.events[event] = callback; },
+      setAttribute() {}, removeAttribute() {},
+    });
+    return elements.get(id);
+  } };
+  const initial = { supported: true, automatic: true, phase: 'idle' };
+  const oldRead = deferred(), saved = deferred();
+  let reads = 0;
+  const updates = createApplicationUpdates({ document, api: async (url, options) => {
+    if (url === '/api/updates/settings') {
+      assert.equal(options.body.automatic, false);
+      return saved.promise;
+    }
+    return ++reads === 1 ? initial : oldRead.promise;
+  } });
+  try {
+    await updates.refresh();
+    const pendingRead = updates.refresh();
+    const checkbox = document.getElementById('application-updates-automatic');
+    checkbox.checked = false;
+    checkbox.events.change();
+    assert.equal(checkbox.checked, false);
+    assert.equal(checkbox.disabled, true);
+    saved.resolve({ ...initial, automatic: false });
+    await delay(0);
+    assert.equal(checkbox.checked, false);
+    assert.equal(checkbox.disabled, false);
+    oldRead.resolve(initial);
+    await pendingRead;
+    assert.equal(checkbox.checked, false);
+    assert.equal(updates.snapshot.automatic, false);
+  } finally { updates.destroy(); }
 });
 
 test('update messages follow the current language and automatic update setting', () => {

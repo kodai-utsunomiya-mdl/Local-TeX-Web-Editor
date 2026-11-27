@@ -138,7 +138,7 @@ export function createApplicationUpdates({ api, onInstall, onOpenSettings, onSta
   const bannerInstall = byId('application-update-install');
   const postpone = byId('application-update-defer');
   const indicator = byId('application-update-open');
-  let state = null, busy = false, reading = false, started = false, timer = null, localError = '', pendingAutomatic = null;
+  let state = null, busy = false, reading = false, started = false, timer = null, localError = '', pendingAutomatic = null, revision = 0;
 
   function render() {
     const supported = state?.supported === true;
@@ -186,18 +186,19 @@ export function createApplicationUpdates({ api, onInstall, onOpenSettings, onSta
   async function refresh({ reportError = false } = {}) {
     if (reading || busy) { schedule(); return; }
     reading = true;
+    const requestedRevision = revision;
     try {
       const result = await api('/api/updates', { projectRoot: null });
-      if (result && typeof result === 'object') state = result;
-      if (reportError) localError = '';
+      if (requestedRevision === revision && result && typeof result === 'object') state = result;
+      if (reportError && requestedRevision === revision) localError = '';
     } catch (cause) {
-      if (reportError) localError = cause.message || String(cause);
+      if (reportError && requestedRevision === revision) localError = cause.message || String(cause);
     } finally { reading = false; render(); schedule(); }
   }
 
   async function perform(action) {
     if (busy) return;
-    busy = true; localError = ''; render();
+    busy = true; ++revision; localError = ''; render();
     try {
       const result = await action();
       if (result && typeof result === 'object' && typeof result.phase === 'string') state = result;
