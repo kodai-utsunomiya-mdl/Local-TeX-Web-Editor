@@ -329,7 +329,7 @@ export const english = {
   '草稿を確認': 'Review drafts',
   '草稿の案内を閉じる': 'Dismiss the draft notice',
   'プロジェクト': 'Projects',
-  '原稿 (.tex)，参考文献 (.bib)，画像などが入ったフォルダーを選択してください．': 'Choose a folder containing your source (.tex), bibliography (.bib), images, and other project files.',
+  '原稿 (.tex，.md，.txt など)，参考文献 (.bib)，画像などが入ったフォルダーを選択してください．': 'Choose a folder containing documents (.tex, .md, .txt), bibliography files (.bib), images, and other project files.',
   '最近開いたプロジェクト': 'Recent projects',
   'タブを閉じています…': 'Closing this tab…',
   'プロジェクトのファイル': 'Project files',

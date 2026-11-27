@@ -1,18 +1,20 @@
 #welcome .welcome-card { width: min(900px, 100%); }
-#welcome .welcome-recent { margin-top: 32px; padding-top: 22px; }
-#welcome .welcome-recent h2 { font-size: 12px; color: var(--secondary); margin-bottom: 13px; }
-.project-home-list { display: grid; gap: 11px; }
-.project-home-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 18px; min-width: 0; padding: 16px 18px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); }
-.project-home-card.current { border-color: var(--accent); background: var(--accent-soft); }
+#welcome .welcome-recent { margin-top: 30px; padding-top: 0; border-top: 0; }
+#welcome .welcome-recent h2 { font-size: 14px; font-weight: 600; line-height: 1.6; color: var(--text); margin-bottom: 12px; }
+.project-home-list { border-top: 1px solid var(--border); }
+.project-home-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 20px; min-width: 0; padding: 16px 0; border-bottom: 1px solid var(--border); }
 .project-home-information { min-width: 0; }
 .project-home-title { display: flex; flex-wrap: wrap; align-items: center; gap: 7px 12px; margin-bottom: 5px; }
 .project-home-title h3 { min-width: 0; font-size: 14px; font-weight: 600; line-height: 1.5; color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; }
-.project-home-current { display: inline-block; padding: 2px 6px; border: 1px solid var(--accent); border-radius: 4px; font-size: 10px; line-height: 1.5; color: var(--accent); }
+.project-home-current { font-size: 11px; line-height: 1.5; color: var(--secondary); }
 .project-home-path { min-width: 0; margin: 0; color: var(--secondary); font: 11px/1.7 var(--editor-font-family, Consolas, monospace); white-space: pre-wrap; overflow-wrap: anywhere; }
 .project-home-status { margin: 7px 0 2px; color: var(--warning); font-size: 12px; font-weight: 600; line-height: 1.6; }
 .project-home-status-help { margin: 0; color: var(--secondary); font-size: 11px; line-height: 1.7; overflow-wrap: anywhere; }
-.project-home-card.unavailable { border-color: var(--warning-border); }
+.project-home-card.unavailable .project-home-title h3 { color: var(--secondary); }
 .project-home-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; max-width: 340px; }
+.project-zip-menu.project-home-zip-menu { min-width: 240px; }
+.project-home-zip-heading { margin: 3px 8px 4px; font-size: 12px; font-weight: 600; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.project-home-zip-help { margin: 0 8px 7px; padding-bottom: 8px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 11px; line-height: 1.7; }
 .project-home-delete { color: var(--danger); background: transparent; border-color: transparent; }
 .project-home-delete:hover:not(:disabled) { color: var(--danger); border-color: var(--danger-border); background: var(--danger-bg); }
 #go-home { border: 0; padding: 0; border-radius: 5px; color: inherit; background: transparent; font: inherit; }
@@ -56,7 +58,7 @@
   #go-home .brand-mark { min-width: 29px; height: 26px; }
   #welcome { padding: 27px 16px; }
   #welcome .welcome-card > .button { margin-bottom: 7px; max-width: 100%; }
-  .project-home-card { grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 14px; }
+  .project-home-card { grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 14px 0; }
   .project-home-actions { justify-content: flex-start; }
   .project-delete-dialog { padding: 18px 15px; gap: 12px; width: calc(100vw - 20px); max-height: calc(100dvh - 20px); }
   .project-delete-entries { max-height: 170px; }

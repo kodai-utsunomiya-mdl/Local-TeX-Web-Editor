@@ -124,6 +124,148 @@ func TestProjectArchiveDownloadRequiresTheCurrentProject(t *testing.T) {
 	}
 }
 
+func openProjectForArchiveTest(t *testing.T, a *App, root string) string {
+	t.Helper()
+	response := apiRequest(a, http.MethodPost, "/api/project/open", map[string]string{"path": root}, nil)
+	var state State
+	if response.Code != http.StatusOK || json.Unmarshal(response.Body.Bytes(), &state) != nil || state.Project == nil {
+		t.Fatalf("open project: %d %s", response.Code, response.Body.String())
+	}
+	return state.Project.Root
+}
+
+func TestProjectArchiveDownloadRecentProjectWithoutOpeningIt(t *testing.T) {
+	a, currentRoot := testApp(t)
+	previous := filepath.Join(t.TempDir(), "Earlier paper")
+	writeTestFile(t, filepath.Join(previous, "main.tex"), []byte("Earlier manuscript"))
+	previous = openProjectForArchiveTest(t, a, previous)
+	openProjectForArchiveTest(t, a, currentRoot)
+	current := a.project
+	config, err := json.Marshal(a.config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, withoutCurrent := range []bool{false, true} {
+		if withoutCurrent {
+			a.project = nil
+		}
+		response := apiRequest(a, http.MethodPost, "/api/project/download", projectArchiveInput{Path: previous}, nil)
+		if response.Code != http.StatusOK {
+			t.Fatalf("download recent project (no current project: %v): %d %s", withoutCurrent, response.Code, response.Body.String())
+		}
+		files := readProjectArchive(t, response.Body.Bytes())
+		if string(files["main.tex"]) != "Earlier manuscript" || len(files) != 1 {
+			t.Fatalf("wrong project in ZIP: %v", files)
+		}
+		if withoutCurrent && a.project != nil || !withoutCurrent && a.project != current {
+			t.Fatal("export changed the current project")
+		}
+		latest, err := json.Marshal(a.config)
+		if err != nil || !bytes.Equal(config, latest) {
+			t.Fatalf("export changed saved projects: %v", err)
+		}
+	}
+}
+
+func TestProjectArchiveRecentProjectRequiresAKnownAvailableFolder(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		status int
+	}{
+		{"relative", http.StatusBadRequest},
+		{"unknown", http.StatusForbidden},
+		{"missing", http.StatusNotFound},
+		{"file", http.StatusBadRequest},
+		{"link", http.StatusConflict},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			a, current := testApp(t)
+			selected := filepath.Join(t.TempDir(), "Selected paper")
+			writeTestFile(t, filepath.Join(selected, "main.tex"), []byte("Selected manuscript"))
+			if test.name != "unknown" {
+				selected = openProjectForArchiveTest(t, a, selected)
+				openProjectForArchiveTest(t, a, current)
+			}
+			switch test.name {
+			case "relative":
+				selected = "relative/project"
+			case "missing", "file", "link":
+				if err := os.Rename(selected, selected+" moved"); err != nil {
+					t.Fatal(err)
+				}
+				if test.name == "file" {
+					writeTestFile(t, selected, []byte("A file replaced the folder"))
+				}
+				if test.name == "link" {
+					if err := os.Symlink(selected+" moved", selected); err != nil {
+						t.Skipf("symbolic links are unavailable: %v", err)
+					}
+				}
+			}
+			a.saveFilePicker = func(context.Context, string) (string, error) {
+				t.Error("the unavailable folder reached the save picker")
+				return "", nil
+			}
+			for _, endpoint := range []string{"/api/project/download", "/api/project/save-as"} {
+				response := apiRequest(a, http.MethodPost, endpoint, projectArchiveInput{Path: selected}, nil)
+				if response.Code != test.status || response.Header().Get("Content-Type") == "application/zip" {
+					t.Fatalf("%s: %d %s", endpoint, response.Code, response.Body.String())
+				}
+				if a.project == nil || !samePath(a.project.Root, current) {
+					t.Fatal("a failed export changed the current project")
+				}
+			}
+		})
+	}
+}
+
+func TestProjectArchiveRecentProjectSaveAsAndCancellation(t *testing.T) {
+	a, currentRoot := testApp(t)
+	previous := filepath.Join(t.TempDir(), "Earlier paper")
+	writeTestFile(t, filepath.Join(previous, "main.tex"), []byte("Earlier manuscript"))
+	previous = openProjectForArchiveTest(t, a, previous)
+	openProjectForArchiveTest(t, a, currentRoot)
+	current := a.project
+	destination := filepath.Join(t.TempDir(), "Saved earlier paper.zip")
+	a.saveFilePicker = func(_ context.Context, name string) (string, error) {
+		if name != "Earlier paper.zip" {
+			t.Errorf("suggested name: %q", name)
+		}
+		return destination, nil
+	}
+	input := projectArchiveInput{Path: previous}
+	response := apiRequest(a, http.MethodPost, "/api/project/save-as", input, nil)
+	if response.Code != http.StatusOK {
+		t.Fatalf("save recent project: %d %s", response.Code, response.Body.String())
+	}
+	archive, err := os.ReadFile(destination)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(readProjectArchive(t, archive)["main.tex"]) != "Earlier manuscript" || a.project != current {
+		t.Fatal("Save As changed the current project or saved its manuscript")
+	}
+	a.saveFilePicker = func(context.Context, string) (string, error) { return "", nil }
+	response = apiRequest(a, http.MethodPost, "/api/project/save-as", input, nil)
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), `"cancelled":true`) || a.project != current {
+		t.Fatalf("cancelled Save As: %d %s", response.Code, response.Body.String())
+	}
+	a.saveFilePicker = func(context.Context, string) (string, error) {
+		if err := os.Rename(previous, previous+" moved"); err != nil {
+			return "", err
+		}
+		return destination, nil
+	}
+	response = apiRequest(a, http.MethodPost, "/api/project/save-as", input, nil)
+	if response.Code != http.StatusNotFound || a.project != current {
+		t.Fatalf("folder moved while choosing destination: %d %s", response.Code, response.Body.String())
+	}
+	after, err := os.ReadFile(destination)
+	if err != nil || !bytes.Equal(archive, after) {
+		t.Fatalf("a cancelled or failed Save As changed the destination: %v", err)
+	}
+}
+
 func TestProjectArchiveDoesNotFollowFileOrDirectoryLinks(t *testing.T) {
 	a, root := testApp(t)
 	outside := t.TempDir()

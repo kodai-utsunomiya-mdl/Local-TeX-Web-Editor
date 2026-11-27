@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/messages"
+	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/platform"
 )
 
 const settingsGenerationHeader = "X-Settings-Generation"
@@ -192,8 +193,17 @@ func (a *App) settingsResetHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	config := cloneConfig(a.config)
+	var startupState platform.StartupState
+	var startupError error
 	if input.Settings {
 		config.TexBin, config.RecentProjects, config.Projects = "", []string{}, map[string]projectSettings{}
+		startupEnabled := true
+		config.StartupEnabled = &startupEnabled
+		config.StartupRegistration = ""
+		startupState, startupError = a.startupFunctions().status(a.options.ConfigDir)
+		if startupError == nil && startupState.Supported {
+			config.StartupRegistration = a.startupRegistrationID()
+		}
 		config.AutomaticAppUpdates = nil
 		config.LastAppUpdateCheck = time.Time{}
 		config.AppUpdateDeferredUntil = time.Time{}
@@ -224,8 +234,11 @@ func (a *App) settingsResetHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			a.updates.mu.Unlock()
 		}
-		if err := a.resetStartupRegistration(); err != nil {
-			startupWarning := messages.Errorf("設定は初期化しましたが，ログイン時の起動を変更できませんでした: %w", err)
+		if startupError == nil {
+			startupError = a.resetStartupRegistration(startupState)
+		}
+		if startupError != nil {
+			startupWarning := messages.Errorf("設定は初期化しましたが，ログイン時の起動を変更できませんでした: %w", startupError)
 			if warning == nil {
 				warning = startupWarning
 			} else {

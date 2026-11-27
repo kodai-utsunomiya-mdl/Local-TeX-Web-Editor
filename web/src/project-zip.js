@@ -41,10 +41,11 @@ export function projectZIPFilename(project) {
   return `${suggestProjectZIPName(project.name || String(project.root || '').replace(/[\\/]+$/, '').split(/[\\/]/).at(-1))}.zip`;
 }
 
-export async function exportProjectZIP({ project, saveAs = false, saveAll, flush, api, saveBlob }) {
-  await saveAll();
+export async function exportProjectZIP({ project, currentProjectRoot = project.root, saveAs = false, saveAll, flush, api, saveBlob }) {
+  const current = project.root === currentProjectRoot;
+  if (current) await saveAll();
   await flush();
-  const options = { method: 'POST', body: {}, projectRoot: project.root, timeout: 0 };
+  const options = { method: 'POST', body: current ? {} : { path: project.root }, projectRoot: current ? project.root : null, timeout: 0 };
   if (saveAs) return api('/api/project/save-as', options);
   const blob = await api('/api/project/download', { ...options, responseType: 'blob' });
   await saveBlob(blob, projectZIPFilename(project));

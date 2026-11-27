@@ -59,6 +59,8 @@ type configuration struct {
 	TeXInstallations       []managedTeXInstallation   `json:"texInstallations,omitempty"`
 	RecentProjects         []string                   `json:"recentProjects"`
 	Projects               map[string]projectSettings `json:"projects"`
+	StartupEnabled         *bool                      `json:"startupEnabled,omitempty"`
+	StartupRegistration    string                     `json:"startupRegistration,omitempty"`
 	AutomaticAppUpdates    *bool                      `json:"automaticAppUpdates,omitempty"`
 	LastAppUpdateCheck     time.Time                  `json:"lastAppUpdateCheck,omitempty"`
 	AppUpdateDeferredUntil time.Time                  `json:"appUpdateDeferredUntil,omitempty"`

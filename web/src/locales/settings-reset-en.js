@@ -6,7 +6,7 @@ export const settingsResetEnglish = {
   '初期化する内容を選びます．設定以外の項目には，原稿や自作の内容が含まれます．': 'Choose what to reset. The items below settings include copies of your writing and your own templates.',
   '初期化する内容': 'What to reset',
   '設定と記憶した操作': 'Settings and remembered actions',
-  '外観，編集の設定，最近開いたプロジェクト，タブと編集位置，TeX の選択を初期値に戻し，ログイン時の起動を無効にします．': 'Reset appearance, editing preferences, recent projects, tabs and editing positions, and the selected TeX installation. Disable start at login.',
+  '外観，編集の設定，最近開いたプロジェクト，タブと編集位置，TeX の選択を初期値に戻し，ログイン時の起動を有効にします．': 'Reset appearance, editing preferences, recent projects, tabs and editing positions, and the selected TeX installation. Enable start at login.',
   '未保存の草稿': 'Unsaved drafts',
   '編集履歴': 'Edit history',
   'ファイルへ保存していない本文のコピーを削除します．': 'Delete copies of text that has not been saved to your files.',

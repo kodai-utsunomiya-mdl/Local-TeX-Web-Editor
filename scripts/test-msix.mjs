@@ -64,7 +64,7 @@ async function api(endpoint, data, method) {
 }
 
 let browser, context, page, passed = false;
-let startupMayBeEnabled = false;
+let startupMayBeEnabled = true;
 const startupStates = [];
 const errors = [];
 async function compile() {
@@ -134,13 +134,15 @@ async function captureProjectZIP() {
 
 try {
   assert.equal(ready.version, version);
-  const startupInitial = await api('/api/startup');
+  const startupInitial = await waitFor(() => api('/api/startup'), state => state.enabled, 'Start at login was not enabled by default.');
   assert.equal(startupInitial.supported, true);
-  assert.equal(startupInitial.status, 'disabled');
-  assert.equal(startupInitial.enabled, false);
-  assert.equal(startupInitial.canEnable, true);
+  assert.equal(startupInitial.status, 'enabled');
+  assert.equal(startupInitial.enabled, true);
+  assert.equal(startupInitial.canDisable, true);
   startupStates.push(startupInitial.status);
-  startupMayBeEnabled = true;
+  assert.equal(JSON.parse(await readFile(path.join(identity.configDir, 'settings.json'), 'utf8')).startupEnabled, true);
+  assert.equal((await api('/api/startup', { enabled: false })).enabled, false);
+  startupStates.push('disabled');
   const startupEnabled = await api('/api/startup', { enabled: true });
   assert.equal(startupEnabled.status, 'enabled');
   assert.equal(startupEnabled.enabled, true);
@@ -153,6 +155,7 @@ try {
   assert.equal(startupDisabled.canEnable, true);
   startupStates.push(startupDisabled.status);
   assert.equal((await api('/api/startup')).enabled, false);
+  assert.equal(JSON.parse(await readFile(path.join(identity.configDir, 'settings.json'), 'utf8')).startupEnabled, false);
   startupMayBeEnabled = false;
   browser = await chromium.launch({ headless: true });
   context = await browser.newContext({ viewport: { width: 1600, height: 1000 }, locale: 'en-US', acceptDownloads: true });

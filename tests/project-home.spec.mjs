@@ -16,9 +16,10 @@ test.beforeAll(async () => {
       setLanguage('ja');
       window.meta = { project: { root: '/projects/current project' }, build: { status: 'success' },
         recentProjects: ['/projects/other', '/projects/current project', '/projects/other', ...Array.from({ length: 15 }, (_, index) => '/projects/project-' + index)] };
-      window.requests = []; window.opened = []; window.resumes = 0; window.events = []; window.errors = []; window.notices = [];
+      window.requests = []; window.opened = []; window.archives = []; window.resumes = 0; window.events = []; window.errors = []; window.notices = [];
       window.blocked = false; window.failInspection = false; window.conflictOnce = false; window.deferBegin = false; window.deferDeleted = false;
       window.refreshCount = 0; window.nextStatuses = null; window.nextCurrentStatus = null; window.failOpen = false; window.deletedOutside = false;
+      window.deferExport = false; window.failExport = false;
       window.inspectionFor = path => ({ path, name: path.split('/').pop(), fileCount: 2, directoryCount: 1, revision: 'first',
         entries: [{ path: 'main.tex', directory: false, size: 128 }, { path: 'figures', directory: true, size: 0 }, { path: 'figures/plot.png', directory: false, size: 16 }],
         draftPaths: ['notes/draft.md'] });
@@ -40,6 +41,12 @@ test.beforeAll(async () => {
           }
           opened.push(path);
         }, onResume: () => { resumes++; },
+        onExport: async (path, saveAs) => {
+          archives.push({ path, saveAs });
+          if (deferExport) await new Promise(resolve => window.releaseExport = resolve);
+          if (failExport) throw new Error('The ZIP could not be saved.');
+          return { cancelled: true };
+        },
         onDeleted: async result => {
           events.push('deleted-start'); if (deferDeleted) await new Promise(resolve => window.releaseDeleted = resolve);
           meta.project = null; meta.recentProjects = meta.recentProjects.filter(path => !result.removedProjects.includes(path)); events.push('deleted-end');
@@ -71,10 +78,10 @@ async function openHome(page) {
   await page.route(`${origin}/**`, async route => {
     const pathname = new URL(route.request().url()).pathname;
     if (pathname === '/home.js') return route.fulfill({ contentType: 'text/javascript', body: javascript });
-    if (['/style.css', '/imports.css', '/project-home.css'].includes(pathname)) return route.fulfill({ contentType: 'text/css', body: await readFile(path.join(repository, 'web/src', pathname.slice(1))) });
+    if (['/style.css', '/imports.css', '/project-home.css', '/project-zip.css'].includes(pathname)) return route.fulfill({ contentType: 'text/css', body: await readFile(path.join(repository, 'web/src', pathname.slice(1))) });
     if (pathname !== '/') return route.fulfill({ status: 404, body: '' });
     return route.fulfill({ contentType: 'text/html', body: `<!doctype html><html lang="ja"><head><meta charset="utf-8">
-      <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/imports.css"><link rel="stylesheet" href="/project-home.css"></head>
+      <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/imports.css"><link rel="stylesheet" href="/project-home.css"><link rel="stylesheet" href="/project-zip.css"></head>
       <body><div id="app-shell" class="app-shell home-mode"><header class="app-header">
       <button id="go-home" class="brand"><span class="brand-mark">T<span>E</span>X</span><span class="brand-name">Local TeX Web Editor</span></button>
       <div class="header-divider"></div><div class="project-heading">Projects</div><button id="sidebar-toggle">Files</button><div id="compile-bar" class="compile-bar">Compile</div>
@@ -107,6 +114,7 @@ test('現在のプロジェクトを先頭に置き，重複なく開く操作�
   await page.evaluate(() => { meta.build.status = 'running'; home.refresh(); });
   await expect(currentCard(page).locator('[data-action="resume"]')).toBeEnabled();
   await expect(page.locator('[data-project-path="/projects/other"] [data-action="open"]')).toBeDisabled();
+  await expect(currentCard(page).locator('[data-action="zip"]')).toBeDisabled();
   await expect(currentCard(page).locator('[data-action="delete"]')).toBeDisabled();
 });
 
@@ -128,7 +136,74 @@ test('コンパイル状況の更新中も，カードのキー操作を続け�
   await page.evaluate(() => { meta.build.status = 'success'; home.refresh(); });
   await expect(resume).toBeFocused();
   await page.keyboard.press('Tab');
+  await expect(currentCard(page).locator('[data-action="zip"]')).toBeFocused();
+  await page.keyboard.press('Tab');
   await expect(currentCard(page).locator('[data-action="delete"]')).toBeFocused();
+});
+
+test('各プロジェクトの ZIP メニューをキーで操作し，取消し後に同じ行へ戻る', async ({ page }) => {
+  await openHome(page);
+  const menu = page.locator('#project-home-zip-menu');
+  const currentZIP = currentCard(page).locator('[data-action="zip"]');
+  await currentZIP.focus(); await page.keyboard.press('ArrowUp');
+  await expect(menu).toBeVisible();
+  await expect(currentZIP).toHaveAttribute('aria-expanded', 'true');
+  await expect(menu).toContainText('未保存の変更を保存して');
+  await expect(menu.locator('[data-action="save-as"]')).toBeFocused();
+  await page.keyboard.press('Home'); await expect(menu.locator('[data-action="download"]')).toBeFocused();
+  await page.keyboard.press('ArrowUp'); await expect(menu.locator('[data-action="save-as"]')).toBeFocused();
+  await page.keyboard.press('Escape'); await expect(currentZIP).toBeFocused();
+  await expect(menu).toBeHidden(); await expect(currentZIP).toHaveAttribute('aria-expanded', 'false');
+  await currentZIP.press('ArrowDown'); await page.keyboard.press('Tab');
+  await expect(menu).toBeHidden(); await expect(currentCard(page).locator('[data-action="delete"]')).toBeFocused();
+
+  const previousZIP = page.locator('[data-project-path="/projects/other"] [data-action="zip"]');
+  await previousZIP.focus(); await page.keyboard.press('ArrowDown');
+  await expect(menu).toContainText('保存済みファイル');
+  await page.evaluate(() => { deferExport = true; });
+  await page.keyboard.press('End'); await page.keyboard.press('Enter');
+  await expect.poll(() => page.evaluate(() => archives)).toEqual([{ path: '/projects/other', saveAs: true }]);
+  await expect(previousZIP).toBeDisabled(); await expect(currentCard(page).locator('[data-action="resume"]')).toBeDisabled();
+  await page.evaluate(() => releaseExport());
+  await expect(previousZIP).toBeFocused(); await expect(previousZIP).toBeEnabled();
+  expect(await page.evaluate(() => opened)).toEqual([]);
+  expect(await page.evaluate(() => meta.project.root)).toBe(currentPath);
+});
+
+test('ZIP を作る直前にフォルダーを再確認し，エラー後もホームの操作を続けられる', async ({ page }) => {
+  await openHome(page);
+  const previous = page.locator('[data-project-path="/projects/other"]');
+  const zip = previous.locator('[data-action="zip"]'), menu = page.locator('#project-home-zip-menu');
+  await zip.click();
+  await page.evaluate(() => { nextStatuses = [{ path: '/projects/other', status: 'missing', message: 'フォルダーを選び直してください．' }]; });
+  await menu.locator('[data-action="download"]').click();
+  await expect(previous).toHaveAttribute('data-project-status', 'missing'); await expect(zip).toBeDisabled();
+  expect(await page.evaluate(() => archives)).toEqual([]);
+  expect(await page.evaluate(() => notices)).toEqual(['フォルダーを選び直してください．']);
+  await expect(previous.locator('[data-action="refresh"]')).toBeFocused();
+  await page.evaluate(() => { nextStatuses = [{ path: '/projects/other', status: 'available' }]; });
+  await previous.locator('[data-action="refresh"]').click(); await expect(zip).toBeEnabled();
+  await zip.click();
+  await page.evaluate(() => { failExport = true; });
+  await menu.locator('[data-action="download"]').click();
+  await expect(zip).toBeFocused();
+  expect(await page.evaluate(() => errors)).toEqual(['The ZIP could not be saved.']);
+  expect(await page.evaluate(() => opened)).toEqual([]);
+  await currentCard(page).locator('[data-action="resume"]').click();
+  expect(await page.evaluate(() => resumes)).toBe(1);
+});
+
+test('一覧が更新されても ZIP メニューの操作を続け，ウィンドウの変更時は閉じる', async ({ page }) => {
+  await openHome(page);
+  const button = currentCard(page).locator('[data-action="zip"]'), menu = page.locator('#project-home-zip-menu');
+  await button.click();
+  await page.evaluate(() => { meta.recentProjects.splice(0, 1); home.refresh(); });
+  await expect(menu.locator('[data-action="download"]')).toBeFocused();
+  await expect(button).toHaveAttribute('aria-expanded', 'true');
+  await page.setViewportSize({ width: 390, height: 700 });
+  await expect(menu).toBeHidden();
+  await button.click(); await expect(menu.locator('[data-action="save-as"]')).toBeInViewport();
+  await page.locator('#home-title').click(); await expect(menu).toBeHidden();
 });
 
 test('一覧と未保存の原稿・草稿を確認し，名前とチェックをそろえても Enter では削除しない', async ({ page }) => {
@@ -232,6 +307,7 @@ test('外部で移動した最近のプロジェクトを案内し，一覧だ�
   const previous = page.locator('[data-project-path="/projects/other"]');
   await expect(previous).toContainText('フォルダーが見つかりません');
   await expect(previous.locator('[data-action="open"]')).toBeDisabled();
+  await expect(previous.locator('[data-action="zip"]')).toBeDisabled();
   await expect(previous.locator('[data-action="delete"]')).toBeDisabled();
   await previous.locator('[data-action="forget"]').click();
   await expect(previous).toHaveCount(0);

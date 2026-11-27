@@ -75,3 +75,30 @@ test('Save As uses the native destination API and returns cancellation without a
   assert.deepEqual(calls, ['save', 'flush', { url: '/api/project/save-as', options: { method: 'POST', body: {}, projectRoot: 'C:\\paper', timeout: 0 } }]);
   assert.deepEqual(result, { cancelled: true });
 });
+
+test('exporting another recent project leaves the current documents unsaved and requests its own folder', async () => {
+  const calls = [], project = { root: '/papers/earlier' }, blob = new Blob(['earlier archive']);
+  await exportProjectZIP({ project, currentProjectRoot: '/papers/current',
+    saveAll: async () => { assert.fail('The current project is still being edited'); },
+    flush: async () => { calls.push('flush'); },
+    api: async (url, options) => { calls.push({ url, options }); return blob; },
+    saveBlob: async (value, name) => { assert.equal(value, blob); calls.push(name); },
+  });
+  assert.deepEqual(calls, ['flush', { url: '/api/project/download', options: {
+    method: 'POST', body: { path: project.root }, projectRoot: null, timeout: 0, responseType: 'blob',
+  } }, 'earlier.zip']);
+});
+
+test('a recent project can use Save As from Home when no project is open', async () => {
+  const project = { root: '/papers/earlier' };
+  const result = await exportProjectZIP({ project, currentProjectRoot: null, saveAs: true,
+    saveAll: async () => { assert.fail('There is no open project'); }, flush: async () => {},
+    api: async (url, options) => {
+      assert.equal(url, '/api/project/save-as');
+      assert.deepEqual(options, { method: 'POST', body: { path: project.root }, projectRoot: null, timeout: 0 });
+      return { cancelled: true };
+    },
+    saveBlob: async () => { assert.fail('Save As uses the OS file picker'); },
+  });
+  assert.deepEqual(result, { cancelled: true });
+});

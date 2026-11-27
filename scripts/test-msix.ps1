@@ -38,6 +38,19 @@ function Write-JSONFile([string]$Path, $Value) {
     [IO.File]::WriteAllText($Path, ($Value | ConvertTo-Json -Depth 10), [Text.UTF8Encoding]::new($false))
 }
 
+function Start-TestApplication($InstalledPackage, [string[]]$Arguments, [string]$ReadyPath) {
+    $applicationId = [LocalTeXMSIXTest.Native]::Activate(($InstalledPackage.PackageFamilyName + '!App'), $Arguments)
+    $deadline = [DateTime]::UtcNow.AddSeconds(25)
+    while ([DateTime]::UtcNow -lt $deadline) {
+        if (Test-Path -LiteralPath $ReadyPath) {
+            try { $current = Get-Content -LiteralPath $ReadyPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { $current = $null }
+            if ($current -and $current.url -and $current.token -and $current.pid -eq $applicationId) { return $current }
+        }
+        Start-Sleep -Milliseconds 100
+    }
+    throw 'The installed MSIX application did not create its ready file.'
+}
+
 function Find-SignTool {
     $sdk = Join-Path ${env:ProgramFiles(x86)} 'Windows Kits\10\bin'
     $versions = Get-ChildItem -LiteralPath $sdk -Directory | Where-Object { $_.Name -match '^10\.\d+\.\d+\.\d+$' } | Sort-Object { [Version]$_.Name } -Descending
@@ -484,17 +497,8 @@ try {
     Write-JSONFile (Join-Path $output 'installed-package.json') $identity
     $arguments = @('--no-browser', '--ready-file', $readyPath)
     if ($TexBin) { $arguments += @('--tex-bin', $TexBin) }
-    $applicationProcessId = [LocalTeXMSIXTest.Native]::Activate(($installed.PackageFamilyName + '!App'), $arguments)
-    $deadline = [DateTime]::UtcNow.AddSeconds(25)
-    while ([DateTime]::UtcNow -lt $deadline) {
-        if (Test-Path -LiteralPath $readyPath) {
-            try { $ready = Get-Content -LiteralPath $readyPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { $ready = $null }
-            if ($ready -and $ready.url -and $ready.token) { break }
-        }
-        Start-Sleep -Milliseconds 100
-    }
-    if (-not $ready) { throw 'The installed MSIX application did not create its ready file.' }
-    if ($ready.pid -ne $applicationProcessId) { throw 'The activated package and the HTTP server have different process IDs.' }
+    $ready = Start-TestApplication $installed $arguments $readyPath
+    $applicationProcessId = $ready.pid
     $actualIdentity = [LocalTeXMSIXTest.Native]::PackageName($ready.pid)
     if ($actualIdentity -ne $installed.PackageFullName) { throw 'The running application does not have the installed MSIX package identity.' }
     Write-JSONFile (Join-Path $output 'activation.json') @{ processId = $ready.pid; fullName = $actualIdentity; activatedWith = 'IApplicationActivationManager' }
@@ -502,6 +506,19 @@ try {
     Test-NativePicker $ready
     & node (Join-Path $PSScriptRoot 'test-msix.mjs') --ready-file $readyPath --identity $identityPath --temporary $temporary
     if ($LASTEXITCODE -ne 0) { throw "The packaged browser tests failed with exit code $LASTEXITCODE." }
+    $previousProcess = Get-Process -Id $applicationProcessId -ErrorAction SilentlyContinue
+    if ($previousProcess -and -not $previousProcess.WaitForExit(5000)) { throw 'The packaged application did not exit before the startup setting check.' }
+    $ready = Start-TestApplication $installed $arguments $readyPath
+    $applicationProcessId = $ready.pid
+    $headers = @{ 'X-Local-Token' = $ready.token; Origin = ([Uri]$ready.url).GetLeftPart([UriPartial]::Authority) }
+    $startup = Invoke-RestMethod -Uri ([Uri]::new([Uri]$ready.url, '/api/startup')) -Headers $headers -TimeoutSec 20
+    if ($startup.enabled -or $startup.status -ne 'disabled') { throw 'Restarting the packaged application changed the disabled startup setting.' }
+    $savedSettings = Get-Content -LiteralPath (Join-Path $defaultConfig 'settings.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($savedSettings.startupEnabled -ne $false) { throw 'The packaged application did not save the disabled startup setting.' }
+    Write-JSONFile (Join-Path $output 'startup-restart.json') @{ startup = $startup; savedEnabled = $savedSettings.startupEnabled; processId = $ready.pid }
+    Invoke-RestMethod -Uri ([Uri]::new([Uri]$ready.url, '/api/shutdown')) -Method Post -Headers $headers -ContentType 'application/json' -Body '{}' -TimeoutSec 3 | Out-Null
+    $currentProcess = Get-Process -Id $applicationProcessId -ErrorAction SilentlyContinue
+    if ($currentProcess -and -not $currentProcess.WaitForExit(5000)) { throw 'The packaged application did not exit after the startup setting check.' }
     Test-AppCertification $installed.PackageFullName
     Write-Host 'MSIX installation, package activation, browser editing, TeX, and shutdown checks passed.'
 } catch {

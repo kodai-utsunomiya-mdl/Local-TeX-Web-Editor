@@ -357,20 +357,50 @@ func createProjectArchive(ctx context.Context, root string, snapshot projectArch
 	}}, nil
 }
 
-func (a *App) prepareProjectArchive(r *http.Request) (*projectArchiveSource, error) {
-	if r.Header.Get("X-Project-Root") == "" {
-		return nil, fail(http.StatusBadRequest, "ZIP にするプロジェクトを開いてから，もう一度操作してください．")
+type projectArchiveInput struct {
+	Path string `json:"path,omitempty"`
+}
+
+func (a *App) projectArchiveRootLocked(r *http.Request, selected string) (string, error) {
+	if selected == "" {
+		if r.Header.Get("X-Project-Root") == "" {
+			return "", fail(http.StatusBadRequest, "ZIP にするプロジェクトを開いてから，もう一度操作してください．")
+		}
+		if err := a.checkProjectLocked(r.Header.Get("X-Project-Root")); err != nil {
+			return "", err
+		}
+		if a.project == nil {
+			return "", fail(http.StatusBadRequest, "原稿フォルダーを開いてください．")
+		}
+		return a.project.Root, nil
 	}
+	if !filepath.IsAbs(selected) || strings.ContainsRune(selected, '\x00') {
+		return "", fail(http.StatusBadRequest, "フォルダーの絶対パスを入力してください．")
+	}
+	root := ""
+	if a.project != nil && samePath(a.project.Root, selected) {
+		root = a.project.Root
+	} else {
+		for _, recent := range a.config.RecentProjects {
+			if samePath(recent, selected) {
+				root = recent
+				break
+			}
+		}
+	}
+	if root == "" {
+		return "", fail(http.StatusForbidden, "開いているプロジェクトか，最近使ったプロジェクトを選んでください．")
+	}
+	if _, err := inspectProjectFolder(root); err != nil {
+		return "", err
+	}
+	return root, nil
+}
+
+func (a *App) prepareProjectArchive(r *http.Request, input projectArchiveInput) (*projectArchiveSource, error) {
 	a.mu.Lock()
-	err := a.checkProjectLocked(r.Header.Get("X-Project-Root"))
+	root, err := a.projectArchiveRootLocked(r, input.Path)
 	project := a.project
-	if err == nil && project == nil {
-		err = fail(http.StatusBadRequest, "原稿フォルダーを開いてください．")
-	}
-	var root string
-	if project != nil {
-		root = project.Root
-	}
 	a.mu.Unlock()
 	if err != nil {
 		return nil, err
@@ -384,11 +414,14 @@ func (a *App) prepareProjectArchive(r *http.Request) (*projectArchiveSource, err
 		return nil, err
 	}
 	a.mu.Lock()
-	current := a.project == project
+	_, err = a.projectArchiveRootLocked(r, input.Path)
+	if err == nil && input.Path == "" && a.project != project {
+		err = fail(http.StatusConflict, "別の画面でプロジェクトが切り替わりました．編集中の内容を確認してから，この画面を開き直してください．")
+	}
 	a.mu.Unlock()
-	if !current {
+	if err != nil {
 		source.close()
-		return nil, fail(http.StatusConflict, "別の画面でプロジェクトが切り替わりました．編集中の内容を確認してから，この画面を開き直してください．")
+		return nil, err
 	}
 	return source, nil
 }
@@ -397,12 +430,12 @@ func (a *App) projectDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	if !requireMethod(w, r, http.MethodPost) {
 		return
 	}
-	var input struct{}
+	var input projectArchiveInput
 	if err := readJSON(w, r, &input); err != nil {
 		writeError(w, err)
 		return
 	}
-	source, err := a.prepareProjectArchive(r)
+	source, err := a.prepareProjectArchive(r, input)
 	if err != nil {
 		writeError(w, err)
 		return
@@ -418,12 +451,12 @@ func (a *App) projectSaveAsHandler(w http.ResponseWriter, r *http.Request) {
 	if !requireMethod(w, r, http.MethodPost) {
 		return
 	}
-	var input struct{}
+	var input projectArchiveInput
 	if err := readJSON(w, r, &input); err != nil {
 		writeError(w, err)
 		return
 	}
-	source, err := a.prepareProjectArchive(r)
+	source, err := a.prepareProjectArchive(r, input)
 	if err != nil {
 		writeError(w, err)
 		return
@@ -456,7 +489,7 @@ func (a *App) projectSaveAsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.mu.Lock()
-	err = a.checkProjectLocked(r.Header.Get("X-Project-Root"))
+	_, err = a.projectArchiveRootLocked(r, input.Path)
 	a.mu.Unlock()
 	if err == nil {
 		err = writeExport(r.Context(), source.fileExportSource, destination, parent, previous)

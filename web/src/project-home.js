@@ -6,15 +6,23 @@ const projectName = path => String(path).replace(/[\\/]+$/, '').split(/[\\/]/).p
 const uniquePaths = paths => [...new Set(paths.filter(path => typeof path === 'string' && path))];
 
 export function createProjectHome({ list, api, getMeta, getUnsavedPaths = () => [], beginAction = async () => {}, endAction = () => {},
-  onOpen, onResume, onDeleted = () => {}, refreshStatus = async () => {}, onRecentChanged = () => {},
+  onOpen, onResume, onExport = async () => {}, canExport = () => true, onDeleted = () => {}, refreshStatus = async () => {}, onRecentChanged = () => {},
   onError = () => {}, onNotice = () => {}, isBlocked = () => false }) {
   list.classList.add('project-home-list');
-  let starting = false, active = null, submitting = false, ending = false, checking = false, removing = false, destroyed = false, renderedSignature = '';
+  let starting = false, active = null, submitting = false, ending = false, checking = false, removing = false, exporting = false, destroyed = false, renderedSignature = '', zipPath = '';
   const statusText = entry => entry.message || t('プロジェクトの場所を確認できません．フォルダーを選び直してください．');
   const statusLabels = {
     missing: 'フォルダーが見つかりません', 'not-directory': 'この場所はフォルダーではありません',
     unavailable: 'フォルダーを読み取れません', changed: 'フォルダーの場所が変わりました',
   };
+
+  const zipMenu = element('div', { id: 'project-home-zip-menu', class: 'project-zip-menu project-home-zip-menu', role: 'menu', 'aria-describedby': 'project-home-zip-help', hidden: '' });
+  const zipHeading = element('p', { class: 'project-home-zip-heading', dir: 'auto' });
+  const zipHelp = element('p', { id: 'project-home-zip-help', class: 'project-home-zip-help' });
+  const download = translated('button', 'プロジェクトを ZIP でダウンロード', { type: 'button', role: 'menuitem', tabindex: '-1', 'data-action': 'download' });
+  const saveAs = translated('button', 'ZIP にして名前を付けて保存…', { type: 'button', role: 'menuitem', tabindex: '-1', 'data-action': 'save-as' });
+  zipMenu.append(zipHeading, zipHelp, download, saveAs);
+  list.ownerDocument.body.append(zipMenu);
 
   const dialog = element('dialog', { id: 'project-delete-dialog', class: 'dialog project-delete-dialog', 'aria-labelledby': 'project-delete-title', 'aria-describedby': 'project-delete-description' });
   const heading = element('div', { class: 'dialog-heading' });
@@ -50,13 +58,13 @@ export function createProjectHome({ list, api, getMeta, getUnsavedPaths = () => 
     const meta = getMeta() || {};
     const current = meta.project?.root || '';
     const entries = recentProjectEntries(meta);
-    const blocked = Boolean(isBlocked() || starting || active || ending || checking || removing);
+    const blocked = Boolean(isBlocked() || starting || active || ending || checking || removing || exporting);
     const running = meta.build?.status === 'running';
     if (active?.inspection && projectStatusFor(meta, active.path).status !== 'available') {
       active.inspection = null; acknowledge.checked = false; name.value = '';
       error.textContent = statusText(projectStatusFor(meta, active.path)); error.hidden = false; updateConfirm();
     }
-    const signature = JSON.stringify([current, entries, blocked, running, getLanguage()]);
+    const signature = JSON.stringify([current, entries, entries.map(entry => canExport(entry.path)), blocked, running, getLanguage()]);
     if (signature === renderedSignature) return;
     renderedSignature = signature;
     const focused = list.contains(list.ownerDocument.activeElement) ? list.ownerDocument.activeElement : null;
@@ -75,15 +83,23 @@ export function createProjectHome({ list, api, getMeta, getUnsavedPaths = () => 
       }
       const actions = element('div', { class: 'project-home-actions' });
       const open = translated('button', isCurrent ? '編集に戻る' : '開く', { type: 'button', class: `button button-small${isCurrent ? ' button-primary' : ''}`, 'data-action': isCurrent ? 'resume' : 'open' });
+      const zip = element('button', { id: `project-home-zip-${fragment.childElementCount}`, type: 'button', class: 'button button-small project-home-zip', 'data-action': 'zip',
+        'aria-label': t('「{name}」の ZIP を保存', { name: projectName(path) }), 'aria-haspopup': 'menu', 'aria-controls': zipMenu.id, 'aria-expanded': 'false' }, 'ZIP');
       const remove = translated('button', '削除…', { type: 'button', class: 'button button-small project-home-delete', 'data-action': 'delete', 'aria-haspopup': 'dialog', 'aria-controls': dialog.id });
       open.disabled = blocked || (!isCurrent && (running || !available)); remove.disabled = blocked || running || !available;
+      zip.disabled = blocked || running || !available || !canExport(path);
       if (running && !isCurrent) open.title = t('コンパイルが終わるとプロジェクトを開けます．');
       if (running) remove.title = t('コンパイルが終わるとプロジェクトを削除できます．');
+      if (running) zip.title = t('コンパイルが終わるとプロジェクトの ZIP を保存できます．');
       if (!available && !isCurrent) open.title = statusText(entry);
-      if (!available) remove.title = statusText(entry);
+      if (!available) remove.title = zip.title = statusText(entry);
       open.addEventListener('click', () => { void openPath(path); });
+      zip.addEventListener('click', () => zipPath === path ? closeZIPMenu(true) : openZIPMenu(path));
+      zip.addEventListener('keydown', event => {
+        if (['ArrowDown', 'ArrowUp'].includes(event.key)) { event.preventDefault(); openZIPMenu(path, event.key === 'ArrowUp'); }
+      });
       remove.addEventListener('click', () => { void inspect(path); });
-      actions.append(open, remove);
+      actions.append(open, zip, remove);
       if (!available) {
         const retry = translated('button', '再確認', { type: 'button', class: 'button button-small', 'data-action': 'refresh' });
         retry.disabled = blocked;
@@ -98,6 +114,10 @@ export function createProjectHome({ list, api, getMeta, getUnsavedPaths = () => 
     }
     list.replaceChildren(fragment);
     const section = list.closest('#welcome-recent'); if (section) section.hidden = !entries.length;
+    if (zipPath) {
+      if (blocked || running || !zipButton(zipPath) || zipButton(zipPath).disabled) closeZIPMenu(zipMenu.contains(list.ownerDocument.activeElement));
+      else positionZIPMenu();
+    }
     if (focusedPath && focusedAction) {
       const card = [...list.querySelectorAll('[data-project-path]')].find(node => node.dataset.projectPath === focusedPath);
       const control = [...(card?.querySelectorAll('[data-action]') || [])].find(node => node.dataset.action === focusedAction);
@@ -105,7 +125,68 @@ export function createProjectHome({ list, api, getMeta, getUnsavedPaths = () => 
     }
   }
 
-  function busy() { return destroyed || isBlocked() || starting || active || ending || checking || removing; }
+  function busy() { return destroyed || isBlocked() || starting || active || ending || checking || removing || exporting; }
+  function zipButton(path) {
+    const card = [...list.querySelectorAll('[data-project-path]')].find(node => node.dataset.projectPath === path);
+    return card?.querySelector('[data-action="zip"]');
+  }
+  function closeZIPMenu(focus = false) {
+    const path = zipPath;
+    zipButton(path)?.setAttribute('aria-expanded', 'false');
+    zipMenu.hidden = true; zipPath = '';
+    if (focus && path) focusCard(path, 'zip');
+  }
+  function positionZIPMenu() {
+    const button = zipButton(zipPath);
+    if (!button) { closeZIPMenu(); return; }
+    button.setAttribute('aria-expanded', 'true'); zipMenu.setAttribute('aria-labelledby', button.id);
+    const anchor = button.getBoundingClientRect(), bounds = zipMenu.getBoundingClientRect();
+    zipMenu.style.left = `${Math.max(6, Math.min(anchor.right - bounds.width, innerWidth - bounds.width - 6))}px`;
+    zipMenu.style.top = `${Math.max(6, Math.min(anchor.bottom + 6, innerHeight - bounds.height - 6))}px`;
+  }
+  function openZIPMenu(path, last = false) {
+    if (busy() || getMeta()?.build?.status === 'running' || list.ownerDocument.querySelector('dialog[open]')) return;
+    const entry = recentProjectEntries(getMeta()).find(value => value.path === path);
+    if (!entry || entry.status !== 'available' || !canExport(path)) return;
+    closeZIPMenu(); zipPath = path;
+    zipHeading.textContent = projectName(path);
+    zipHelp.textContent = t(entry.current ? '未保存の変更を保存して，ZIP にまとめます．' : 'このプロジェクトの保存済みファイルを ZIP にまとめます．');
+    zipMenu.hidden = false; positionZIPMenu();
+    (last ? saveAs : download).focus({ preventScroll: true });
+  }
+  async function exportPath(saveAs) {
+    const path = zipPath; closeZIPMenu(true);
+    if (!path || busy() || getMeta()?.build?.status === 'running' || !canExport(path)) return;
+    exporting = true; refresh();
+    try {
+      await reloadStatus();
+      const entry = recentProjectEntries(getMeta()).find(value => value.path === path);
+      if (!entry || entry.status !== 'available') { onNotice(statusText(entry || {})); return; }
+      await onExport(path, saveAs);
+    } catch (failure) {
+      onError(failure);
+      try { await reloadStatus(); } catch (refreshFailure) { onError(refreshFailure); }
+    } finally {
+      exporting = false; refresh();
+      if (!list.ownerDocument.querySelector('dialog[open]')) focusCard(path, 'zip');
+    }
+  }
+  download.addEventListener('click', () => { void exportPath(false); });
+  saveAs.addEventListener('click', () => { void exportPath(true); });
+  zipMenu.addEventListener('keydown', event => {
+    const items = [download, saveAs], index = items.indexOf(list.ownerDocument.activeElement);
+    if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+      event.preventDefault();
+      const next = event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1 : (index + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+      items[next]?.focus({ preventScroll: true });
+    } else if (event.key === 'Escape') { event.preventDefault(); closeZIPMenu(true); }
+    else if (event.key === 'Tab') closeZIPMenu(true);
+  });
+  const outsideZIPMenu = event => { if (zipPath && !zipMenu.contains(event.target) && !zipButton(zipPath)?.contains(event.target)) closeZIPMenu(); };
+  const movedZIPMenu = event => { if (zipPath && (event.type === 'resize' || !zipMenu.contains(event.target))) closeZIPMenu(zipMenu.contains(list.ownerDocument.activeElement)); };
+  list.ownerDocument.addEventListener('pointerdown', outsideZIPMenu);
+  window.addEventListener('resize', movedZIPMenu);
+  window.addEventListener('scroll', movedZIPMenu, true);
   async function reloadStatus() {
     await refreshStatus();
     refresh();
@@ -260,9 +341,14 @@ export function createProjectHome({ list, api, getMeta, getUnsavedPaths = () => 
   dialog.addEventListener('cancel', event => { if (submitting) event.preventDefault(); });
   dialog.addEventListener('close', () => { void finish(); });
   const stopLanguage = onLanguageChange(() => {
-    refresh(); translateElements(dialog);
+    closeZIPMenu(); refresh(); translateElements(dialog); translateElements(zipMenu);
     if (active?.inspection) renderInspection(active.inspection, false);
   });
   refresh();
-  return { refresh, destroy() { destroyed = true; stopLanguage(); if (dialog.open) dialog.close(); dialog.remove(); list.replaceChildren(); } };
+  return { refresh, destroy() {
+    destroyed = true; stopLanguage(); closeZIPMenu();
+    list.ownerDocument.removeEventListener('pointerdown', outsideZIPMenu);
+    window.removeEventListener('resize', movedZIPMenu); window.removeEventListener('scroll', movedZIPMenu, true);
+    if (dialog.open) dialog.close(); dialog.remove(); zipMenu.remove(); list.replaceChildren();
+  } };
 }

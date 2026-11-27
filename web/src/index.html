@@ -92,12 +92,12 @@
           <button type="button" id="welcome-template" class="button"><span data-i18n="テンプレートから作成">Create from a template</span></button>
           <button type="button" id="welcome-import-zip" class="button"><span data-i18n="ZIP を読み込む…">Import ZIP…</span></button>
         </div>
-        <p class="welcome-note"><span data-i18n="原稿 (.tex)，参考文献 (.bib)，画像などが入ったフォルダーを選択してください．">Choose a folder containing your source (.tex), bibliography (.bib), images, and other project files.</span></p>
-        <section id="tex-setup-home" hidden></section>
+        <p class="welcome-note"><span data-i18n="原稿 (.tex，.md，.txt など)，参考文献 (.bib)，画像などが入ったフォルダーを選択してください．">Choose a folder containing documents (.tex, .md, .txt), bibliography files (.bib), images, and other project files.</span></p>
         <div id="welcome-recent" class="welcome-recent" hidden>
           <h2><span data-i18n="最近開いたプロジェクト">Recent projects</span></h2>
           <div id="welcome-recent-list"></div>
         </div>
+        <section id="tex-setup-home" aria-labelledby="tex-setup-home-title" hidden></section>
       </div>
     </main>
 
@@ -297,7 +297,7 @@
       <p id="store-installation-note" class="field-help" hidden data-i18n="このアプリのインストールと更新は Windows が管理しています．スタートメニューから起動できます．">Windows manages installation and updates for this app. Open it from the Start menu.</p>
       <section id="startup-settings" class="startup-settings" aria-labelledby="startup-title">
         <h3 id="startup-title" data-i18n="ログイン時の起動">Start at login</h3>
-        <p class="field-help" data-i18n="ブラウザのタブ復元に備え，ログイン時にバックグラウンドで起動します．新しいブラウザのタブは開きません．">Start in the background when you log in, ready for the browser to restore your tabs. No new browser tab is opened.</p>
+        <p class="field-help" data-i18n="初期設定では，ログイン時にバックグラウンドで起動します．ブラウザのタブ復元に備えて待機し，新しいタブは開きません．">Start in the background at login by default, ready for the browser to restore your tabs. No new browser tab is opened.</p>
         <p id="startup-status" class="field-help" role="status"></p>
         <div class="startup-actions"><button id="startup-enable" type="button" class="button" data-i18n="ログイン時の起動を有効にする" disabled>Enable start at login</button><button id="startup-disable" type="button" class="button" data-i18n="無効にする" disabled>Disable</button><button id="startup-system-settings" type="button" class="button" data-i18n="OS の起動設定を開く…" hidden>Open system startup settings…</button></div>
         <p class="field-help" data-i18n="この欄の変更はその場で反映します．自動起動を無効にした後も，現在の画面で編集を続けられます．">Changes in this section apply immediately. You can continue editing in the current session after disabling start at login.</p>

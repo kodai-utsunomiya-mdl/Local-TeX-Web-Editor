@@ -1155,7 +1155,7 @@ function updateDocumentIndicators(doc) {
     const conflictNote = $('conflict-banner').querySelector('[data-i18n]');
     conflictNote.dataset.i18n = doc.diskMissing ? 'PC 上のファイルが見つかりません．編集画面の内容から作成し直す場合は，「内容を確認」を開いてください．' : 'ディスクの内容が変更されました．編集中の内容を確認して保存してください．';
     conflictNote.textContent = t(conflictNote.dataset.i18n);
-    document.title = `${dirty ? '● ' : ''}${basename(doc.path)} — Local TeX Web Editor`;
+    if (!state.homeVisible) document.title = `${dirty ? '● ' : ''}${basename(doc.path)} — Local TeX Web Editor`;
   }
   renderControls();
 }
@@ -3070,13 +3070,16 @@ async function importProjectArchive({ archive, parent, name }, onCreated) {
   } finally { setOperation(''); await openInitialFile(); }
 }
 
-async function exportProjectArchive(saveAs = false) {
-  if (state.operation || state.closed || isRunning() || state.externalProjectChanged || !projectIsAvailable()) return;
-  const project = state.meta.project;
+async function exportProjectArchive(saveAs = false, root = state.meta?.project?.root) {
+  if (state.operation || state.closed || isRunning() || !root) return;
+  const currentProjectRoot = state.meta?.project?.root || null;
+  const current = root === currentProjectRoot;
+  if (current && (state.externalProjectChanged || !projectIsAvailable())) return;
+  const project = current ? state.meta.project : { root };
   try {
     await beginFileAction(); setOperation('exporting-project');
     const result = await exportProjectZIP({
-      project, saveAs, api, saveAll,
+      project, currentProjectRoot, saveAs, api, saveAll,
       flush: async () => { syncDrafts(); persistSession(); await sessionStore.flush(); },
       saveBlob: (blob, name) => {
         const url = URL.createObjectURL(blob), link = document.createElement('a');
@@ -3085,7 +3088,7 @@ async function exportProjectArchive(saveAs = false) {
       },
     });
     if (!result?.cancelled) toast(result?.path ? t('プロジェクトの ZIP を保存しました: {path}', { path: result.path }) : t('プロジェクトの ZIP をダウンロードしました．'));
-  } finally { setOperation(''); }
+  } finally { setOperation(''); renderWorkspaceView(); }
 }
 
 function updateIndex(path, content, rebuild = true) {
@@ -3462,9 +3465,11 @@ projectHome = createProjectHome({
   ])] : [],
   beginAction: beginProjectDeletion, endAction: () => setOperation(''),
   onOpen: path => path === state.meta?.project?.root ? resumeProject() : openCreatedProject(path),
+  onExport: (path, saveAs) => exportProjectArchive(saveAs, path),
+  canExport: path => path !== state.meta?.project?.root || !state.externalProjectChanged,
   refreshStatus: refreshProjectStatuses, onRecentChanged: applyProjectStatuses,
   onResume: resumeProject, onDeleted: completeProjectDeletion,
-  onError: showError, onNotice: toast, isBlocked: () => !!state.operation || state.closed,
+  onError: error => { if (!error?.shown) showError(error); }, onNotice: toast, isBlocked: () => !!state.operation || state.closed,
 });
 
 help = createHelp({
