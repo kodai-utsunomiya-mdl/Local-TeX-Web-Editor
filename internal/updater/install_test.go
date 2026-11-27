@@ -344,13 +344,22 @@ func runUpdaterTestApplication(mode string) int {
 	if err != nil || os.WriteFile(readyPath, data, 0600) != nil {
 		return 10
 	}
+	if mode == "remove-download-directory" {
+		if err := os.RemoveAll(filepath.Join(configDir, "updates", "v"+version)); err != nil {
+			return 12
+		}
+	}
 	server := &http.Server{Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/api/updates" {
+			http.NotFound(w, r)
+			return
+		}
 		if r.Header.Get("X-Local-Token") != "local-updater-test-token" {
 			http.Error(w, "forbidden", http.StatusForbidden)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]any{"version": version})
+		_ = json.NewEncoder(w).Encode(map[string]any{"currentVersion": version})
 	}), ReadHeaderTimeout: time.Second}
 	if err := server.Serve(listener); err != nil {
 		return 11
@@ -375,7 +384,7 @@ func prepareInstallerProcessTest(t *testing.T, mode string) (InstallPlan, string
 	t.Cleanup(func() { publicKeyText = oldKey })
 	root := t.TempDir()
 	configDir := filepath.Join(root, "settings")
-	directory := filepath.Join(configDir, "updates", "prepared")
+	directory := filepath.Join(configDir, "updates", "v"+release.Manifest.Version)
 	if err := os.MkdirAll(directory, 0700); err != nil {
 		t.Fatal(err)
 	}
@@ -398,7 +407,7 @@ func prepareInstallerProcessTest(t *testing.T, mode string) (InstallPlan, string
 	writeUpdateTestFile(t, planPath, data)
 	t.Setenv(updaterTestMode, mode)
 	t.Setenv(updaterTestVersion, "0.1.17")
-	for _, readyPath := range []string{filepath.Join(directory, "restart-ready.json"), filepath.Join(configDir, "fallback-ready.json")} {
+	for _, readyPath := range []string{filepath.Join(configDir, "updates", "restart-ready.json"), filepath.Join(configDir, "fallback-ready.json")} {
 		readyPath := readyPath
 		t.Cleanup(func() {
 			data, err := os.ReadFile(readyPath)
@@ -455,12 +464,29 @@ func TestRunInstallerStartsThePreparedApplication(t *testing.T) {
 	if err != nil || os.SameFile(before, after) {
 		t.Fatalf("the prepared executable was not installed: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(plan.Directory, "restart-ready.json")); err != nil {
+	if _, err := os.Stat(filepath.Join(plan.ConfigDir, "updates", "restart-ready.json")); err != nil {
 		t.Fatalf("the new process did not report readiness: %v", err)
 	}
 	backups, err := filepath.Glob(filepath.Join(filepath.Dir(plan.Target), "application-previous-*.exe"))
 	if err != nil || len(backups) != 0 {
 		t.Fatalf("a completed installation left backups: %v, %v", backups, err)
+	}
+}
+
+func TestRunInstallerStartsWhenTheNewApplicationCleansItsDownloadDirectory(t *testing.T) {
+	plan, path, before := prepareInstallerProcessTest(t, "remove-download-directory")
+	if err := RunInstaller(path); err != nil {
+		t.Fatal(err)
+	}
+	after, err := os.Stat(plan.Target)
+	if err != nil || os.SameFile(before, after) {
+		t.Fatalf("the prepared executable was not installed: %v", err)
+	}
+	if _, err := os.Stat(plan.Directory); !os.IsNotExist(err) {
+		t.Fatalf("the new application did not remove its download directory: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(plan.ConfigDir, "updates", "restart-ready.json")); err != nil {
+		t.Fatalf("the new application lost its readiness file during cleanup: %v", err)
 	}
 }
 
@@ -525,13 +551,13 @@ func TestRunInstallerRejectsInvalidPlansBeforeStartingAProcess(t *testing.T) {
 }
 
 func TestUpdateServerReadyChecksTheProcessAddressTokenAndHTTPVersion(t *testing.T) {
-	for _, name := range []string{"ready", "wrong ready version", "wrong process", "short token", "external address", "userinfo", "query", "wrong HTTP version", "HTTP error", "redirect"} {
+	for _, name := range []string{"ready", "wrong ready version", "wrong process", "short token", "external address", "userinfo", "query", "wrong HTTP version", "legacy state", "HTTP error", "redirect"} {
 		t.Run(name, func(t *testing.T) {
 			var requests atomic.Int32
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
 				requests.Add(1)
-				if request.URL.Path != "/api/state" || request.Header.Get("X-Local-Token") != "local-updater-test-token" {
-					t.Error("the readiness request did not use the authenticated state endpoint")
+				if request.Method != http.MethodGet || request.URL.Path != "/api/updates" || request.Header.Get("X-Local-Token") != "local-updater-test-token" {
+					t.Error("the readiness request did not use the authenticated updates endpoint")
 				}
 				switch name {
 				case "HTTP error":
@@ -539,9 +565,11 @@ func TestUpdateServerReadyChecksTheProcessAddressTokenAndHTTPVersion(t *testing.
 				case "redirect":
 					http.Redirect(w, request, "/unexpected-update-state", http.StatusFound)
 				case "wrong HTTP version":
-					_ = json.NewEncoder(w).Encode(map[string]string{"version": "0.1.16"})
-				default:
+					_ = json.NewEncoder(w).Encode(map[string]string{"currentVersion": "0.1.16"})
+				case "legacy state":
 					_ = json.NewEncoder(w).Encode(map[string]string{"version": "0.1.17"})
+				default:
+					_ = json.NewEncoder(w).Encode(map[string]string{"currentVersion": "0.1.17"})
 				}
 			}))
 			defer server.Close()

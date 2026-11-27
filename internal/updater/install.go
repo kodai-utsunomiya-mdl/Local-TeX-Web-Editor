@@ -312,7 +312,7 @@ func RunInstaller(planPath string) (result error) {
 	if !plan.Restart {
 		return nil
 	}
-	readyPath := filepath.Join(plan.Directory, "restart-ready.json")
+	readyPath := filepath.Join(plan.ConfigDir, "updates", "restart-ready.json")
 	_ = os.Remove(readyPath)
 	command := exec.Command(plan.Target, "--background", "--config-dir", plan.ConfigDir, "--ready-file", readyPath)
 	platform.PrepareCommand(command)
@@ -388,7 +388,9 @@ func updateServerReady(path, version string, pid int) bool {
 	if ip == nil || !ip.IsLoopback() {
 		return false
 	}
-	request, err := http.NewRequest(http.MethodGet, ready.URL+"api/state", nil)
+	// The update state reports the running version without scanning project
+	// folders or looking for TeX tools during the startup check.
+	request, err := http.NewRequest(http.MethodGet, ready.URL+"api/updates", nil)
 	if err != nil {
 		return false
 	}
@@ -403,7 +405,7 @@ func updateServerReady(path, version string, pid int) bool {
 		return false
 	}
 	var state struct {
-		Version string `json:"version"`
+		CurrentVersion string `json:"currentVersion"`
 	}
-	return json.NewDecoder(io.LimitReader(response.Body, 16<<20)).Decode(&state) == nil && state.Version == version
+	return json.NewDecoder(io.LimitReader(response.Body, 64<<10)).Decode(&state) == nil && state.CurrentVersion == version
 }

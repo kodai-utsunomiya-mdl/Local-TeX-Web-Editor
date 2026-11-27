@@ -1,10 +1,12 @@
 import { getLanguage, onLanguageChange, t } from './i18n.js';
 
 const releases = 'https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases';
+const storeListing = 'https://apps.microsoft.com/detail/9P6QF32N19HG';
 
 export function updateReleaseNotesURL(value) {
   try {
     const url = new URL(value);
+    if (url.href === storeListing) return url.href;
     if (url.origin === 'https://github.com' && (url.pathname === releases.slice(url.origin.length) || url.pathname.startsWith(`${releases.slice(url.origin.length)}/`))) return url.href;
   } catch { /* Use the published release list until a specific release is available. */ }
   return `${releases}/latest`;

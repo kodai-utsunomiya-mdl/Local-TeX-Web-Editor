@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"time"
 
@@ -150,6 +151,8 @@ func run() error {
 	}
 	if !noBrowser {
 		application.StartInstallationUpdate(platform.RefreshInstalledShortcuts, func() error { return platform.RefreshStartupRegistration(*configDir) })
+	} else if runtime.GOOS == "darwin" {
+		application.StartInstallationUpdate(func() error { return platform.RefreshStartupRegistration(*configDir) })
 	}
 	select {
 	case <-quit:

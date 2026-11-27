@@ -162,6 +162,14 @@ test('release notes link to published releases of this application', () => {
   assert.equal(updateReleaseNotesURL(`${base}-elsewhere`), `${base}/latest`);
 });
 
+test('Store update details link to this application in the Microsoft Store', () => {
+  const listing = 'https://apps.microsoft.com/detail/9P6QF32N19HG';
+  const fallback = 'https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest';
+  assert.equal(updateReleaseNotesURL(listing), listing);
+  assert.equal(updateReleaseNotesURL('https://apps.microsoft.com/detail/another-application'), fallback);
+  assert.equal(updateReleaseNotesURL(`${listing}?next=https://example.org/`), fallback);
+});
+
 test('update messages follow the current language and automatic update setting', () => {
   try {
     setLanguage('en');
