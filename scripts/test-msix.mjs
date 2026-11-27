@@ -82,6 +82,56 @@ async function compile() {
   return finished;
 }
 
+async function setInterfaceLanguage(language) {
+  if (await page.locator('html').getAttribute('lang') === language) return;
+  await page.getByTestId('settings-button').click();
+  await page.getByTestId('language-setting').selectOption(language);
+  await page.locator('#save-settings').click();
+  await expect(page.locator('#settings-dialog')).toBeHidden();
+  await expect(page.locator('html')).toHaveAttribute('lang', language);
+  await expect(page.locator('#toast')).toBeHidden();
+}
+
+async function captureProjectZIP() {
+  const button = page.locator('#project-zip-button');
+  const menu = page.locator('#project-zip-menu');
+  const dialog = page.locator('#project-zip-dialog');
+  const current = await api('/api/state');
+  await button.click();
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    menu.locator('[data-action="download"]').click(),
+  ]);
+  assert.equal(download.suggestedFilename(), 'Research notes.zip');
+  const archive = await readFile(await download.path());
+  assert.equal(archive.subarray(0, 4).toString('hex'), '504b0304');
+  await expect(page.locator('#toast')).toBeHidden();
+  for (const language of ['en', 'ja']) {
+    await setInterfaceLanguage(language);
+    await button.click();
+    await expect(menu).toBeVisible();
+    await expect(menu.getByRole('menuitem')).toHaveCount(3);
+    await page.screenshot({ path: path.join(output, `project-zip-menu-${language}.png`) });
+    await menu.locator('[data-action="import"]').click();
+    await expect(dialog).toBeVisible();
+    await page.locator('#project-zip-archive').setInputFiles({ name: download.suggestedFilename(), mimeType: 'application/zip', buffer: archive });
+    const parent = path.dirname(project);
+    const name = language === 'ja' ? 'ZIP から読み込んだ原稿' : 'Research notes from ZIP';
+    await page.locator('#project-zip-parent').fill(parent);
+    await page.locator('#project-zip-name').fill(name);
+    await expect(page.locator('#project-zip-destination')).toHaveText(path.join(parent, name));
+    await expect(page.locator('#project-zip-submit')).toBeEnabled();
+    await expect(dialog.locator('.form-error')).toBeHidden();
+    await page.evaluate(async () => { await document.fonts.ready; });
+    await page.screenshot({ path: path.join(output, `project-zip-import-${language}.png`) });
+    await dialog.getByRole('button', { name: language === 'ja' ? 'キャンセル' : 'Cancel', exact: true }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByTestId('editor').locator('.cm-content')).toBeVisible();
+    assert.equal((await api('/api/state')).project.root, current.project.root);
+  }
+  await setInterfaceLanguage('en');
+}
+
 try {
   assert.equal(ready.version, version);
   const startupInitial = await api('/api/startup');
@@ -105,7 +155,7 @@ try {
   assert.equal((await api('/api/startup')).enabled, false);
   startupMayBeEnabled = false;
   browser = await chromium.launch({ headless: true });
-  context = await browser.newContext({ viewport: { width: 1600, height: 1000 }, locale: 'en-US' });
+  context = await browser.newContext({ viewport: { width: 1600, height: 1000 }, locale: 'en-US', acceptDownloads: true });
   await context.tracing.start({ screenshots: true, snapshots: true });
   page = await context.newPage();
   page.on('pageerror', error => errors.push(error.message));
@@ -288,6 +338,7 @@ $\widehat w$ & Estimated coefficient vector \\
   await expect(page.locator('#pdf-state')).not.toHaveClass(/stale/);
   await expect(page.locator('#toast')).toBeHidden();
   await page.screenshot({ path: path.join(output, 'editor-tex-dark.png') });
+  await captureProjectZIP();
   await page.getByTestId('settings-button').click();
   await page.locator('#settings-tex-management').click();
   const management = page.locator('#tex-management-dialog');
@@ -404,7 +455,7 @@ $\widehat w$ & Estimated coefficient vector \\
   await writeFile(path.join(output, 'result.json'), JSON.stringify({
     version, packageVersion: identity.packageVersion, architecture: process.arch,
     packageIdentity: initial.packageIdentity,
-    checks: ['package-identity', 'package-localstate', 'store-shortcuts', 'startup-task', 'optional-tex-setup', 'thesis-preambles', 'external-source-save', 'japanese-tex', 'bibliography', 'synctex', 'synctex-ui', 'pdf', 'active-document', 'markdown', 'markdown-direct-editing-save', 'shutdown'],
+    checks: ['package-identity', 'package-localstate', 'store-shortcuts', 'startup-task', 'optional-tex-setup', 'thesis-preambles', 'external-source-save', 'japanese-tex', 'bibliography', 'synctex', 'synctex-ui', 'pdf', 'project-zip-download', 'project-zip-dialogs', 'active-document', 'markdown', 'markdown-direct-editing-save', 'shutdown'],
     startupTask: { states: startupStates },
     texSetup: { release: setup.release, directory: setup.directory, checks: [...setup.checks, ...removed.checks] },
   }, null, 2));

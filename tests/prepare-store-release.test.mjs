@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import {
-  assertSuccessfulMainRun, createStoreMetadata, lastCompletedRun,
+  assertSuccessfulMainRun, createStoreMetadata, findReleaseRuns, lastCompletedRun,
 } from '../scripts/prepare-store-release.mjs';
 
 const repository = 'kodai-utsunomiya-mdl/Local-TeX-Web-Editor';
@@ -81,4 +81,67 @@ test('runs completed in the same second use one consistent owner', () => {
   const second = run({ id: 2 });
   assert.equal(lastCompletedRun([first, second]), second);
   assert.equal(lastCompletedRun([second, first]), second);
+});
+
+function releaseRepository({ release = {}, storeRuns, buildRuns } = {}) {
+  const releaseSha = 'c'.repeat(40);
+  const calls = [];
+  const store = run({ id: 10, head_sha: releaseSha });
+  const build = run({ id: 20, head_sha: releaseSha, path: '.github/workflows/windows.yml',
+    updated_at: '2026-11-26T14:02:00Z' });
+  const readApi = route => {
+    calls.push(route);
+    if (route === `repos/${repository}/releases/latest`) return {
+      tag_name: 'v0.1.18', draft: false, prerelease: false, published_at: '2026-11-26T14:03:00Z', ...release,
+    };
+    assert.ok(route.includes(`head_sha=${releaseSha}`));
+    assert.ok(route.includes('branch=main&event=push&status=success'));
+    if (route.includes('/microsoft-store.yml/runs?')) return { workflow_runs: storeRuns ?? [store] };
+    if (route.includes('/windows.yml/runs?')) return { workflow_runs: buildRuns ?? [build] };
+    throw new Error(`Unexpected GitHub request: ${route}`);
+  };
+  const readTag = (name, tag) => {
+    assert.equal(name, repository);
+    assert.equal(tag, 'v0.1.18');
+    return releaseSha;
+  };
+  return { readApi, readTag, calls, releaseSha, store, build };
+}
+
+test('a scheduled retry chooses both successful main runs from the latest stable release tag', () => {
+  const remote = releaseRepository();
+  const result = findReleaseRuns({ repository, latest: true }, remote);
+  assert.deepEqual(result, { ready: true, headSha: remote.releaseSha, storeRun: remote.store, buildRun: remote.build });
+  assert.equal(remote.calls[0], `repos/${repository}/releases/latest`);
+  assert.equal(remote.calls.length, 3);
+});
+
+test('a retry waits when either set of tests for the latest release is missing or comes from another commit', () => {
+  for (const changes of [
+    { storeRuns: [] }, { buildRuns: [] },
+    { storeRuns: [run({ head_sha: 'd'.repeat(40) })] },
+    { storeRuns: [run({ head_sha: 'c'.repeat(40), event: 'pull_request' })] },
+  ]) {
+    const result = findReleaseRuns({ repository, latest: true }, releaseRepository(changes));
+    assert.equal(result.ready, false);
+    assert.match(result.reason, /same main commit/);
+  }
+});
+
+test('a retry requires a public stable release with an app version tag', () => {
+  for (const release of [{ draft: true }, { prerelease: true }, { published_at: null }, { tag_name: 'nightly' }]) {
+    assert.throws(() => findReleaseRuns({ repository, latest: true }, releaseRepository({ release })));
+  }
+  assert.throws(() => findReleaseRuns({ repository, latest: true, storeRunId: '10' }, releaseRepository()),
+    /latest release or a Store run ID/);
+});
+
+test('workflow events still prepare only after the later successful run completes', () => {
+  const remote = releaseRepository();
+  const earlier = findReleaseRuns({ repository, event: { workflow_run: remote.store } }, remote);
+  assert.equal(earlier.ready, false);
+  assert.match(earlier.reason, /completed later/);
+  const later = findReleaseRuns({ repository, event: { workflow_run: remote.build } }, remote);
+  assert.equal(later.ready, true);
+  assert.equal(later.headSha, remote.releaseSha);
 });

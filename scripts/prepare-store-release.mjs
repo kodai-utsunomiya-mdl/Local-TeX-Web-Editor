@@ -174,33 +174,49 @@ function writeOutput(output, values) {
   console.log(values.ready ? `Ready: ${values.tag}, Store run ${values.storeRunId}.` : values.reason);
 }
 
-export function prepareRelease(options) {
+export function findReleaseRuns(options, { readApi = api, readTag = resolveTag } = {}) {
   const repository = options.repository;
   assert.match(repository, /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/);
-  const output = resolve(options.output);
-  mkdirSync(output, { recursive: true });
   const triggered = options.event?.workflow_run;
   const requestedId = options.storeRunId;
-  const incomplete = (reason) => {
-    writeOutput(output, { ready: false, reason });
-    if (requestedId) throw new Error(reason);
-    return { ready: false, reason };
-  };
-  if (!requestedId && !triggered) throw new Error('A Store run ID or workflow_run event is required.');
+  assert.ok(!(options.latest && requestedId), 'Choose the latest release or a Store run ID.');
+  if (!requestedId && !triggered && !options.latest) throw new Error('A Store run ID, workflow_run event, or --latest is required.');
 
-  let storeRun = requestedId ? api(`repos/${repository}/actions/runs/${requestedId}`) : null;
-  const headSha = storeRun?.head_sha ?? triggered.head_sha;
+  let storeRun = requestedId ? readApi(`repos/${repository}/actions/runs/${requestedId}`) : null;
+  let headSha = storeRun?.head_sha ?? triggered?.head_sha;
+  if (options.latest) {
+    const release = readApi(`repos/${repository}/releases/latest`);
+    assert.ok(release && !release.draft && !release.prerelease && release.published_at,
+      'The latest release must be public and stable.');
+    assert.match(release.tag_name, /^v\d+\.\d+\.\d+$/, 'The latest release must use an app version tag.');
+    headSha = readTag(repository, release.tag_name);
+  }
   assert.match(headSha, /^[a-f0-9]{40}$/);
-  const completed = (kind) => api(`repos/${repository}/actions/workflows/${workflowPaths[kind].split('/').at(-1)}/runs?head_sha=${headSha}&branch=main&event=push&status=success&per_page=100`)
+  const completed = (kind) => readApi(`repos/${repository}/actions/workflows/${workflowPaths[kind].split('/').at(-1)}/runs?head_sha=${headSha}&branch=main&event=push&status=success&per_page=100`)
     .workflow_runs.filter((run) => run.head_sha === headSha && run.head_branch === 'main' && run.event === 'push' && run.conclusion === 'success');
   if (!storeRun) storeRun = lastCompletedRun(completed('store'));
   const buildRun = lastCompletedRun(completed('build'));
-  if (!storeRun || !buildRun) return incomplete('Waiting for successful app and Store-package workflows for the same main commit.');
+  if (!storeRun || !buildRun) return { ready: false, reason: 'Waiting for successful app and Store-package workflows for the same main commit.' };
   assertSuccessfulMainRun(storeRun, repository, 'store', headSha);
   assertSuccessfulMainRun(buildRun, repository, 'build', headSha);
-  if (!requestedId && Number(triggered.id) !== Number(lastCompletedRun([storeRun, buildRun]).id)) {
-    return incomplete('The workflow that completed later prepares this release.');
+  if (!requestedId && !options.latest && Number(triggered.id) !== Number(lastCompletedRun([storeRun, buildRun]).id)) {
+    return { ready: false, reason: 'The workflow that completed later prepares this release.' };
   }
+  return { ready: true, headSha, storeRun, buildRun };
+}
+
+export function prepareRelease(options) {
+  const repository = options.repository;
+  const output = resolve(options.output);
+  mkdirSync(output, { recursive: true });
+  const incomplete = (reason) => {
+    writeOutput(output, { ready: false, reason });
+    if (options.storeRunId) throw new Error(reason);
+    return { ready: false, reason };
+  };
+  const runs = findReleaseRuns(options);
+  if (!runs.ready) return incomplete(runs.reason);
+  const { headSha, storeRun, buildRun } = runs;
 
   const artifacts = api(`repos/${repository}/actions/runs/${storeRun.id}/artifacts?per_page=100`).artifacts;
   const submission = artifactFor(artifacts, 'microsoft-store-submission', headSha);
@@ -260,6 +276,7 @@ function main() {
   for (let index = 0; index < args.length; index++) {
     const arg = args[index];
     if (arg === '--publish-downloads') options.publishDownloads = true;
+    else if (arg === '--latest') options.latest = true;
     else if (['--repository', '--output', '--store-run'].includes(arg)) {
       const value = args[++index];
       assert.ok(value, `Missing value for ${arg}.`);

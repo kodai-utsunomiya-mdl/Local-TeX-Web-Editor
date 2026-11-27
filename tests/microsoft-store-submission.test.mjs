@@ -237,16 +237,54 @@ test('a successful submission sends the package and images before committing and
   }
 });
 
-test('an existing draft or review in progress stops the submission before any Store mutation', async t => {
+test('a submission being processed defers the update until a later run without changing Store data', async t => {
   const sample = await fixture(t);
   const prepared = await prepareSubmission(sample.options);
-  const mock = mockStore({ pending: '999' });
-  await assert.rejects(submitPrepared(prepared, submitOptions(mock)), { code: 'pending-submission' });
-  const storeWrites = mock.requests.filter(item => item.url.hostname === 'manage.devcenter.microsoft.com' && item.method !== 'GET');
-  assert.equal(storeWrites.length, 0);
-  const result = JSON.parse(await fs.readFile(path.join(prepared.output, 'result.json'), 'utf8'));
-  assert.equal(result.submissionId, '999');
-  assert.equal(result.status, 'Certification');
+  for (const pendingStatus of ['CommitStarted', 'PreProcessing', 'Certification', 'Release',
+    'PendingPublication', 'Publishing', 'Published']) {
+    const mock = mockStore({ pending: '999', pendingStatus });
+    const result = await submitPrepared(prepared, submitOptions(mock));
+    assert.equal(result.outcome, 'deferred');
+    assert.equal(result.submissionId, '999');
+    assert.equal(result.status, pendingStatus);
+    assert.equal(result.published, false);
+    assert.equal(result.retryAfterPublication, true);
+    const storeWrites = mock.requests.filter(item => item.url.hostname === 'manage.devcenter.microsoft.com' && item.method !== 'GET');
+    assert.equal(storeWrites.length, 0);
+    assert.deepEqual(JSON.parse(await fs.readFile(path.join(prepared.output, 'result.json'), 'utf8')), result);
+  }
+});
+
+test('an unfinished draft or a submission requiring attention still stops the update', async t => {
+  const sample = await fixture(t);
+  const prepared = await prepareSubmission(sample.options);
+  for (const pendingStatus of ['None', 'PendingCommit', 'CertificationFailed', 'Canceled', 'UnexpectedStatus']) {
+    const mock = mockStore({ pending: '999', pendingStatus });
+    await assert.rejects(submitPrepared(prepared, submitOptions(mock)), { code: 'pending-submission' });
+    const storeWrites = mock.requests.filter(item => item.url.hostname === 'manage.devcenter.microsoft.com' && item.method !== 'GET');
+    assert.equal(storeWrites.length, 0);
+    const result = JSON.parse(await fs.readFile(path.join(prepared.output, 'result.json'), 'utf8'));
+    assert.equal(result.outcome, 'blocked');
+    assert.equal(result.submissionId, '999');
+    assert.equal(result.status, pendingStatus === 'UnexpectedStatus' ? 'Unknown' : pendingStatus);
+  }
+});
+
+test('a deferred release is submitted after the earlier review finishes and is skipped once published', async t => {
+  const sample = await fixture(t);
+  const prepared = await prepareSubmission(sample.options);
+  const reviewing = mockStore({ pending: '999' });
+  assert.equal((await submitPrepared(prepared, submitOptions(reviewing))).outcome, 'deferred');
+
+  const ready = mockStore();
+  assert.equal((await submitPrepared(prepared, submitOptions(ready))).outcome, 'submitted');
+  assert.equal(ready.requests.filter(item => item.method === 'POST' && item.url.pathname.endsWith('/submissions')).length, 1);
+
+  const current = publishedSubmission();
+  current.applicationPackages[0].version = sample.info.storeVersion;
+  const published = mockStore({ current });
+  assert.equal((await submitPrepared(prepared, submitOptions(published))).outcome, 'already-published');
+  assert.equal(published.requests.filter(item => item.url.hostname === 'manage.devcenter.microsoft.com' && item.method !== 'GET').length, 0);
 });
 
 test('the already published version is reported without creating another submission', async t => {
@@ -389,6 +427,8 @@ test('the command requires an explicit mode and numeric Store versions use numer
   assert.equal(compareVersions('2.0.0.0', '1.100.999.0'), 1);
   assert.throws(() => compareVersions('1.1.65536.0', '1.1.0.0'), StoreSubmissionError);
   assert.deepEqual(parseArguments(['--status', '--output', 'status-result']), { mode: 'status', output: 'status-result' });
+  assert.deepEqual(parseArguments(['--status', '--output', 'status-result', '--app-version', '0.1.18']),
+    { mode: 'status', output: 'status-result', appVersion: '0.1.18' });
   assert.throws(() => parseArguments(['--status']), StoreSubmissionError);
   assert.throws(() => parseArguments(['--status', '--output', 'result', '--metadata', 'listing.json']), StoreSubmissionError);
 });
@@ -398,6 +438,39 @@ async function statusDirectory(t) {
   t.after(() => fs.rm(output, { recursive: true, force: true }));
   return output;
 }
+
+test('a scheduled retry compares the release with published x64 packages using only Store reads', async t => {
+  const output = await statusDirectory(t);
+  for (const [appVersion, updateRequired] of [['0.1.15', true], ['0.1.14', false], ['0.1.13', false]]) {
+    const mock = mockStore();
+    const result = await readSubmissionStatus({ output, appVersion }, { env: environment, ...mock });
+    assert.equal(result.updateRequired, updateRequired);
+    assert.equal(result.appVersion, appVersion);
+    assert.deepEqual(result.publishedStoreVersions, ['1.1.14.0']);
+    assert.equal(mock.requests.filter(item => item.url.hostname === 'manage.devcenter.microsoft.com' && item.method !== 'GET').length, 0);
+  }
+});
+
+test('a scheduled retry waits for the existing submission and reports a draft needing attention', async t => {
+  const output = await statusDirectory(t);
+  const reviewing = mockStore({ pending: '999' });
+  const result = await readSubmissionStatus({ output, appVersion: '0.1.18' }, { env: environment, ...reviewing });
+  assert.equal(result.status, 'Certification');
+  assert.equal(result.updateRequired, false);
+  assert.equal(reviewing.requests.some(item => item.url.pathname.endsWith('/submissions/100')), false);
+  const draft = mockStore({ pending: '999', pendingStatus: 'PendingCommit' });
+  await assert.rejects(readSubmissionStatus({ output, appVersion: '0.1.18' }, { env: environment, ...draft }),
+    { code: 'pending-submission' });
+});
+
+test('version comparison for a scheduled retry rejects an invalid app version before connecting', async t => {
+  const output = await statusDirectory(t);
+  const mock = mockStore();
+  for (const appVersion of ['v0.1.18', '0.1.18.0', '65535.0.0']) {
+    await assert.rejects(readSubmissionStatus({ output, appVersion }, { env: environment, ...mock }), { code: 'invalid-version' });
+  }
+  assert.equal(mock.requests.length, 0);
+});
 
 test('status reads the pending or published submission through Store GET requests and records four public fields', async t => {
   const output = await statusDirectory(t);
@@ -484,4 +557,13 @@ globalThis.fetch = async (rawUrl, options) => {
     assert.ok(!`${result.stdout}${result.stderr}`.includes('cli-test-token'));
     assert.ok(!`${result.stdout}${result.stderr}`.includes('private-upload-signature'));
   }
+  const githubOutput = path.join(root, 'github-output');
+  const retry = spawnSync(process.execPath, ['--import', pathToFileURL(mockFile).href,
+    path.resolve('scripts/submit-microsoft-store.mjs'), '--status', '--output', path.join(root, 'retry'),
+    '--app-version', '0.1.18'], {
+    encoding: 'utf8', env: { ...process.env, ...environment, STATUS_TEST_REPORT: 'Certification', GITHUB_OUTPUT: githubOutput },
+  });
+  assert.equal(retry.status, 0, retry.stderr);
+  assert.equal(await fs.readFile(githubOutput, 'utf8'), 'update_required=false\n');
+  assert.equal(JSON.parse(await fs.readFile(path.join(root, 'retry/result.json'), 'utf8')).updateRequired, false);
 });

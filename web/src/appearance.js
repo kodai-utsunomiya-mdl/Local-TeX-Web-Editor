@@ -106,7 +106,7 @@ export function normalizeAppearance(value, legacyTheme = null) {
   const source = value && typeof value === 'object' ? value : {};
   const customColors = normalizeCustomColors(source.customColors);
   return {
-    mode: ['system', 'light', 'dark'].includes(source.mode) ? source.mode : ['light', 'dark'].includes(legacyTheme) ? legacyTheme : 'system',
+    mode: ['system', 'light', 'dark'].includes(source.mode) ? source.mode : ['light', 'dark'].includes(legacyTheme) ? legacyTheme : 'dark',
     palette: has(palettes, source.palette) ? source.palette : 'gray',
     accent: has(accents, source.accent) ? source.accent : 'blue',
     editorFont: source.editorFont === 'default' ? 'cascadia' : has(fonts, source.editorFont) ? source.editorFont : 'consolas',

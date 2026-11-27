@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { normalizeAppearance, normalizeHexColor, resolveAppearance } from '../web/src/appearance.js';
 
 test('外観の初期値を選び，既存のライトとダークの設定を引き継ぐ', () => {
-  const defaults = { mode: 'system', palette: 'gray', accent: 'blue', editorFont: 'consolas' };
+  const defaults = { mode: 'dark', palette: 'gray', accent: 'blue', editorFont: 'consolas' };
   assert.deepEqual(normalizeAppearance(), defaults);
   assert.deepEqual(normalizeAppearance(null, 'dark'), { ...defaults, mode: 'dark' });
   assert.deepEqual(normalizeAppearance(undefined, 'light'), { ...defaults, mode: 'light' });
@@ -16,6 +16,8 @@ test('外観の初期値を選び，既存のライトとダークの設定を�
 });
 
 test('システムモードは OS の設定に従い，明示したモードは同じまま使う', () => {
+  assert.equal(resolveAppearance(undefined, false).theme, 'dark');
+  assert.equal(resolveAppearance(undefined, true).theme, 'dark');
   assert.equal(resolveAppearance({ mode: 'system' }, false).theme, 'light');
   assert.equal(resolveAppearance({ mode: 'system' }, true).theme, 'dark');
   assert.equal(resolveAppearance({ mode: 'light' }, true).theme, 'light');
@@ -71,7 +73,7 @@ test('カラーコードを読み取り，ライトとダークの設定を別�
     dark: { background: '#12212c', foreground: '#ddeeff', accent: '#ddeeff' },
   });
   assert.equal(input.customColors.light.background, '#FaFAF0');
-  const light = resolveAppearance(appearance, false).colors, dark = resolveAppearance(appearance, true).colors;
+  const light = resolveAppearance({ ...appearance, mode: 'light' }).colors, dark = resolveAppearance({ ...appearance, mode: 'dark' }).colors;
   assert.equal(light.surface, '#fafaf0'); assert.equal(light.text, '#223344'); assert.equal(light['accent-button'], '#ab0000');
   assert.equal(dark.surface, '#12212c'); assert.equal(dark.text, '#ddeeff'); assert.equal(dark['accent-button'], '#ddeeff');
   assert.ok(contrast(dark['accent-on-button'], dark['accent-button']) >= 4.5);

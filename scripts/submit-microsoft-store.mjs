@@ -15,6 +15,9 @@ const STATUS_NAMES = new Set(['None', 'Canceled', 'PendingCommit', 'CommitStarte
   'PreProcessingFailed', 'Certification', 'CertificationFailed', 'Release', 'ReleaseFailed']);
 const FAILED_STATUSES = new Set(['Canceled', 'CommitFailed', 'PublishFailed', 'PreProcessingFailed',
   'CertificationFailed', 'ReleaseFailed']);
+// The pending-submission reference can remain briefly after publication completes.
+const PROCESSING_STATUSES = new Set(['CommitStarted', 'PreProcessing', 'Certification',
+  'Release', 'PendingPublication', 'Publishing', 'Published']);
 const OAUTH_ERROR_NAMES = new Set(['invalid_request', 'invalid_client', 'invalid_grant', 'invalid_resource',
   'unauthorized_client', 'unsupported_grant_type', 'invalid_scope', 'access_denied',
   'interaction_required', 'temporarily_unavailable', 'server_error']);
@@ -72,6 +75,15 @@ export function compareVersions(left, right) {
     if (a[index] !== b[index]) return a[index] > b[index] ? 1 : -1;
   }
   return 0;
+}
+
+function storeVersionForApp(appVersion) {
+  requireValue(typeof appVersion === 'string' && /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(appVersion),
+    'invalid-version', 'The app version must contain three decimal components.');
+  const parts = appVersion.split('.').map(Number);
+  const version = `${parts[0] + 1}.${parts[1]}.${parts[2]}.0`;
+  versionParts(version);
+  return version;
 }
 
 async function readJson(file, label) {
@@ -179,10 +191,7 @@ export async function prepareSubmission({ packageDir, listingDir, metadata: meta
   requireValue(object(info) && info.testIdentity === false && info.identity?.name === IDENTITY_NAME
     && info.identity?.publisher?.toUpperCase() === PUBLISHER.toUpperCase(),
   'invalid-package-identity', 'The package must use the published Store product identity.');
-  requireValue(typeof info.appVersion === 'string' && /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(info.appVersion),
-    'invalid-version', 'The app version must contain three decimal components.');
-  const appParts = info.appVersion.split('.').map(Number);
-  const expectedStoreVersion = `${appParts[0] + 1}.${appParts[1]}.${appParts[2]}.0`;
+  const expectedStoreVersion = storeVersionForApp(info.appVersion);
   requireValue(info.storeVersion === expectedStoreVersion, 'version-mismatch', 'The Store version differs from the app version.');
   versionParts(info.storeVersion);
   requireValue(safeName(info.file) && info.file.endsWith('.msix') && /^[a-f0-9]{64}$/.test(info.sha256),
@@ -398,8 +407,9 @@ function checkStoreApplication(app) {
   'store-identity-mismatch', 'The connected Store application differs from the published product identity.');
 }
 
-export async function readSubmissionStatus({ output }, { env = process.env, fetchImpl = globalThis.fetch } = {}) {
+export async function readSubmissionStatus({ output, appVersion }, { env = process.env, fetchImpl = globalThis.fetch } = {}) {
   requireValue(typeof output === 'string' && output.length > 0, 'invalid-arguments', 'Provide --output for the Store status result.');
+  const expectedVersion = appVersion === undefined ? null : storeVersionForApp(appVersion);
   await fs.mkdir(output, { recursive: true });
   const resultFile = path.join(output, 'result.json');
   let result = { productId: PRODUCT_ID, submissionId: null, status: 'Unknown', published: false };
@@ -416,6 +426,22 @@ export async function readSubmissionStatus({ output }, { env = process.env, fetc
   await fs.writeFile(resultFile, `${JSON.stringify(result, null, 2)}\n`);
   requireValue(status !== 'Unknown', 'invalid-api-response', 'Microsoft returned an unknown submission status.');
   requireValue(!FAILED_STATUSES.has(status), 'submission-failed', `Submission ${id} has status ${status}.`);
+  if (expectedVersion) {
+    result = { ...result, appVersion, storeVersion: expectedVersion, updateRequired: false };
+    if (app.pendingApplicationSubmission?.id) {
+      requireValue(PROCESSING_STATUSES.has(status), 'pending-submission',
+        `Submission ${id} has status ${status} and needs attention before another update can be submitted.`);
+    } else {
+      const published = await client.api('GET', `${appPath}/submissions/${id}`, 'Reading the published package version');
+      checkFreePublishedSubmission(published);
+      const packages = published.applicationPackages.filter(item => item.fileStatus !== 'PendingDelete'
+        && item.architecture?.toLowerCase() === 'x64');
+      requireValue(packages.length > 0, 'missing-published-package', 'The published submission has no x64 package.');
+      result.publishedStoreVersions = packages.map(item => item.version);
+      result.updateRequired = result.publishedStoreVersions.every(version => compareVersions(expectedVersion, version) > 0);
+    }
+    await fs.writeFile(resultFile, `${JSON.stringify(result, null, 2)}\n`);
+  }
   return result;
 }
 
@@ -434,6 +460,9 @@ export async function submitPrepared(prepared, { env = process.env, fetchImpl = 
       id = submissionId(app.pendingApplicationSubmission.id);
       const existing = await client.api('GET', `${appPath}/submissions/${id}/status`, 'Reading the existing submission status');
       const status = statusName(existing.status);
+      if (PROCESSING_STATUSES.has(status)) return writeResult(prepared, {
+        outcome: 'deferred', submissionId: id, status, published: false, retryAfterPublication: true,
+      });
       throw new StoreSubmissionError('pending-submission', `Submission ${id} already exists with status ${status}. Finish or remove it in its original submission workflow before starting this update.`,
         { submissionId: id, status });
     }
@@ -488,7 +517,8 @@ export async function submitPrepared(prepared, { env = process.env, fetchImpl = 
 
 export function parseArguments(args) {
   const result = {};
-  const keys = { '--package-dir': 'packageDir', '--listing-dir': 'listingDir', '--metadata': 'metadata', '--output': 'output' };
+  const fileKeys = { '--package-dir': 'packageDir', '--listing-dir': 'listingDir', '--metadata': 'metadata', '--output': 'output' };
+  const keys = { ...fileKeys, '--app-version': 'appVersion' };
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
     if (arg === '--prepare' || arg === '--submit' || arg === '--status') {
@@ -504,9 +534,9 @@ export function parseArguments(args) {
   }
   if (result.mode === 'status') {
     requireValue(result.output && !result.packageDir && !result.listingDir && !result.metadata, 'invalid-arguments',
-      'Use --status with --output only.');
+      'Use --status with --output and an optional --app-version.');
   } else {
-    requireValue(result.mode && Object.values(keys).every(key => result[key]), 'invalid-arguments',
+    requireValue(result.mode && !result.appVersion && Object.values(fileKeys).every(key => result[key]), 'invalid-arguments',
       'Use --status with --output, or --prepare/--submit with --package-dir, --listing-dir, --metadata and --output.');
   }
   return result;
@@ -518,6 +548,10 @@ async function main() {
     if (options.mode === 'status') {
       const result = await readSubmissionStatus(options);
       console.log(`Store submission ${result.submissionId}: ${result.status}.`);
+      if (result.updateRequired !== undefined) {
+        console.log(`Store update for app ${result.appVersion}: ${result.updateRequired ? 'needed' : 'not needed now'}.`);
+        if (process.env.GITHUB_OUTPUT) await fs.appendFile(process.env.GITHUB_OUTPUT, `update_required=${result.updateRequired}\n`);
+      }
       return;
     }
     const prepared = await prepareSubmission(options);

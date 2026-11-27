@@ -4,13 +4,13 @@
 
 [![Microsoft Store から無料の Windows 版をインストール](docs/download-store.svg)](https://apps.microsoft.com/detail/9P6QF32N19HG?hl=ja-jp&gl=JP)
 &nbsp;&nbsp;
-[![Windows 版の ZIP をダウンロード](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.17/local-tex-web-editor-0.1.17-windows-x64.zip)
+[![Windows 版の ZIP をダウンロード](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.18/local-tex-web-editor-0.1.18-windows-x64.zip)
 &nbsp;&nbsp;
-[![macOS 版をダウンロード](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.17/local-tex-web-editor-0.1.17-macos-universal.zip)
+[![macOS 版をダウンロード](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.18/local-tex-web-editor-0.1.18-macos-universal.zip)
 
-**v0.1.17** · [配布ファイルと更新内容](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [初めて使う](#初めて使う) · [起動する](#ダウンロードして起動する) · [利用前の準備](#利用前の準備) · [アプリの容量](#アプリとデータの保存先)
+**v0.1.18** · [配布ファイルと更新内容](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [初めて使う](#初めて使う) · [起動する](#ダウンロードして起動する) · [利用前の準備](#利用前の準備) · [アプリの容量](#アプリとデータの保存先)
 
-ZIP は v0.1.17 を配布する．Microsoft Store 版の更新は，Store の審査と公開の完了後に利用できる．
+ZIP は v0.1.18 を配布する．Microsoft Store 版の更新は，Store の審査と公開の完了後に利用できる．
 
 Windows と macOS のブラウザで TeX と Markdown の原稿を編集するアプリ．TeX が入っていない PC でも，まずこのアプリを起動し，**ホーム → TeX をセットアップ…** から導入できる．完了すると，導入した環境が自動で選ばれ，原稿をコンパイルできる．起動時には既定のブラウザで `localhost` の画面が開き，原稿と PDF を同じウィンドウで確認できる．
 
@@ -64,7 +64,7 @@ macOS 版の最低 OS は，アプリのビルドに使う [Go 1.25 の対応 OS
 #### ZIP をダウンロードする
 
 1. [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) を開き，最新のバージョンを選ぶ．
-2. **Assets** の `local-tex-web-editor-0.1.17-windows-x64.zip` をダウンロードする．`Source code` は開発用のソースである．
+2. **Assets** の `local-tex-web-editor-0.1.18-windows-x64.zip` をダウンロードする．`Source code` は開発用のソースである．
 3. ZIP を展開し，`local-tex-web-editor.exe` をダブルクリックする．
 4. ホーム画面が開いたら，TeX がない場合は [アプリから TeX を導入する](#アプリから-tex-を導入する)，すでにある場合は [既存の TeX を選ぶ](#既存の-tex-を選ぶ) へ進む．続いてホームの **Create from a template (テンプレートから作成)** からサンプルを作れる．
 
@@ -72,7 +72,7 @@ Windows の ZIP に含まれる実行ファイルにはコード署名が付い�
 
 ### macOS
 
-1. [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) の **Assets** から `local-tex-web-editor-0.1.17-macos-universal.zip` をダウンロードする．Apple Silicon と Intel で共通の ZIP を使う．
+1. [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) の **Assets** から `local-tex-web-editor-0.1.18-macos-universal.zip` をダウンロードする．Apple Silicon と Intel で共通の ZIP を使う．
 2. ZIP を展開し，`Local TeX Web Editor.app` を「アプリケーション」フォルダーへ移す．
 3. Finder や Spotlight から `Local TeX Web Editor` を開く．ブラウザに編集画面が開く．
 4. ホーム画面が開いたら，TeX がない場合は [アプリから TeX を導入する](#アプリから-tex-を導入する)，すでにある場合は [既存の TeX を選ぶ](#既存の-tex-を選ぶ) へ進む．続いてホームの **Create from a template (テンプレートから作成)** からサンプルを作れる．
@@ -81,7 +81,7 @@ macOS 版には Apple Developer ID による署名と notarization が付いて�
 
 ## アプリから TeX を導入する
 
-まず [アプリをダウンロードして起動する](#ダウンロードして起動する)．初回の画面は **英語** で表示される．日本語へ切り替える場合は，右上の **Settings** を開き，**Language / 言語設定** で **日本語** を選んで **Save and apply settings (設定を保存して反映)** を押す．導入の各画面は，英語でも日本語でも同じ操作で進められる．
+まず [アプリをダウンロードして起動する](#ダウンロードして起動する)．初回は **英語** と **ダークモード** で表示される．日本語へ切り替える場合は，右上の **Settings** を開き，**Language / 言語設定** で **日本語** を選んで **Save and apply settings (設定を保存して反映)** を押す．配色は **Settings → Appearance (設定 → 外観)** で変更できる．導入の各画面は，英語でも日本語でも同じ操作で進められる．
 
 | 初回の英語表示 | 日本語に切り替えた後の表示 |
 | --- | --- |
@@ -208,11 +208,30 @@ TeX Live，BasicTeX，MacTeX，TinyTeX などで原稿をコンパイルでき�
 
 ### プロジェクトを開き，作業を終了する
 
-例えば，Overleaf にあるような原稿は，プロジェクトのソースを ZIP としてダウンロードして展開し，そのフォルダーを開く．GitHub などから取得した原稿を開く場合も，`.tex`，`.bib`，画像，`latexmkrc` などを含むプロジェクトのフォルダーを指定する．
+PC にある原稿は，`.tex`，`.bib`，画像，`latexmkrc` などを含むプロジェクトのフォルダーを指定して開く．Overleaf などからダウンロードしたプロジェクトの ZIP は，ホームの **ZIP を読み込む…** から開ける．
 
 ブラウザの編集タブが休止したり閉じられたりしても，アプリは動作を続ける．タブへ戻ると同じローカルアドレスへ接続し直す．同じ版のアプリをもう一度起動した場合も，起動中の編集画面を開く．ページから離れる際には草稿とタブの位置を記録し，戻ったときに読み込む．原稿に未保存の編集がある場合は，ブラウザの確認画面が出る．
 
 右上の終了ボタンで，アプリとコンパイル中の処理を終了する．未保存の編集がある場合は，保存するか草稿に残すかを選べる．ブラウザが自動で閉じる操作を認めない場合は，終了したことを画面に表示するので，Windows では `Ctrl + W`，Mac では `Cmd + W` でタブを閉じる．
+
+### ZIP からプロジェクトを読み込む
+
+1. ホームの **Import ZIP… (ZIP を読み込む…)** を押す．編集画面では，**ZIP → Import ZIP… (ZIP を読み込む…)** を選ぶ．
+2. **ZIP file (ZIP ファイル)** でプロジェクトの `.zip` ファイルを選ぶ．
+3. **Destination parent folder (保存先の親フォルダー)** にパスを入力するか，**Choose a folder (フォルダーを選ぶ)** で選ぶ．**New project name (新しいプロジェクトの名前)** には，まだ使っていない名前を入力する．ZIP の名前をもとにプロジェクト名を提案する．
+4. **New project folder (作成先)** を確認して **Import and open (読み込んで開く)** を押す．その新しいフォルダーへ原稿，参考文献，画像などを展開し，プロジェクトを開く．
+
+同じ名前のフォルダーがある場合は，新しい名前を指定する．ZIP 内にある日本語のファイル名や，画像・章ごとのフォルダー構成も使える．Overleaf でダウンロードしたソースの ZIP を，アプリで展開して編集できる．
+
+### プロジェクトを ZIP でダウンロードする
+
+1. プロジェクトを開き，上部の **ZIP → Download project as ZIP (プロジェクトを ZIP でダウンロード)** を選ぶ．編集中の原稿を保存してから，プロジェクトの ZIP を作る．
+2. ブラウザのダウンロード設定に従い，`<プロジェクト名>.zip` を保存する．
+3. 任意の保存先とファイル名を選ぶ場合は，**ZIP → Save project ZIP as… (ZIP にして名前を付けて保存…)** を選ぶ．Windows または Mac の保存画面でフォルダーと `.zip` で終わるファイル名を指定し，**保存** を押す．同名のファイルがある場合は，上書きの確認が表示される．どちらの操作もファイル一覧の右クリックメニューから使える．
+
+Overleaf で使う場合は，**New Project → Upload Project** でこの ZIP を選ぶ．メイン文書とコンパイラーを，元のプロジェクトに合わせて選ぶ．手順は Overleaf の [Uploading a project](https://docs.overleaf.com/managing-projects-and-files/uploading-a-project) で確認できる．
+
+ZIP の直下に原稿と各フォルダーを置き，参考文献，画像，フォント，独自の `.sty`・`.cls`，`latexmkrc` などもまとめる．アプリのキャッシュ，Git の管理用フォルダー，コンパイルに対応するログや中間ファイルは含めない．図として使う PDF，外部の文書を参照する `.aux`，参考文献の `.bbl`，独自の `.ist` は ZIP に含める．
 
 ### PC の再起動後にブラウザのタブから戻る
 
@@ -240,9 +259,9 @@ v0.1.16 以前の ZIP 版からは，自動更新を備えた版を最初に一�
 
 ### スタートメニューやデスクトップから開く (Windows)
 
-**Microsoft Store 版**は，インストール後にスタートメニューから開ける．
+**Microsoft Store 版** は，インストール後にスタートメニューから開ける．
 
-**ZIP 版**では，アプリからショートカットを作成できる．
+**ZIP 版** では，アプリからショートカットを作成できる．
 
 1. アプリの「設定」を開く．
 2. 「起動用のショートカット」で「スタートメニューに追加」または「デスクトップに作成」を押す．
@@ -375,13 +394,13 @@ Mac では，保存・検索・コンパイル・SyncTeX のクリック操作�
 
 ### 外観を選ぶ
 
-**設定 → 外観**では，モード (システム・ライト・ダーク)，7 種の配色 (グレー・ブラック・ブルーグレー・暖色・ネイビー・フォレスト・プラム)，8 色のアクセント，10 種の原稿のフォントを選べる．黒い背景で使うには，モードに「ダーク」，配色に「ブラック」を選ぶ．「システム」は PC のライト／ダーク設定に合わせる．選んだ外観の見本も画面で確認できる．
+**設定 → 外観** では，モード (システム・ライト・ダーク)，7 種の配色 (グレー・ブラック・ブルーグレー・暖色・ネイビー・フォレスト・プラム)，8 色のアクセント，10 種の原稿のフォントを選べる．黒い背景で使うには，モードに「ダーク」，配色に「ブラック」を選ぶ．「システム」は PC のライト／ダーク設定に合わせる．選んだ外観の見本も画面で確認できる．
 
 背景・文字・アクセントには，色の選択欄や 16 進数のカラーコードで色を指定できる．ライトとダークの色はそれぞれ保存する．コードを空にすると，選んだ配色の色へ戻る．設定画面，補完のポップアップ，通知，コンパイル結果，草稿の状態にも選んだ色を使う．
 
 通知や浮動メニューは専用の背景色と枠，影で表示する．ライトとダークの配色に応じて文字色も調整し，カラーコードで指定した色にも対応する．
 
-初期状態では，モードに「システム」，配色に「グレー」，アクセントに「青」，原稿のフォントに「Consolas」を使う．グレーと Consolas は一覧の先頭に置き，初期値と表示する．以前に保存した外観がある場合は，その設定を引き続き使う．Consolas がない PC では，Cascadia Code，Menlo，DejaVu Sans Mono，ブラウザの等幅フォントの順に探して表示する．
+初回起動から **ダークモード** を使う．初期状態の配色は「グレー」，アクセントは「青」，原稿のフォントは「Consolas」である．グレーと Consolas は一覧の先頭に置き，初期値と表示する．以前に保存した外観がある場合は，その設定を読み込む．Consolas がない PC では，Cascadia Code，Menlo，DejaVu Sans Mono，ブラウザの等幅フォントの順に探して表示する．
 
 変更はその場で表示に反映される．「外観を保存」を押すと，次回も選んだ外観で開く．「キャンセル」，`Esc`，**×** で閉じると，開く前の外観に戻る．「外観を初期値に戻す」では初期値の見本を確認し，「外観を保存」で確定する．
 
@@ -583,7 +602,7 @@ go build -o bin/local-tex-web-editor.exe ./cmd/local-tex-editor
 Windows 用の配布ファイルは次のコマンドで作成する．
 
 ```sh
-go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.17" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
+go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.18" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
 ```
 
 `build:windows-resources` は同梱の ICO から Windows x64 用の resource を生成する．実行ファイルのビルド時に，16〜256 px の 9 サイズのアイコンが組み込まれる．
@@ -599,7 +618,7 @@ npx playwright install chromium
 node scripts/build-macos.mjs
 ```
 
-`dist/local-tex-web-editor-0.1.17-macos-universal.zip` に，Apple Silicon と Intel で動く `.app`，日英の README，ライセンスを収録する．
+`dist/local-tex-web-editor-0.1.18-macos-universal.zip` に，Apple Silicon と Intel で動く `.app`，日英の README，ライセンスを収録する．
 
 起動時のオプション:
 

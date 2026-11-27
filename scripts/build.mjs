@@ -14,7 +14,7 @@ const bundle = await build({
 });
 console.log(`JavaScript loaded at startup: ${initialJavaScript(bundle.metafile).bytes.toLocaleString('en-US')} bytes.`);
 await cp(path.join(root, 'web/src/index.html'), path.join(out, 'index.html'));
-for (const name of ['offline.html', 'offline.js']) await cp(path.join(root, 'web/src', name), path.join(out, name));
+for (const name of ['offline.html', 'offline.js', 'theme-init.js']) await cp(path.join(root, 'web/src', name), path.join(out, name));
 const version = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8')).version;
 await writeFile(path.join(out, 'service-worker.js'), (await readFile(path.join(root, 'web/src/service-worker.js'), 'utf8')).replaceAll('__APP_VERSION__', version));
 await cp(path.join(root, 'internal/branding/app-icon.svg'), path.join(out, 'app-icon.svg'));

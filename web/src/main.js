@@ -31,6 +31,7 @@ import { createLogIssues } from './log-issues.js';
 import { createMarkdownEditing } from './markdown-editing.js';
 import { MarkdownRichEditor } from './markdown-rich-editor.js';
 import { createProjectHome } from './project-home.js';
+import { createProjectZIP, exportProjectZIP } from './project-zip.js';
 import { projectStatusFor } from './project-status.js';
 import { createFileImporter } from './file-import.js';
 import { createFileTreeDrag } from './file-tree-drag.js';
@@ -115,7 +116,7 @@ const state = {
   preferences: { autoSave: true, theme: null, appearance: normalizeAppearance(), editorFontSize: 14, language: getLanguage(), panelLayout: normalizePanelLayout(), fileSort: 'name-asc', markdownEditorModes: { primary: 'rich', secondary: 'rich' }, previewVisibility: { rich: false, markdown: true, source: true }, markdownScrollSync: true, texCompletion: true, automaticCompletion: true, pdfDarkMode: false },
   previewContext: '',
   homeVisible: false,
-  theme: 'light',
+  theme: document.documentElement.dataset.theme === 'light' ? 'light' : 'dark',
   saveQueue: Promise.resolve(),
   autoSaveTimer: null,
   draftTimer: null,
@@ -161,6 +162,7 @@ let logIssues = null;
 let markdownEditing = null;
 let editorContextMenu = null;
 let projectHome = null;
+let projectZIP = null;
 let outlineTree = null;
 let fileTreeDrag = null;
 let compiledPDFList = null;
@@ -226,13 +228,14 @@ async function api(path, { method = 'GET', body, binary = false, responseType = 
   const headers = { ...additionalHeaders, 'X-Local-Token': token, Accept: 'application/json', 'Accept-Language': getLanguage() };
   if (state.settingsGeneration !== null) headers['X-Settings-Generation'] = state.settingsGeneration;
   if (projectRoot && !/^\/api\/(state|project\/(open|pick)|shutdown)(\?|$)/.test(path)) headers['X-Project-Root'] = encodeURIComponent(projectRoot);
-  if (body !== undefined) headers['Content-Type'] = binary ? 'application/octet-stream' : 'application/json';
+  const multipart = body instanceof FormData;
+  if (body !== undefined && !multipart) headers['Content-Type'] = binary ? 'application/octet-stream' : 'application/json';
   const controller = new AbortController();
   const cancel = () => controller.abort(signal.reason);
   if (signal?.aborted) cancel(); else signal?.addEventListener('abort', cancel, { once: true });
   const timer = timeout ? setTimeout(() => controller.abort(), timeout) : null;
   try {
-    const response = await fetch(path, { method, headers, body: body === undefined ? undefined : binary ? body : JSON.stringify(body), cache: 'no-store', signal: controller.signal, keepalive });
+    const response = await fetch(path, { method, headers, body: body === undefined ? undefined : binary || multipart ? body : JSON.stringify(body), cache: 'no-store', signal: controller.signal, keepalive });
     if (response.ok && responseType === 'blob') {
       const blob = await response.blob();
       if (state.resetDetected) throw new DOMException(t('初期化後の状態を使うため，アプリを開き直してください．'), 'AbortError');
@@ -2307,6 +2310,7 @@ function renderControls() {
   $('toggle-preview').disabled = state.closed;
   $('go-home').disabled = busy;
   renderRecentControls(); projectHome?.refresh(); renderWorkspaceView();
+  projectZIP?.refresh();
   updateEditorModeControls(); updatePreviewVisibilityControls();
   updateNavigationControls();
   renderCompiledPDFList();
@@ -2539,6 +2543,7 @@ function applyTheme(theme) {
   const previous = state.theme;
   state.theme = theme === 'dark' ? 'dark' : 'light';
   document.documentElement.dataset.theme = state.theme;
+  document.documentElement.style.colorScheme = state.theme;
   $('theme-toggle').setAttribute('aria-pressed', String(state.theme === 'dark'));
   $('theme-toggle').setAttribute('aria-label', state.theme === 'dark' ? t("ライトテーマに切り替える") : t("ダークテーマに切り替える"));
   $('theme-label').textContent = state.theme === 'dark' ? t("ダーク") : t("ライト");
@@ -3044,10 +3049,43 @@ async function openCreatedProject(path) {
   if (state.operation || state.closed || isRunning()) throw new Error(t('コンパイルが終了してからプロジェクトを切り替えてください．'));
   setOperation('opening');
   try {
-    if (!await confirmUnsaved(t('プロジェクトを切り替える前に，変更を保存しますか？'))) return;
+    if (!await confirmUnsaved(t('プロジェクトを切り替える前に，変更を保存しますか？'))) return false;
     const meta = await api('/api/project/open', { method: 'POST', body: { path } });
     await applyMeta(meta, true); clearError();
+    return true;
   } finally { setOperation(''); await openInitialFile(); }
+}
+
+async function importProjectArchive({ archive, parent, name }, onCreated) {
+  if (state.operation || state.closed || isRunning()) return false;
+  try {
+    await beginFileAction(); setOperation('importing-project');
+    if (!await confirmUnsaved(t('プロジェクトを切り替える前に，変更を保存しますか？'))) return false;
+    const body = new FormData(); body.append('archive', archive); body.append('parent', parent); body.append('name', name);
+    const result = await api('/api/project/import', { method: 'POST', body, projectRoot: null, timeout: 0 });
+    onCreated(result);
+    const meta = await api('/api/project/open', { method: 'POST', body: { path: result.path } });
+    await applyMeta(meta, true); clearError(); toast(t('ZIP からプロジェクトを開きました．'));
+    return true;
+  } finally { setOperation(''); await openInitialFile(); }
+}
+
+async function exportProjectArchive(saveAs = false) {
+  if (state.operation || state.closed || isRunning() || state.externalProjectChanged || !projectIsAvailable()) return;
+  const project = state.meta.project;
+  try {
+    await beginFileAction(); setOperation('exporting-project');
+    const result = await exportProjectZIP({
+      project, saveAs, api, saveAll,
+      flush: async () => { syncDrafts(); persistSession(); await sessionStore.flush(); },
+      saveBlob: (blob, name) => {
+        const url = URL.createObjectURL(blob), link = document.createElement('a');
+        link.href = url; link.download = name; document.body.append(link); link.click(); link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+      },
+    });
+    if (!result?.cancelled) toast(result?.path ? t('プロジェクトの ZIP を保存しました: {path}', { path: result.path }) : t('プロジェクトの ZIP をダウンロードしました．'));
+  } finally { setOperation(''); }
 }
 
 function updateIndex(path, content, rebuild = true) {
@@ -3381,6 +3419,13 @@ const fileImporter = createFileImporter({
   begin: beginFileAction, end: () => setOperation(''), checkDestination: assertNewFilePathAvailable,
   onImported: applyImportedFile, onError: showError, onNotice: toast,
 });
+projectZIP = createProjectZIP({
+  button: $('project-zip-button'), homeButton: $('welcome-import-zip'), api, getProject: () => state.meta?.project,
+  isBlocked: () => !!state.operation || state.closed || isRunning(),
+  canExport: () => projectIsAvailable() && !state.externalProjectChanged,
+  onImport: importProjectArchive, onOpen: openCreatedProject, onExport: exportProjectArchive,
+  onError: error => { if (!error?.shown) showError(error); },
+});
 compiledPDFList = createCompiledPDFList({
   onOpen: openCompiledPDF, onDownload: downloadPDF, onSaveAs: savePDFAs, onCopy: copyCompiledPDF, onDelete: entry => compiledPDFDeletion.open(entry), onError: showError,
   isBlocked: () => !!state.operation || state.closed || state.externalProjectChanged || isRunning() || !!document.querySelector('dialog[open]'),
@@ -3399,9 +3444,10 @@ createFileActions({
   begin: beginFileAction, end: () => setOperation(''), inspectOpenDocuments, checkDestination: assertNewFilePathAvailable, api,
   getCopyPath: entry => suggestEntryCopyPath(entry, [...(state.meta?.project?.files || []).map(file => file.path), ...(state.meta?.project?.directories || []), ...openProjectPaths()], { platform: state.meta?.platform }),
   getUnsavedPaths: entry => [...new Set([...state.documents.values()].filter(doc => isDirty(doc) && entryContains(entry, doc.path)).map(doc => doc.path).concat((state.drafts.entries || []).filter(draft => entryContains(entry, draft.path)).map(draft => draft.path)))],
-  onChanged: applyEntryChange, onNewFile: showNewFile, onImportFiles: folder => fileImporter.open(folder), onError: showError, onNotice: toast,
+  onChanged: applyEntryChange, onNewFile: showNewFile, onImportFiles: folder => fileImporter.open(folder), onError: error => { if (!error?.shown) showError(error); }, onNotice: toast,
   onDownload: entry => exportFile({ path: entry.path }, basename(entry.path), false),
   onSaveAs: entry => exportFile({ path: entry.path }, basename(entry.path), true),
+  onImportProject: () => projectZIP.open(), onDownloadProject: () => exportProjectArchive(false), onSaveProjectAs: () => exportProjectArchive(true),
 });
 fileTreeDrag = createFileTreeDrag({
   tree: $('file-tree'), getProjectRoot: () => state.meta?.project?.root || '',
@@ -3443,7 +3489,7 @@ if (isMac) {
   $('project-tex-help').textContent = t("例: /Library/TeX/texbin");
 }
 let cachedAppearance = state.preferences.appearance;
-try { cachedAppearance = normalizeAppearance(JSON.parse(localStorage.getItem('local-tex-editor-appearance') || 'null'), localStorage.getItem('local-tex-editor-theme')); } catch { /* Use the system preference on the first visit. */ }
+try { cachedAppearance = normalizeAppearance(JSON.parse(localStorage.getItem('local-tex-editor-appearance') || 'null'), localStorage.getItem('local-tex-editor-theme')); } catch { /* Use the initial dark theme when browser storage is unavailable. */ }
 applyAppearance(cachedAppearance);
 onClick('theme-toggle', () => {
   state.preferences.appearance = { ...state.preferences.appearance, mode: state.theme === 'dark' ? 'light' : 'dark' };
