@@ -63,18 +63,18 @@
             <span><span class="download-label">Microsoft Store で入手</span><small>Windows x64 · 無料 · Store で更新</small></span>
             <span class="download-arrow" aria-hidden="true">↗</span>
           </a>
-          <a class="download" href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.16/local-tex-web-editor-0.1.16-windows-x64.zip">
+          <a class="download" href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.18/local-tex-web-editor-0.1.18-windows-x64.zip">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 4.4 10.7 3v8.2H2zm9.7-1.6L22 1.2v10H11.7zM2 12.3h8.7v8.2L2 19.1zm9.7 0H22v10l-10.3-1.6z"/></svg>
-            <span><span class="download-label">Windows の ZIP を入手</span><small>v0.1.16 · x64 · ZIP</small></span>
+            <span><span class="download-label">Windows の ZIP を入手</span><small>v0.1.18 · x64 · ZIP</small></span>
             <span class="download-arrow" aria-hidden="true">↓</span>
           </a>
-          <a class="download" href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.16/local-tex-web-editor-0.1.16-macos-universal.zip">
+          <a class="download" href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.18/local-tex-web-editor-0.1.18-macos-universal.zip">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="13" rx="1.4"/><path d="M8 21h8M12 16v5M3 12.5h18"/></svg>
-            <span><span class="download-label">macOS 版をダウンロード</span><small>v0.1.16 · Apple Silicon + Intel · ZIP</small></span>
+            <span><span class="download-label">macOS 版をダウンロード</span><small>v0.1.18 · Apple Silicon + Intel · ZIP</small></span>
             <span class="download-arrow" aria-hidden="true">↓</span>
           </a>
-          <p class="release-note"><span class="version-badge">v0.1.16</span> <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.16">変更内容とダウンロード</a></p>
-          <p class="store-release-note">ZIP は v0.1.16 を配布します．Microsoft Store 版の更新は，Store の審査と公開の完了後に利用できます．</p>
+          <p class="release-note"><span class="version-badge">v0.1.18</span> <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.18">変更内容とダウンロード</a></p>
+          <p class="store-release-note">ZIP は v0.1.18 を配布します．Microsoft Store 版の更新は，Store の審査と公開の完了後に利用できます．</p>
         </div>
       </div>
 
@@ -140,7 +140,7 @@
             <p>Mac については， <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/blob/main/README.ja.md#macos">macOS の起動手順</a> と <a href="https://support.apple.com/ja-jp/102445">Apple の案内</a> があります．</p>
           </details>
           <p class="file-note" style="margin-top: 1.2rem;">普段使うブラウザにホームが開きます．</p>
-          <p class="file-note">初回は英語で表示します． <strong>Settings → Language / 言語設定</strong> で <strong>日本語</strong> を選ぶと，その場で表示が切り替わります． <strong>「設定を保存して反映」</strong> で次回にも使い， <strong>キャンセル</strong> すると保存済みの言語へ戻ります．項目名は常に日英で表示します．</p>
+          <p class="file-note">初回は英語とダークモードで表示します． <strong>Settings → Language / 言語設定</strong> で <strong>日本語</strong> を選ぶと，その場で表示が切り替わります． <strong>「設定を保存して反映」</strong> で次回にも使い， <strong>キャンセル</strong> すると保存済みの言語へ戻ります．配色は <strong>Settings → Appearance (設定 → 外観)</strong> で変更できます．</p>
           <p><strong>TeX がない場合:</strong> 下の <a href="#tex-install">画面付きの導入手順</a> へ進みます．アプリが TeX をダウンロード・インストールし，完了するとその環境が自動で選ばれます．</p>
           <p><strong>TeX がすでにある場合:</strong> <a href="#tex-existing">設定でその環境を選ぶ手順</a> へ進みます．</p>
           <p>Markdown だけを使う場合は，ホームの <strong>Create from a template (テンプレートから作成)</strong> で <strong>Markdown notes (Markdown のメモ)</strong> を選んで新しいプロジェクトを作るか， <a href="#project-open">既存のフォルダーを開きます</a>．その後は <a href="#markdown-editing">本文を直接編集</a> できます．</p>
@@ -254,10 +254,30 @@
           <div class="usage-block" id="project-open">
             <h3>既存のプロジェクトを開く</h3>
             <p>TeX のセットアップ完了画面が開いている場合は， <strong>Close (閉じる)</strong> を押してホームへ戻ります．</p>
-            <p>ホームの <strong>Open project folder (プロジェクトフォルダーを開く)</strong> を押し， <strong>Browse… (参照…)</strong> またはパスの入力で <code>.tex</code>， <code>.bib</code>， <code>.md</code>，画像，設定ファイルを含むフォルダーを選んで <strong>Open (開く)</strong> を押します．Overleaf のプロジェクトを使う場合は，ソースを ZIP でダウンロードして展開します．</p>
+            <p>ホームの <strong>Open project folder (プロジェクトフォルダーを開く)</strong> を押し， <strong>Browse… (参照…)</strong> またはパスの入力で <code>.tex</code>， <code>.bib</code>， <code>.md</code>，画像，設定ファイルを含むフォルダーを選んで <strong>Open (開く)</strong> を押します．Overleaf などからダウンロードした ZIP は，次の <a href="#project-zip">ZIP から読み込む手順</a> で開けます．</p>
             <p>TeX の文書では，メインの <code>.tex</code> を開き，コンパイル前に <strong>Settings (設定) → Compiler (コンパイラー)</strong> を確認します． <code>latexmkrc</code> または <code>.latexmkrc</code> があれば <strong>Use latexmkrc settings (latexmkrc の設定を使う)</strong>，それ以外は必要な TeX のエンジンを選び， <strong>Save and apply settings (設定を保存して反映)</strong> を押します．</p>
             <p>TeX の文書を選び， <strong>Compile (コンパイル)</strong> を押します．Windows では <span class="shortcut"><kbd>Ctrl</kbd> + <kbd>Enter</kbd></span>，Mac では <span class="shortcut"><kbd>Cmd</kbd> + <kbd>Enter</kbd></span> も使えます．コンパイルした PDF が右側に表示されます．</p>
             <p>Markdown の文書では，ファイル一覧の <code>.md</code> または <code>.markdown</code> を開くと， <a href="#markdown-editing">本文を直接編集</a> できます．</p>
+          </div>
+          <div class="usage-block" id="project-zip">
+            <h3>ZIP からプロジェクトを読み込む</h3>
+            <ol>
+              <li>ホームの <strong>Import ZIP… (ZIP を読み込む…)</strong>，または編集画面の <strong>ZIP → Import ZIP… (ZIP を読み込む…)</strong> を選びます．</li>
+              <li><strong>ZIP file (ZIP ファイル)</strong> で，プロジェクトの <code>.zip</code> ファイルを選びます．</li>
+              <li><strong>Destination parent folder (保存先の親フォルダー)</strong> にパスを入力するか，<strong>Choose a folder (フォルダーを選ぶ)</strong> で選びます．<strong>New project name (新しいプロジェクトの名前)</strong> に，まだ使っていない名前を入力します．ZIP のファイル名をもとに名前を提案します．</li>
+              <li><strong>New project folder (作成先)</strong> を確認して <strong>Import and open (読み込んで開く)</strong> を押します．その新しいフォルダーへ原稿，参考文献，画像などを展開し，プロジェクトを開きます．</li>
+            </ol>
+            <p>日本語のファイル名や，画像・章ごとのフォルダー構成も使えます．作成先に同名のフォルダーがある場合は，別のプロジェクト名を指定します．TeX のプロジェクトを読み込んだ後は，メイン文書を選び，<a href="#project-open">コンパイラーを設定</a> してからコンパイルします．</p>
+          </div>
+          <div class="usage-block" id="project-zip-export">
+            <h3>ZIP をダウンロードし，保存先を選ぶ</h3>
+            <ol>
+              <li>プロジェクトを開き，<strong>ZIP → Download project as ZIP (プロジェクトを ZIP でダウンロード)</strong> を選びます．編集中の原稿を保存してから，ZIP を作ります．</li>
+              <li>ブラウザのダウンロード設定に従い，<code>&lt;プロジェクト名&gt;.zip</code> を保存します．</li>
+              <li>任意の保存先と名前を選ぶ場合は，<strong>ZIP → Save project ZIP as… (ZIP にして名前を付けて保存…)</strong> を選びます．Windows または Mac の保存画面でフォルダーと <code>.zip</code> で終わるファイル名を指定し，<strong>保存</strong> を押します．同名のファイルがある場合は，上書きの確認が表示されます．</li>
+            </ol>
+            <p>ファイル一覧の右クリックメニューからも，両方の操作を使えます．ZIP にはプロジェクト内のフォルダー，参考文献，画像，フォント，独自の <code>.sty</code>・<code>.cls</code>，<code>latexmkrc</code> などをまとめます．図として使う PDF と，入力に使う <code>.aux</code>，<code>.bbl</code>，<code>.ist</code> も含めます．アプリのキャッシュ，Git の管理用データ，TeX の文書に対応するログや中間ファイルは含めません．</p>
+            <p>Overleaf で開く場合は，<strong>New project → Existing project (.zip)</strong> で ZIP を選び，原稿に合うメイン文書とコンパイラーを指定します．詳しい手順は <a href="https://docs.overleaf.com/managing-projects-and-files/uploading-a-project">Overleaf の案内</a> を参照できます．</p>
           </div>
           <div class="usage-block">
             <h3>ホームでプロジェクトを管理する</h3>
@@ -293,7 +313,7 @@
           <p><strong>アウトライン</strong> には，選択中の TeX または Markdown のタブの見出しが表示されます．タブを変えると見出しも切り替わります．縦線で階層を確認し，矢印で下位の見出しを開閉できます．見出しをクリックすると原稿の該当箇所を展開し，上側に余白を設けて表示します．</p>
           <p>ファイル一覧・アウトラインの右端，原稿とプレビューの境界，ログの上端をドラッグして，幅や高さを調整できます．境界にフォーカスして矢印キーで調整する操作や，ダブルクリックで初期位置に戻す操作も使えます．選んだ幅とログの高さは，次回の起動にも反映されます．</p>
           <p><strong>「プレビューを表示 / プレビューを閉じる」</strong> で，プレビューを開閉できます．閉じると編集する場所が広がり，開き直すと元の境界の位置へ戻ります．直接編集では閉じ，Markdown のソース編集と TeX では表示することを初期値としています．手動で変えた状態は，モードごとに記録します．</p>
-          <p><strong>設定 → 外観</strong> で，システム・ライト・ダークのモードと，7 種の配色，8 色のアクセント，10 種のフォントから選べます．初期値は，配色が <strong>グレー</strong>，アクセントが <strong>青</strong>，フォントが <strong>Consolas</strong> です．黒い背景で使うには，モードに <strong>ダーク</strong>，配色に <strong>ブラック</strong> を選びます．システムを選ぶと PC のライト／ダーク設定に合わせ，選んだフォントがない環境では別の等幅フォントを使います．</p>
+          <p><strong>設定 → 外観</strong> で，システム・ライト・ダークのモードと，7 種の配色，8 色のアクセント，10 種のフォントから選べます．初回は <strong>ダーク</strong> モードを使い，配色は <strong>グレー</strong>，アクセントは <strong>青</strong>，フォントは <strong>Consolas</strong> です．以前に保存した外観がある場合は，その設定を使います．黒い背景で使うには，モードに <strong>ダーク</strong>，配色に <strong>ブラック</strong> を選びます．システムを選ぶと PC のライト／ダーク設定に合わせ，選んだフォントがない環境では別の等幅フォントを使います．</p>
           <p>背景・文字・アクセントの色は，色の選択欄やカラーコードで指定できます．ライトとダークの色は個別に保存します．コードを空にするか <strong>「このモードの色を配色に戻す」</strong> を押すと，選んだ配色の色へ戻ります．変更はその場で表示され， <strong>外観を保存</strong> すると次回も同じ外観で開きます． <strong>キャンセル</strong> すると開く前の外観へ戻ります．</p>
           <p>通知と浮動メニューには，それぞれの背景色，枠，影を付けます．本文，補足，選択した項目の文字色も，ライト，ダーク，個別に指定した色へ合わせ，文書の上に表示するメッセージを読みやすくします．</p>
 
@@ -395,8 +415,17 @@
         <section id="updates" aria-labelledby="updates-title">
           <h2 id="updates-title">更新・使い方・問い合わせ</h2>
           <p>アプリの <strong>? (ヘルプ)</strong> ボタン，または <kbd>F1</kbd> から，使い方，キーボードショートカット，更新内容，問題が起きたときの手順を確認できます．コンパイルのログや設定，配布形態に応じた更新先もヘルプから開けます．</p>
-          <p>Windows の Store 版は Microsoft Store から更新します．新しいバージョンは Store の審査と公開が完了すると配布されます．更新後もスタートメニューから起動できます．</p>
-          <p>Windows ZIP 版と macOS 版の更新は <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.16">GitHub Releases</a> から取得します．Windows では ZIP を展開して <code>.exe</code> を起動し，旧版が動いている場合は画面の案内に従います．Mac では原稿を保存して終了し，アプリケーションフォルダーのアプリを置き換えます．</p>
+          <div class="usage-block" id="application-updates">
+            <h3>アプリを更新する</h3>
+            <p><strong>アプリの自動更新は初期状態で有効です．</strong> 起動後に更新を確認し，新しい版をバックグラウンドで取得します．原稿の保存，コンパイル，TeX の操作が済み，開いている全ての編集画面で操作が落ち着いてから更新して再起動します．同じブラウザのタブで編集を再開できます．</p>
+            <ol>
+              <li><strong>Settings → App updates (設定 → アプリの更新)</strong> で，現在のバージョン，更新の状態，変更内容を確認できます．すぐに確認する場合は <strong>Check now (今すぐ確認)</strong> を押します．</li>
+              <li>更新の準備ができたら，<strong>Save, update and restart (保存して更新・再起動)</strong> で適用できます．延期する場合は，通知の <strong>Update in one hour (1 時間後に更新)</strong> を選びます．</li>
+              <li>同じ設定欄で自動更新を切り替えられます．無効にした場合も，<strong>Check now (今すぐ確認)</strong> で更新を確認して取得できます．</li>
+            </ol>
+            <p>Microsoft Store 版は，Store の審査と公開が完了した版を，Windows の更新設定や通信条件に従って取得します．Windows の ZIP 版と macOS 版は，同梱の更新機能で新しい版を取得し，署名を確認して更新します．</p>
+            <p>v0.1.16 以前の ZIP 版からは，自動更新を備えた版を <a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.18">GitHub Releases</a> から一度導入します．Windows では ZIP を展開して <code>.exe</code> を起動し，画面の案内に従って原稿を保存し，旧版を終了します．Mac では保存して終了し，アプリケーションフォルダーのアプリを置き換えます．その後の更新はアプリが確認します．</p>
+          </div>
           <p>更新後も，それぞれの配布方法で使っている設定と草稿を読み込みます．Store 版の初回起動時には，既存の Windows ZIP 版から有効な設定と草稿をコピーします．原稿は元のプロジェクトフォルダーで使えます．</p>
           <p>作業を終えるときはアプリ内の <strong>終了</strong> を使います．ブラウザタブを閉じた後もアプリは動き続けるため，後からエディタを開き直せます．</p>
           <p>不具合や要望は，ヘルプの <strong>「GitHub Issues を開く」</strong> から送れます． <strong>「アプリの情報」→「環境情報をコピー」</strong> で，バージョン，OS，アプリのアーキテクチャ，配布形態，TeX の利用状況をコピーできます．不具合が起きるまでの操作を添え，コンパイルに関する問題では，ログの該当部分や小さなサンプル原稿も示すと内容を確認しやすくなります．</p>
@@ -407,7 +436,7 @@
             <p>未保存の本文がある場合は，開始前に保存や草稿の扱いを選びます．プロジェクトのファイルと導入した TeX は PC に残り，完了後にアプリを開き直します．必要に応じてプロジェクトを開き，TeX の環境を選び直してください．TeX 自体を削除するときは， <a href="#tex-packages">「TeX を管理…」</a> にある環境全体の削除を使います．</p>
           </div>
           <ul class="reading-links">
-            <li><a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.16">ダウンロードと変更内容</a></li>
+            <li><a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.18">ダウンロードと変更内容</a></li>
             <li><a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/issues">不具合・要望を送る</a></li>
             <li><a href="https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/blob/main/README.ja.md">README 全文</a></li>
           </ul>
