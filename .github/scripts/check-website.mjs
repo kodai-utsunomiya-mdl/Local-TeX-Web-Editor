@@ -78,7 +78,7 @@ try {
         const captureSection = async (locator, name) => {
           await locator.screenshot({
             path: path.join(output, name),
-            style: '.site-header { visibility: hidden !important; }',
+            style: '.site-header, .skip-link { visibility: hidden !important; }',
           });
           sectionScreenshots.push(name);
         };
