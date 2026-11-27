@@ -85,7 +85,7 @@ The macOS app does not have an Apple Developer ID signature or notarization. If 
 
 ## Set up TeX from the app
 
-First [download and launch the app](#download-and-launch). The first launch uses **English**. To switch to Japanese, open **Settings** at the top right, choose **日本語** under **Language / 言語設定**, and click **Save and apply settings (設定を保存して反映)**. The same setup screens are available in both languages.
+First [download and launch the app](#download-and-launch). The first launch uses **English** and **Dark** mode. To switch to Japanese, open **Settings** at the top right, choose **日本語** under **Language / 言語設定**, and click **Save and apply settings (設定を保存して反映)**. Use **Settings → Appearance** to choose another theme. The same setup screens are available in both languages.
 
 | English label | Japanese label |
 | --- | --- |
@@ -220,17 +220,20 @@ Use the exit button at the top right to stop the app and any running compilation
 
 ### Import a project from ZIP
 
-1. Choose **Import ZIP…** on Home, or open the **ZIP** menu at the top of the editor.
-2. Select the project's `.zip` file, choose its **Destination parent folder**, and enter a **New project name**. The app suggests a project name from the ZIP filename.
-3. Review the destination and import the project. The app extracts the source, bibliography, images, and other files into a new folder and opens it.
+1. Choose **Import ZIP…** on Home. From the editor, choose **ZIP → Import ZIP…**.
+2. Select the project's `.zip` file under **ZIP file**.
+3. Under **Destination parent folder**, enter a folder path or click **Choose a folder**. Enter an unused **New project name**; the app suggests one from the ZIP filename.
+4. Check **New project folder**, then click **Import and open**. The app extracts the source, bibliography, images, and other files into that new folder and opens the project.
 
 Choose another name if a folder with that name already exists. Japanese filenames and folders for images or chapters are supported. You can import a source ZIP downloaded from Overleaf directly into the app.
 
 ### Download a project as ZIP
 
-1. Choose **ZIP → Download project as ZIP**. The app saves the documents you are editing before creating the archive.
-2. Save `<project name>.zip` using your browser's download settings. Choose **Save project ZIP as…** to select its destination and filename. The file list's context menu offers these actions too.
-3. To use the project on Overleaf, choose **New Project → Upload Project** and select the ZIP. Set the main document and compiler to match the original project. See Overleaf's [Uploading a project](https://docs.overleaf.com/managing-projects-and-files/uploading-a-project) guide.
+1. Open the project and choose **ZIP → Download project as ZIP**. The app saves edited documents before creating the archive.
+2. The browser saves `<project name>.zip` according to its download settings.
+3. To choose any destination folder and filename, select **ZIP → Save project ZIP as…** instead. In the Windows or Mac save dialog, select the folder, enter a name ending in `.zip`, and click **Save**. The dialog asks before replacing an existing file. Both ZIP actions are also available from the file-list context menu.
+
+To use the ZIP in Overleaf, choose **New Project → Upload Project** and select the file. Set the main document and compiler to match the original project. See Overleaf's [Uploading a project](https://docs.overleaf.com/managing-projects-and-files/uploading-a-project) guide.
 
 The ZIP contains the project files and their relative folders at its root, including bibliography files, images, fonts, custom `.sty` and `.cls` files, and `latexmkrc`. App caches, Git's internal folder, and logs and intermediate files associated with TeX documents are omitted. PDF figures, `.aux` files used to reference external documents, `.bbl` bibliography files, and custom `.ist` files are included.
 

@@ -5,13 +5,14 @@ on:
     workflows: ['Build Microsoft Store package', 'Build and test']
     types: [completed]
     branches: [main]
+  schedule:
+    - cron: '47 */6 * * *'
   workflow_dispatch:
     inputs:
       store_run_id:
         description: 'Successful main run of Build Microsoft Store package'
         required: true
         type: string
-        default: '45844360603'
       operation:
         description: 'Prepare files or submit the update to Microsoft Store'
         required: true
@@ -63,6 +64,7 @@ jobs:
     if: >-
       github.ref == 'refs/heads/main' &&
       (github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'schedule' && vars.MICROSOFT_STORE_AUTOMATIC_SUBMISSION == 'true') ||
       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'))
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -85,14 +87,28 @@ jobs:
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '22'
+      - name: Check whether the latest release needs a Store update
+        if: github.event_name == 'schedule'
+        id: retry
+        env:
+          PARTNER_CENTER_TENANT_ID: ${{ secrets.PARTNER_CENTER_TENANT_ID }}
+          PARTNER_CENTER_CLIENT_ID: ${{ secrets.PARTNER_CENTER_CLIENT_ID }}
+          PARTNER_CENTER_CLIENT_SECRET: ${{ secrets.PARTNER_CENTER_CLIENT_SECRET }}
+        shell: bash
+        run: |
+          release_tag="$(gh release view --json tagName --jq .tagName)"
+          node scripts/submit-microsoft-store.mjs --status --app-version "${release_tag#v}" --output store-publication-status
       - name: Find the tested release and publish its Store download files
+        if: github.event_name != 'schedule' || steps.retry.outputs.update_required == 'true'
         id: files
         env:
           STORE_RUN_ID: ${{ inputs.store_run_id }}
+          EVENT_NAME: ${{ github.event_name }}
         shell: bash
         run: |
           args=(--output store-submission-files --publish-downloads)
           if [[ -n "$STORE_RUN_ID" ]]; then args+=(--store-run "$STORE_RUN_ID"); fi
+          if [[ "$EVENT_NAME" == schedule ]]; then args+=(--latest); fi
           node scripts/prepare-store-release.mjs "${args[@]}"
       - name: Prepare the package, images and listing text
         if: steps.files.outputs.ready == 'true'
@@ -118,7 +134,7 @@ jobs:
               exit 1
             fi
             operation=submit
-          elif [[ "$EVENT_NAME" == workflow_run && "$AUTOMATIC_SUBMISSION" == true ]]; then
+          elif [[ ( "$EVENT_NAME" == workflow_run || "$EVENT_NAME" == schedule ) && "$AUTOMATIC_SUBMISSION" == true ]]; then
             operation=submit
           fi
           echo "operation=$operation" >> "$GITHUB_OUTPUT"
@@ -148,3 +164,11 @@ jobs:
             store-submission-files/prepared/
           if-no-files-found: error
           retention-days: 90
+      - name: Save the status checked before a scheduled retry
+        if: always() && github.event_name == 'schedule'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: microsoft-store-retry-status
+          path: store-publication-status/result.json
+          if-no-files-found: warn
+          retention-days: 14

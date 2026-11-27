@@ -19,8 +19,9 @@ async function menuAction(page, action) {
 }
 
 async function savedProjectZIP(session) {
-  const response = await request(session, '/api/project/download', { method: 'POST', data: {}, headers: { 'X-Project-Root': encodeURIComponent(session.project) } });
-  expect(response.ok(), response.statusText).toBe(true);
+  const { project } = await json(session, '/api/session');
+  const response = await request(session, '/api/project/download', { method: 'POST', data: {}, headers: { 'X-Project-Root': encodeURIComponent(project.root) } });
+  expect(response.ok, `${response.status} ${response.statusText}`).toBe(true);
   return Buffer.from(await response.arrayBuffer());
 }
 
@@ -123,7 +124,7 @@ test('読み込み後に開く処理が失敗しても，同じ ZIP を展開し
 });
 
 test('ZIP を名前を付けて保存すると原稿を保存し，保存先選択のキャンセル後も編集を続けられる', async ({ page, session }) => {
-  await openProject(session); await openEditor(page, session); await setAutoSave(page, false);
+  const meta = await openProject(session); await openEditor(page, session); await setAutoSave(page, false);
   const original = (await readFile(path.join(session.project, 'main.tex'), 'utf8')).replace(/\r\n/g, '\n');
   await replaceText(page, `${original}\n% Saved before choosing a destination\n`);
   const requests = [];
@@ -134,7 +135,7 @@ test('ZIP を名前を付けて保存すると原稿を保存し，保存先選�
   await page.getByTestId('file-main.tex').click({ button: 'right' });
   await page.locator('#file-context-menu [data-action="saveProjectAs"]').click();
   await expect.poll(() => requests.length).toBe(1);
-  expect(requests[0]).toEqual({ body: {}, root: session.project });
+  expect(requests[0]).toEqual({ body: {}, root: meta.project.root });
   expect(await readFile(path.join(session.project, 'main.tex'), 'utf8')).toContain('Saved before choosing a destination');
   await expect(editor(page)).toHaveAttribute('contenteditable', 'true');
   await expect(page.locator('#app-error')).toBeHidden();

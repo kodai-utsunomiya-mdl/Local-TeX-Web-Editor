@@ -24,7 +24,7 @@ func BenchmarkRefreshInstalledExecutable(b *testing.B) {
 			}
 			b.ReportAllocs()
 			b.ResetTimer()
-			for b.Loop() {
+			for iteration := 0; iteration < b.N; iteration++ {
 				for index := 0; index < checks; index++ {
 					if _, err := installShortcutExecutable(source, directory); err != nil {
 						b.Fatal(err)
