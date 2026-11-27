@@ -121,6 +121,7 @@ details p:last-child { margin-bottom: 0; }
 .project-zip-import-shot, .project-zip-menu-shot, .project-home-zip-shot { margin-inline: auto; margin-bottom: 24px; }
 .project-zip-import-shot { max-width: 800px; }
 .project-zip-menu-shot { max-width: 420px; }
+.project-home-zip-shot { max-width: 940px; }
 .project-zip-import-shot a, .project-zip-menu-shot a { position: relative; }
 .project-zip-import-shot a { aspect-ratio: 1; }
 .project-zip-menu-shot a { aspect-ratio: 12 / 7; }
@@ -130,6 +131,10 @@ details p:last-child { margin-bottom: 0; }
 /* Show a 360 × 210 region starting at (1030, 0) in English and (1060, 0) in Japanese. */
 .project-zip-menu-shot img { width: 444.444444%; transform: translateX(-64.375%); }
 html[lang="ja"] .project-zip-menu-shot img { transform: translateX(-66.25%); }
+.project-home-zip-shot a { position: relative; aspect-ratio: 94 / 51; }
+.project-home-zip-shot picture { display: block; }
+/* Show the project rows and open menu from (330, 80) to (1270, 590). */
+.project-home-zip-shot img { position: absolute; top: 0; left: 0; max-width: none; width: 170.212766%; height: auto; transform: translate(-20.625%, -8%); }
 .project-zip-menu-shot figcaption { display: block; }
 .project-zip-menu-shot figcaption span { display: block; }
 .project-zip-menu-shot figcaption span:last-child { margin-top: .35rem; }
@@ -145,6 +150,11 @@ html[lang="ja"] .project-zip-menu-shot img { transform: translateX(-66.25%); }
   .header-nav { gap: 1rem; }
   .languages { padding-left: 1rem; }
   .guide-layout { grid-template-columns: 150px minmax(0, 1fr); gap: 30px; }
+  .project-home-zip-shot { max-width: 390px; }
+  .project-home-zip-shot a { aspect-ratio: 390 / 844; }
+  .project-home-zip-shot img { position: static; max-width: 100%; width: 100%; height: auto; transform: none; }
+  .project-home-zip-shot figcaption, .project-home-zip-shot figcaption span { display: block; }
+  .project-home-zip-shot figcaption span:last-child { margin-top: .35rem; }
 }
 @media (max-width: 760px) {
   html { scroll-padding-top: 8rem; }
