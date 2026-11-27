@@ -4,7 +4,35 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 )
+
+func TestStoreRestartWaitUsesTheProcessAge(t *testing.T) {
+	now := time.Date(2026, time.November, 27, 12, 0, 0, 0, time.UTC)
+	for _, test := range []struct {
+		age  time.Duration
+		want time.Duration
+	}{
+		{0, time.Minute},
+		{10 * time.Second, 50 * time.Second},
+		{time.Minute - time.Millisecond, time.Millisecond},
+		{time.Minute, 0},
+		{5 * time.Minute, 0},
+		{-time.Second, time.Minute},
+	} {
+		if got := storeRestartDelay(now.Add(-test.age), now); got != test.want {
+			t.Errorf("restart delay at process age %s = %s, want %s", test.age, got, test.want)
+		}
+	}
+	if err := waitStoreRestartAge(context.Background(), time.Now().Add(-2*time.Minute)); err != nil {
+		t.Fatalf("an already eligible process was delayed: %v", err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+	if err := waitStoreRestartAge(ctx, time.Now()); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("cancelling the restart wait returned %v", err)
+	}
+}
 
 func TestStoreUpdateCompletionAndDeferredConditions(t *testing.T) {
 	for _, test := range []struct {

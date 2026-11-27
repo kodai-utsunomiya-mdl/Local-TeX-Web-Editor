@@ -239,6 +239,16 @@ func TestStoreUpdateIterableMatchesWindowsRuntimeSignature(t *testing.T) {
 	}
 }
 
+func TestStoreUpdateReadsTheProcessStartTime(t *testing.T) {
+	startedAt, err := storeProcessStartedAt()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if startedAt.IsZero() || startedAt.After(time.Now()) || startedAt.Year() < 2000 {
+		t.Fatalf("unexpected process start time: %v", startedAt)
+	}
+}
+
 func TestStoreRestartArgumentsRoundTrip(t *testing.T) {
 	for _, directory := range []string{"", `C:\Users\TeX Writer\設定`, `C:\drafts\"quoted"\`, `C:\path with spaces\`} {
 		line, err := storeRestartArguments(directory)

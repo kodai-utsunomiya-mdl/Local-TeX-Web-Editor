@@ -2,6 +2,7 @@ package platform
 
 import (
 	"context"
+	"time"
 
 	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/messages"
 )
@@ -26,6 +27,35 @@ type StoreUpdateState struct {
 }
 
 var ErrStoreUpdatesUnsupported = messages.Errorf("Microsoft Store から導入した Windows 版で更新できます．")
+
+func storeRestartDelay(startedAt, now time.Time) time.Duration {
+	age := now.Sub(startedAt)
+	if age >= time.Minute {
+		return 0
+	}
+	if age < 0 {
+		age = 0
+	}
+	return time.Minute - age
+}
+
+func waitStoreRestartAge(ctx context.Context, startedAt time.Time) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	delay := storeRestartDelay(startedAt, time.Now())
+	if delay == 0 {
+		return nil
+	}
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return ctx.Err()
+	}
+}
 
 func validateStoreUpdateRequest(ctx context.Context, options StoreUpdateOptions) error {
 	if err := ctx.Err(); err != nil {

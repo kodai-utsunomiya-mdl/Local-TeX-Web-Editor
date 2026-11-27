@@ -5,7 +5,7 @@ func init() {
 		"別の画面で保存情報が初期化されました．未保存の原稿を確認してから，画面を読み込み直してください．":    "Saved information was reset in another tab. Check your unsaved documents before reloading this page.",
 		"保存情報の初期化が終わってから操作してください．":                            "Wait for the saved information to finish resetting before continuing.",
 		"初期化する項目を 1 つ以上選び，確認してから実行してください．":                    "Select at least one item to reset and confirm before continuing.",
-		"コンパイル，TeX の操作，フォルダー選択が終わってから初期化してください．":              "Wait for compilation, TeX operations, and folder selection to finish before resetting.",
+		"アプリの更新，コンパイル，TeX の操作，フォルダー選択が終わってから初期化してください．":       "Wait for the app update, compilation, TeX operations, and folder selection to finish before resetting.",
 		"保存情報の場所が通常のフォルダーではありません: %s":                         "The saved information is not in a regular folder: %s",
 		"保存情報の項目が多いため，設定フォルダーの内容を確認してください．":                   "There are too many saved items. Check the contents of the settings folder.",
 		"保存情報のファイルを確認できません: %s":                               "The saved information file could not be verified: %s",

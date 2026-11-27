@@ -190,6 +190,7 @@ func TestAutomaticUpdateWaitsWhileCompilationOrTeXSetupRuns(t *testing.T) {
 
 func TestUpdateStopsNewWritesUntilInstallationFinishes(t *testing.T) {
 	a, started := updateTestApp(t)
+	generation := a.config.SettingsGeneration
 	finish := make(chan struct{})
 	a.updates.install = func(automatic bool) error { started <- automatic; <-finish; return nil }
 	if err := a.beginUpdateAttempt(false); err != nil {
@@ -205,11 +206,51 @@ func TestUpdateStopsNewWritesUntilInstallationFinishes(t *testing.T) {
 		close(finish)
 		t.Fatalf("a write ran during installation: %d", response.Code)
 	}
+	response = apiRequest(a, http.MethodPost, "/api/settings/reset", settingsResetOptions{Settings: true, Drafts: true, Confirmation: true}, nil)
+	if response.Code != http.StatusConflict || a.config.SettingsGeneration != generation {
+		close(finish)
+		t.Fatalf("settings were reset during installation: %s", response.Body.String())
+	}
 	close(finish)
 	a.workers.Wait()
 	response = apiRequest(a, http.MethodPut, "/api/storage", map[string]any{"key": "preferences", "value": map[string]string{"language": "en"}}, nil)
 	if response.Code != http.StatusOK {
 		t.Fatalf("the write gate did not reopen: %s", response.Body.String())
+	}
+}
+
+func TestApplicationUpdateRestoresItsStatusAfterInstallerReturns(t *testing.T) {
+	for _, fails := range []bool{false, true} {
+		t.Run(map[bool]string{false: "completed", true: "failed"}[fails], func(t *testing.T) {
+			a, _ := updateTestApp(t)
+			u := a.updates
+			u.state.Error = "an earlier attempt failed"
+			u.problem = errors.New(u.state.Error)
+			u.install = func(bool) error {
+				if fails {
+					return errors.New("the installer could not finish")
+				}
+				return nil
+			}
+			if err := a.beginUpdateAttempt(false); err != nil {
+				t.Fatal(err)
+			}
+			a.workers.Wait()
+			state := a.updateState("en")
+			if state.Message != "" {
+				t.Fatalf("installation was still described as running: %+v", state)
+			}
+			if fails {
+				if state.Phase != "ready" || !state.CanInstall || state.Error != "the installer could not finish" {
+					t.Fatalf("the failed installation could not be retried: %+v", state)
+				}
+			} else if state.Phase != "up-to-date" || state.CanInstall || state.Error != "" {
+				t.Fatalf("the successful installation left an old status: %+v", state)
+			}
+			if a.updateApplying {
+				t.Fatal("the editor stayed locked after installation returned")
+			}
+		})
 	}
 }
 

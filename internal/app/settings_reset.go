@@ -114,7 +114,7 @@ func (a *App) lockSettingsData() func() {
 }
 
 func (a *App) settingsResetBusyLocked() bool {
-	return a.isRunningLocked() || a.isTeXSetupRunningLocked() || a.folderPickerRequests > 0
+	return a.updateApplying || a.isRunningLocked() || a.isTeXSetupRunningLocked() || a.folderPickerRequests > 0
 }
 
 func (a *App) settingsResetHandler(w http.ResponseWriter, r *http.Request) {
@@ -149,7 +149,7 @@ func (a *App) settingsResetHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if a.settingsResetPending || a.settingsResetBusyLocked() {
-		a.writeSettingsConflictLocked(w, r, false, "コンパイル，TeX の操作，フォルダー選択が終わってから初期化してください．")
+		a.writeSettingsConflictLocked(w, r, false, "アプリの更新，コンパイル，TeX の操作，フォルダー選択が終わってから初期化してください．")
 		a.mu.Unlock()
 		return
 	}
@@ -174,7 +174,7 @@ func (a *App) settingsResetHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if a.settingsResetBusyLocked() {
-		a.writeSettingsConflictLocked(w, r, false, "コンパイル，TeX の操作，フォルダー選択が終わってから初期化してください．")
+		a.writeSettingsConflictLocked(w, r, false, "アプリの更新，コンパイル，TeX の操作，フォルダー選択が終わってから初期化してください．")
 		return
 	}
 	if err := recoverSettingsReset(a.options.ConfigDir); err != nil {

@@ -260,6 +260,10 @@ jobs:
       - name: Test the packaged app, editing, compilation, and shutdown
         run: node scripts/test-macos.mjs
 
+      - name: Test automatic updates and restore the same editor
+        if: matrix.architecture == 'arm64'
+        run: node scripts/test-macos-update.mjs
+
       - name: Test the native macOS folder and Save As dialogs
         if: ${{ !cancelled() }}
         shell: bash

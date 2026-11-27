@@ -57,6 +57,18 @@ func ManageStoreUpdates(ctx context.Context, options StoreUpdateOptions) (StoreU
 	case <-ctx.Done():
 		return StoreUpdateState{}, ctx.Err()
 	}
+	if options.Action == "install" && options.Restart {
+		// Windows restarts an updated app only after it has run for 60 seconds.
+		// The process time covers manual updates immediately after launch too.
+		// https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-registerapplicationrestart
+		startedAt, err := storeProcessStartedAt()
+		if err != nil {
+			return StoreUpdateState{}, err
+		}
+		if err := waitStoreRestartAge(ctx, startedAt); err != nil {
+			return StoreUpdateState{}, err
+		}
+	}
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	hr, _, _ := startupCombase.NewProc("RoInitialize").Call(0) // RO_INIT_SINGLETHREADED
@@ -75,6 +87,18 @@ func ManageStoreUpdates(ctx context.Context, options StoreUpdateOptions) (StoreU
 	}
 	defer store.call(2)
 	return performStoreUpdates(ctx, store, options)
+}
+
+func storeProcessStartedAt() (time.Time, error) {
+	process, err := syscall.GetCurrentProcess()
+	if err != nil {
+		return time.Time{}, messages.Errorf("更新後の再起動に必要な起動時刻を取得できません: %w", err)
+	}
+	var created, exited, kernel, user syscall.Filetime
+	if err := syscall.GetProcessTimes(process, &created, &exited, &kernel, &user); err != nil {
+		return time.Time{}, messages.Errorf("更新後の再起動に必要な起動時刻を取得できません: %w", err)
+	}
+	return time.Unix(0, created.Nanoseconds()), nil
 }
 
 func newStoreUpdateWindow(interactive bool) (uintptr, error) {

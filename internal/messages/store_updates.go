@@ -13,6 +13,7 @@ func init() {
 		"Microsoft Store から更新の応答を受け取れませんでした．":           "Microsoft Store did not return an update response.",
 		"更新後に開くアプリの起動引数が長すぎるか無効です．":                     "The command-line arguments for restarting the updated app are too long or invalid.",
 		"Microsoft Store の更新を処理できません (HRESULT 0x%08X)．": "Could not process the Microsoft Store update (HRESULT 0x%08X).",
+		"更新後の再起動に必要な起動時刻を取得できません: %w":                   "Could not read the process start time needed to restart after the update: %w",
 	} {
 		english[key] = value
 	}

@@ -194,10 +194,7 @@ func TestReplaceExecutableLeavesTheOriginalWhenThePreparedFileIsMissing(t *testi
 	directory := t.TempDir()
 	target := filepath.Join(directory, "editor.exe")
 	writeUpdateTestFile(t, target, []byte("previous application"))
-	before, err := os.Stat(target)
-	if err != nil {
-		t.Fatal(err)
-	}
+	before := updateTestFileInfo(t, target)
 	expected, err := fileHash(target)
 	if err != nil {
 		t.Fatal(err)
@@ -231,10 +228,7 @@ func TestReplaceExecutableRestoresTheOriginalAfterAMoveFailure(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	before, err := os.Stat(target)
-	if err != nil {
-		t.Fatal(err)
-	}
+	before := updateTestFileInfo(t, target)
 	if err := os.Chmod(protected, 0500); err != nil {
 		t.Fatal(err)
 	}
@@ -387,10 +381,7 @@ func prepareInstallerProcessTest(t *testing.T, mode string) (InstallPlan, string
 	}
 	target := filepath.Join(root, "editor.exe")
 	writeUpdateTestFile(t, target, application)
-	before, err := os.Stat(target)
-	if err != nil {
-		t.Fatal(err)
-	}
+	before := updateTestFileInfo(t, target)
 	expected, err := fileHash(target)
 	if err != nil {
 		t.Fatal(err)
@@ -490,6 +481,25 @@ func TestRunInstallerRestoresAndStartsThePreviousApplication(t *testing.T) {
 	if err != nil || json.Unmarshal(data, &failure) != nil || failure.Version != "0.1.17" {
 		t.Fatalf("the failed version was not recorded: %q, %v", data, err)
 	}
+}
+
+func updateTestFileInfo(t *testing.T, path string) os.FileInfo {
+	t.Helper()
+	// Windows resolves file IDs lazily for os.Stat. Reading through the open
+	// file records its identity before the installer changes the target path.
+	file, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	info, err := file.Stat()
+	closeErr := file.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	return info
 }
 
 func waitForUpdaterTestReadyFile(t *testing.T, path string) {

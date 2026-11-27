@@ -212,6 +212,8 @@ func (a *App) commitApplicationUpdate(id string) {
 	u.state.Phase = "applying"
 	u.applyingAttemptID = id
 	u.state.Message = "アプリを更新しています．"
+	u.state.Error = ""
+	u.problem = nil
 	a.updateApplying = true
 	automatic := attempt.automatic
 	channel := u.state.Channel
@@ -252,6 +254,7 @@ func (a *App) commitApplicationUpdate(id string) {
 	}
 	a.releaseUpdatePreparation()
 	u.mu.Lock()
+	u.state.Message = ""
 	if err != nil {
 		u.state.Phase = "ready"
 		u.state.Error = err.Error()
@@ -260,6 +263,8 @@ func (a *App) commitApplicationUpdate(id string) {
 	} else {
 		u.state.Phase = "up-to-date"
 		u.state.CanInstall = false
+		u.state.Error = ""
+		u.problem = nil
 	}
 	u.mu.Unlock()
 }
