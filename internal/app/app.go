@@ -71,7 +71,9 @@ type App struct {
 	synctexVersions       map[string]*synctexVersion
 	synctexSlots          chan struct{}
 
-	browserEnd chan struct{}
+	browserEnd     chan struct{}
+	updates        *applicationUpdates
+	updateApplying bool
 }
 
 type State struct {
@@ -150,6 +152,7 @@ func New(options Options) (*App, error) {
 	if err := a.loadConfig(); err != nil {
 		return nil, err
 	}
+	a.initApplicationUpdates()
 	if options.TexBin != "" {
 		a.config.TexBin = options.TexBin
 	}
@@ -174,6 +177,15 @@ func (a *App) SetAddress(address string) {
 }
 
 func (a *App) Close() error {
+	if a.updates != nil {
+		a.updates.cancel()
+		a.updates.mu.Lock()
+		if a.updates.attempt != nil {
+			a.updates.attempt.timer.Stop()
+			a.updates.attempt = nil
+		}
+		a.updates.mu.Unlock()
+	}
 	a.mu.Lock()
 	setupRunning := a.isTeXSetupRunningLocked()
 	var setupDone <-chan struct{}
@@ -207,6 +219,7 @@ func (a *App) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/state", a.stateHandler)
 	mux.HandleFunc("/api/session", a.browserSessionHandler)
+	a.registerUpdateHandlers(mux)
 	mux.HandleFunc("/api/project/open", a.openHandler)
 	mux.HandleFunc("/api/project/recent", a.recentProjectHandler)
 	mux.HandleFunc("/api/project/delete", a.projectDeleteHandler)

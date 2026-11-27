@@ -67,6 +67,7 @@ func startupLaunchAgentExecutable(data []byte) (string, error) {
 }
 
 func validStartupMacExecutable(executable string) bool {
-	return path.IsAbs(executable) && path.Base(executable) == branding.ExecutableName &&
+	name := path.Base(executable)
+	return path.IsAbs(executable) && (name == branding.ExecutableName || name == "LocalTeXWebEditor") &&
 		strings.HasSuffix(path.Dir(executable), ".app/Contents/MacOS")
 }

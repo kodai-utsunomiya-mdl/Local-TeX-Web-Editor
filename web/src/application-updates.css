@@ -1,0 +1,11 @@
+.application-updates { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
+.application-updates h3 { color: var(--text); font-size: 12px; margin-bottom: 14px; }
+.application-updates .field-help + .field-help { margin-top: 10px; }
+.application-updates-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
+.application-updates-actions a { font-size: 11px; color: var(--accent); text-underline-offset: 3px; }
+.application-updates progress { display: block; width: 100%; height: 7px; margin: 14px 0; accent-color: var(--accent); }
+.application-update-banner { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 16px; flex: 0 0 auto; padding: 10px 14px; background: var(--accent-soft); color: var(--text); border-bottom: 1px solid var(--border); font-size: 11px; line-height: 1.7; }
+.application-update-banner > span { flex: 1 1 280px; }
+.application-update-banner-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; }
+.application-update-banner a { color: var(--accent); text-underline-offset: 3px; }
+.application-update-open { color: var(--accent); font-size: 10px; padding: 0; border: 0; background: transparent; }

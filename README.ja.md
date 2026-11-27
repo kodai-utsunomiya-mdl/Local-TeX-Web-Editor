@@ -4,13 +4,13 @@
 
 [![Microsoft Store から無料の Windows 版をインストール](docs/download-store.svg)](https://apps.microsoft.com/detail/9P6QF32N19HG?hl=ja-jp&gl=JP)
 &nbsp;&nbsp;
-[![Windows 版の ZIP をダウンロード](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.16/local-tex-web-editor-0.1.16-windows-x64.zip)
+[![Windows 版の ZIP をダウンロード](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.17/local-tex-web-editor-0.1.17-windows-x64.zip)
 &nbsp;&nbsp;
-[![macOS 版をダウンロード](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.16/local-tex-web-editor-0.1.16-macos-universal.zip)
+[![macOS 版をダウンロード](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.17/local-tex-web-editor-0.1.17-macos-universal.zip)
 
-**v0.1.16** · [配布ファイルと更新内容](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [初めて使う](#初めて使う) · [起動する](#ダウンロードして起動する) · [利用前の準備](#利用前の準備) · [アプリの容量](#アプリとデータの保存先)
+**v0.1.17** · [配布ファイルと更新内容](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [初めて使う](#初めて使う) · [起動する](#ダウンロードして起動する) · [利用前の準備](#利用前の準備) · [アプリの容量](#アプリとデータの保存先)
 
-ZIP は v0.1.16 を配布する．Microsoft Store 版の更新は，Store の審査と公開の完了後に利用できる．
+ZIP は v0.1.17 を配布する．Microsoft Store 版の更新は，Store の審査と公開の完了後に利用できる．
 
 Windows と macOS のブラウザで TeX と Markdown の原稿を編集するアプリ．TeX が入っていない PC でも，まずこのアプリを起動し，**ホーム → TeX をセットアップ…** から導入できる．完了すると，導入した環境が自動で選ばれ，原稿をコンパイルできる．起動時には既定のブラウザで `localhost` の画面が開き，原稿と PDF を同じウィンドウで確認できる．
 
@@ -64,7 +64,7 @@ macOS 版の最低 OS は，アプリのビルドに使う [Go 1.25 の対応 OS
 #### ZIP をダウンロードする
 
 1. [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) を開き，最新のバージョンを選ぶ．
-2. **Assets** の `local-tex-web-editor-0.1.16-windows-x64.zip` をダウンロードする．`Source code` は開発用のソースである．
+2. **Assets** の `local-tex-web-editor-0.1.17-windows-x64.zip` をダウンロードする．`Source code` は開発用のソースである．
 3. ZIP を展開し，`local-tex-web-editor.exe` をダブルクリックする．
 4. ホーム画面が開いたら，TeX がない場合は [アプリから TeX を導入する](#アプリから-tex-を導入する)，すでにある場合は [既存の TeX を選ぶ](#既存の-tex-を選ぶ) へ進む．続いてホームの **Create from a template (テンプレートから作成)** からサンプルを作れる．
 
@@ -72,7 +72,7 @@ Windows の ZIP に含まれる実行ファイルにはコード署名が付い�
 
 ### macOS
 
-1. [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) の **Assets** から `local-tex-web-editor-0.1.16-macos-universal.zip` をダウンロードする．Apple Silicon と Intel で共通の ZIP を使う．
+1. [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) の **Assets** から `local-tex-web-editor-0.1.17-macos-universal.zip` をダウンロードする．Apple Silicon と Intel で共通の ZIP を使う．
 2. ZIP を展開し，`Local TeX Web Editor.app` を「アプリケーション」フォルダーへ移す．
 3. Finder や Spotlight から `Local TeX Web Editor` を開く．ブラウザに編集画面が開く．
 4. ホーム画面が開いたら，TeX がない場合は [アプリから TeX を導入する](#アプリから-tex-を導入する)，すでにある場合は [既存の TeX を選ぶ](#既存の-tex-を選ぶ) へ進む．続いてホームの **Create from a template (テンプレートから作成)** からサンプルを作れる．
@@ -228,11 +228,13 @@ v0.1.14 以前から更新した場合は，新版のアプリを一度開き，
 
 ### 更新する
 
-**Microsoft Store 版**は，Microsoft Store からアプリを更新し，スタートメニューから開く．
+**アプリの自動更新は初期状態で有効** である．起動後に更新を確認し，新しい版をバックグラウンドで取得する．編集中の原稿の保存，コンパイル，TeX の操作が済み，開いている全ての編集画面で操作が落ち着いてから更新して再起動する．再起動後は，同じブラウザタブで編集を再開できる．
 
-**Windows の ZIP 版**では，新しい ZIP を展開して `.exe` を起動する．異なるバージョンが動いている場合は，起動中のバージョンと今回開いたバージョンが表示される．原稿を保存して旧版を終了すると，新版の画面が開く．設定画面の「アプリのバージョン」と「起動中の実行ファイル」で，動いているアプリを確認できる．
+更新の通知にある **1 時間後に更新** で適用を延期できる．**設定 → アプリの更新** には，自動更新の設定，**今すぐ確認**，**保存して更新・再起動**，更新内容へのリンクがある．自動更新を無効にした場合も，**今すぐ確認** から更新を取得できる．
 
-Mac では，原稿を保存してアプリを終了し，展開した新しい `Local TeX Web Editor.app` を「アプリケーション」にある旧版と置き換えてから開く．設定と草稿はユーザーの設定フォルダーから読み込む．
+**Microsoft Store 版** は，Store から利用可能になった更新を取得する．Windows の自動更新設定や通信条件に従って進み，Store の審査と公開が完了した版へ更新する．**Windows の ZIP 版** は，署名を確認した更新ファイルを取得し，起動中の実行ファイルを入れ替える．新しい版の起動に失敗した場合は元の実行ファイルへ戻す．**macOS 版** は，アプリに同梱した Sparkle で署名を確認し，アプリケーションを更新する．
+
+v0.1.16 以前の ZIP 版からは，自動更新を備えた版を最初に一度導入する．Windows では新しい ZIP を展開して `.exe` を起動し，原稿を保存して旧版を終了する．Mac ではアプリを終了し，新しい `Local TeX Web Editor.app` を「アプリケーション」にある旧版と置き換えて開く．その後の更新はアプリが確認する．設定画面の **アプリのバージョン** と **起動中の実行ファイル** で，動いているアプリを確認できる．
 
 同じバージョンのアプリをもう一度開くと，既存の編集画面へ接続する．同じ原稿を複数のプロセスが同時にコンパイルすることを防ぐ仕組みも入れている．
 
@@ -581,7 +583,7 @@ go build -o bin/local-tex-web-editor.exe ./cmd/local-tex-editor
 Windows 用の配布ファイルは次のコマンドで作成する．
 
 ```sh
-go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.16" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
+go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.17" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
 ```
 
 `build:windows-resources` は同梱の ICO から Windows x64 用の resource を生成する．実行ファイルのビルド時に，16〜256 px の 9 サイズのアイコンが組み込まれる．
@@ -597,7 +599,7 @@ npx playwright install chromium
 node scripts/build-macos.mjs
 ```
 
-`dist/local-tex-web-editor-0.1.16-macos-universal.zip` に，Apple Silicon と Intel で動く `.app`，日英の README，ライセンスを収録する．
+`dist/local-tex-web-editor-0.1.17-macos-universal.zip` に，Apple Silicon と Intel で動く `.app`，日英の README，ライセンスを収録する．
 
 起動時のオプション:
 
@@ -620,6 +622,7 @@ GitHub Actions はアプリをビルドし，Windows と macOS の Apple Silicon
 
 ## 利用するライブラリ
 
+- [Sparkle](https://sparkle-project.org/): macOS アプリの更新 (MIT)
 - [CodeMirror](https://codemirror.net/): 編集画面 (MIT)
 - [PDF.js](https://mozilla.github.io/pdf.js/): PDF の表示 (Apache-2.0)
 - [markdown-it](https://github.com/markdown-it/markdown-it): Markdown の表示 (MIT)

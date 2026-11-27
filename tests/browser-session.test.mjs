@@ -11,6 +11,7 @@ function streamingServer() {
     const body = new ReadableStream({
       start(controller) {
         connection.close = () => controller.close();
+        connection.send = value => controller.enqueue(value instanceof Uint8Array ? value : new TextEncoder().encode(value));
         options.signal.addEventListener('abort', () => controller.error(new DOMException('Closed', 'AbortError')), { once: true });
       },
     });
@@ -39,6 +40,40 @@ test('the default fetch receives the browser global object as its receiver', asy
   } finally {
     session.stop();
   }
+});
+
+test('a named editor receives update events across UTF-8 and stream boundaries', async () => {
+  const server = streamingServer(), events = [];
+  const session = new BrowserSession({ token: 'local-token', clientId: 'editor-one', fetch: server.request, onMessage: event => events.push(event) });
+  try {
+    session.start(); await delay(0);
+    assert.equal(server.connections[0].url, '/api/session?clientId=editor-one');
+    const first = { type: 'prepare-update', attemptId: 'first', message: '保存中です．' };
+    const bytes = new TextEncoder().encode(`: connected\r\n\r\ndata: ${JSON.stringify(first)}\r\n\r\n`);
+    for (let offset = 0; offset < bytes.length; offset += 3) server.connections[0].send(bytes.slice(offset, offset + 3));
+    await delay(0);
+    assert.deepEqual(events, [first]);
+    server.connections[0].send('data: invalid\n\ndata: {"type":"update-cancelled","attemptId":"first"}\n\n');
+    await delay(0);
+    assert.equal(events.length, 2);
+    assert.equal(events[1].type, 'update-cancelled');
+  } finally { session.stop(); }
+});
+
+test('a pending preparation does not delay the cancellation event', async () => {
+  const server = streamingServer(), events = [];
+  let finish;
+  const wait = new Promise(resolve => { finish = resolve; });
+  const session = new BrowserSession({ token: 'local-token', fetch: server.request, onMessage: event => {
+    events.push(event.type);
+    return event.type === 'prepare-update' ? wait : undefined;
+  } });
+  try {
+    session.start(); await delay(0);
+    server.connections[0].send('data: {"type":"prepare-update","attemptId":"first"}\n\ndata: {"type":"update-cancelled","attemptId":"first"}\n\n');
+    await delay(0);
+    assert.deepEqual(events, ['prepare-update', 'update-cancelled']);
+  } finally { finish(); session.stop(); }
 });
 
 test('one tab opens one authenticated stream and aborts it when stopped', async () => {

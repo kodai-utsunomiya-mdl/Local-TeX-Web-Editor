@@ -11,15 +11,17 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"time"
 
 	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/app"
 	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/platform"
+	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/updater"
 	"github.com/kodai-utsunomiya-mdl/local-tex-editor/web"
 )
 
-var version = "0.1.5"
+var version = "development"
 var noBrowser bool
 
 func main() {
@@ -33,6 +35,10 @@ func main() {
 }
 
 func run() error {
+	if len(os.Args) == 3 && os.Args[1] == "--apply-app-update" {
+		noBrowser = true
+		return updater.RunInstaller(os.Args[2])
+	}
 	project := flag.String("project", "", "TeX project folder")
 	texBin := flag.String("tex-bin", "", "TeX Live executables folder")
 	listen := flag.String("listen", "127.0.0.1:0", "loopback address to listen on")
@@ -133,6 +139,7 @@ func run() error {
 	fmt.Println(string(data))
 	serveResult := make(chan error, 1)
 	go func() { serveResult <- server.Serve(listener) }()
+	application.StartAutomaticUpdates()
 	if update != nil {
 		if !update.Complete(url + "#token=" + token) {
 			return nil
@@ -144,6 +151,8 @@ func run() error {
 	}
 	if !noBrowser {
 		application.StartInstallationUpdate(platform.RefreshInstalledShortcuts, func() error { return platform.RefreshStartupRegistration(*configDir) })
+	} else if runtime.GOOS == "darwin" {
+		application.StartInstallationUpdate(func() error { return platform.RefreshStartupRegistration(*configDir) })
 	}
 	select {
 	case <-quit:

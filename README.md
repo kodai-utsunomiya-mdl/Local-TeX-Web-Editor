@@ -4,13 +4,13 @@ English | [日本語](README.ja.md) · [Website and guide](https://kodai-utsunom
 
 [![Get the free Windows app from Microsoft Store](docs/download-store.svg)](https://apps.microsoft.com/detail/9P6QF32N19HG)
 &nbsp;&nbsp;
-[![Download Windows ZIP](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.16/local-tex-web-editor-0.1.16-windows-x64.zip)
+[![Download Windows ZIP](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.17/local-tex-web-editor-0.1.17-windows-x64.zip)
 &nbsp;&nbsp;
-[![Download for macOS](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.16/local-tex-web-editor-0.1.16-macos-universal.zip)
+[![Download for macOS](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.17/local-tex-web-editor-0.1.17-macos-universal.zip)
 
-**v0.1.16** · [All downloads and release notes](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [Get started](#first-document) · [Download and launch](#download-and-launch) · [Requirements](#requirements) · [App size](#app-files-and-storage)
+**v0.1.17** · [All downloads and release notes](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [Get started](#first-document) · [Download and launch](#download-and-launch) · [Requirements](#requirements) · [App size](#app-files-and-storage)
 
-The ZIP downloads are v0.1.16. The Microsoft Store update becomes available after Store review and publication.
+The ZIP downloads are v0.1.17. The Microsoft Store update becomes available after Store review and publication.
 
 Edit TeX and Markdown documents in your browser on Windows or macOS. On a computer without TeX, start this app and choose **Home → Set up TeX…**. The app downloads and installs TeX, selects the new environment when setup finishes, and uses it to compile your documents. Launching the app opens a `localhost` page in your default browser, with the editor and PDF preview in the same window.
 
@@ -68,7 +68,7 @@ Microsoft Store manages installation and app updates. The setup guide below cont
 #### ZIP download
 
 1. Open [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) and select the latest version.
-2. Under **Assets**, download `local-tex-web-editor-0.1.16-windows-x64.zip`. The **Source code** archives contain the files for development.
+2. Under **Assets**, download `local-tex-web-editor-0.1.17-windows-x64.zip`. The **Source code** archives contain the files for development.
 3. Extract the ZIP and double-click `local-tex-web-editor.exe`.
 4. On Home, [set up TeX from the app](#set-up-tex-from-the-app) if TeX is not installed, or [select your existing installation](#use-an-existing-tex-installation) if you already use TeX. Then choose **Create from a template** on Home to create a sample.
 
@@ -76,7 +76,7 @@ The Windows executable in the ZIP download does not have a code signature. If Sm
 
 ### macOS
 
-1. Under **Assets** in [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases), download `local-tex-web-editor-0.1.16-macos-universal.zip`. The same ZIP supports Apple Silicon and Intel.
+1. Under **Assets** in [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases), download `local-tex-web-editor-0.1.17-macos-universal.zip`. The same ZIP supports Apple Silicon and Intel.
 2. Extract the ZIP and move `Local TeX Web Editor.app` to **Applications**.
 3. Open **Local TeX Web Editor** from Finder or Spotlight. The editor opens in your browser.
 4. On Home, [set up TeX from the app](#set-up-tex-from-the-app) if TeX is not installed, or [select your existing installation](#use-an-existing-tex-installation) if you already use TeX. Then choose **Create from a template** on Home to create a sample.
@@ -232,11 +232,13 @@ After updating from v0.1.14 or earlier, open the app once and use the newly open
 
 ### Update the app
 
-For the **Microsoft Store edition**, use Microsoft Store to install app updates, then open the app from the Start menu.
+**Automatic app updates are enabled by default.** After startup, the app checks for updates and downloads new versions in the background. It waits for saved documents, completed compilation and TeX operations, and a pause in activity across every open editor before updating and restarting. The same browser tabs reconnect to the updated app.
 
-For the **Windows ZIP edition**, extract the new ZIP and launch its `.exe`. If another version is running, the app shows both the running version and the version you just launched. Save your documents and exit the old version to open the new one. Settings shows the app version and the path of the running executable.
+Choose **Update in one hour** in the notification to postpone installation. **Settings → App updates** includes the automatic update setting, **Check now**, **Save, update and restart**, and release notes. **Check now** can download an update even when automatic updates are disabled.
 
-On Mac, save your documents and exit the app, replace the old copy in **Applications** with the new `Local TeX Web Editor.app`, then open it. Settings and drafts are loaded from your user configuration folder.
+The **Microsoft Store edition** uses updates available from the Store, following Windows update settings and connection conditions. Store review and publication must complete before an update becomes available. The **Windows ZIP edition** verifies signed update information and replaces the running executable after the app exits. If the new app fails to start, it restores the previous executable. The **macOS edition** uses the bundled Sparkle updater to verify and update the application.
+
+For a ZIP installation of v0.1.16 or earlier, install a version with automatic updates once. On Windows, extract the new ZIP, launch its `.exe`, save your work, and exit the older version. On Mac, exit the app, replace the copy in **Applications** with the new `Local TeX Web Editor.app`, and open it. The app checks for subsequent updates. Settings shows the app version and the path of the running executable.
 
 Launching the same version again connects to the existing editor. A project lock also prevents multiple app processes from compiling the same project at the same time.
 
@@ -585,7 +587,7 @@ go build -o bin/local-tex-web-editor.exe ./cmd/local-tex-editor
 Build a Windows distribution executable:
 
 ```sh
-go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.16" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
+go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.17" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
 ```
 
 `build:windows-resources` generates Windows x64 resources from the bundled ICO. The executable embeds nine icon sizes from 16 to 256 px.
@@ -601,7 +603,7 @@ npx playwright install chromium
 node scripts/build-macos.mjs
 ```
 
-This creates `dist/local-tex-web-editor-0.1.16-macos-universal.zip` with an app supporting Apple Silicon and Intel, the English and Japanese READMEs, and license files.
+This creates `dist/local-tex-web-editor-0.1.17-macos-universal.zip` with an app supporting Apple Silicon and Intel, the English and Japanese READMEs, and license files.
 
 Command-line options:
 
@@ -624,6 +626,7 @@ When the Windows and both macOS test jobs on `main` succeed, and no release exis
 
 ## Libraries
 
+- [Sparkle](https://sparkle-project.org/): macOS app updates (MIT)
 - [CodeMirror](https://codemirror.net/): editor (MIT)
 - [PDF.js](https://mozilla.github.io/pdf.js/): PDF display (Apache-2.0)
 - [markdown-it](https://github.com/markdown-it/markdown-it): Markdown rendering (MIT)

@@ -1,6 +1,7 @@
 package app
 
 import (
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -28,6 +29,12 @@ func (a *App) browserSessionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	end := a.browserEnd
 	a.mu.Unlock()
+	client := a.registerUpdateBrowser(r.URL.Query().Get("clientId"))
+	defer a.unregisterUpdateBrowser(client)
+	var events <-chan updateEvent
+	if client != nil {
+		events = client.events
+	}
 
 	w.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
 	w.Header().Set("X-Accel-Buffering", "no")
@@ -56,6 +63,19 @@ func (a *App) browserSessionHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		case <-end:
 			return
+		case event := <-events:
+			data, err := json.Marshal(event)
+			if err != nil {
+				return
+			}
+			_ = controller.SetWriteDeadline(time.Now().Add(5 * time.Second))
+			if _, err := w.Write(append(append([]byte("data: "), data...), []byte("\n\n")...)); err != nil {
+				return
+			}
+			if err := controller.Flush(); err != nil {
+				return
+			}
+			_ = controller.SetWriteDeadline(time.Time{})
 		case <-ticker.C:
 			if !writeComment("keepalive") {
 				return

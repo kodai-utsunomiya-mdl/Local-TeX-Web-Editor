@@ -31,6 +31,13 @@ func startupMacPaths() (string, string, error) {
 	if !validStartupMacExecutable(executable) || strings.Contains(executable, "/AppTranslocation/") || strings.HasPrefix(executable, "/Volumes/") {
 		return "", "", messages.Errorf("ログイン時に起動するには，アプリケーションフォルダーの Local TeX Web Editor.app から設定してください．")
 	}
+	// The native launcher starts both the backend and Sparkle. Older registrations
+	// that point to the backend are accepted and refreshed to this launcher.
+	executable = filepath.Join(filepath.Dir(executable), "LocalTeXWebEditor")
+	info, err := os.Stat(executable)
+	if err != nil || !info.Mode().IsRegular() || info.Mode().Perm()&0111 == 0 {
+		return "", "", messages.Errorf("アプリの起動用プログラムを確認できません．Local TeX Web Editor.app を開き直してください．")
+	}
 	return filepath.Join(home, "Library", "LaunchAgents", startupAgentLabel+".plist"), executable, nil
 }
 

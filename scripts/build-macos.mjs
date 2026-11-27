@@ -3,6 +3,8 @@ import { promisify } from 'node:util';
 import { appendFile, chmod, cp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { chromium } from '@playwright/test';
+import { createHash } from 'node:crypto';
+import { macOSUpdateConfiguration, sparkleRelease } from './macos-update-config.mjs';
 
 if (process.platform !== 'darwin') throw new Error('Build the macOS application on a macOS runner.');
 const execute = promisify(execFile);
@@ -15,6 +17,7 @@ const application = path.join(distribution, 'Local TeX Web Editor.app');
 const contents = path.join(application, 'Contents');
 const macos = path.join(contents, 'MacOS');
 const resources = path.join(contents, 'Resources');
+const updateConfiguration = macOSUpdateConfiguration(process.env.APP_UPDATE_PUBLIC_KEY || await readFile(path.join(root, 'internal/updater/public-key.txt'), 'utf8'));
 await rm(build, { recursive: true, force: true });
 await rm(distribution, { recursive: true, force: true });
 await mkdir(build, { recursive: true });
@@ -28,11 +31,36 @@ async function run(program, args, options = {}) {
   return result;
 }
 
+const sparkleDirectory = path.join(build, 'sparkle');
+await mkdir(sparkleDirectory, { recursive: true });
+const sparkleArchive = path.join(build, `Sparkle-${sparkleRelease.version}.tar.xz`);
+const sparkleResponse = await fetch(sparkleRelease.url, { signal: AbortSignal.timeout(90000) });
+if (!sparkleResponse.ok || !sparkleResponse.body) throw new Error(`Could not download Sparkle (${sparkleResponse.status}).`);
+const sparkleParts = [];
+let sparkleBytes = 0;
+for await (const chunk of sparkleResponse.body) {
+  sparkleBytes += chunk.length;
+  if (sparkleBytes > 32 * 1024 * 1024) throw new Error('The Sparkle archive is larger than expected.');
+  sparkleParts.push(chunk);
+}
+const sparkleData = Buffer.concat(sparkleParts);
+if (createHash('sha256').update(sparkleData).digest('hex') !== sparkleRelease.sha256) throw new Error('The Sparkle archive did not match its recorded SHA-256.');
+await writeFile(sparkleArchive, sparkleData);
+await run('/usr/bin/tar', ['-xf', sparkleArchive, '-C', sparkleDirectory]);
+await run(process.execPath, [path.join(root, 'scripts/test-sparkle-signatures.mjs'), path.join(sparkleDirectory, 'bin/sign_update')]);
+const framework = path.join(contents, 'Frameworks', 'Sparkle.framework');
+await mkdir(path.dirname(framework), { recursive: true });
+await run('/usr/bin/ditto', [path.join(sparkleDirectory, 'Sparkle.framework'), framework]);
+
 for (const [goArchitecture, swiftArchitecture] of [['arm64', 'arm64'], ['amd64', 'x86_64']]) {
   await run('go', ['build', '-trimpath', `-ldflags=-s -w -X main.version=${version}`, '-o', path.join(build, `server-${goArchitecture}`), './cmd/local-tex-editor'], {
     env: { ...process.env, CGO_ENABLED: '0', GOOS: 'darwin', GOARCH: goArchitecture },
   });
-  await run('/usr/bin/xcrun', ['swiftc', '-O', '-target', `${swiftArchitecture}-apple-macos12.0`, path.join(root, 'scripts/macos-launcher.swift'), '-o', path.join(build, `launcher-${goArchitecture}`)]);
+  await run('/usr/bin/xcrun', ['swiftc', '-O', '-target', `${swiftArchitecture}-apple-macos12.0`,
+    '-F', path.dirname(framework), '-framework', 'Sparkle',
+    '-Xlinker', '-rpath', '-Xlinker', '@executable_path/../Frameworks',
+    path.join(root, 'scripts/macos-launcher.swift'), path.join(root, 'scripts/macos-updater.swift'),
+    '-o', path.join(build, `launcher-${goArchitecture}`)]);
 }
 await run('/usr/bin/lipo', ['-create', path.join(build, 'server-arm64'), path.join(build, 'server-amd64'), '-output', path.join(macos, 'local-tex-web-editor')]);
 await run('/usr/bin/lipo', ['-create', path.join(build, 'launcher-arm64'), path.join(build, 'launcher-amd64'), '-output', path.join(macos, 'LocalTeXWebEditor')]);
@@ -65,12 +93,14 @@ const info = {
   CFBundleIconFile: 'app-icon.icns', LSMinimumSystemVersion: '12.0',
   LSUIElement: true, NSHighResolutionCapable: true,
   NSHumanReadableCopyright: 'Local TeX Web Editor contributors. MIT License.',
+  ...updateConfiguration,
 };
 await writeFile(path.join(contents, 'Info.plist'), JSON.stringify(info));
 await run('/usr/bin/plutil', ['-convert', 'xml1', path.join(contents, 'Info.plist')]);
 await writeFile(path.join(contents, 'PkgInfo'), 'APPL????');
 await cp(path.join(root, 'LICENSE'), path.join(resources, 'LICENSE'));
 await cp(path.join(root, 'web/dist/THIRD_PARTY_LICENSES.txt'), path.join(resources, 'THIRD_PARTY_LICENSES.txt'));
+await cp(path.join(sparkleDirectory, 'LICENSE'), path.join(resources, 'SPARKLE_LICENSE.txt'));
 // Ad-hoc signing makes both Mach-O slices and the bundle verifiable. A Developer
 // ID signature and notarization require the maintainer's Apple credentials.
 await run('/usr/bin/codesign', ['--force', '--sign', '-', '--timestamp=none', path.join(macos, 'local-tex-web-editor')]);

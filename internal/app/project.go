@@ -53,12 +53,15 @@ type projectSettings struct {
 }
 
 type configuration struct {
-	SettingsGeneration string                     `json:"settingsGeneration,omitempty"`
-	DraftsGeneration   string                     `json:"draftsGeneration,omitempty"`
-	TexBin             string                     `json:"texBin"`
-	TeXInstallations   []managedTeXInstallation   `json:"texInstallations,omitempty"`
-	RecentProjects     []string                   `json:"recentProjects"`
-	Projects           map[string]projectSettings `json:"projects"`
+	SettingsGeneration     string                     `json:"settingsGeneration,omitempty"`
+	DraftsGeneration       string                     `json:"draftsGeneration,omitempty"`
+	TexBin                 string                     `json:"texBin"`
+	TeXInstallations       []managedTeXInstallation   `json:"texInstallations,omitempty"`
+	RecentProjects         []string                   `json:"recentProjects"`
+	Projects               map[string]projectSettings `json:"projects"`
+	AutomaticAppUpdates    *bool                      `json:"automaticAppUpdates,omitempty"`
+	LastAppUpdateCheck     time.Time                  `json:"lastAppUpdateCheck,omitempty"`
+	AppUpdateDeferredUntil time.Time                  `json:"appUpdateDeferredUntil,omitempty"`
 }
 
 func (a *App) loadConfig() error {

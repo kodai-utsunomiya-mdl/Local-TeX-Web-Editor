@@ -100,6 +100,9 @@ jobs:
       - name: Restore the previous browser tab before installing TeX
         run: npm test -- tests/startup.spec.mjs --grep "ブラウザを終了して前回のタブを復元" --output test-results/browser-session-restore
 
+      - name: Test application updates before installing TeX
+        run: npm test -- tests/application-updates.spec.mjs --output test-results/application-updates
+
       - name: Install TeX through the application and compile the research preambles
         run: node scripts/test-tex-setup.mjs
 
@@ -260,6 +263,10 @@ jobs:
       - name: Test the packaged app, editing, compilation, and shutdown
         run: node scripts/test-macos.mjs
 
+      - name: Test automatic updates and restore the same editor
+        if: matrix.architecture == 'arm64'
+        run: node scripts/test-macos-update.mjs
+
       - name: Test the native macOS folder and Save As dialogs
         if: ${{ !cancelled() }}
         shell: bash
@@ -297,6 +304,8 @@ jobs:
 
       - name: Create a release when the version is new
         shell: bash
+        env:
+          APP_UPDATE_PRIVATE_KEY: ${{ secrets.APP_UPDATE_PRIVATE_KEY }}
         run: |
           version=$(node -p "require('./package.json').version")
           tag="v$version"
@@ -311,6 +320,7 @@ jobs:
           mac_archive="local-tex-web-editor-$version-macos-universal.zip"
           cp "macos-release/$mac_archive" "$mac_archive"
           sha256sum "$archive" "$mac_archive" > SHA256SUMS.txt
-          gh release create "$tag" "$archive" "$mac_archive" SHA256SUMS.txt \
+          node scripts/app-update-release.mjs .
+          gh release create "$tag" "$archive" "$mac_archive" SHA256SUMS.txt app-update.json app-update.json.sig appcast.xml \
             --target "$GITHUB_SHA" --title "Local TeX Web Editor $version" \
             --notes-file "release-notes/$tag.md"
