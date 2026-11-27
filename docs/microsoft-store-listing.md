@@ -67,6 +67,8 @@ Paste images, create or paste tables, and start from built-in or custom template
 
 Manage project files from the context menu and copy multiple files from your computer. Download a file using the browser's settings, or choose Save as… to select its destination and name in the Windows save dialog. Files being edited use the current text, including unsaved changes. Create copies of files or folders from their saved contents while continuing to edit the originals. Sort by name or date, drag entries into a manual order, or drop onto a folder to move them. New files can start empty or use one previewed text file from a built-in or custom template. Each TeX document's latest successful PDF appears in the file list with its output name and TeX path; open it, download it, save it to a chosen folder, or copy it into the project. Delete a compiled result after reviewing its document and file count. This clears that document's cached previews and compilation files; source documents and PDFs saved or copied as ordinary files stay in place. Compile again to recreate the result.
 
+Import a project ZIP from Home, choose its destination and name, and open it as a new project. Download the current project as ZIP, or choose Save project ZIP as… to select its location. Source, bibliography, images, fonts and relative folders can travel together to Overleaf. Documents being edited are saved before creating the ZIP; app caches and compilation intermediates are omitted.
+
 Edit Python, JavaScript and other program files. Home checks current and recent folders and explains missing locations; remove an entry while leaving its files and drafts in place. Open documents without unsaved edits load external changes. Documents being edited offer a comparison; a deleted file's text and draft stay available for review. The TeX logo opens Home with current and recent projects. Review a project's contents and enter its name before deleting it. Close all tabs together. The local app keeps running while the browser tab sleeps; use Quit to stop it. Settings > Start at login can start it in the background when you sign in, so restored browser tabs can reconnect after a PC restart.
 
 Preview English or Japanese immediately in Settings, adjust panes and appearance, and use autosave and local drafts. Documents, history and templates stay on your PC.
@@ -90,7 +92,7 @@ Find citation and reference definitions and uses, and preview key renames
 Use two source editors and restore open tabs and their order
 Filter compilation errors and warnings by category
 Import images, paste tables, or create and edit a new table
-Create projects or individual files from built-in or custom templates, with a preview for new files
+Import or download project ZIPs for Overleaf, or create projects and files from templates
 Format Markdown and synchronize source and preview scrolling in both directions
 Create a Markdown page and insert a relative link to it
 Print Markdown to PDF and extract PDF text to a TXT file
@@ -125,11 +127,12 @@ About 2 GB free for initial TeX setup; extra packages may need more space
 ### What's new
 
 ```text
-Version 0.1.17
+Version 0.1.18
 
-- Automatic app updates are enabled by default and use Microsoft Store updates available for this app.
-- Added update progress, Check now, and an option to postpone an update for one hour.
-- Updates wait for saved documents and completed operations across the open editors before restarting.
+- Import project ZIPs into a new folder directly from Home.
+- Save your work and download a project ZIP, or choose its destination with Save project ZIP as….
+- Include source, bibliography, images and relative folders for use in Overleaf.
+- Automatic app updates remain enabled by default and use updates available from Microsoft Store.
 ```
 
 ## 日本語の掲載内容
@@ -165,6 +168,8 @@ PNG・JPEG・PDF を 8 MiB まで取り込み，表計算ソフトからコピ�
 
 各 TeX 文書の最新のコンパイル成功結果を，実際の PDF 名と TeX のパス付きで一覧に表示します．プレビューへ開く，ダウンロードする，名前を付けて保存する，プロジェクトへコピーする操作を選べます．右クリックの「削除…」では，文書とファイルの件数を確認して，その文書の表示用キャッシュとコンパイルの出力・補助ファイルを削除できます．原稿と，通常のファイルとして保存・コピーした PDF はそのまま残り，再コンパイルで結果を作り直せます．
 
+ホームからプロジェクトの ZIP を読み込み，保存先と名前を選んで新しいプロジェクトとして開けます．現在のプロジェクトを ZIP でダウンロードしたり，「ZIP にして名前を付けて保存…」で保存場所を選んだりできます．原稿，参考文献，画像，フォント，元のフォルダー構成をまとめて Overleaf へ持ち込めます．編集中の原稿を保存してから ZIP を作成し，アプリのキャッシュやコンパイルの中間ファイルを除きます．
+
 TeX のロゴからホームへ移り，現在と最近使ったプロジェクトを管理できます．フォルダーの状態を読み直し，見つからない場合は案内を表示します．一覧から外しても原稿と草稿は残ります．未保存の編集がない原稿には外部で変更された本文を読み込み，編集中の場合は内容を比較できます．外部で削除されたファイルも本文と草稿を残して確認できます．プロジェクトの削除には，中身の確認と名前の入力が必要です．Python，JavaScript などのプログラムも編集でき，すべてのタブをまとめて閉じる操作もあります．ブラウザのタブが休止してもアプリは動作を続け，終了ボタンで終了します．「設定 → ログイン時の起動」を有効にすると，ログイン後にバックグラウンドで起動し，PC の再起動後も復元したブラウザのタブから再接続できます．
 
 英語・日本語は選択直後に表示を切り替えられ，配色，フォント，各欄の大きさを選べます．原稿，設定，草稿，履歴，テンプレートは PC に保存します．
@@ -190,7 +195,7 @@ Markdown を直接編集し，ピンチや Ctrl + ホイールで文字サイズ
 原稿を二つ並べ，開いていたタブと並び順を復元
 コンパイルのエラーと警告を種類で絞り込み
 画像の取り込み，コピーした表の挿入，新しい表の作成と編集
-標準・ユーザーのテンプレートからプロジェクトやファイルを作成し，新規ファイルの内容をプレビュー
+ZIP でプロジェクトを読み込み・保存して Overleaf とやり取りし，テンプレートからも原稿を作成
 Markdown の装飾と，原稿・プレビューの両方向のスクロール同期
 Markdown のページを作成し，現在の文書へ相対リンクを挿入
 Markdown を PDF に保存し，PDF の文字を TXT として保存
@@ -225,11 +230,12 @@ TeX の導入と追加パッケージの取得にはインターネット接続
 ### このバージョンの最新情報
 
 ```text
-バージョン 0.1.17
+バージョン 0.1.18
 
-・アプリの自動更新を初期状態で有効にし，Microsoft Store から利用可能な更新を取得する．
-・更新の進捗，「今すぐ確認」，「1 時間後に更新」を追加した．
-・開いている編集画面の原稿の保存と実行中の操作を確認してから更新し，再起動する．
+・ホームからプロジェクトの ZIP を読み込み，新しいフォルダーで開けるようにした．
+・原稿を保存してからプロジェクトを ZIP でダウンロードし，「名前を付けて保存…」では場所を選べるようにした．
+・原稿，参考文献，画像，フォルダー構成をまとめて Overleaf へ持ち込めるようにした．
+・アプリの自動更新は初期状態で有効とし，Microsoft Store から利用可能な更新を取得する．
 ```
 
 ## Images and captions
@@ -271,7 +277,7 @@ Sample project: https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/down
 1. Launch Local TeX Web Editor and use Open to select that folder.
 2. Open notes.md. It starts in Visual editing with the preview closed. Edit a rendered sentence and save with Ctrl+S. Switch to Source to edit the Markdown notation and use the separate preview. Show preview / Hide preview controls its visibility.
 3. Open Settings, switch Language between English and Japanese, and change the theme. These changes do not alter document contents.
-4. To test setup in version 0.1.17, open Home or Settings > Set up TeX…. Review TinyTeX v2026.11, the packages, about 250 MB of downloads and the destination under the app's LocalState folder. Choose Download and install. Allow about 2 GB of free space and an internet connection. Follow the progress log; Close and continue editing allows editing while setup continues. On a disposable first attempt, Stop setup and confirm that it can be started again.
+4. To test setup in version 0.1.18, open Home or Settings > Set up TeX…. Review TinyTeX v2026.11, the packages, about 250 MB of downloads and the destination under the app's LocalState folder. Choose Download and install. Allow about 2 GB of free space and an internet connection. Follow the progress log; Close and continue editing allows editing while setup continues. On a disposable first attempt, Stop setup and confirm that it can be started again.
 5. After setup succeeds, the app selects the new environment. Choose pdfLaTeX as the compilation mode for the sample. An existing TeX installation can also be selected in Settings, for example C:\texlive\2026\bin\windows.
 6. Open main.tex, set the preview to Auto, and click Compile. A PDF appears on the right.
 7. Double-click a sentence in the PDF to open its source line. Ctrl-click that source line to navigate back to the PDF.
@@ -314,7 +320,7 @@ Local TeX Web Editor は，ブラウザを画面として使う Windows のデ�
 1. アプリを起動し，Open からそのフォルダーを選びます．
 2. notes.md を開きます．初期状態は「直接編集」で，プレビューは閉じています．表示された文章を編集し，Ctrl + S で保存します．「ソース」へ切り替えると Markdown の記法とプレビューを使えます．「プレビューを表示 / プレビューを閉じる」で表示を変更できます．
 3. Settings の Language で英語と日本語を切り替え，テーマも変更します．原稿の内容は変わりません．
-4. v0.1.17 のセットアップを確認するため，ホームまたは「設定 → TeX をセットアップ…」を開きます．TinyTeX v2026.11，パッケージ，約 250 MB のダウンロード，アプリの LocalState 内の導入先を確認し，「ダウンロードしてインストール」を選びます．インターネット接続と約 2 GB の空き容量が必要です．進捗とログを確認し，「閉じて編集を続ける」で導入中も編集できます．試験用の最初の操作では「セットアップを停止」も試し，再度開始できることを確認します．
+4. v0.1.18 のセットアップを確認するため，ホームまたは「設定 → TeX をセットアップ…」を開きます．TinyTeX v2026.11，パッケージ，約 250 MB のダウンロード，アプリの LocalState 内の導入先を確認し，「ダウンロードしてインストール」を選びます．インターネット接続と約 2 GB の空き容量が必要です．進捗とログを確認し，「閉じて編集を続ける」で導入中も編集できます．試験用の最初の操作では「セットアップを停止」も試し，再度開始できることを確認します．
 5. 導入が成功すると，新しい環境が選ばれます．このサンプルのコンパイル方法には pdfLaTeX を選びます．設定で C:\texlive\2026\bin\windows などの既存の TeX を選ぶこともできます．
 6. main.tex を開き，プレビューを Auto にして Compile を押します．右側に PDF が表示されます．
 7. PDF の文章をダブルクリックして原稿の行へ移動し，その行を Ctrl + クリックして PDF へ移動します．

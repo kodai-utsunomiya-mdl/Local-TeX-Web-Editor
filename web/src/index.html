@@ -37,6 +37,7 @@
   <link rel="stylesheet" href="/editor-context-menu.css">
   <link rel="stylesheet" href="/file-import.css">
   <link rel="stylesheet" href="/project-home.css">
+  <link rel="stylesheet" href="/project-zip.css">
   <link rel="stylesheet" href="/katex/katex.min.css">
   <script type="module" src="/app.js"></script>
 </head>
@@ -59,6 +60,7 @@
       <div class="mobile-view-switch" aria-label="Workspace view" data-i18n-aria-label="作業画面"><button type="button" id="show-editor" class="selected" aria-pressed="true"><span data-i18n="編集">Editor</span></button><button type="button" id="show-preview" aria-pressed="false">PDF</button></div>
       <button type="button" id="log-toggle" class="button button-subtle" aria-expanded="false"><span data-i18n="ログ">Log</span> <span id="log-indicator" class="log-indicator" hidden></span></button>
       <div class="header-actions">
+        <button type="button" id="project-zip-button" class="button button-subtle" title="Import or export a project ZIP" aria-label="Import or export a project ZIP" data-i18n-title="プロジェクトの ZIP を読み込み・保存" data-i18n-aria-label="プロジェクトの ZIP を読み込み・保存">ZIP <span aria-hidden="true">⌄</span></button>
         <button type="button" id="show-project" class="button button-subtle" title="Open project folder" aria-label="Open project folder" data-i18n-title="プロジェクトフォルダーを開く" data-i18n-aria-label="プロジェクトフォルダーを開く"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5h6l2 2h10v3M3 7h7l2 3h10l-3 10H2V7Z"/></svg><span class="header-button-label"><span data-i18n="開く">Open</span></span></button>
         <button type="button" id="settings-button" data-testid="settings-button" class="button button-subtle" title="Editing and compilation settings" aria-label="Settings" data-i18n-title="編集とコンパイルの設定" data-i18n-aria-label="設定"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 3-1 3-3 1-2 4 2 3v4l4 2 3-1 3 1 4-2v-4l2-3-2-4-3-1-1-3Z"/><circle cx="12" cy="12" r="3"/></svg><span class="header-button-label"><span data-i18n="設定">Settings</span></span></button>
         <button type="button" id="theme-toggle" data-testid="theme-toggle" class="icon-button theme-toggle" aria-pressed="false" aria-label="Switch to dark theme" title="Toggle light and dark theme" data-i18n-aria-label="ダークテーマに切り替える" data-i18n-title="ライト／ダークを切り替える"><span id="theme-icon" aria-hidden="true">◐</span><span id="theme-label" class="sr-only"><span data-i18n="ライト">Light</span></span></button>
@@ -84,8 +86,11 @@
     <main id="welcome" class="welcome">
       <div class="welcome-card">
         <h1 id="home-title" tabindex="-1"><span data-i18n="プロジェクト">Projects</span></h1>
-        <button type="button" id="welcome-open" class="button button-primary"><span data-i18n="プロジェクトフォルダーを開く">Open project folder</span></button>
-        <button type="button" id="welcome-template" class="button"><span data-i18n="テンプレートから作成">Create from a template</span></button>
+        <div class="welcome-project-actions">
+          <button type="button" id="welcome-open" class="button button-primary"><span data-i18n="プロジェクトフォルダーを開く">Open project folder</span></button>
+          <button type="button" id="welcome-template" class="button"><span data-i18n="テンプレートから作成">Create from a template</span></button>
+          <button type="button" id="welcome-import-zip" class="button"><span data-i18n="ZIP を読み込む…">Import ZIP…</span></button>
+        </div>
         <p class="welcome-note"><span data-i18n="原稿 (.tex)，参考文献 (.bib)，画像などが入ったフォルダーを選択してください．">Choose a folder containing your source (.tex), bibliography (.bib), images, and other project files.</span></p>
         <section id="tex-setup-home" hidden></section>
         <div id="welcome-recent" class="welcome-recent" hidden>

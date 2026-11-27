@@ -65,7 +65,7 @@ func (a *App) serveSettingsRequest(next http.Handler, w http.ResponseWriter, r *
 	if r.Context().Err() != nil {
 		return
 	}
-	picker := r.Method == http.MethodPost && (r.URL.Path == "/api/project/pick" || r.URL.Path == "/api/tex/setup/pick" || r.URL.Path == "/api/file/save-as")
+	picker := r.Method == http.MethodPost && (r.URL.Path == "/api/project/pick" || r.URL.Path == "/api/tex/setup/pick" || r.URL.Path == "/api/file/save-as" || r.URL.Path == "/api/project/save-as")
 	a.mu.Lock()
 	if a.updateApplying && r.URL.Path != "/api/shutdown" && r.URL.Path != "/api/updates" {
 		a.mu.Unlock()

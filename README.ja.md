@@ -4,13 +4,13 @@
 
 [![Microsoft Store から無料の Windows 版をインストール](docs/download-store.svg)](https://apps.microsoft.com/detail/9P6QF32N19HG?hl=ja-jp&gl=JP)
 &nbsp;&nbsp;
-[![Windows 版の ZIP をダウンロード](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.17/local-tex-web-editor-0.1.17-windows-x64.zip)
+[![Windows 版の ZIP をダウンロード](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.18/local-tex-web-editor-0.1.18-windows-x64.zip)
 &nbsp;&nbsp;
-[![macOS 版をダウンロード](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.17/local-tex-web-editor-0.1.17-macos-universal.zip)
+[![macOS 版をダウンロード](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.18/local-tex-web-editor-0.1.18-macos-universal.zip)
 
-**v0.1.17** · [配布ファイルと更新内容](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [初めて使う](#初めて使う) · [起動する](#ダウンロードして起動する) · [利用前の準備](#利用前の準備) · [アプリの容量](#アプリとデータの保存先)
+**v0.1.18** · [配布ファイルと更新内容](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [初めて使う](#初めて使う) · [起動する](#ダウンロードして起動する) · [利用前の準備](#利用前の準備) · [アプリの容量](#アプリとデータの保存先)
 
-ZIP は v0.1.17 を配布する．Microsoft Store 版の更新は，Store の審査と公開の完了後に利用できる．
+ZIP は v0.1.18 を配布する．Microsoft Store 版の更新は，Store の審査と公開の完了後に利用できる．
 
 Windows と macOS のブラウザで TeX と Markdown の原稿を編集するアプリ．TeX が入っていない PC でも，まずこのアプリを起動し，**ホーム → TeX をセットアップ…** から導入できる．完了すると，導入した環境が自動で選ばれ，原稿をコンパイルできる．起動時には既定のブラウザで `localhost` の画面が開き，原稿と PDF を同じウィンドウで確認できる．
 
@@ -64,7 +64,7 @@ macOS 版の最低 OS は，アプリのビルドに使う [Go 1.25 の対応 OS
 #### ZIP をダウンロードする
 
 1. [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) を開き，最新のバージョンを選ぶ．
-2. **Assets** の `local-tex-web-editor-0.1.17-windows-x64.zip` をダウンロードする．`Source code` は開発用のソースである．
+2. **Assets** の `local-tex-web-editor-0.1.18-windows-x64.zip` をダウンロードする．`Source code` は開発用のソースである．
 3. ZIP を展開し，`local-tex-web-editor.exe` をダブルクリックする．
 4. ホーム画面が開いたら，TeX がない場合は [アプリから TeX を導入する](#アプリから-tex-を導入する)，すでにある場合は [既存の TeX を選ぶ](#既存の-tex-を選ぶ) へ進む．続いてホームの **Create from a template (テンプレートから作成)** からサンプルを作れる．
 
@@ -72,7 +72,7 @@ Windows の ZIP に含まれる実行ファイルにはコード署名が付い�
 
 ### macOS
 
-1. [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) の **Assets** から `local-tex-web-editor-0.1.17-macos-universal.zip` をダウンロードする．Apple Silicon と Intel で共通の ZIP を使う．
+1. [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) の **Assets** から `local-tex-web-editor-0.1.18-macos-universal.zip` をダウンロードする．Apple Silicon と Intel で共通の ZIP を使う．
 2. ZIP を展開し，`Local TeX Web Editor.app` を「アプリケーション」フォルダーへ移す．
 3. Finder や Spotlight から `Local TeX Web Editor` を開く．ブラウザに編集画面が開く．
 4. ホーム画面が開いたら，TeX がない場合は [アプリから TeX を導入する](#アプリから-tex-を導入する)，すでにある場合は [既存の TeX を選ぶ](#既存の-tex-を選ぶ) へ進む．続いてホームの **Create from a template (テンプレートから作成)** からサンプルを作れる．
@@ -208,11 +208,27 @@ TeX Live，BasicTeX，MacTeX，TinyTeX などで原稿をコンパイルでき�
 
 ### プロジェクトを開き，作業を終了する
 
-例えば，Overleaf にあるような原稿は，プロジェクトのソースを ZIP としてダウンロードして展開し，そのフォルダーを開く．GitHub などから取得した原稿を開く場合も，`.tex`，`.bib`，画像，`latexmkrc` などを含むプロジェクトのフォルダーを指定する．
+PC にある原稿は，`.tex`，`.bib`，画像，`latexmkrc` などを含むプロジェクトのフォルダーを指定して開く．Overleaf などからダウンロードしたプロジェクトの ZIP は，ホームの **ZIP を読み込む…** から開ける．
 
 ブラウザの編集タブが休止したり閉じられたりしても，アプリは動作を続ける．タブへ戻ると同じローカルアドレスへ接続し直す．同じ版のアプリをもう一度起動した場合も，起動中の編集画面を開く．ページから離れる際には草稿とタブの位置を記録し，戻ったときに読み込む．原稿に未保存の編集がある場合は，ブラウザの確認画面が出る．
 
 右上の終了ボタンで，アプリとコンパイル中の処理を終了する．未保存の編集がある場合は，保存するか草稿に残すかを選べる．ブラウザが自動で閉じる操作を認めない場合は，終了したことを画面に表示するので，Windows では `Ctrl + W`，Mac では `Cmd + W` でタブを閉じる．
+
+### ZIP からプロジェクトを読み込む
+
+1. ホームの **ZIP を読み込む…** を押す．編集画面では，上部の **ZIP** メニューからも開ける．
+2. プロジェクトの `.zip` ファイルを選び，**保存先の親フォルダー** と **新しいプロジェクトの名前** を指定する．ZIP の名前をもとにプロジェクト名を提案する．
+3. 表示された作成先を確認して読み込む．新しいフォルダーへ原稿，参考文献，画像などを展開し，そのプロジェクトを開く．
+
+同じ名前のフォルダーがある場合は，新しい名前を指定する．ZIP 内にある日本語のファイル名や，画像・章ごとのフォルダー構成も使える．Overleaf でダウンロードしたソースの ZIP を，アプリで展開して編集できる．
+
+### プロジェクトを ZIP でダウンロードする
+
+1. 上部の **ZIP → プロジェクトを ZIP でダウンロード** を選ぶ．編集中の原稿を保存してから，プロジェクトの ZIP を作る．
+2. ブラウザのダウンロード先に `<プロジェクト名>.zip` を保存する．場所と名前を選ぶ場合は，**ZIP にして名前を付けて保存…** を使う．ファイル一覧の右クリックメニューからも操作できる．
+3. Overleaf で使う場合は，**New Project → Upload Project** でこの ZIP を選ぶ．メイン文書とコンパイラーを，元のプロジェクトに合わせて選ぶ．手順は Overleaf の [Uploading a project](https://docs.overleaf.com/managing-projects-and-files/uploading-a-project) で確認できる．
+
+ZIP の直下に原稿と各フォルダーを置き，参考文献，画像，フォント，独自の `.sty`・`.cls`，`latexmkrc` などもまとめる．アプリのキャッシュ，Git の管理用フォルダー，コンパイルに対応するログや中間ファイルは含めない．図として使う PDF，外部の文書を参照する `.aux`，参考文献の `.bbl`，独自の `.ist` は ZIP に含める．
 
 ### PC の再起動後にブラウザのタブから戻る
 
@@ -583,7 +599,7 @@ go build -o bin/local-tex-web-editor.exe ./cmd/local-tex-editor
 Windows 用の配布ファイルは次のコマンドで作成する．
 
 ```sh
-go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.17" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
+go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.18" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
 ```
 
 `build:windows-resources` は同梱の ICO から Windows x64 用の resource を生成する．実行ファイルのビルド時に，16〜256 px の 9 サイズのアイコンが組み込まれる．
@@ -599,7 +615,7 @@ npx playwright install chromium
 node scripts/build-macos.mjs
 ```
 
-`dist/local-tex-web-editor-0.1.17-macos-universal.zip` に，Apple Silicon と Intel で動く `.app`，日英の README，ライセンスを収録する．
+`dist/local-tex-web-editor-0.1.18-macos-universal.zip` に，Apple Silicon と Intel で動く `.app`，日英の README，ライセンスを収録する．
 
 起動時のオプション:
 
