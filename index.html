@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Local TeX Web Editor — TeX and Markdown in your browser</title>
-  <meta name="description" content="A free TeX and Markdown editor for Windows and macOS. Install TeX from the app or use an existing installation, manage packages, and read PDFs beside your manuscript.">
+  <title>Local TeX Web Editor — TeX, Markdown and text in your browser</title>
+  <meta name="description" content="A completely free TeX, Markdown and text editor for Windows and macOS. Use a small local app and your existing browser, set up TeX easily, and compile on your computer.">
   <meta name="theme-color" content="#f7f8f5">
   <link rel="canonical" href="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/">
   <link rel="alternate" hreflang="en" href="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/">
@@ -13,7 +13,7 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Local TeX Web Editor">
   <meta property="og:title" content="Local TeX Web Editor">
-  <meta property="og:description" content="Edit TeX and Markdown in your browser. Set up TeX from the app, manage the selected installation and its packages, and compile documents on your computer.">
+  <meta property="og:description" content="Write TeX, Markdown and text in your browser. All features are free, with no in-app purchases or paid upgrades. Set up TeX from the app and compile on your computer.">
   <meta property="og:url" content="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/">
   <meta property="og:image" content="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/assets/social-preview.png">
   <meta property="og:image:type" content="image/png">
@@ -24,7 +24,7 @@
   <meta property="og:locale:alternate" content="ja_JP">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Local TeX Web Editor">
-  <meta name="twitter:description" content="Edit TeX and Markdown in your browser. Set up TeX from the app, manage the selected installation and its packages, and compile documents on your computer.">
+  <meta name="twitter:description" content="Write TeX, Markdown and text in your browser. All features are free, with no in-app purchases or paid upgrades. Set up TeX from the app and compile on your computer.">
   <meta name="twitter:image" content="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/assets/social-preview.png">
   <meta name="twitter:image:alt" content="Local TeX Web Editor's icon and name beside its TeX source editor and PDF preview">
   <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
@@ -54,7 +54,7 @@
       <div class="intro-grid">
         <div class="intro-copy">
           <h1 id="app-title">Local TeX Web Editor</h1>
-          <p>Edit TeX and Markdown in your browser. If TeX is not installed, this app can download and install it, then select it automatically when setup finishes. If you already have TeX, you can select that installation. Compile TeX documents to view their PDFs, or edit rendered Markdown directly.</p>
+          <p>A completely free editor for TeX, Markdown and plain text, in the browser you already use. Write a paper with its PDF beside the source, edit rendered Markdown directly, or work on notes and text files in the same app.</p>
           <p class="local-note">Launching the app opens a <code>localhost</code> page. Documents stay in the project folder on your computer.</p>
         </div>
         <div class="download-options" aria-label="Install or download the app">
@@ -93,6 +93,7 @@
       <nav class="contents" aria-label="On this page">
         <p>On this page</p>
         <ul>
+          <li><a href="#features">Why use this editor</a></li>
           <li><a href="#requirements">Requirements &amp; size</a></li>
           <li><a href="#get-started">Get the app and open it</a></li>
           <li><a href="#tex">Prepare TeX &amp; create a PDF</a></li>
@@ -103,6 +104,30 @@
         </ul>
       </nav>
       <div class="guide">
+        <section id="features" aria-labelledby="features-title">
+          <h2 id="features-title">Why use this editor</h2>
+          <div class="usage-block">
+            <h3>Every feature is free</h3>
+            <p>There are no in-app purchases, paid upgrades or subscriptions. All features are available for free in the Windows and macOS editions.</p>
+          </div>
+          <div class="usage-block">
+            <h3>A lightweight app that uses your browser</h3>
+            <p>The editor runs as a small Go application with the browser already on your computer. The <a href="https://code.visualstudio.com/docs/editor/whyvscode">VS Code desktop app uses Electron</a>; this app serves its editor and PDF viewer to your existing browser, keeping its download small. You can start writing without installing VS Code or configuring TeX extensions.</p>
+          </div>
+          <div class="usage-block">
+            <h3>Set up TeX from the app</h3>
+            <p>Choose <strong>Set up TeX…</strong> on Home to install the programs and packages needed for writing and compilation. When setup finishes, the app selects the new environment automatically, so you can open a sample and compile it straight away. You can also use an existing TeX installation. Follow the <a href="#tex-install">illustrated setup guide</a> to get started.</p>
+          </div>
+          <div class="usage-block">
+            <h3>Compile without a service timeout</h3>
+            <p>Overleaf's free plan has a <a href="https://docs.overleaf.com/getting-started/free-and-premium-plans/plan-limits">compilation time limit</a>. Here, TeX runs on your computer, and the app sets no compilation time limit. Work on long documents using your local TeX installation and stop a running compilation whenever needed.</p>
+          </div>
+          <div class="usage-block">
+            <h3>Write Markdown and everyday text too</h3>
+            <p>Use the app for notes, README files, code and configuration files as well as TeX manuscripts. Markdown supports direct editing of rendered text and a source view. Plain text and supported code files use the same saving, search, drafts and edit history. Markdown and text editing work before you install TeX.</p>
+          </div>
+        </section>
+
         <section id="requirements" aria-labelledby="requirements-title">
           <h2 id="requirements-title">Requirements and app size</h2>
           <p>Use a current version of Chrome or Edge on one of the systems below. After opening the app, follow <a href="#tex-install">TeX setup in the app</a>. If TeX already works on your computer, go directly to <a href="#tex-existing">selecting that installation</a>. Markdown editing and preview work without TeX.</p>
@@ -131,7 +156,7 @@
         <section id="get-started" aria-labelledby="get-started-title">
           <h2 id="get-started-title">Get the app and open it</h2>
           <p><strong>Windows (Microsoft Store):</strong> install the app from <a href="https://apps.microsoft.com/detail/9P6QF32N19HG">Microsoft Store</a>, then open <strong>Local TeX Web Editor</strong> from the Start menu.</p>
-          <p><strong>Windows (ZIP):</strong> extract the ZIP and double-click <code>local-tex-web-editor.exe</code>.</p>
+          <p><strong>Windows (ZIP):</strong> extract the ZIP and double-click <code>local-tex-web-editor.exe</code>. The first launch creates Start menu and desktop shortcuts. You can also create them from the app’s Settings.</p>
           <p><strong>Mac:</strong> extract the ZIP, move <code>Local TeX Web Editor.app</code> to Applications, then open it from Finder or Spotlight.</p>
           <details id="first-launch">
             <summary>If Windows or macOS blocks an app downloaded as a ZIP</summary>
@@ -254,7 +279,7 @@
           <div class="usage-block" id="project-open">
             <h3>Open an existing project</h3>
             <p>If the setup completion screen is still open, choose <strong>Close</strong> to return to Home.</p>
-            <p>Choose <strong>Open project folder</strong> on Home, then use <strong>Browse…</strong> or enter the path to the folder containing your <code>.tex</code>, <code>.bib</code> or <code>.md</code> files, images and project settings. Click <strong>Open</strong>. For a ZIP downloaded from Overleaf or another editor, follow <a href="#project-zip">Import a project from ZIP</a> below.</p>
+            <p>Choose <strong>Open project folder</strong> on Home, then use <strong>Browse…</strong> or enter the path to the folder containing your <code>.tex</code>, <code>.md</code>, <code>.txt</code> and <code>.bib</code> files, images and project settings. Click <strong>Open</strong>. For a ZIP downloaded from Overleaf or another editor, follow <a href="#project-zip">Import a project from ZIP</a> below.</p>
             <p>For a TeX document, open its main <code>.tex</code> file and set <strong>Settings → Compiler</strong> before compiling: choose <strong>Use latexmkrc settings</strong> when the project includes <code>latexmkrc</code> or <code>.latexmkrc</code>, or choose the required TeX engine. Click <strong>Save and apply settings</strong>.</p>
             <p>Select the TeX document in the file list and click <strong>Compile</strong>, or press <span class="shortcut"><kbd>Ctrl</kbd> + <kbd>Enter</kbd></span> on Windows or <span class="shortcut"><kbd>Cmd</kbd> + <kbd>Enter</kbd></span> on Mac. The resulting PDF appears on the right.</p>
             <p>For a Markdown document, select its <code>.md</code> or <code>.markdown</code> file to start <a href="#markdown-editing">editing it directly</a>.</p>
@@ -288,28 +313,35 @@
               </a>
               <figcaption><span>Download the project, or use Save project ZIP as… to choose its destination.</span><span>Click to view the full screen.</span></figcaption>
             </figure>
+            <p>Each recent project on Home also has a <strong>ZIP</strong> menu with both export actions. For the current project, the app saves edited documents first. For another project, it exports the files saved in that folder. You can continue editing the current project after the export.</p>
+            <figure class="screenshot secondary-shot project-home-zip-shot">
+              <a href="assets/project-home-zip-en.png" aria-label="Open the Home project ZIP menu screenshot at full size">
+                <img src="assets/project-home-zip-en.png" width="1600" height="1000" alt="A recent project's ZIP menu on Home, with Download project as ZIP and Save project ZIP as… available." loading="lazy" decoding="async">
+              </a>
+              <figcaption><span>Use ZIP beside a recent project to download it or choose a destination.</span><span>Click to view the full screen.</span></figcaption>
+            </figure>
             <p>The file-list context menu offers both ZIP actions too. The archive includes the project's relative folders, bibliography, images, fonts, custom <code>.sty</code> and <code>.cls</code> files, and <code>latexmkrc</code>. PDF figures and files used as inputs, including <code>.aux</code>, <code>.bbl</code> and <code>.ist</code>, are included. The app's cache, Git metadata, and compilation logs and intermediate files associated with TeX documents are omitted.</p>
             <p>To open the result on Overleaf, choose <strong>New project → Existing project (.zip)</strong> and select the ZIP. Choose the main document and compiler required by the project. See <a href="https://docs.overleaf.com/managing-projects-and-files/uploading-a-project">Overleaf's upload guide</a>.</p>
           </div>
           <div class="usage-block">
             <h3>Manage projects from Home</h3>
-            <p>Click the <strong>TeX logo</strong> to open Home. Cards show the current and recent projects with their full folder paths. <strong>Return to editing</strong> resumes the same workspace, including unsaved text, open tabs, and cursor positions.</p>
-            <p>Opening Home or returning to the browser window checks the folders again. Missing or unreadable locations show an explanation and <strong>Check again</strong>. Choose a moved project's new folder from the project picker. On a card for another project, <strong>Remove from recent</strong> removes the entry while its files, settings, and drafts stay on your computer. If the current folder is unavailable, you can continue editing and recording drafts; saving and compilation resume when it is available again. Saved PDF previews remain readable.</p>
-            <p>Choose <strong>Delete…</strong> on a project card to review its files, folders, hidden items, and saved drafts. Check the acknowledgment and enter the exact folder name, then choose <strong>Delete project</strong> to delete the folder and its contents from your computer.</p>
+            <p>Click the <strong>TeX logo</strong> to open Home. The list shows the current and recent projects with their full folder paths. Each project has a <strong>ZIP</strong> menu for downloading an archive or choosing where to save it. <strong>Return to editing</strong> resumes the same workspace, including unsaved text, open tabs, and cursor positions.</p>
+            <p>Opening Home or returning to the browser window checks the folders again. Missing or unreadable locations show an explanation and <strong>Check again</strong>. Choose a moved project's new folder from the project picker. For another project, <strong>Remove from recent</strong> removes the entry while its files, settings, and drafts stay on your computer. If the current folder is unavailable, you can continue editing and recording drafts; saving and compilation resume when it is available again. Saved PDF previews remain readable.</p>
+            <p>Choose <strong>Delete…</strong> for a project to review its files, folders, hidden items, and saved drafts. Check the acknowledgment and enter the exact folder name, then choose <strong>Delete project</strong> to delete the folder and its contents from your computer.</p>
             <p>If files or drafts change after the review, the app asks you to review the updated list. Deletion also removes the project's recent entry, saved drafts, editing session, and saved PDF previews.</p>
           </div>
           <div class="usage-block">
             <h3>Return to the editor and finish a session</h3>
             <p>The local app keeps running when its browser tab sleeps, is discarded, or closes. Returning to the tab reconnects to the same local address. Launching the same version again opens the existing editor.</p>
             <p>To finish, choose <strong>Quit</strong> in the app and follow the save prompt. This stops the local app and its background work.</p>
-            <p class="small-note" style="margin-top: 1.2rem;">The Microsoft Store installation adds the app to the Windows Start menu. In the Windows ZIP edition, the app's Settings can create Start menu or desktop shortcuts. On Mac, open the app from Applications or Spotlight.</p>
+            <p class="small-note" style="margin-top: 1.2rem;">The Microsoft Store installation adds the app to the Windows Start menu. The Windows ZIP edition creates Start menu and desktop shortcuts on its first launch. The app's Settings can also create them. On Mac, open the app from Applications or Spotlight.</p>
           </div>
           <div class="usage-block" id="browser-restore">
             <h3>Restore the editor after restarting your computer</h3>
-            <p>The app remembers its local address for the next launch. Set it up once to be available when you sign in:</p>
+            <p><strong>Start at login is enabled by default.</strong> The app remembers its local address and starts in the background when you sign in, so restored browser tabs can reconnect.</p>
             <ol>
               <li>Open <strong>Settings → Start at login</strong>.</li>
-              <li>Choose <strong>Enable start at login</strong>. If your operating system asks for approval, follow the explanation shown there; use <strong>Open system startup settings…</strong> when needed.</li>
+              <li>Choose <strong>Disable</strong> to turn it off, or <strong>Enable start at login</strong> to turn it back on. Use <strong>Open system startup settings…</strong> when needed.</li>
               <li>After restarting your computer, restore your previous browser tabs. If the browser opens first, a waiting page reconnects to the editor when the app is ready.</li>
             </ol>
             <p>Start at login runs the app in the background without opening another browser tab. <strong>Disable</strong> turns it off for later logins. You can also open the app yourself before returning to a restored tab.</p>
@@ -444,7 +476,7 @@
           <div class="usage-block" id="settings-reset">
             <h3>Reset settings and remembered information</h3>
             <p>Open <strong>Settings</strong> and scroll to <strong>Information saved by the app</strong> near the bottom. Choose <strong>Reset settings and remembered information…</strong> to review the available items, file counts and sizes.</p>
-            <p><strong>Settings and remembered actions</strong> resets appearance, editing preferences, recent projects, tabs, editing positions and the selected TeX installation, and disables start at login. You can also select <strong>Unsaved drafts</strong>, <strong>Edit history</strong>, <strong>Your templates</strong>, or the <strong>PDF and SyncTeX cache</strong>. Review these choices, select the confirmation checkbox, then choose <strong>Reset selected information</strong>.</p>
+            <p><strong>Settings and remembered actions</strong> resets appearance, editing preferences, recent projects, tabs, editing positions and the selected TeX installation, and enables start at login. You can also select <strong>Unsaved drafts</strong>, <strong>Edit history</strong>, <strong>Your templates</strong>, or the <strong>PDF and SyncTeX cache</strong>. Review these choices, select the confirmation checkbox, then choose <strong>Reset selected information</strong>.</p>
             <p>If you have unsaved text, the app offers the relevant save or draft options before proceeding. Project files and installed TeX remain on your computer. The app reloads after the reset; open your project and select the TeX environment again when needed. To remove TeX itself, use the environment removal action in <a href="#tex-packages">Manage TeX…</a>.</p>
           </div>
           <ul class="reading-links">

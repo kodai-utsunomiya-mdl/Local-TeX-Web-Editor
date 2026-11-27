@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Local TeX Web Editor — ブラウザで TeX と Markdown を編集</title>
-  <meta name="description" content="Windows と macOS で使える無料の TeX / Markdown エディタ．アプリから TeX を導入するか既存の環境を選び，パッケージを管理して，原稿と PDF を並べて確認できます．">
+  <title>Local TeX Web Editor — TeX / Markdown / テキストをブラウザで編集</title>
+  <meta name="description" content="Windows と macOS で使える完全無料の TeX / Markdown / テキストエディタ．小さな本体と普段のブラウザで動き，アプリから TeX を導入して，PC で原稿をコンパイルできます．">
   <meta name="theme-color" content="#f7f8f5">
   <link rel="canonical" href="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/ja/">
   <link rel="alternate" hreflang="en" href="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/">
@@ -13,7 +13,7 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Local TeX Web Editor">
   <meta property="og:title" content="Local TeX Web Editor">
-  <meta property="og:description" content="ブラウザで TeX と Markdown を編集できます．アプリから TeX を導入し，選択中の環境とパッケージを管理して，PC で原稿をコンパイルできます．">
+  <meta property="og:description" content="TeX，Markdown，テキストを普段のブラウザで編集．全機能が無料で，アプリ内購入や有料アップグレードはありません．アプリから TeX を導入し，自分の PC でコンパイルできます．">
   <meta property="og:url" content="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/ja/">
   <meta property="og:image" content="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/assets/social-preview.png">
   <meta property="og:image:type" content="image/png">
@@ -24,7 +24,7 @@
   <meta property="og:locale:alternate" content="en_US">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Local TeX Web Editor">
-  <meta name="twitter:description" content="ブラウザで TeX と Markdown を編集できます．アプリから TeX を導入し，選択中の環境とパッケージを管理して，PC で原稿をコンパイルできます．">
+  <meta name="twitter:description" content="TeX，Markdown，テキストを普段のブラウザで編集．全機能が無料で，アプリ内購入や有料アップグレードはありません．アプリから TeX を導入し，自分の PC でコンパイルできます．">
   <meta name="twitter:image" content="https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/assets/social-preview.png">
   <meta name="twitter:image:alt" content="Local TeX Web Editor のアイコンとアプリ名，TeX の編集画面と PDF のプレビュー">
   <link rel="icon" href="../assets/app-icon.svg" type="image/svg+xml">
@@ -54,7 +54,7 @@
       <div class="intro-grid">
         <div class="intro-copy">
           <h1 id="app-title">Local TeX Web Editor</h1>
-          <p>ブラウザで TeX の原稿と Markdown の本文を編集できます．TeX が入っていない PC でも，本アプリからダウンロード・インストールでき，完了後はその環境が自動で選ばれます．すでに TeX がある場合は，その環境を選んで使えます．TeX は原稿をコンパイルして PDF を確認でき，Markdown は表示した本文を直接編集できます．</p>
+          <p>TeX，Markdown，テキストを普段のブラウザで編集できる，完全無料のエディタです．原稿と PDF を並べて確認したり，Markdown の本文を直接編集したり，同じアプリでメモやテキストファイルを扱えます．</p>
           <p class="local-note">アプリを起動すると <code>localhost</code> のページが開きます．原稿は PC のプロジェクトフォルダーへ保存します．</p>
         </div>
         <div class="download-options" aria-label="アプリのインストール・ダウンロード">
@@ -93,6 +93,7 @@
       <nav class="contents" aria-label="このページの目次">
         <p>このページの内容</p>
         <ul>
+          <li><a href="#features">このアプリの特徴</a></li>
           <li><a href="#requirements">必要な環境と容量</a></li>
           <li><a href="#get-started">アプリを入手して起動する</a></li>
           <li><a href="#tex">TeX の準備と最初の PDF</a></li>
@@ -103,6 +104,30 @@
         </ul>
       </nav>
       <div class="guide">
+        <section id="features" aria-labelledby="features-title">
+          <h2 id="features-title">このアプリの特徴</h2>
+          <div class="usage-block">
+            <h3>すべての機能を無料で使う</h3>
+            <p>アプリ内購入，有料アップグレード，サブスクリプションはありません．Windows 版と macOS 版のすべての機能を無料で使えます．</p>
+          </div>
+          <div class="usage-block">
+            <h3>普段のブラウザで動く軽量なアプリ</h3>
+            <p>Go で作られた小さなアプリと，PC に入っているブラウザを組み合わせて動きます．<a href="https://code.visualstudio.com/docs/editor/whyvscode">VS Code のデスクトップ版は Electron を使います</a>．本アプリはエディタと PDF ビューアーを既存のブラウザへ提供するため，配布物を小さくできます．VS Code や TeX 用の拡張機能を追加せずに，原稿を書き始められます．</p>
+          </div>
+          <div class="usage-block">
+            <h3>TeX もアプリから導入する</h3>
+            <p>ホームの <strong>Set up TeX… (TeX をセットアップ…)</strong> から，執筆とコンパイルに使うプログラムやパッケージを導入できます．完了するとその環境が自動で選ばれ，サンプルの原稿を開いてそのままコンパイルできます．すでにある TeX の環境も使えます．<a href="#tex-install">画面付きの導入手順</a> から始められます．</p>
+          </div>
+          <div class="usage-block">
+            <h3>サービスの時間制限を気にせずコンパイルする</h3>
+            <p>Overleaf の無料プランには <a href="https://docs.overleaf.com/getting-started/free-and-premium-plans/plan-limits">コンパイル時間の上限</a> があります．本アプリでは手元の TeX を使い，アプリ側にもコンパイル時間の上限を設けていません．長い原稿も自分の PC で処理でき，必要なときに実行中のコンパイルを停止できます．</p>
+          </div>
+          <div class="usage-block">
+            <h3>Markdown や普段のテキスト編集にも使う</h3>
+            <p>メモや README，コード，設定ファイルの編集にも使えます．Markdown は本文の直接編集とソース編集を切り替えられ，テキストファイルにも保存，検索，草稿，履歴の機能を使えます．Markdown とテキストの編集は，TeX の導入前から始められます．</p>
+          </div>
+        </section>
+
         <section id="requirements" aria-labelledby="requirements-title">
           <h2 id="requirements-title">必要な環境と容量</h2>
           <p>以下の PC で，現在の Chrome または Edge を使います．TeX はアプリを開いてから <a href="#tex-install">アプリ内のセットアップ</a> で準備できます．すでに TeX を使っている場合は， <a href="#tex-existing">その環境を選ぶ手順</a> へ直接進めます．Markdown の編集とプレビューは TeX がなくても使えます．</p>
@@ -131,7 +156,7 @@
         <section id="get-started" aria-labelledby="get-started-title">
           <h2 id="get-started-title">アプリを入手して起動する</h2>
           <p><strong>Windows (Microsoft Store):</strong> <a href="https://apps.microsoft.com/detail/9P6QF32N19HG?hl=ja-jp&amp;gl=JP">Microsoft Store</a> からインストールし，スタートメニューの <strong>Local TeX Web Editor</strong> を開きます．</p>
-          <p><strong>Windows (ZIP):</strong> ZIP を展開し， <code>local-tex-web-editor.exe</code> をダブルクリックします．</p>
+          <p><strong>Windows (ZIP):</strong> ZIP を展開し， <code>local-tex-web-editor.exe</code> をダブルクリックします．初回の起動時に，スタートメニューとデスクトップへショートカットが作成されます．アプリの設定からも作成できます．</p>
           <p><strong>Mac:</strong> ZIP を展開し， <code>Local TeX Web Editor.app</code> を「アプリケーション」へ移して，Finder または Spotlight から開きます．</p>
           <details id="first-launch">
             <summary>ZIP から取得したアプリの初回起動が止まる場合</summary>
@@ -254,7 +279,7 @@
           <div class="usage-block" id="project-open">
             <h3>既存のプロジェクトを開く</h3>
             <p>TeX のセットアップ完了画面が開いている場合は， <strong>Close (閉じる)</strong> を押してホームへ戻ります．</p>
-            <p>ホームの <strong>Open project folder (プロジェクトフォルダーを開く)</strong> を押し， <strong>Browse… (参照…)</strong> またはパスの入力で <code>.tex</code>， <code>.bib</code>， <code>.md</code>，画像，設定ファイルを含むフォルダーを選んで <strong>Open (開く)</strong> を押します．Overleaf などからダウンロードした ZIP は，次の <a href="#project-zip">ZIP から読み込む手順</a> で開けます．</p>
+            <p>ホームの <strong>Open project folder (プロジェクトフォルダーを開く)</strong> を押し， <strong>Browse… (参照…)</strong> またはパスの入力で <code>.tex</code>， <code>.md</code>， <code>.txt</code>， <code>.bib</code>，画像，設定ファイルを含むフォルダーを選んで <strong>Open (開く)</strong> を押します．Overleaf などからダウンロードした ZIP は，次の <a href="#project-zip">ZIP から読み込む手順</a> で開けます．</p>
             <p>TeX の文書では，メインの <code>.tex</code> を開き，コンパイル前に <strong>Settings (設定) → Compiler (コンパイラー)</strong> を確認します． <code>latexmkrc</code> または <code>.latexmkrc</code> があれば <strong>Use latexmkrc settings (latexmkrc の設定を使う)</strong>，それ以外は必要な TeX のエンジンを選び， <strong>Save and apply settings (設定を保存して反映)</strong> を押します．</p>
             <p>TeX の文書を選び， <strong>Compile (コンパイル)</strong> を押します．Windows では <span class="shortcut"><kbd>Ctrl</kbd> + <kbd>Enter</kbd></span>，Mac では <span class="shortcut"><kbd>Cmd</kbd> + <kbd>Enter</kbd></span> も使えます．コンパイルした PDF が右側に表示されます．</p>
             <p>Markdown の文書では，ファイル一覧の <code>.md</code> または <code>.markdown</code> を開くと， <a href="#markdown-editing">本文を直接編集</a> できます．</p>
@@ -288,28 +313,35 @@
               </a>
               <figcaption><span>ZIP をダウンロードするか，名前を付けて保存する操作を選べます．</span><span>画像を押すと画面全体を開きます．</span></figcaption>
             </figure>
+            <p>ホームの最近開いたプロジェクトでも，各プロジェクトの <strong>ZIP</strong> から両方の書き出しを選べます．編集中のプロジェクトでは原稿を保存してから ZIP を作り，別のプロジェクトではそのフォルダーに保存されたファイルを使います．書き出した後も，現在のプロジェクトで編集を続けられます．</p>
+            <figure class="screenshot secondary-shot project-home-zip-shot">
+              <a href="../assets/project-home-zip-ja.png" aria-label="ホームのプロジェクトの ZIP メニューを元のサイズで開く">
+                <img src="../assets/project-home-zip-ja.png" width="1600" height="1000" alt="ホームの最近開いたプロジェクトで ZIP メニューを開いた画面．プロジェクトを ZIP でダウンロードする操作と，ZIP にして名前を付けて保存する操作が並んでいる．" loading="lazy" decoding="async">
+              </a>
+              <figcaption><span>ホームの各プロジェクトから，ZIP の保存方法を選べます．</span><span>画像を押すと画面全体を開きます．</span></figcaption>
+            </figure>
             <p>ファイル一覧の右クリックメニューからも，両方の操作を使えます．ZIP にはプロジェクト内のフォルダー，参考文献，画像，フォント，独自の <code>.sty</code>・<code>.cls</code>，<code>latexmkrc</code> などをまとめます．図として使う PDF と，入力に使う <code>.aux</code>，<code>.bbl</code>，<code>.ist</code> も含めます．アプリのキャッシュ，Git の管理用データ，TeX の文書に対応するログや中間ファイルは含めません．</p>
             <p>Overleaf で開く場合は，<strong>New project → Existing project (.zip)</strong> で ZIP を選び，原稿に合うメイン文書とコンパイラーを指定します．詳しい手順は <a href="https://docs.overleaf.com/managing-projects-and-files/uploading-a-project">Overleaf の案内</a> を参照できます．</p>
           </div>
           <div class="usage-block">
             <h3>ホームでプロジェクトを管理する</h3>
-            <p><strong>TeX のロゴ</strong> を押すとホームが開きます．現在と最近使ったプロジェクトを，フォルダーの絶対パス付きのカードで確認できます． <strong>編集に戻る</strong> を押すと，未保存の本文，開いているタブ，カーソル位置がある同じ編集画面へ戻ります．</p>
-            <p>ホームを開いたときやブラウザの画面へ戻ったときに，フォルダーの状態を読み直します．見つからない場合や読み取れない場合は，理由と <strong>「再確認」</strong> を表示します．移動先を使う場合は，フォルダーを選び直してください．編集中以外のカードでは <strong>「一覧から外す」</strong> を選べ，PC 上の原稿，設定，草稿を残して登録を消せます．現在のフォルダーが使えない間も本文の編集と草稿の記録を続けられ，元の場所が使える状態に戻ると保存やコンパイルを再開できます．保存された PDF のプレビューも引き続き読めます．</p>
-            <p>カードの <strong>「削除…」</strong> で，ファイル，フォルダー，隠し項目，記録した草稿を確認します．確認のチェックを入れ，フォルダー名を正確に入力して <strong>「プロジェクトを削除」</strong> を押すと，PC 上のフォルダーを中身ごと削除します．</p>
+            <p><strong>TeX のロゴ</strong> を押すとホームが開きます．現在と最近使ったプロジェクトを，フォルダーの絶対パスとともに一覧で確認できます．各プロジェクトの <strong>ZIP</strong> から，ダウンロードや保存先を選ぶ操作を使えます． <strong>編集に戻る</strong> を押すと，未保存の本文，開いているタブ，カーソル位置がある同じ編集画面へ戻ります．</p>
+            <p>ホームを開いたときやブラウザの画面へ戻ったときに，フォルダーの状態を読み直します．見つからない場合や読み取れない場合は，理由と <strong>「再確認」</strong> を表示します．移動先を使う場合は，フォルダーを選び直してください．編集中以外のプロジェクトでは <strong>「一覧から外す」</strong> を選べ，PC 上の原稿，設定，草稿を残して登録を消せます．現在のフォルダーが使えない間も本文の編集と草稿の記録を続けられ，元の場所が使える状態に戻ると保存やコンパイルを再開できます．保存された PDF のプレビューも引き続き読めます．</p>
+            <p>各プロジェクトの <strong>「削除…」</strong> で，ファイル，フォルダー，隠し項目，記録した草稿を確認します．確認のチェックを入れ，フォルダー名を正確に入力して <strong>「プロジェクトを削除」</strong> を押すと，PC 上のフォルダーを中身ごと削除します．</p>
             <p>確認後にファイルや草稿が変わった場合は，更新された一覧をもう一度確認します．削除したプロジェクトの登録，草稿，編集位置，表示用に保存した PDF も消去します．</p>
           </div>
           <div class="usage-block">
             <h3>エディタへ戻り，作業を終了する</h3>
             <p>ブラウザタブが休止・破棄された場合や閉じた場合も，PC でアプリが動き続けます．タブへ戻ると同じローカルアドレスへ再接続します．同じバージョンをもう一度起動すると，既存のエディタを開きます．</p>
             <p>作業を終えるときは，アプリ内の <strong>終了</strong> を選び，保存の案内に従います．PC で動いているアプリと処理を終了できます．</p>
-            <p class="small-note" style="margin-top: 1.2rem;">Microsoft Store 版は，インストール時にスタートメニューへ追加されます．Windows ZIP 版では，アプリの設定からスタートメニューやデスクトップのショートカットを作れます．Mac では，アプリケーションフォルダーや Spotlight から起動できます．</p>
+            <p class="small-note" style="margin-top: 1.2rem;">Microsoft Store 版は，インストール時にスタートメニューへ追加されます．Windows ZIP 版は，初回の起動時にスタートメニューとデスクトップへショートカットを作成します．アプリの設定からも作成できます．Mac では，アプリケーションフォルダーや Spotlight から起動できます．</p>
           </div>
           <div class="usage-block" id="browser-restore">
             <h3>PC の再起動後にブラウザのタブから戻る</h3>
-            <p>アプリは同じ PC 内の接続先を使って起動し直します．ログイン後に使えるようにするには，次の設定を一度行います．</p>
+            <p><strong>ログイン時の起動は初期状態で有効です．</strong> アプリは PC 内の接続先を記録し，ログイン後にバックグラウンドで起動するため，復元したブラウザのタブから接続できます．</p>
             <ol>
               <li><strong>Settings (設定) → Start at login (ログイン時の起動)</strong> を開きます．</li>
-              <li><strong>Enable start at login (ログイン時の起動を有効にする)</strong> を押します．OS が許可を求める場合は表示に従い，必要に応じて <strong>Open system startup settings… (OS の起動設定を開く…)</strong> から確認します．</li>
+              <li>オフにする場合は <strong>Disable (無効にする)</strong>，再びオンにする場合は <strong>Enable start at login (ログイン時の起動を有効にする)</strong> を押します．必要に応じて <strong>Open system startup settings… (OS の起動設定を開く…)</strong> から確認します．</li>
               <li>PC を再起動した後，ブラウザで前回のタブを復元します．アプリより先にタブが開いた場合は，接続を待つ画面から自動的に編集画面へ戻ります．</li>
             </ol>
             <p>ログイン時はアプリをバックグラウンドで起動し，新しいブラウザのタブは開きません． <strong>Disable (無効にする)</strong> で次回からの自動起動を止められます．手動でアプリを開いてから，復元したタブへ戻る方法も使えます．</p>
@@ -444,7 +476,7 @@
           <div class="usage-block" id="settings-reset">
             <h3>設定と記憶した情報を初期化する</h3>
             <p><strong>Settings (設定)</strong> を開き，下部の <strong>Information saved by the app (アプリに保存した情報)</strong> までスクロールします．その中の <strong>Reset settings and remembered information… (設定と記憶した情報を初期化…)</strong> を押すと，対象の項目，ファイル数，容量を確認できます．</p>
-            <p><strong>「設定と記憶した操作」</strong> では，外観，編集設定，最近のプロジェクト，タブと編集位置，TeX の選択を初期値へ戻し，ログイン時の自動起動も無効にします． <strong>「未保存の草稿」</strong>， <strong>「編集履歴」</strong>， <strong>「自作テンプレート」</strong>， <strong>「PDF と SyncTeX のキャッシュ」</strong> も選べます．対象を確認し，確認のチェックを入れて <strong>Reset selected information (選んだ内容を初期化)</strong> を押します．</p>
+            <p><strong>「設定と記憶した操作」</strong> では，外観，編集設定，最近のプロジェクト，タブと編集位置，TeX の選択を初期値へ戻し，ログイン時の自動起動も有効にします． <strong>「未保存の草稿」</strong>， <strong>「編集履歴」</strong>， <strong>「自作テンプレート」</strong>， <strong>「PDF と SyncTeX のキャッシュ」</strong> も選べます．対象を確認し，確認のチェックを入れて <strong>Reset selected information (選んだ内容を初期化)</strong> を押します．</p>
             <p>未保存の本文がある場合は，開始前に保存や草稿の扱いを選びます．プロジェクトのファイルと導入した TeX は PC に残り，完了後にアプリを開き直します．必要に応じてプロジェクトを開き，TeX の環境を選び直してください．TeX 自体を削除するときは， <a href="#tex-packages">「TeX を管理…」</a> にある環境全体の削除を使います．</p>
           </div>
           <ul class="reading-links">
