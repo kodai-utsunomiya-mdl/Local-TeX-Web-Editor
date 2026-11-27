@@ -85,6 +85,7 @@ try {
         for (let index = 0; index < count; index++) {
           await captureSection(steps.nth(index), `${route.name}-${size.name}-setup-${index + 1}.png`);
         }
+        await captureSection(page.locator('#features'), `${route.name}-${size.name}-features.png`);
         await captureSection(page.locator('#settings-reset'), `${route.name}-${size.name}-settings-reset.png`);
         await captureSection(page.locator('#browser-restore'), `${route.name}-${size.name}-browser-restore.png`);
         await captureSection(page.locator('#project-zip'), `${route.name}-${size.name}-project-zip.png`);
