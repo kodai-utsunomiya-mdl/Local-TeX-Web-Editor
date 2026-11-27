@@ -16,7 +16,7 @@ func startupLaunchAgent(executable string) []byte {
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
   <key>Label</key><string>` + startupAgentLabel + `</string>
-  <key>ProgramArguments</key><array><string>` + escaped.String() + `</string><string>--background</string></array>
+  <key>ProgramArguments</key><array><string>` + escaped.String() + `</string><string>` + startupArgument + `</string></array>
   <key>RunAtLoad</key><true/>
   <key>ProcessType</key><string>Background</string>
   <key>AssociatedBundleIdentifiers</key><array><string>io.github.kodai-utsunomiya-mdl.local-tex-editor</string></array>
@@ -60,7 +60,7 @@ func startupLaunchAgentExecutable(data []byte) (string, error) {
 		}
 	}
 	executable := arguments.Children[0].Text
-	if !validStartupMacExecutable(executable) || arguments.Children[1].Text != "--background" {
+	if !validStartupMacExecutable(executable) || !validStartupArgument(arguments.Children[1].Text) {
 		return "", ErrStartupConflict
 	}
 	return executable, nil

@@ -45,13 +45,17 @@ For MSIX submissions, Microsoft provides Store signing after review. This route 
 ### Short description
 
 ```text
-Edit TeX and Markdown in your browser. Install TinyTeX from the app or use your existing TeX, compile on your PC, and move between source and PDF with SyncTeX.
+Completely free TeX, Markdown and text editor. Set up TeX from the app, compile locally without an app time limit, and preview PDFs in your browser.
 ```
 
 ### Description
 
 ```text
-Local TeX Web Editor edits TeX and Markdown projects on your Windows PC in a browser. TeX compilation requires a TeX installation: choose Set up TeX… to install TinyTeX from the app, or select an existing TeX Live. No account or subscription is needed.
+Local TeX Web Editor is a completely free editor for TeX, Markdown and plain text on your Windows PC. All features are included, with no in-app purchases, paid upgrades, subscriptions or trial expiry. No account is required.
+
+A small Go executable works with a tab in your existing browser. The download includes no separate browser engine, and TeX completion, compilation and PDF preview work without installing editor extensions. You can use it for Markdown notes, documentation and text files before installing TeX.
+
+Compile with the TeX on your PC, with no compilation time limit set by the app. Choose Set up TeX… to install TinyTeX from the app, or select an existing TeX Live. When setup finishes, the app automatically selects the new environment so you can create a sample and compile it.
 
 Review the download source, packages and destination, then choose Download and install. Setup provides pdfLaTeX, upLaTeX, XeLaTeX, LuaLaTeX, latexmk, SyncTeX, Japanese fonts, bibliography tools and common mathematics and drawing packages. It runs in your user folder and selects TeX after setup succeeds. Setup and package downloads require internet access; allow about 250 MB of downloads and 2 GB of free space during initial setup.
 
@@ -73,7 +77,7 @@ Edit Python, JavaScript and other program files. Home checks current and recent 
 
 Start in Dark mode from the first launch, or select Light or System in Appearance settings. Preview English or Japanese immediately in Settings, adjust panes and appearance, and use autosave and local drafts. Documents, history and templates stay on your PC.
 
-Requires an x64 PC with Windows 10 build 19041 or later, or Windows 11, and current Edge or Chrome. Use in-app TeX setup or select TeX Live with the packages your documents need. Markdown works without TeX. Free and open source under the MIT license.
+Requires an x64 PC with Windows 10 build 19041 or later, or Windows 11, and current Edge or Chrome. Use in-app TeX setup or select TeX Live with the packages your documents need. Open source under the MIT license.
 ```
 
 ### Product features
@@ -81,22 +85,22 @@ Requires an x64 PC with Windows 10 build 19041 or later, or Windows 11, and curr
 Enter each line as one feature, without adding a bullet character to the Store field.
 
 ```text
-Set up TinyTeX from the app or select existing TeX Live to compile local projects
-Read PDFs with continuous scrolling, search and zoom, and open or delete each TeX document's saved previews
+All features are free, with no in-app purchases, paid upgrades, subscriptions or trial expiry
+A small Go app works with your existing browser, with no separate browser engine to install
+Set up and automatically select TinyTeX, or use existing TeX Live, and compile locally with no app time limit
+Read PDFs with continuous scrolling, search, zoom and Back/Forward; open or delete each TeX document's saved previews
 Move between corresponding source and PDF positions with SyncTeX
-Edit rendered Markdown, resize its text with pinch or Ctrl + wheel, or switch to source and preview
+Edit rendered Markdown, resize its text with pinch or Ctrl + wheel, and switch to source with synchronized preview scrolling
 Search project text, review replacements, and include unsaved edits
-Return to earlier source and PDF positions with Back and Forward
 Select several history changes to restore, or review and delete unneeded versions
 Find citation and reference definitions and uses, and preview key renames
 Use two source editors and restore open tabs and their order
 Filter compilation errors and warnings by category
 Import images, paste tables, or create and edit a new table
 Import or download project ZIPs for Overleaf, or create projects and files from templates
-Format Markdown and synchronize source and preview scrolling in both directions
 Create a Markdown page and insert a relative link to it
 Print Markdown to PDF and extract PDF text to a TXT file
-Copy project files and folders, sort by name or date, drag to arrange or move, and edit Python and other code
+Edit plain text, Python and other code; copy files and folders, sort by name or date, and drag to arrange or move
 Use autosave and local drafts, and resume after the browser tab sleeps
 Preview English or Japanese, and choose colors and the editor font
 Complete TeX commands and environments, fold source, and browse the outline
@@ -140,13 +144,17 @@ Version 0.1.20
 ### 短い説明
 
 ```text
-ブラウザで TeX と Markdown を編集できます．アプリから TinyTeX を導入するか，既存の TeX を選んで PC でコンパイルし，SyncTeX で原稿と PDF を相互に移動できます．
+TeX，Markdown，テキストを編集できる完全無料のアプリです．TeX もアプリから導入でき，コンパイル時間の制限を気にせず PC で原稿を組版し，ブラウザで PDF を確認できます．
 ```
 
 ### 説明
 
 ```text
-Local TeX Web Editor は，Windows PC にある TeX と Markdown のプロジェクトをブラウザで編集するアプリです．コンパイルには TeX が必要です．「TeX をセットアップ…」から TinyTeX を導入するか，既存の TeX Live を選んで使えます．
+Local TeX Web Editor は，Windows PC にある TeX，Markdown，テキストの原稿を編集する完全無料のアプリです．アプリ内購入，有料アップグレード，サブスクリプション，試用期限はなく，すべての機能を使えます．アカウント登録も不要です．
+
+Go の小さな実行ファイルと普段のブラウザのタブで動作します．配布ファイルに専用のブラウザエンジンを含めず，TeX の補完，コンパイル，PDF の表示も追加の拡張機能を入れずに使える軽量な構成です．TeX を導入する前から，Markdown のメモや説明文，テキストファイルの編集にも使えます．
+
+コンパイルには PC の TeX を使い，アプリによるコンパイル時間の上限はありません．「TeX をセットアップ…」から TinyTeX を導入するか，既存の TeX Live を選んで使えます．導入が完了すると環境が自動で選ばれ，サンプルの作成とコンパイルへ進めます．
 
 取得元，パッケージ，導入先を確認し，「ダウンロードしてインストール」を選ぶと，pdfLaTeX，upLaTeX，XeLaTeX，LuaLaTeX，latexmk，SyncTeX，日本語フォント，文献処理と数式・図の基本的なパッケージを導入します．自分のユーザーフォルダーへ導入し，成功後は新しい TeX を選択します．導入や追加パッケージの取得にはインターネット接続を使います．初期構成のダウンロードは約 250 MB，作業中の空き容量は約 2 GB が目安です．
 
@@ -174,9 +182,9 @@ TeX のロゴからホームへ移り，現在と最近使ったプロジェク�
 
 初回起動からダークモードを使い，外観の設定でライトやシステムに合わせるモードも選べます．英語・日本語は選択直後に表示を切り替えられ，配色，フォント，各欄の大きさを選べます．原稿，設定，草稿，履歴，テンプレートは PC に保存します．
 
-必要な環境は Windows 10 build 19041 以降または Windows 11 の x64 PC と，現在の Edge または Chrome です．アプリから TeX を導入するか，原稿で使うパッケージを含む既存の TeX Live を選びます．Markdown は TeX がなくても使えます．
+必要な環境は Windows 10 build 19041 以降または Windows 11 の x64 PC と，現在の Edge または Chrome です．アプリから TeX を導入するか，原稿で使うパッケージを含む既存の TeX Live を選びます．
 
-MIT ライセンスで公開されている無料のアプリです．アプリ用のアカウント登録やサブスクリプションは不要です．
+ソースコードは MIT ライセンスで公開しています．
 ```
 
 ### 製品の機能
@@ -184,22 +192,22 @@ MIT ライセンスで公開されている無料のアプリです．アプリ�
 各行を 1 件の機能として入力する．Store の入力欄には箇条書きの記号を付けない．
 
 ```text
-アプリから TinyTeX を導入するか，既存の TeX Live を選んで PC の原稿をコンパイル
-PDF を連続スクロールし，検索・拡大し，TeX 文書ごとの結果を一覧から開く・削除
+アプリ内購入，有料アップグレード，サブスクリプション，試用期限のない完全無料のアプリ
+小さな Go のアプリと既存のブラウザで動作し，専用のブラウザエンジンの導入は不要
+アプリから TeX を導入して自動選択するか，既存の TeX を使い，時間制限なしで PC の原稿をコンパイル
+PDF を連続スクロール・検索・拡大し，移動前の位置へ戻り，文書ごとの結果を一覧から開く・削除
 SyncTeX による原稿と PDF の対応位置への相互移動
-Markdown を直接編集し，ピンチや Ctrl + ホイールで文字サイズを変え，ソースにも切替
+Markdown を直接編集し，文字サイズを変え，ソースとプレビューのスクロールを同期
 未保存の内容も含めてプロジェクト全体を検索し，選んだ箇所を置換
-原稿や PDF の移動前の位置へ「戻る」「進む」で移動
 履歴から複数の箇所をまとめて復元し，不要な版は選んで確認して削除
 引用と相互参照の定義・使用箇所を確認し，名前の変更を事前に確認
 原稿を二つ並べ，開いていたタブと並び順を復元
 コンパイルのエラーと警告を種類で絞り込み
 画像の取り込み，コピーした表の挿入，新しい表の作成と編集
 ZIP でプロジェクトを読み込み・保存して Overleaf とやり取りし，テンプレートからも原稿を作成
-Markdown の装飾と，原稿・プレビューの両方向のスクロール同期
 Markdown のページを作成し，現在の文書へ相対リンクを挿入
 Markdown を PDF に保存し，PDF の文字を TXT として保存
-ファイルやフォルダーをコピーし，名前順・日時順・手動で並べ，ドラッグで移動し，コードも編集
+テキストやコードを編集し，ファイルやフォルダーをコピー・並べ替え・ドラッグで移動
 自動保存と草稿を使い，ブラウザのタブが休止した後も作業を再開
 日本語・英語を選択直後に確認し，配色と原稿のフォントを選択
 TeX のコマンドと環境を補完し，原稿を折りたたんでアウトラインを確認

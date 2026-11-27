@@ -129,7 +129,7 @@ const manifest = `<?xml version="1.0" encoding="utf-8"?>
       <uap:VisualElements DisplayName="Local TeX Web Editor" Description="Edit TeX and Markdown with a local TeX installation."
                           Square150x150Logo="Assets\\Square150x150Logo.png" Square44x44Logo="Assets\\Square44x44Logo.png" BackgroundColor="transparent" />
       <Extensions>
-        <desktop:Extension Category="windows.startupTask" Executable="local-tex-web-editor.exe" EntryPoint="Windows.FullTrustApplication" uap10:Parameters="--background">
+        <desktop:Extension Category="windows.startupTask" Executable="local-tex-web-editor.exe" EntryPoint="Windows.FullTrustApplication" uap10:Parameters="--startup">
           <desktop:StartupTask TaskId="LocalTeXWebEditorBackground" Enabled="false" DisplayName="Local TeX Web Editor" />
         </desktop:Extension>
       </Extensions>

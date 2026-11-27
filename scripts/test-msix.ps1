@@ -477,6 +477,10 @@ try {
     if (@($manifest.Package.Applications.Application).Count -ne 1 -or $manifest.Package.Applications.Application.Id -ne 'App') {
         throw 'The package must expose exactly one application with Id App.'
     }
+    $startupExtensions = @($manifest.Package.Applications.Application.Extensions.Extension | Where-Object { $_.Category -eq 'windows.startupTask' })
+    if ($startupExtensions.Count -ne 1 -or $startupExtensions[0].GetAttribute('Parameters', 'http://schemas.microsoft.com/appx/manifest/uap/windows10/10') -ne '--startup') {
+        throw 'The package must use the login-specific startup argument.'
+    }
     if (Get-AppxPackage -Name $name) { throw 'The test package is already installed on this runner.' }
     $signTool = Find-SignTool
     $certificate = New-SelfSignedCertificate -Type Custom -Subject $publisher -KeyUsage DigitalSignature -KeyAlgorithm RSA -KeyLength 2048 -HashAlgorithm SHA256 -KeyExportPolicy NonExportable -CertStoreLocation 'Cert:\CurrentUser\My' -NotAfter (Get-Date).AddDays(1) -TextExtension @('2.5.29.37={text}1.3.6.1.5.5.7.3.3', '2.5.29.19={text}')
@@ -508,6 +512,19 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "The packaged browser tests failed with exit code $LASTEXITCODE." }
     $previousProcess = Get-Process -Id $applicationProcessId -ErrorAction SilentlyContinue
     if ($previousProcess -and -not $previousProcess.WaitForExit(5000)) { throw 'The packaged application did not exit before the startup setting check.' }
+    $disabledReadyPath = Join-Path $temporary 'disabled-startup-ready.json'
+    $applicationProcessId = [LocalTeXMSIXTest.Native]::Activate(($installed.PackageFamilyName + '!App'), @('--startup', '--ready-file', $disabledReadyPath))
+    $deadline = [DateTime]::UtcNow.AddSeconds(20)
+    while (Get-Process -Id $applicationProcessId -ErrorAction SilentlyContinue) {
+        if (Test-Path -LiteralPath $disabledReadyPath) { throw 'The packaged startup opened the application after start at login was disabled.' }
+        if ([DateTime]::UtcNow -ge $deadline) { throw 'The disabled packaged startup did not exit.' }
+        Start-Sleep -Milliseconds 100
+    }
+    if ((Test-Path -LiteralPath $disabledReadyPath) -or (Test-Path -LiteralPath (Join-Path $defaultConfig 'active.json'))) {
+        throw 'The disabled packaged startup left an active application.'
+    }
+    $startupWhileDisabled = @{ processId = $applicationProcessId; exited = $true; readyFileCreated = $false; activeFileCreated = $false }
+    $arguments[0] = '--background'
     $ready = Start-TestApplication $installed $arguments $readyPath
     $applicationProcessId = $ready.pid
     $headers = @{ 'X-Local-Token' = $ready.token; Origin = ([Uri]$ready.url).GetLeftPart([UriPartial]::Authority) }
@@ -515,7 +532,7 @@ try {
     if ($startup.enabled -or $startup.status -ne 'disabled') { throw 'Restarting the packaged application changed the disabled startup setting.' }
     $savedSettings = Get-Content -LiteralPath (Join-Path $defaultConfig 'settings.json') -Raw -Encoding UTF8 | ConvertFrom-Json
     if ($savedSettings.startupEnabled -ne $false) { throw 'The packaged application did not save the disabled startup setting.' }
-    Write-JSONFile (Join-Path $output 'startup-restart.json') @{ startup = $startup; savedEnabled = $savedSettings.startupEnabled; processId = $ready.pid }
+    Write-JSONFile (Join-Path $output 'startup-restart.json') @{ startup = $startup; savedEnabled = $savedSettings.startupEnabled; processId = $ready.pid; startupWhileDisabled = $startupWhileDisabled; resumedWith = '--background' }
     Invoke-RestMethod -Uri ([Uri]::new([Uri]$ready.url, '/api/shutdown')) -Method Post -Headers $headers -ContentType 'application/json' -Body '{}' -TimeoutSec 3 | Out-Null
     $currentProcess = Get-Process -Id $applicationProcessId -ErrorAction SilentlyContinue
     if ($currentProcess -and -not $currentProcess.WaitForExit(5000)) { throw 'The packaged application did not exit after the startup setting check.' }

@@ -11,7 +11,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"runtime"
 	"sync"
 	"time"
 
@@ -44,11 +43,12 @@ func run() error {
 	listen := flag.String("listen", "127.0.0.1:0", "loopback address to listen on")
 	flag.BoolVar(&noBrowser, "no-browser", false, "do not open a browser automatically")
 	background := flag.Bool("background", false, "start for restored browser tabs without opening a window")
+	startup := flag.Bool("startup", false, "start at login if enabled, without opening a window")
 	readyFile := flag.String("ready-file", "", "write server information to this file")
 	configDir := flag.String("config-dir", "", "application settings and cache folder")
 	showVersion := flag.Bool("version", false, "show application version")
 	flag.Parse()
-	if *background {
+	if *background || *startup {
 		noBrowser = true
 	}
 	if *showVersion {
@@ -80,7 +80,7 @@ func run() error {
 	runContext, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stopSignals()
 	releaseInstance, update, err := acquireStartupInstance(runContext, *configDir, *readyFile, noBrowser, platform.OpenBrowser)
-	if *background && errors.Is(err, platform.ErrLocked) {
+	if (*background || *startup) && errors.Is(err, platform.ErrLocked) {
 		return nil
 	}
 	if err != nil {
@@ -92,6 +92,12 @@ func run() error {
 	defer releaseInstance()
 	if update != nil {
 		defer update.Close()
+	}
+	if *startup {
+		enabled, err := app.StartupEnabled(*configDir)
+		if err != nil || !enabled {
+			return err
+		}
 	}
 	if importFrom != "" {
 		if err := app.ImportLegacySettings(importFrom, *configDir); err != nil {
@@ -151,10 +157,9 @@ func run() error {
 	}
 	installationUpdates := []func() error{application.InitializeStartupRegistration, application.InitializeShortcuts}
 	if !noBrowser {
-		installationUpdates = append(installationUpdates, platform.RefreshInstalledShortcuts, func() error { return platform.RefreshStartupRegistration(*configDir) })
-	} else if runtime.GOOS == "darwin" {
-		installationUpdates = append(installationUpdates, func() error { return platform.RefreshStartupRegistration(*configDir) })
+		installationUpdates = append(installationUpdates, platform.RefreshInstalledShortcuts)
 	}
+	installationUpdates = append(installationUpdates, func() error { return platform.RefreshStartupRegistration(*configDir) })
 	application.StartInstallationUpdate(installationUpdates...)
 	select {
 	case <-quit:

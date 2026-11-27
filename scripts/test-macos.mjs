@@ -79,7 +79,7 @@ try {
   await execute('/usr/bin/lipo', [path.join(application, 'Contents/Frameworks/Sparkle.framework/Sparkle'), '-verify_arch', 'arm64', 'x86_64']);
   const launchArgs = ['-W', '-n', application, '--args', '--ready-file', readyPath, '--config-dir', path.join(temporary, 'config')];
   if (process.env.LOCAL_TEX_EDITOR_TEST_TEX_BIN) launchArgs.push('--tex-bin', process.env.LOCAL_TEX_EDITOR_TEST_TEX_BIN);
-  opening = spawn('/usr/bin/open', launchArgs, { stdio: ['ignore', 'pipe', 'pipe'] });
+  opening = spawn('/usr/bin/open', [...launchArgs, '--startup'], { stdio: ['ignore', 'pipe', 'pipe'] });
   let launchError = '';
   opening.stderr.on('data', data => { launchError += data; });
   ready = await waitFor(async () => {
@@ -197,7 +197,7 @@ try {
   await waitFor(() => opening.exitCode, value => value !== null, 'The background macOS launcher did not exit.');
   assert.equal(opening.exitCode, 0, launchError);
   assert.deepEqual(errors, []);
-  await writeFile(path.join(output, 'result.json'), JSON.stringify({ version, architecture: process.arch, checks: ['universal-bundle', 'icon', 'signature', 'sparkle-signatures-required', 'native-update-bridge', 'launch-services', 'api', 'command-save', 'japanese-tex', 'synctex', 'active-document', 'markdown', 'reopen', 'file-download', 'shutdown', 'offline-waiting', 'background-launch', 'restored-tab'] }, null, 2));
+  await writeFile(path.join(output, 'result.json'), JSON.stringify({ version, architecture: process.arch, checks: ['universal-bundle', 'icon', 'signature', 'sparkle-signatures-required', 'native-update-bridge', 'launch-services', 'startup-launch', 'api', 'command-save', 'japanese-tex', 'synctex', 'active-document', 'markdown', 'reopen', 'file-download', 'shutdown', 'offline-waiting', 'background-launch', 'restored-tab'] }, null, 2));
   passed = true;
   console.log(`macOS ${process.arch}: application launch, editing, TeX, previews, and shutdown passed.`);
 } finally {

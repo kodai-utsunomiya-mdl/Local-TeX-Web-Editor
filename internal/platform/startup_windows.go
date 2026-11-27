@@ -83,12 +83,16 @@ func RefreshStartupRegistration(configDir string) error {
 	if err != nil {
 		return err
 	}
-	state, err := windowsStartupStatusAt(local, folder)
-	if err != nil || !state.Enabled {
-		return err
-	}
 	source, err := os.Executable()
 	if err != nil {
+		return err
+	}
+	return refreshWindowsStartupAt(source, local, folder)
+}
+
+func refreshWindowsStartupAt(source, local, folder string) error {
+	state, err := windowsStartupStatusAt(local, folder)
+	if err != nil || !state.Enabled {
 		return err
 	}
 	_, err = setWindowsStartupAt(source, local, folder, true)
@@ -129,7 +133,7 @@ func windowsStartupStatusAt(local, folder string) (StartupState, error) {
 	}
 	link, err := readShellShortcut(path)
 	target := filepath.Join(local, "Programs", branding.DataDirectoryName, shortcutExecutableName)
-	if err != nil || !startupPathsEqual(link.Target, target) || link.Arguments != "--background" {
+	if err != nil || !startupPathsEqual(link.Target, target) || !validStartupArgument(link.Arguments) {
 		return StartupState{}, ErrStartupConflict
 	}
 	state = startupEnabled(target)
@@ -179,7 +183,7 @@ func setWindowsStartupAt(source, local, folder string, enabled bool) (StartupSta
 	temporary := file.Name()
 	_ = file.Close()
 	defer os.Remove(temporary)
-	if err := writeShellShortcutWithArguments(temporary, installed, icon, "--background"); err != nil {
+	if err := writeShellShortcutWithArguments(temporary, installed, icon, startupArgument); err != nil {
 		return StartupState{}, err
 	}
 	if err := commitShortcutFile(temporary, path, before.Enabled); err != nil {

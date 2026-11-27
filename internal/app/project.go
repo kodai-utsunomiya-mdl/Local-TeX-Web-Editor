@@ -68,26 +68,37 @@ type configuration struct {
 }
 
 func (a *App) loadConfig() error {
-	a.config = configuration{Projects: map[string]projectSettings{}, RecentProjects: []string{}}
-	path := filepath.Join(a.options.ConfigDir, "settings.json")
+	config, exists, err := readConfig(a.options.ConfigDir)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		config.ShortcutSetupPending = a.canInitializeShortcuts()
+	}
+	a.config = config
+	return nil
+}
+
+func readConfig(directory string) (configuration, bool, error) {
+	config := configuration{Projects: map[string]projectSettings{}, RecentProjects: []string{}}
+	path := filepath.Join(directory, "settings.json")
 	data, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
-		a.config.ShortcutSetupPending = a.canInitializeShortcuts()
-		return nil
+		return config, false, nil
 	}
 	if err != nil {
-		return messages.Errorf("設定を読めません: %w", err)
+		return config, true, messages.Errorf("設定を読めません: %w", err)
 	}
 	if len(data) > 1<<20 {
-		return messages.Errorf("設定ファイルが大きすぎます．settings.json を確認してください．")
+		return config, true, messages.Errorf("設定ファイルが大きすぎます．settings.json を確認してください．")
 	}
-	if err := json.Unmarshal(data, &a.config); err != nil {
-		return messages.Errorf("設定ファイル %s を読めません: %w", path, err)
+	if err := json.Unmarshal(data, &config); err != nil {
+		return config, true, messages.Errorf("設定ファイル %s を読めません: %w", path, err)
 	}
-	if a.config.Projects == nil {
-		a.config.Projects = map[string]projectSettings{}
+	if config.Projects == nil {
+		config.Projects = map[string]projectSettings{}
 	}
-	return nil
+	return config, true, nil
 }
 
 func (a *App) saveConfig(config configuration) error {

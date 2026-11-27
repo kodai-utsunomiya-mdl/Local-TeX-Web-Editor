@@ -27,8 +27,28 @@ await mkdir(output, { recursive: true });
 let child, ready, settingsGeneration = '', outputText = '';
 const states = [];
 const tokens = [];
+const startupWhileDisabled = [];
 const execute = promisify(execFile);
 let shortcuts = [], shortcutResults = [];
+
+function applicationLog() {
+  return tokens.reduce((text, token) => text.replaceAll(token, '[local token]'), outputText)
+    .replace(/("token"\s*:\s*")[^"]+(")/g, '$1[local token]$2');
+}
+
+async function unloadMacStartupJob() {
+  if (process.platform !== 'darwin') return;
+  const service = `gui/${process.getuid()}/io.github.kodai-utsunomiya-mdl.local-tex-editor.background`;
+  try {
+    await execute('/bin/launchctl', ['bootout', service], { timeout: 20000 });
+  } catch (error) {
+    // A job that was not loaded (for example while awaiting OS approval) has
+    // nothing to unload. A job that is still loaded must be cleaned up.
+    try { await execute('/bin/launchctl', ['print', service], { timeout: 20000 }); }
+    catch { return; }
+    throw error;
+  }
+}
 
 async function exists(filename) {
   return lstat(filename).then(() => true, error => {
@@ -63,7 +83,7 @@ async function waitFor(read, predicate, description) {
     if (predicate(value)) return value;
     await delay(100);
   }
-  throw new Error(`${description}\n${outputText}`);
+  throw new Error(`${description}\n${applicationLog()}`);
 }
 
 async function api(endpoint, data) {
@@ -79,16 +99,16 @@ async function api(endpoint, data) {
   return JSON.parse(text);
 }
 
-async function start() {
+async function start(mode = '--no-browser') {
   await rm(readyPath, { force: true });
   let launchError;
-  child = spawn(executable, ['--no-browser', '--ready-file', readyPath], { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+  child = spawn(executable, [mode, '--ready-file', readyPath], { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
   child.on('error', error => { launchError = error; });
   child.stdout.on('data', data => { outputText += data; });
   child.stderr.on('data', data => { outputText += data; });
   ready = await waitFor(async () => {
     if (launchError) throw launchError;
-    assert.equal(child.exitCode, null, `The application exited before it was ready.\n${outputText}`);
+    assert.equal(child.exitCode, null, `The application exited before it was ready.\n${applicationLog()}`);
     try { return JSON.parse(await readFile(readyPath, 'utf8')); }
     catch (error) { if (error.code === 'ENOENT' || error instanceof SyntaxError) return null; throw error; }
   }, value => Boolean(value?.url && value?.token), 'The application did not start.');
@@ -100,6 +120,21 @@ async function stop() {
   await api('/api/shutdown', {});
   await waitFor(() => child.exitCode !== null || child.signalCode !== null, Boolean, 'The application did not exit.');
   ready = null;
+}
+
+async function checkDisabledStartup(command, entry) {
+  const disabledReadyPath = path.join(temporary, `${entry}-disabled.json`);
+  try {
+    const result = await execute(command, ['--startup', '--ready-file', disabledReadyPath], { timeout: 25000, windowsHide: true });
+    outputText += result.stdout + result.stderr;
+  } catch (error) {
+    outputText += (error.stdout || '') + (error.stderr || '');
+    throw new Error(`The disabled startup did not exit successfully through ${entry}.\n${applicationLog()}`);
+  }
+  assert.equal(await exists(disabledReadyPath), false, `${entry} opened the application while start at login was disabled.`);
+  assert.equal(await exists(path.join(config, 'active.json')), false, `${entry} left an active application while start at login was disabled.`);
+  assert.equal(JSON.parse(await readFile(settingsPath, 'utf8')).startupEnabled, false);
+  startupWhileDisabled.push({ entry, exitCode: 0, readyFileCreated: false, activeFileCreated: false });
 }
 
 function registered(state) {
@@ -136,11 +171,13 @@ try {
   assert.equal(JSON.parse(await readFile(settingsPath, 'utf8')).startupEnabled, false);
   states.push({ phase: 'disabled-in-settings', ...disabled });
   await stop();
-  await start();
+  await checkDisabledStartup(process.platform === 'win32' ? initial.executable : executable, 'backend');
+  if (process.platform === 'darwin') await checkDisabledStartup(path.join(application, 'Contents/MacOS/LocalTeXWebEditor'), 'native-launcher');
+  await start('--background');
   const restarted = await api('/api/startup');
   assert.equal(restarted.enabled, false);
   assert.equal(restarted.status, 'disabled');
-  states.push({ phase: 'restart', ...restarted });
+  states.push({ phase: 'restart', arguments: ['--background'], ...restarted });
   if (shortcuts.length) assert.equal(await exists(shortcuts.find(shortcut => shortcut.destination === 'DesktopDirectory').path), false, 'Restarting recreated a desktop shortcut that the user removed.');
   await api('/api/settings/reset', { settings: true, confirmation: true });
   const reset = await api('/api/startup');
@@ -151,13 +188,14 @@ try {
     assert.equal(Boolean(JSON.parse(await readFile(settingsPath, 'utf8')).shortcutSetupPending), false);
     assert.equal(await exists(shortcuts.find(shortcut => shortcut.destination === 'DesktopDirectory').path), false, 'Resetting settings recreated a desktop shortcut that the user removed.');
   }
-  await writeFile(path.join(output, 'result.json'), JSON.stringify({ platform: process.platform, states, shortcuts: shortcutResults }, null, 2));
-  console.log('Start at login: initial registration, disabling, restart, and settings reset passed.');
+  await writeFile(path.join(output, 'result.json'), JSON.stringify({ platform: process.platform, states, startupWhileDisabled, backgroundResume: true, shortcuts: shortcutResults }, null, 2));
+  console.log('Start at login: initial registration, disabling, disabled startup, background resume, and settings reset passed.');
 } finally {
   if (ready && child?.exitCode === null) await api('/api/startup', { enabled: false }).catch(() => {});
+  await unloadMacStartupJob().catch(() => {});
   await stop().catch(() => {});
   if (child?.exitCode === null && child?.signalCode === null) child.kill();
   for (const shortcut of shortcuts) await rm(shortcut.path, { force: true });
-  await writeFile(path.join(output, 'application.log'), tokens.reduce((text, token) => text.replaceAll(token, '[local token]'), outputText));
+  await writeFile(path.join(output, 'application.log'), applicationLog());
   await rm(temporary, { recursive: true, force: true });
 }

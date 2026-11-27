@@ -13,6 +13,7 @@ import (
 
 const startupTaskID = "LocalTeXWebEditorBackground"
 const startupAgentLabel = "io.github.kodai-utsunomiya-mdl.local-tex-editor.background"
+const startupArgument = "--startup"
 
 var startupRegistrationMu sync.Mutex
 
@@ -32,6 +33,10 @@ type StartupState struct {
 
 func startupConfigSupported(configDir string) bool {
 	return IsDefaultConfigDirectory(configDir)
+}
+
+func validStartupArgument(argument string) bool {
+	return argument == startupArgument || argument == "--background"
 }
 
 func startupPathsEqual(first, second string) bool {

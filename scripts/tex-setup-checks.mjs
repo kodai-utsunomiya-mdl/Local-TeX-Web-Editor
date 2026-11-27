@@ -12,6 +12,29 @@ function setupFailure(status) {
   return `${status.error || ''}\n${String(status.log || '').slice(-32_000)}`;
 }
 
+export async function requestTeXManagement(request, endpoint, data, method, { timeout = 60_000, pollInterval = 200 } = {}) {
+  const deadline = Date.now() + timeout;
+  for (;;) {
+    const response = await request(endpoint, data, method);
+    if (response.status !== 409) return response;
+    const body = await response.clone().json().catch(() => null);
+    if (body?.error !== 'Wait for the TeX operation or compilation to finish before continuing.') return response;
+    // The browser also reads setup status after the selected TeX changes. That
+    // inspection briefly owns the management lock; this response means the
+    // requested operation has not started. Other conflicts need their own check.
+    await response.text();
+    if (Date.now() >= deadline) throw new Error(`${endpoint}: TeX management stayed busy for ${timeout} ms.\n${body.error}`);
+    await delay(Math.min(pollInterval, deadline - Date.now()));
+  }
+}
+
+async function teXManagementAPI(request, endpoint, data, method) {
+  const response = await requestTeXManagement(request, endpoint, data, method);
+  const text = await response.text();
+  if (!response.ok) throw new Error(`${endpoint}: HTTP ${response.status}\n${text}`);
+  return JSON.parse(text);
+}
+
 async function waitForSetup(api, id, output, timeout = 20 * 60_000, onStatus) {
   const deadline = Date.now() + timeout;
   let previousStage = '';
@@ -209,24 +232,24 @@ export async function installAndCheckTeX({ api, request, temporary, output, useD
     documents.push(await inspectPDF(Buffer.from(await response.arrayBuffer()), mode, output));
   }
 
-  const beforeAddition = await api('/api/tex/packages');
-  const additional = await api('/api/tex/setup', { operation: 'packages', consent: true, packages: ['siunitx'], reinstall: false, directory: beforeAddition.directory, revision: beforeAddition.revision });
+  const beforeAddition = await teXManagementAPI(request, '/api/tex/packages');
+  const additional = await teXManagementAPI(request, '/api/tex/setup', { operation: 'packages', consent: true, packages: ['siunitx'], reinstall: false, directory: beforeAddition.directory, revision: beforeAddition.revision });
   const added = await waitForSetup(api, additional.id, output, 5 * 60_000);
   assert.equal(added.status, 'succeeded', setupFailure(added));
   await writeFile(path.join(engines, 'units.tex'), '\\documentclass{article}\n\\usepackage{siunitx}\n\\begin{document}\n\\qty{12.3}{\\metre\\per\\second}\n\\end{document}\n');
   await api('/api/settings', { mode: 'pdflatex' }, 'PUT');
   await compile(api, 'units.tex', output);
-  const packages = await api('/api/tex/packages');
+  const packages = await teXManagementAPI(request, '/api/tex/packages');
   assert.equal(packages.managed, true);
   assert.ok(packages.packages.some(item => item.name === 'siunitx'), 'The added package must appear in the installed list.');
-  const removal = await api('/api/tex/packages/remove-preview', { packages: ['siunitx'] });
+  const removal = await teXManagementAPI(request, '/api/tex/packages/remove-preview', { packages: ['siunitx'] });
   assert.ok(removal.removals.some(item => item.name === 'siunitx'));
-  const rejected = await request('/api/tex/setup', { operation: 'remove-packages', consent: true, packages: ['siunitx'], directory: removal.directory, revision: 'outdated-preview' });
+  const rejected = await requestTeXManagement(request, '/api/tex/setup', { operation: 'remove-packages', consent: true, packages: ['siunitx'], directory: removal.directory, revision: 'outdated-preview' });
   assert.equal(rejected.status, 409, 'Package removal must require the current preview.');
-  const removing = await api('/api/tex/setup', { operation: 'remove-packages', consent: true, packages: ['siunitx'], directory: removal.directory, revision: removal.revision });
+  const removing = await teXManagementAPI(request, '/api/tex/setup', { operation: 'remove-packages', consent: true, packages: ['siunitx'], directory: removal.directory, revision: removal.revision });
   const removed = await waitForSetup(api, removing.id, output, 5 * 60_000);
   assert.equal(removed.status, 'succeeded', setupFailure(removed));
-  assert.ok(!(await api('/api/tex/packages')).packages.some(item => item.name === 'siunitx'));
+  assert.ok(!(await teXManagementAPI(request, '/api/tex/packages')).packages.some(item => item.name === 'siunitx'));
   await api('/api/project/open', { path: project });
   await api('/api/settings', { mode: 'project' }, 'PUT');
   await compile(api, 'article.tex', output, 'article-after-package-removal');
@@ -260,7 +283,7 @@ export async function checkExistingTeX({ api, request, temporary, output, instal
   const bin = path.join(directory, relativeBin);
   try {
     await api('/api/settings', { texBin: bin }, 'PUT');
-    const packages = await api('/api/tex/packages');
+    const packages = await teXManagementAPI(request, '/api/tex/packages');
     assert.equal(packages.managed, false);
     assert.equal(packages.environment.managed, false);
     assert.equal(await realpath(packages.environment.directory), await realpath(directory));
@@ -268,28 +291,28 @@ export async function checkExistingTeX({ api, request, temporary, output, instal
     assert.equal(packages.environment.canInstallPackages, true);
     assert.equal(packages.environment.canRemovePackages, true);
     assert.equal(packages.environment.requiresElevation, false);
-    const started = await api('/api/tex/setup', { operation: 'packages', consent: true, packages: ['siunitx'], directory: packages.directory, revision: packages.revision });
+    const started = await teXManagementAPI(request, '/api/tex/setup', { operation: 'packages', consent: true, packages: ['siunitx'], directory: packages.directory, revision: packages.revision });
     const added = await waitForSetup(api, started.id, output, 5 * 60_000);
     assert.equal(added.status, 'succeeded', setupFailure(added));
     assert.equal(added.managed, false);
-    assert.ok((await api('/api/tex/packages')).packages.some(item => item.name === 'siunitx'));
+    assert.ok((await teXManagementAPI(request, '/api/tex/packages')).packages.some(item => item.name === 'siunitx'));
     // The original installation has not received the package.
     await api('/api/settings', { texBin: installed.bin }, 'PUT');
-    assert.ok(!(await api('/api/tex/packages')).packages.some(item => item.name === 'siunitx'));
+    assert.ok(!(await teXManagementAPI(request, '/api/tex/packages')).packages.some(item => item.name === 'siunitx'));
     await api('/api/settings', { texBin: bin }, 'PUT');
-    const preview = await api('/api/tex/packages/remove-preview', { packages: ['siunitx'] });
+    const preview = await teXManagementAPI(request, '/api/tex/packages/remove-preview', { packages: ['siunitx'] });
     assert.ok(preview.removals.some(item => item.name === 'siunitx'));
-    const removing = await api('/api/tex/setup', { operation: 'remove-packages', consent: true, packages: ['siunitx'], directory: preview.directory, revision: preview.revision });
+    const removing = await teXManagementAPI(request, '/api/tex/setup', { operation: 'remove-packages', consent: true, packages: ['siunitx'], directory: preview.directory, revision: preview.revision });
     const removed = await waitForSetup(api, removing.id, output, 5 * 60_000);
     assert.equal(removed.status, 'succeeded', setupFailure(removed));
-    assert.ok(!(await api('/api/tex/packages')).packages.some(item => item.name === 'siunitx'));
+    assert.ok(!(await teXManagementAPI(request, '/api/tex/packages')).packages.some(item => item.name === 'siunitx'));
     await api('/api/project/open', { path: project });
     await api('/api/settings', { mode: 'project' }, 'PUT');
     await compile(api, 'article.tex', output, 'existing-tex-article');
-    const review = await api('/api/tex/setup/delete');
+    const review = await teXManagementAPI(request, '/api/tex/setup/delete');
     assert.equal(await realpath(review.directory), await realpath(directory));
     assert.ok(review.fileCount > 100 && review.size > 50_000_000);
-    const denied = await request('/api/tex/setup/delete', { directory: review.directory, revision: review.revision, confirmation: '' }, 'DELETE');
+    const denied = await requestTeXManagement(request, '/api/tex/setup/delete', { directory: review.directory, revision: review.revision, confirmation: '' }, 'DELETE');
     assert.equal(denied.status, 400);
     assert.ok((await stat(directory)).isDirectory());
     const checks = ['existing-environment-list', 'existing-environment-add-package', 'existing-environment-remove-package', 'selected-environment-only', 'compile-with-existing-environment', 'existing-environment-delete-review'];
@@ -317,25 +340,25 @@ export async function removeAndCheckTeX({ api, request, temporary, output, direc
   const unexpected = path.join(directory, 'user-notes-for-removal-check.tex');
   await writeFile(outside, 'This file is outside the TeX installation.\n', { flag: 'wx' });
   await writeFile(unexpected, 'A document placed in the TeX folder must stop removal.\n', { flag: 'wx' });
-  const blocked = await api('/api/tex/setup/delete');
+  const blocked = await teXManagementAPI(request, '/api/tex/setup/delete');
   assert.equal(blocked.directory, directory);
   assert.equal(blocked.canDelete, false);
   assert.ok(blocked.unknownFiles.some(name => name.endsWith(path.basename(unexpected))));
-  const denied = await request('/api/tex/setup/delete', { directory, revision: blocked.revision, confirmation: 'TinyTeX' }, 'DELETE');
+  const denied = await requestTeXManagement(request, '/api/tex/setup/delete', { directory, revision: blocked.revision, confirmation: 'TinyTeX' }, 'DELETE');
   assert.equal(denied.status, 409, 'Unrecognized files must stop deletion.');
   assert.ok((await stat(unexpected)).isFile());
   await rm(unexpected);
-  const review = await api('/api/tex/setup/delete');
+  const review = await teXManagementAPI(request, '/api/tex/setup/delete');
   await writeFile(path.join(output, 'delete-review.json'), JSON.stringify(review, null, 2));
   assert.equal(review.canDelete, true);
   assert.ok(review.fileCount > 100);
   assert.ok(review.size > 50_000_000);
-  const wrongConfirmation = await request('/api/tex/setup/delete', { directory, revision: review.revision, confirmation: '' }, 'DELETE');
+  const wrongConfirmation = await requestTeXManagement(request, '/api/tex/setup/delete', { directory, revision: review.revision, confirmation: '' }, 'DELETE');
   assert.equal(wrongConfirmation.status, 400);
-  const staleReview = await request('/api/tex/setup/delete', { directory, revision: 'outdated-preview', confirmation: 'TinyTeX' }, 'DELETE');
+  const staleReview = await requestTeXManagement(request, '/api/tex/setup/delete', { directory, revision: 'outdated-preview', confirmation: 'TinyTeX' }, 'DELETE');
   assert.equal(staleReview.status, 409);
   assert.ok((await stat(directory)).isDirectory());
-  const started = await api('/api/tex/setup/delete', { directory, revision: review.revision, confirmation: 'TinyTeX' }, 'DELETE');
+  const started = await teXManagementAPI(request, '/api/tex/setup/delete', { directory, revision: review.revision, confirmation: 'TinyTeX' }, 'DELETE');
   assert.equal(started.operation, 'uninstall');
   const finished = await waitForSetup(api, started.id, output, 120_000);
   assert.equal(finished.status, 'succeeded', setupFailure(finished));
