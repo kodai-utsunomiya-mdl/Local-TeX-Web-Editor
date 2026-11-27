@@ -555,12 +555,12 @@ Store 版で共用の TeX を使う場合は，このボタンから公式の Te
 
 ## アプリとデータの保存先
 
-次の表は **v0.1.15** の配布ファイルの実測値である．1 MB = 1,000,000 bytes とし，MB 単位に丸めている．現在の配布ファイルの容量は，[Release](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) の Assets で確認できる．
+次の表は **v0.1.18** の配布ファイルの実測値である．1 MB = 1,000,000 bytes とし，小数点以下 2 桁で表示している．対象のファイルは，[v0.1.18 の配布ファイル](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.18) から取得できる．
 
 | 対応環境 | ダウンロードする ZIP | 展開後のアプリ本体 |
 | --- | ---: | ---: |
-| Windows x64 | 約 **9 MB** | 約 **18 MB** (`.exe`) |
-| macOS，Apple Silicon + Intel | 約 **17 MB** | 約 **36 MB** (`.app`) |
+| Windows x64 | **9.77 MB** | **18.46 MB** (`.exe`) |
+| macOS，Apple Silicon + Intel | **18.69 MB** | **39.55 MB** (`.app`) |
 
 ZIP には README，画像，ライセンスも含む．Mac のアプリは両方の CPU 向けの実行ファイルを収録している．冒頭の Windows ZIP と macOS のボタンから，対応する配布ファイルを取得できる．
 
