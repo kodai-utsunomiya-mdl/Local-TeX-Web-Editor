@@ -138,7 +138,7 @@ export function createApplicationUpdates({ api, onInstall, onOpenSettings, onSta
   const bannerInstall = byId('application-update-install');
   const postpone = byId('application-update-defer');
   const indicator = byId('application-update-open');
-  let state = null, busy = false, reading = false, started = false, timer = null, localError = '';
+  let state = null, busy = false, reading = false, started = false, timer = null, localError = '', pendingAutomatic = null;
 
   function render() {
     const supported = state?.supported === true;
@@ -147,7 +147,7 @@ export function createApplicationUpdates({ api, onInstall, onOpenSettings, onSta
     const available = supported && ['ready', 'waiting', 'preparing', 'applying', 'downloading'].includes(state?.phase);
     const deferred = Date.parse(state?.deferredUntil || '') > Date.now();
     section.setAttribute('aria-busy', String(busy));
-    checkbox.checked = state?.automatic !== false;
+    checkbox.checked = pendingAutomatic === null ? state?.automatic !== false : pendingAutomatic;
     checkbox.disabled = busy || !supported || preparing;
     status.textContent = applicationUpdateMessage(state);
     status.dataset.phase = state?.phase || 'loading';
@@ -207,8 +207,13 @@ export function createApplicationUpdates({ api, onInstall, onOpenSettings, onSta
 
   check.addEventListener('click', () => perform(() => api('/api/updates/check', { method: 'POST', projectRoot: null, body: {} })));
   checkbox.addEventListener('change', () => {
+    if (busy) { render(); return; }
     const automatic = checkbox.checked;
-    void perform(() => api('/api/updates/settings', { method: 'POST', projectRoot: null, body: { automatic } }));
+    pendingAutomatic = automatic;
+    void perform(async () => {
+      try { return await api('/api/updates/settings', { method: 'POST', projectRoot: null, body: { automatic } }); }
+      finally { pendingAutomatic = null; }
+    });
   });
   for (const button of [install, bannerInstall]) button.addEventListener('click', () => perform(onInstall));
   postpone.addEventListener('click', () => perform(() => api('/api/updates/defer', { method: 'POST', projectRoot: null, body: { minutes: 60 } })));

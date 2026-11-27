@@ -7,7 +7,7 @@ const setupUISpecs = ['**/tex-setup.spec.mjs', '**/tex-management.spec.mjs'];
 export default defineConfig({
   testDir: import.meta.dirname,
   testMatch: phase === 'before-tex' ? setupUISpecs : '**/*.spec.mjs',
-  testIgnore: phase === 'after-tex' ? setupUISpecs : [],
+  testIgnore: phase === 'after-tex' ? [...setupUISpecs, '**/application-updates.spec.mjs'] : [],
   timeout: 180_000,
   expect: { timeout: 15_000 },
   fullyParallel: false,

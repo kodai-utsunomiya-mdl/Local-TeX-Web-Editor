@@ -111,7 +111,7 @@ test('別のタブに未保存の原稿があると更新を待ち，取り消�
   await expect(otherEditor).toHaveAttribute('contenteditable', 'true');
   await page.evaluate(() => window.__sendApplicationUpdate({ type: 'update-cancelled', attemptId: 'all-tabs' }));
   await expect(page.getByTestId('editor').locator('.cm-content')).toHaveAttribute('contenteditable', 'true');
-  await expect(otherEditor).toHaveText(text);
+  await expect(otherEditor).toHaveText(text, { useInnerText: true });
   await other.close();
 });
 

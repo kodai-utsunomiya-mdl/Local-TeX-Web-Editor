@@ -100,6 +100,9 @@ jobs:
       - name: Restore the previous browser tab before installing TeX
         run: npm test -- tests/startup.spec.mjs --grep "ブラウザを終了して前回のタブを復元" --output test-results/browser-session-restore
 
+      - name: Test application updates before installing TeX
+        run: npm test -- tests/application-updates.spec.mjs --output test-results/application-updates
+
       - name: Install TeX through the application and compile the research preambles
         run: node scripts/test-tex-setup.mjs
 
