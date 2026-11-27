@@ -22,7 +22,7 @@ test.use({ interfaceLanguage: 'en', projectDirectory: 'Research project' });
 
 async function replaceSource(page, text) {
   await source(page).click(); await page.keyboard.press(`${modifier}+a`); await page.keyboard.insertText(text);
-  await expect(source(page)).toContainText(text.trim());
+  await expect(source(page)).toContainText(text.trim(), { useInnerText: true });
 }
 
 async function openHome(page) {
@@ -33,6 +33,12 @@ async function openHome(page) {
 async function openZIPMenu(page, root) {
   await card(page, root).locator('[data-action="zip"]').click();
   await expect(menu(page)).toBeVisible();
+}
+
+async function capture(page, testInfo, name) {
+  const file = testInfo.outputPath(name);
+  await page.screenshot({ path: file });
+  await testInfo.attach(name, { path: file, contentType: 'image/png' });
 }
 
 async function addEarlierProject(session, name = 'Earlier paper') {
@@ -67,7 +73,7 @@ test('ホームで現在のプロジェクトを ZIP にすると全ての未保
   const editorElement = await source(page).elementHandle(), cursor = await page.locator('#cursor-status').innerText();
   await openHome(page); await openZIPMenu(page, current);
   await expect(menu(page)).toContainText('Save unsaved changes');
-  await testInfo.attach('project-home-current-zip-en.png', { body: await page.screenshot(), contentType: 'image/png' });
+  await capture(page, testInfo, 'project-home-current-zip-en.png');
   const pending = page.waitForEvent('download'); await menu(page).locator('[data-action="download"]').click();
   const download = await pending;
   expect(download.suggestedFilename()).toBe('Research project.zip');
@@ -81,8 +87,8 @@ test('ホームで現在のプロジェクトを ZIP にすると全ての未保
   expect(await readFile(path.join(imported, 'notes.md'), 'utf8')).toBe(notes);
   await card(page, current).locator('[data-action="resume"]').click();
   expect(await editorElement.evaluate(element => element === document.querySelector('#editor .cm-content'))).toBe(true);
-  await expect(source(page)).toHaveText(notes); await expect(page.locator('#cursor-status')).toHaveText(cursor);
-  await page.keyboard.insertText(' Continued here.'); await expect(source(page)).toHaveText(notes + ' Continued here.');
+  await expect(source(page)).toHaveText(notes, { useInnerText: true }); await expect(page.locator('#cursor-status')).toHaveText(cursor);
+  await page.keyboard.insertText(' Continued here.'); await expect(source(page)).toHaveText(notes + ' Continued here.', { useInnerText: true });
 });
 
 test('別の履歴を ZIP にしても現在の本文と草稿が残り，対象の保存済みファイルを書き出す', async ({ page, session }) => {
@@ -180,14 +186,14 @@ for (const language of ['en', 'ja']) test.describe(`${language} project ZIP on H
     const previous = await addEarlierProject(session, language === 'ja' ? '以前の研究原稿' : 'Earlier research paper');
     const current = (await openProject(session)).project.root;
     await openEditor(page, session); await openHome(page);
-    await testInfo.attach(`project-home-${language}.png`, { body: await page.screenshot(), contentType: 'image/png' });
+    await capture(page, testInfo, `project-home-${language}.png`);
     await openZIPMenu(page, previous);
     await expect(menu(page).getByRole('menuitem')).toHaveCount(2);
     await expect(menu(page).locator('[data-action="download"]')).toHaveText(language === 'ja' ? 'プロジェクトを ZIP でダウンロード' : 'Download project as ZIP');
-    await testInfo.attach(`project-home-zip-${language}.png`, { body: await page.screenshot(), contentType: 'image/png' });
+    await capture(page, testInfo, `project-home-zip-${language}.png`);
     await page.keyboard.press('Escape'); await expect(card(page, previous).locator('[data-action="zip"]')).toBeFocused();
     await page.locator('#theme-toggle').click(); await openZIPMenu(page, current);
-    await testInfo.attach(`project-home-zip-${language}-light.png`, { body: await page.screenshot(), contentType: 'image/png' });
+    await capture(page, testInfo, `project-home-zip-${language}-light.png`);
     await page.keyboard.press('Escape'); await page.setViewportSize({ width: 390, height: 844 });
     const button = card(page, previous).locator('[data-action="zip"]');
     await button.scrollIntoViewIfNeeded(); await button.focus(); await page.keyboard.press('ArrowUp');
@@ -195,7 +201,7 @@ for (const language of ['en', 'ja']) test.describe(`${language} project ZIP on H
     await expect(menu(page).locator('[data-action="download"]')).toBeInViewport();
     await expect(menu(page).locator('[data-action="save-as"]')).toBeInViewport();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
-    await testInfo.attach(`project-home-zip-${language}-narrow.png`, { body: await page.screenshot(), contentType: 'image/png' });
+    await capture(page, testInfo, `project-home-zip-${language}-narrow.png`);
     await page.keyboard.press('Escape'); await expect(button).toBeFocused();
     await page.keyboard.press('Tab'); await expect(card(page, previous).locator('[data-action="delete"]')).toBeFocused();
   });

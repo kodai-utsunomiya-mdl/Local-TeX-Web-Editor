@@ -30,6 +30,7 @@
 .tex-setup-dialog .dialog-actions { margin-top: 16px; }
 .tex-setup-dialog .dialog-actions .button { min-height: 36px; }
 .tex-setup-home { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 24px; row-gap: 6px; margin-top: 32px; padding-top: 22px; border-top: 1px solid var(--border); }
+.welcome-recent:not([hidden]) + .tex-setup-home { padding-top: 0; border-top: 0; }
 .tex-setup-home h2 { grid-column: 1; margin: 0; font-size: 14px; font-weight: 600; line-height: 1.6; }
 .tex-setup-home p { grid-column: 1; min-width: 0; margin: 0; color: var(--secondary); font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
 .tex-setup-home p.field-help { font-size: 11px; }

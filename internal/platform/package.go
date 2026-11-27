@@ -19,6 +19,16 @@ type ConfigDirectories struct {
 	ImportFrom string
 }
 
+// IsDefaultConfigDirectory reports whether the app uses its normal per-user
+// settings folder, including the LocalState folder of an MSIX package.
+func IsDefaultConfigDirectory(configDir string) bool {
+	directories, err := DefaultConfigDirectories()
+	if err != nil {
+		return false
+	}
+	return startupPathsEqual(configDir, directories.Directory)
+}
+
 func unpackagedConfigDirectories() (ConfigDirectories, error) {
 	base, err := os.UserConfigDir()
 	if err != nil {

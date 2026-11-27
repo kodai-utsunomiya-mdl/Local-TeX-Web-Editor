@@ -59,6 +59,7 @@ type configuration struct {
 	TeXInstallations       []managedTeXInstallation   `json:"texInstallations,omitempty"`
 	RecentProjects         []string                   `json:"recentProjects"`
 	Projects               map[string]projectSettings `json:"projects"`
+	ShortcutSetupPending   bool                       `json:"shortcutSetupPending,omitempty"`
 	StartupEnabled         *bool                      `json:"startupEnabled,omitempty"`
 	StartupRegistration    string                     `json:"startupRegistration,omitempty"`
 	AutomaticAppUpdates    *bool                      `json:"automaticAppUpdates,omitempty"`
@@ -71,6 +72,7 @@ func (a *App) loadConfig() error {
 	path := filepath.Join(a.options.ConfigDir, "settings.json")
 	data, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
+		a.config.ShortcutSetupPending = a.canInitializeShortcuts()
 		return nil
 	}
 	if err != nil {

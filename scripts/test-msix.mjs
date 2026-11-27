@@ -141,6 +141,7 @@ try {
   assert.equal(startupInitial.canDisable, true);
   startupStates.push(startupInitial.status);
   assert.equal(JSON.parse(await readFile(path.join(identity.configDir, 'settings.json'), 'utf8')).startupEnabled, true);
+  assert.equal(Boolean(JSON.parse(await readFile(path.join(identity.configDir, 'settings.json'), 'utf8')).shortcutSetupPending), false);
   assert.equal((await api('/api/startup', { enabled: false })).enabled, false);
   startupStates.push('disabled');
   const startupEnabled = await api('/api/startup', { enabled: true });

@@ -149,7 +149,7 @@ func run() error {
 			return err
 		}
 	}
-	installationUpdates := []func() error{application.InitializeStartupRegistration}
+	installationUpdates := []func() error{application.InitializeStartupRegistration, application.InitializeShortcuts}
 	if !noBrowser {
 		installationUpdates = append(installationUpdates, platform.RefreshInstalledShortcuts, func() error { return platform.RefreshStartupRegistration(*configDir) })
 	} else if runtime.GOOS == "darwin" {

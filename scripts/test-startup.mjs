@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { execFile, spawn } from 'node:child_process';
+import { lstat, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
+import { promisify } from 'node:util';
 
 if (!['win32', 'darwin'].includes(process.platform)) throw new Error('Run the startup checks on Windows or macOS.');
 if (process.env.GITHUB_ACTIONS !== 'true') throw new Error('These startup checks require a disposable GitHub Actions runner.');
@@ -26,6 +27,34 @@ await mkdir(output, { recursive: true });
 let child, ready, settingsGeneration = '', outputText = '';
 const states = [];
 const tokens = [];
+const execute = promisify(execFile);
+let shortcuts = [], shortcutResults = [];
+
+async function exists(filename) {
+  return lstat(filename).then(() => true, error => {
+    if (error.code === 'ENOENT') return false;
+    throw error;
+  });
+}
+
+async function windowsShortcutPaths() {
+  const script = `@('Programs', 'DesktopDirectory') | ForEach-Object {
+    $folder = [Environment]::GetFolderPath([Environment+SpecialFolder]::$_, [Environment+SpecialFolderOption]::DoNotVerify)
+    @{ destination = $_; path = [IO.Path]::Combine($folder, 'Local TeX Web Editor.lnk') }
+  } | ConvertTo-Json -Compress`;
+  return JSON.parse((await execute('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script])).stdout);
+}
+
+async function readWindowsShortcuts() {
+  const script = `$shell = New-Object -ComObject WScript.Shell
+  @('Programs', 'DesktopDirectory') | ForEach-Object {
+    $folder = [Environment]::GetFolderPath([Environment+SpecialFolder]::$_, [Environment+SpecialFolderOption]::DoNotVerify)
+    $file = [IO.Path]::Combine($folder, 'Local TeX Web Editor.lnk')
+    $link = $shell.CreateShortcut($file)
+    @{ destination = $_; path = $file; executable = $link.TargetPath; arguments = $link.Arguments }
+  } | ConvertTo-Json -Compress`;
+  return JSON.parse((await execute('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script])).stdout);
+}
 
 async function waitFor(read, predicate, description) {
   const deadline = Date.now() + 25000;
@@ -78,11 +107,29 @@ function registered(state) {
 }
 
 try {
+  if (process.platform === 'win32') {
+    const paths = await windowsShortcutPaths();
+    for (const shortcut of paths) {
+      assert.equal(path.isAbsolute(shortcut.path), true);
+      assert.equal(await exists(shortcut.path), false, 'The shortcut checks require fresh Desktop and Start menu locations.');
+    }
+    shortcuts = paths;
+  }
   await start();
   const initial = await waitFor(() => api('/api/startup'), registered, 'Start at login was not registered by default.');
   assert.equal(initial.supported, true);
   assert.equal(JSON.parse(await readFile(settingsPath, 'utf8')).startupEnabled, true);
   states.push({ phase: 'first-launch', ...initial });
+  if (shortcuts.length) {
+    await waitFor(() => Promise.all(shortcuts.map(shortcut => exists(shortcut.path))), values => values.every(Boolean), 'The initial Desktop and Start menu shortcuts were not created.');
+    shortcutResults = await readWindowsShortcuts();
+    for (const shortcut of shortcutResults) {
+      assert.equal(path.normalize(shortcut.executable).toLowerCase(), path.normalize(initial.executable).toLowerCase());
+      assert.equal(shortcut.arguments, '');
+    }
+    assert.equal(Boolean(JSON.parse(await readFile(settingsPath, 'utf8')).shortcutSetupPending), false);
+    await rm(shortcuts.find(shortcut => shortcut.destination === 'DesktopDirectory').path);
+  }
   const disabled = await api('/api/startup', { enabled: false });
   assert.equal(disabled.enabled, false);
   assert.equal(disabled.status, 'disabled');
@@ -94,17 +141,23 @@ try {
   assert.equal(restarted.enabled, false);
   assert.equal(restarted.status, 'disabled');
   states.push({ phase: 'restart', ...restarted });
+  if (shortcuts.length) assert.equal(await exists(shortcuts.find(shortcut => shortcut.destination === 'DesktopDirectory').path), false, 'Restarting recreated a desktop shortcut that the user removed.');
   await api('/api/settings/reset', { settings: true, confirmation: true });
   const reset = await api('/api/startup');
   assert.equal(registered(reset), true, 'Resetting settings did not restore the startup default.');
   assert.equal(JSON.parse(await readFile(settingsPath, 'utf8')).startupEnabled, true);
   states.push({ phase: 'settings-reset', ...reset });
-  await writeFile(path.join(output, 'result.json'), JSON.stringify({ platform: process.platform, states }, null, 2));
+  if (shortcuts.length) {
+    assert.equal(Boolean(JSON.parse(await readFile(settingsPath, 'utf8')).shortcutSetupPending), false);
+    assert.equal(await exists(shortcuts.find(shortcut => shortcut.destination === 'DesktopDirectory').path), false, 'Resetting settings recreated a desktop shortcut that the user removed.');
+  }
+  await writeFile(path.join(output, 'result.json'), JSON.stringify({ platform: process.platform, states, shortcuts: shortcutResults }, null, 2));
   console.log('Start at login: initial registration, disabling, restart, and settings reset passed.');
 } finally {
   if (ready && child?.exitCode === null) await api('/api/startup', { enabled: false }).catch(() => {});
   await stop().catch(() => {});
   if (child?.exitCode === null && child?.signalCode === null) child.kill();
+  for (const shortcut of shortcuts) await rm(shortcut.path, { force: true });
   await writeFile(path.join(output, 'application.log'), tokens.reduce((text, token) => text.replaceAll(token, '[local token]'), outputText));
   await rm(temporary, { recursive: true, force: true });
 }
