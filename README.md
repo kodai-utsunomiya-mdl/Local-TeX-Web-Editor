@@ -225,6 +225,8 @@ Use the exit button at the top right to stop the app and any running compilation
 3. Under **Destination parent folder**, enter a folder path or click **Choose a folder**. Enter an unused **New project name**; the app suggests one from the ZIP filename.
 4. Check **New project folder**, then click **Import and open**. The app extracts the source, bibliography, images, and other files into that new folder and opens the project.
 
+[![The ZIP import dialog with the archive, destination and new project name selected](docs/screenshots/project-zip-import-en.png)](docs/screenshots/project-zip-import-en.png)
+
 Choose another name if a folder with that name already exists. Japanese filenames and folders for images or chapters are supported. You can import a source ZIP downloaded from Overleaf directly into the app.
 
 ### Download a project as ZIP
@@ -233,7 +235,9 @@ Choose another name if a folder with that name already exists. Japanese filename
 2. The browser saves `<project name>.zip` according to its download settings.
 3. To choose any destination folder and filename, select **ZIP → Save project ZIP as…** instead. In the Windows or Mac save dialog, select the folder, enter a name ending in `.zip`, and click **Save**. The dialog asks before replacing an existing file. Both ZIP actions are also available from the file-list context menu.
 
-To use the ZIP in Overleaf, choose **New Project → Upload Project** and select the file. Set the main document and compiler to match the original project. See Overleaf's [Uploading a project](https://docs.overleaf.com/managing-projects-and-files/uploading-a-project) guide.
+[![The ZIP menu with Download project as ZIP and Save project ZIP as…](docs/screenshots/project-zip-menu-en.png)](docs/screenshots/project-zip-menu-en.png)
+
+To use the ZIP in Overleaf, choose **New project → Existing project (.zip)** and select the file. Set the main document and compiler to match the original project. See Overleaf's [Uploading a project](https://docs.overleaf.com/managing-projects-and-files/uploading-a-project) guide.
 
 The ZIP contains the project files and their relative folders at its root, including bibliography files, images, fonts, custom `.sty` and `.cls` files, and `latexmkrc`. App caches, Git's internal folder, and logs and intermediate files associated with TeX documents are omitted. PDF figures, `.aux` files used to reference external documents, `.bbl` bibliography files, and custom `.ist` files are included.
 
