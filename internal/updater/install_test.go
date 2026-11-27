@@ -532,12 +532,18 @@ func waitForUpdaterTestReadyFile(t *testing.T, path string) {
 	t.Helper()
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
-		if _, err := os.Stat(path); err == nil {
+		// os.WriteFile creates the file before writing its JSON. Cleanup needs
+		// the PID to stop the child before TempDir removes its executable.
+		data, err := os.ReadFile(path)
+		var ready struct {
+			PID int `json:"pid"`
+		}
+		if err == nil && json.Unmarshal(data, &ready) == nil && ready.PID > 0 && ready.PID != os.Getpid() {
 			return
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
-	t.Fatalf("the application did not report readiness: %s", path)
+	t.Fatalf("the application did not report readiness with a valid process ID: %s", path)
 }
 
 func TestRunInstallerRejectsInvalidPlansBeforeStartingAProcess(t *testing.T) {
