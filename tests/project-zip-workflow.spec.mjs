@@ -19,7 +19,7 @@ async function menuAction(page, action) {
 }
 
 async function savedProjectZIP(session) {
-  const { project } = await json(session, '/api/session');
+  const { project } = await json(session, '/api/state');
   const response = await request(session, '/api/project/download', { method: 'POST', data: {}, headers: { 'X-Project-Root': encodeURIComponent(project.root) } });
   expect(response.ok, `${response.status} ${response.statusText}`).toBe(true);
   return Buffer.from(await response.arrayBuffer());

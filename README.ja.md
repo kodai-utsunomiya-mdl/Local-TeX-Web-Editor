@@ -221,6 +221,8 @@ PC にある原稿は，`.tex`，`.bib`，画像，`latexmkrc` などを含む�
 3. **Destination parent folder (保存先の親フォルダー)** にパスを入力するか，**Choose a folder (フォルダーを選ぶ)** で選ぶ．**New project name (新しいプロジェクトの名前)** には，まだ使っていない名前を入力する．ZIP の名前をもとにプロジェクト名を提案する．
 4. **New project folder (作成先)** を確認して **Import and open (読み込んで開く)** を押す．その新しいフォルダーへ原稿，参考文献，画像などを展開し，プロジェクトを開く．
 
+[![ZIP ファイルと保存先の親フォルダー，新しいプロジェクトの名前を入力した読み込み画面](docs/screenshots/project-zip-import-ja.png)](docs/screenshots/project-zip-import-ja.png)
+
 同じ名前のフォルダーがある場合は，新しい名前を指定する．ZIP 内にある日本語のファイル名や，画像・章ごとのフォルダー構成も使える．Overleaf でダウンロードしたソースの ZIP を，アプリで展開して編集できる．
 
 ### プロジェクトを ZIP でダウンロードする
@@ -229,7 +231,9 @@ PC にある原稿は，`.tex`，`.bib`，画像，`latexmkrc` などを含む�
 2. ブラウザのダウンロード設定に従い，`<プロジェクト名>.zip` を保存する．
 3. 任意の保存先とファイル名を選ぶ場合は，**ZIP → Save project ZIP as… (ZIP にして名前を付けて保存…)** を選ぶ．Windows または Mac の保存画面でフォルダーと `.zip` で終わるファイル名を指定し，**保存** を押す．同名のファイルがある場合は，上書きの確認が表示される．どちらの操作もファイル一覧の右クリックメニューから使える．
 
-Overleaf で使う場合は，**New Project → Upload Project** でこの ZIP を選ぶ．メイン文書とコンパイラーを，元のプロジェクトに合わせて選ぶ．手順は Overleaf の [Uploading a project](https://docs.overleaf.com/managing-projects-and-files/uploading-a-project) で確認できる．
+[![プロジェクトを ZIP でダウンロードする操作と，ZIP にして名前を付けて保存する操作を示すメニュー](docs/screenshots/project-zip-menu-ja.png)](docs/screenshots/project-zip-menu-ja.png)
+
+Overleaf で使う場合は，**New project → Existing project (.zip)** でこの ZIP を選ぶ．メイン文書とコンパイラーを，元のプロジェクトに合わせて選ぶ．手順は Overleaf の [Uploading a project](https://docs.overleaf.com/managing-projects-and-files/uploading-a-project) で確認できる．
 
 ZIP の直下に原稿と各フォルダーを置き，参考文献，画像，フォント，独自の `.sty`・`.cls`，`latexmkrc` などもまとめる．アプリのキャッシュ，Git の管理用フォルダー，コンパイルに対応するログや中間ファイルは含めない．図として使う PDF，外部の文書を参照する `.aux`，参考文献の `.bbl`，独自の `.ist` は ZIP に含める．
 
