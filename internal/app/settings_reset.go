@@ -197,6 +197,7 @@ func (a *App) settingsResetHandler(w http.ResponseWriter, r *http.Request) {
 	var startupError error
 	if input.Settings {
 		config.TexBin, config.RecentProjects, config.Projects = "", []string{}, map[string]projectSettings{}
+		config.ShortcutSetupPending = false
 		startupEnabled := true
 		config.StartupEnabled = &startupEnabled
 		config.StartupRegistration = ""

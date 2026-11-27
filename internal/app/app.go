@@ -45,6 +45,7 @@ type App struct {
 	startupHooks          *startupHooks
 	templateMu            sync.Mutex
 	shortcutCreator       func(string) (platform.ShortcutResult, error)
+	shortcutSetupCheck    func(string) bool
 	saveFilePicker        fileSavePicker
 	options               Options
 	packageIdentity       *platform.PackageIdentity

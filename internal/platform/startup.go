@@ -31,11 +31,7 @@ type StartupState struct {
 }
 
 func startupConfigSupported(configDir string) bool {
-	directories, err := DefaultConfigDirectories()
-	if err != nil {
-		return false
-	}
-	return startupPathsEqual(configDir, directories.Directory)
+	return IsDefaultConfigDirectory(configDir)
 }
 
 func startupPathsEqual(first, second string) bool {

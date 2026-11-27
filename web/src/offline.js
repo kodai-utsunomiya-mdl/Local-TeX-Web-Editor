@@ -2,14 +2,14 @@ const text = {
   en: {
     title: 'Waiting for the application',
     description: 'This tab will reopen your editor when Local TeX Web Editor starts on this computer.',
-    help: 'Open the application from its icon. You can also enable automatic startup in Settings to reconnect after signing in to your computer.',
+    help: 'Open the application from its icon. You can change Start at login in the app’s Settings.',
     checking: 'Checking the connection…', waiting: 'Waiting for Local TeX Web Editor to start…',
     key: 'Open Local TeX Web Editor from its icon to reconnect this browser.', retry: 'Check again',
   },
   ja: {
     title: 'アプリへの接続を待っています',
     description: 'この PC で Local TeX Web Editor が起動すると，このタブに編集画面が戻ります．',
-    help: 'アプリのアイコンから起動してください．設定で自動起動を有効にすると，PC へのログイン後に接続できます．',
+    help: 'アプリのアイコンから起動してください．ログイン時の起動は，アプリの設定で切り替えられます．',
     checking: '接続を確認しています…', waiting: 'Local TeX Web Editor の起動を待っています…',
     key: 'アプリのアイコンから Local TeX Web Editor を開き，ブラウザを再接続してください．', retry: '接続を確認',
   },
