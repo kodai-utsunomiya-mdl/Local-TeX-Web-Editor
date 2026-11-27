@@ -1,6 +1,6 @@
 export const startupEnglish = {
   'ログイン時の起動': 'Start at login',
-  'ブラウザのタブ復元に備え，ログイン時にバックグラウンドで起動します．新しいブラウザのタブは開きません．': 'Start in the background when you log in, ready for the browser to restore your tabs. No new browser tab is opened.',
+  '初期設定では，ログイン時にバックグラウンドで起動します．ブラウザのタブ復元に備えて待機し，新しいタブは開きません．': 'Start in the background at login by default, ready for the browser to restore your tabs. No new tab is opened.',
   'ログイン時の起動を有効にする': 'Enable start at login',
   '無効にする': 'Disable',
   'OS の起動設定を開く…': 'Open system startup settings…',

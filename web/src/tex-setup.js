@@ -96,7 +96,7 @@ export function createTeXSetup({ api, getMeta, home, indicator, getCompileTarget
   const sample = translated('button', 'サンプルを作成…', { id: 'tex-setup-sample', type: 'button', class: 'button button-primary', hidden: '' });
   ui.footer.append(close, retry, stop, start, compile, sample);
 
-  const homeTitle = translated('h2', 'TeX の導入と管理');
+  const homeTitle = translated('h2', 'TeX の導入と管理', { id: 'tex-setup-home-title' });
   const homeStatus = element('p', { id: 'tex-setup-home-status' });
   const homeNote = translated('p', 'Markdown は，TeX を導入せずに編集できます．', { class: 'field-help' });
   const homeOpen = translated('button', 'TeX をセットアップ…', { id: 'home-tex-setup', type: 'button', class: 'button' });

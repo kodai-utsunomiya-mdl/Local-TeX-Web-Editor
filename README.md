@@ -4,13 +4,13 @@ English | [日本語](README.ja.md) · [Website and guide](https://kodai-utsunom
 
 [![Get the free Windows app from Microsoft Store](docs/download-store.svg)](https://apps.microsoft.com/detail/9P6QF32N19HG)
 &nbsp;&nbsp;
-[![Download Windows ZIP](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.18/local-tex-web-editor-0.1.18-windows-x64.zip)
+[![Download Windows ZIP](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.19/local-tex-web-editor-0.1.19-windows-x64.zip)
 &nbsp;&nbsp;
-[![Download for macOS](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.18/local-tex-web-editor-0.1.18-macos-universal.zip)
+[![Download for macOS](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.19/local-tex-web-editor-0.1.19-macos-universal.zip)
 
-**v0.1.18** · [All downloads and release notes](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [Get started](#first-document) · [Download and launch](#download-and-launch) · [Requirements](#requirements) · [App size](#app-files-and-storage)
+**v0.1.19** · [All downloads and release notes](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [Get started](#first-document) · [Download and launch](#download-and-launch) · [Requirements](#requirements) · [App size](#app-files-and-storage)
 
-The ZIP downloads are v0.1.18. The Microsoft Store update becomes available after Store review and publication.
+The ZIP downloads are v0.1.19. The Microsoft Store update becomes available after Store review and publication.
 
 Edit TeX and Markdown documents in your browser on Windows or macOS. On a computer without TeX, start this app and choose **Home → Set up TeX…**. The app downloads and installs TeX, selects the new environment when setup finishes, and uses it to compile your documents. Launching the app opens a `localhost` page in your default browser, with the editor and PDF preview in the same window.
 
@@ -68,7 +68,7 @@ Microsoft Store manages installation and app updates. The setup guide below cont
 #### ZIP download
 
 1. Open [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) and select the latest version.
-2. Under **Assets**, download `local-tex-web-editor-0.1.18-windows-x64.zip`. The **Source code** archives contain the files for development.
+2. Under **Assets**, download `local-tex-web-editor-0.1.19-windows-x64.zip`. The **Source code** archives contain the files for development.
 3. Extract the ZIP and double-click `local-tex-web-editor.exe`.
 4. On Home, [set up TeX from the app](#set-up-tex-from-the-app) if TeX is not installed, or [select your existing installation](#use-an-existing-tex-installation) if you already use TeX. Then choose **Create from a template** on Home to create a sample.
 
@@ -76,7 +76,7 @@ The Windows executable in the ZIP download does not have a code signature. If Sm
 
 ### macOS
 
-1. Under **Assets** in [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases), download `local-tex-web-editor-0.1.18-macos-universal.zip`. The same ZIP supports Apple Silicon and Intel.
+1. Under **Assets** in [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases), download `local-tex-web-editor-0.1.19-macos-universal.zip`. The same ZIP supports Apple Silicon and Intel.
 2. Extract the ZIP and move `Local TeX Web Editor.app` to **Applications**.
 3. Open **Local TeX Web Editor** from Finder or Spotlight. The editor opens in your browser.
 4. On Home, [set up TeX from the app](#set-up-tex-from-the-app) if TeX is not installed, or [select your existing installation](#use-an-existing-tex-installation) if you already use TeX. Then choose **Create from a template** on Home to create a sample.
@@ -212,7 +212,7 @@ If a required program is missing, use **Add TeX packages** to review and add it 
 
 ### Open a project and finish a session
 
-For a project already on your computer, open the folder containing its `.tex` and `.bib` files, images, `latexmkrc`, and other project files. Choose **Import ZIP…** on Home to open a project ZIP downloaded from Overleaf or another source.
+For a project already on your computer, open the folder containing its documents (`.tex`, `.md`, `.txt`), bibliography files (`.bib`), images, `latexmkrc`, and other project files. Choose **Import ZIP…** on Home to open a project ZIP downloaded from Overleaf or another source.
 
 The app keeps running when an editor browser tab sleeps, is discarded, or closes. Returning to the tab reconnects to the same local address. Launching the same version again opens the running editor. Drafts and tab positions are recorded when the page becomes inactive and are available when you return. The browser asks for confirmation when a document has unsaved edits.
 
@@ -237,16 +237,18 @@ Choose another name if a folder with that name already exists. Japanese filename
 
 [![The ZIP menu with Download project as ZIP and Save project ZIP as…](docs/screenshots/project-zip-menu-en.png)](docs/screenshots/project-zip-menu-en.png)
 
+On Home, each recent project also has a **ZIP** menu with both export actions. For the project being edited, the app saves the open documents before creating the archive. For another recent project, it exports the files saved in that folder. You can continue editing the current project after the export.
+
 To use the ZIP in Overleaf, choose **New project → Existing project (.zip)** and select the file. Set the main document and compiler to match the original project. See Overleaf's [Uploading a project](https://docs.overleaf.com/managing-projects-and-files/uploading-a-project) guide.
 
 The ZIP contains the project files and their relative folders at its root, including bibliography files, images, fonts, custom `.sty` and `.cls` files, and `latexmkrc`. App caches, Git's internal folder, and logs and intermediate files associated with TeX documents are omitted. PDF figures, `.aux` files used to reference external documents, `.bbl` bibliography files, and custom `.ist` files are included.
 
 ### Restore the editor after restarting the computer
 
-The app remembers its local address so a browser tab can reconnect after the app restarts. To make it available when you sign in to your computer:
+**Start at login is enabled by default.** The app remembers its local address and starts in the background when you sign in, so restored browser tabs can reconnect.
 
 1. Open **Settings → Start at login**.
-2. Choose **Enable start at login**. If the operating system asks for approval, follow the explanation shown there. **Open system startup settings…** opens the relevant OS settings when needed.
+2. Choose **Disable** to turn it off, or **Enable start at login** to turn it back on. **Open system startup settings…** opens the relevant OS settings when needed.
 3. After restarting your computer, restore your previous browser tabs as usual. The editor opens the project and its recorded tabs and positions. If the browser opens first, a waiting page reconnects when the app is ready.
 
 Start at login runs the app in the background and opens no additional browser tab. **Disable** turns it off for later logins. **Quit** still stops the current app session; opening the app starts it again. You can also leave start at login disabled and open the app yourself before returning to the restored tab.
@@ -438,7 +440,7 @@ Open **Settings → Information saved by the app → Reset settings and remember
 
 | Choice | Selected initially | Effect |
 | --- | --- | --- |
-| Settings and remembered actions | Yes | Returns appearance, editing preferences, recent projects, open tabs, editing positions and the selected TeX installation to their defaults; disables start at login |
+| Settings and remembered actions | Yes | Returns appearance, editing preferences, recent projects, open tabs, editing positions and the selected TeX installation to their defaults; enables start at login |
 | Unsaved drafts | No | Deletes the app's copies of text that has not been saved to project files |
 | Edit history | No | Deletes the recorded earlier versions of documents |
 | Your templates | No | Deletes templates you added |
@@ -610,7 +612,7 @@ go build -o bin/local-tex-web-editor.exe ./cmd/local-tex-editor
 Build a Windows distribution executable:
 
 ```sh
-go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.18" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
+go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.19" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
 ```
 
 `build:windows-resources` generates Windows x64 resources from the bundled ICO. The executable embeds nine icon sizes from 16 to 256 px.
@@ -626,7 +628,7 @@ npx playwright install chromium
 node scripts/build-macos.mjs
 ```
 
-This creates `dist/local-tex-web-editor-0.1.18-macos-universal.zip` with an app supporting Apple Silicon and Intel, the English and Japanese READMEs, and license files.
+This creates `dist/local-tex-web-editor-0.1.19-macos-universal.zip` with an app supporting Apple Silicon and Intel, the English and Japanese READMEs, and license files.
 
 Command-line options:
 

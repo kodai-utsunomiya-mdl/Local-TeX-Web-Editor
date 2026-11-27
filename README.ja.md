@@ -4,13 +4,13 @@
 
 [![Microsoft Store から無料の Windows 版をインストール](docs/download-store.svg)](https://apps.microsoft.com/detail/9P6QF32N19HG?hl=ja-jp&gl=JP)
 &nbsp;&nbsp;
-[![Windows 版の ZIP をダウンロード](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.18/local-tex-web-editor-0.1.18-windows-x64.zip)
+[![Windows 版の ZIP をダウンロード](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.19/local-tex-web-editor-0.1.19-windows-x64.zip)
 &nbsp;&nbsp;
-[![macOS 版をダウンロード](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.18/local-tex-web-editor-0.1.18-macos-universal.zip)
+[![macOS 版をダウンロード](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.19/local-tex-web-editor-0.1.19-macos-universal.zip)
 
-**v0.1.18** · [配布ファイルと更新内容](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [初めて使う](#初めて使う) · [起動する](#ダウンロードして起動する) · [利用前の準備](#利用前の準備) · [アプリの容量](#アプリとデータの保存先)
+**v0.1.19** · [配布ファイルと更新内容](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [初めて使う](#初めて使う) · [起動する](#ダウンロードして起動する) · [利用前の準備](#利用前の準備) · [アプリの容量](#アプリとデータの保存先)
 
-ZIP は v0.1.18 を配布する．Microsoft Store 版の更新は，Store の審査と公開の完了後に利用できる．
+ZIP は v0.1.19 を配布する．Microsoft Store 版の更新は，Store の審査と公開の完了後に利用できる．
 
 Windows と macOS のブラウザで TeX と Markdown の原稿を編集するアプリ．TeX が入っていない PC でも，まずこのアプリを起動し，**ホーム → TeX をセットアップ…** から導入できる．完了すると，導入した環境が自動で選ばれ，原稿をコンパイルできる．起動時には既定のブラウザで `localhost` の画面が開き，原稿と PDF を同じウィンドウで確認できる．
 
@@ -64,7 +64,7 @@ macOS 版の最低 OS は，アプリのビルドに使う [Go 1.25 の対応 OS
 #### ZIP をダウンロードする
 
 1. [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) を開き，最新のバージョンを選ぶ．
-2. **Assets** の `local-tex-web-editor-0.1.18-windows-x64.zip` をダウンロードする．`Source code` は開発用のソースである．
+2. **Assets** の `local-tex-web-editor-0.1.19-windows-x64.zip` をダウンロードする．`Source code` は開発用のソースである．
 3. ZIP を展開し，`local-tex-web-editor.exe` をダブルクリックする．
 4. ホーム画面が開いたら，TeX がない場合は [アプリから TeX を導入する](#アプリから-tex-を導入する)，すでにある場合は [既存の TeX を選ぶ](#既存の-tex-を選ぶ) へ進む．続いてホームの **Create from a template (テンプレートから作成)** からサンプルを作れる．
 
@@ -72,7 +72,7 @@ Windows の ZIP に含まれる実行ファイルにはコード署名が付い�
 
 ### macOS
 
-1. [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) の **Assets** から `local-tex-web-editor-0.1.18-macos-universal.zip` をダウンロードする．Apple Silicon と Intel で共通の ZIP を使う．
+1. [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) の **Assets** から `local-tex-web-editor-0.1.19-macos-universal.zip` をダウンロードする．Apple Silicon と Intel で共通の ZIP を使う．
 2. ZIP を展開し，`Local TeX Web Editor.app` を「アプリケーション」フォルダーへ移す．
 3. Finder や Spotlight から `Local TeX Web Editor` を開く．ブラウザに編集画面が開く．
 4. ホーム画面が開いたら，TeX がない場合は [アプリから TeX を導入する](#アプリから-tex-を導入する)，すでにある場合は [既存の TeX を選ぶ](#既存の-tex-を選ぶ) へ進む．続いてホームの **Create from a template (テンプレートから作成)** からサンプルを作れる．
@@ -208,7 +208,7 @@ TeX Live，BasicTeX，MacTeX，TinyTeX などで原稿をコンパイルでき�
 
 ### プロジェクトを開き，作業を終了する
 
-PC にある原稿は，`.tex`，`.bib`，画像，`latexmkrc` などを含むプロジェクトのフォルダーを指定して開く．Overleaf などからダウンロードしたプロジェクトの ZIP は，ホームの **ZIP を読み込む…** から開ける．
+PC にある原稿は，`.tex`，`.md`，`.txt`，`.bib`，画像，`latexmkrc` などを含むプロジェクトのフォルダーを指定して開く．Overleaf などからダウンロードしたプロジェクトの ZIP は，ホームの **ZIP を読み込む…** から開ける．
 
 ブラウザの編集タブが休止したり閉じられたりしても，アプリは動作を続ける．タブへ戻ると同じローカルアドレスへ接続し直す．同じ版のアプリをもう一度起動した場合も，起動中の編集画面を開く．ページから離れる際には草稿とタブの位置を記録し，戻ったときに読み込む．原稿に未保存の編集がある場合は，ブラウザの確認画面が出る．
 
@@ -233,16 +233,18 @@ PC にある原稿は，`.tex`，`.bib`，画像，`latexmkrc` などを含む�
 
 [![プロジェクトを ZIP でダウンロードする操作と，ZIP にして名前を付けて保存する操作を示すメニュー](docs/screenshots/project-zip-menu-ja.png)](docs/screenshots/project-zip-menu-ja.png)
 
+ホームの最近開いたプロジェクトでも，各プロジェクトの **ZIP** から両方の書き出しを選べる．編集中のプロジェクトでは，開いている原稿を保存してから ZIP を作る．別のプロジェクトでは，そのフォルダーに保存されたファイルを使う．書き出した後も，現在のプロジェクトで編集を続けられる．
+
 Overleaf で使う場合は，**New project → Existing project (.zip)** でこの ZIP を選ぶ．メイン文書とコンパイラーを，元のプロジェクトに合わせて選ぶ．手順は Overleaf の [Uploading a project](https://docs.overleaf.com/managing-projects-and-files/uploading-a-project) で確認できる．
 
 ZIP の直下に原稿と各フォルダーを置き，参考文献，画像，フォント，独自の `.sty`・`.cls`，`latexmkrc` などもまとめる．アプリのキャッシュ，Git の管理用フォルダー，コンパイルに対応するログや中間ファイルは含めない．図として使う PDF，外部の文書を参照する `.aux`，参考文献の `.bbl`，独自の `.ist` は ZIP に含める．
 
 ### PC の再起動後にブラウザのタブから戻る
 
-アプリは PC 内の接続先を記録し，起動し直した後も同じブラウザのタブから接続する．PC へのログイン後に使えるようにするには，次の設定を行う．
+**ログイン時の起動は初期状態で有効** である．アプリは PC 内の接続先を記録し，ログイン後にバックグラウンドで起動するため，復元したブラウザのタブから接続できる．
 
 1. **設定 → ログイン時の起動** を開く．
-2. **ログイン時の起動を有効にする** を押す．OS が許可を求める場合は，表示された説明に沿って進める．必要な場合は **OS の起動設定を開く…** から確認できる．
+2. オフにする場合は **無効にする**，再びオンにする場合は **ログイン時の起動を有効にする** を押す．必要な場合は **OS の起動設定を開く…** から確認できる．
 3. PC を再起動した後，ブラウザで前回のタブを復元する．プロジェクトと記録済みのタブ・編集位置へ戻る．ブラウザが先に起動した場合は，待機画面からアプリへ自動的に再接続する．
 
 この設定では，ログイン時にアプリをバックグラウンドで起動し，新しいブラウザのタブは開かない．**無効にする** で次回以降の自動起動を止められる．**終了** は現在動いているアプリを停止し，アプリを開くと再び起動する．自動起動を使わず，自分でアプリを起動してから復元したタブへ戻る方法も使える．
@@ -316,11 +318,11 @@ Mac では，保存・検索・コンパイル・SyncTeX のクリック操作�
 
 ### ファイルを操作し，プログラムを編集する
 
-**TeX のロゴ**を押すとホームが開き，現在のプロジェクトと最近開いたプロジェクトを管理できる．「編集に戻る」で，未保存の本文，タブ，カーソル位置がある同じ編集画面へ戻る．各カードにプロジェクト名とフォルダーの絶対パスを表示する．
+**TeX のロゴ**を押すとホームが開き，現在のプロジェクトと最近開いたプロジェクトを管理できる．「編集に戻る」で，未保存の本文，タブ，カーソル位置がある同じ編集画面へ戻る．一覧にはプロジェクト名とフォルダーの絶対パスを表示し，各プロジェクトの **ZIP** から書き出しを選べる．
 
-ホームを開いたときやブラウザの画面へ戻ったときに，フォルダーの状態を読み直す．移動・削除された場合や読み取れない場合は，カードに理由を表示する．ドライブの再接続やフォルダーを戻した後には「再確認」を使い，移動先を使う場合はフォルダーを選び直す．「一覧から外す」は最近の一覧の登録を外す操作で，PC 上の原稿，設定，草稿は残る．現在のフォルダーが使えない間も，開いた本文の編集と草稿の記録を続けられ，元の場所が使える状態に戻ると保存やコンパイルを再開できる．保存された PDF のプレビューも引き続き読める．
+ホームを開いたときやブラウザの画面へ戻ったときに，フォルダーの状態を読み直す．移動・削除された場合や読み取れない場合は，そのプロジェクトに理由を表示する．ドライブの再接続やフォルダーを戻した後には「再確認」を使い，移動先を使う場合はフォルダーを選び直す．「一覧から外す」は最近の一覧の登録を外す操作で，PC 上の原稿，設定，草稿は残る．現在のフォルダーが使えない間も，開いた本文の編集と草稿の記録を続けられ，元の場所が使える状態に戻ると保存やコンパイルを再開できる．保存された PDF のプレビューも引き続き読める．
 
-カードの「削除…」では，隠し項目や記録した草稿を含めて，削除するファイルとフォルダーを確認できる．確認のチェックを入れ，プロジェクト名を正確に入力して「プロジェクトを削除」を押すと，PC 上のフォルダーを中身ごと削除する．確認後にファイルや草稿が変わった場合は一覧を更新し，もう一度確認する．対象の草稿と，最近使ったプロジェクトの登録も削除する．
+各プロジェクトの「削除…」では，隠し項目や記録した草稿を含めて，削除するファイルとフォルダーを確認できる．確認のチェックを入れ，プロジェクト名を正確に入力して「プロジェクトを削除」を押すと，PC 上のフォルダーを中身ごと削除する．確認後にファイルや草稿が変わった場合は一覧を更新し，もう一度確認する．対象の草稿と，最近使ったプロジェクトの登録も削除する．
 
 ファイル，フォルダー，ファイル一覧の空いている部分を右クリックすると，その場所へ新規ファイルやフォルダーを作成できる．「コンピューターからファイルを追加…」では，ファイル選択画面から選んだファイルをプロジェクトへコピーする．「＋」の隣のボタンからも開ける．コピー先のフォルダーを選び，同名のファイルがある場合は「置き換える」「別名で追加」「スキップ」から選ぶ．開いているタブや草稿があるファイルを置き換える場合は，先にタブを閉じるか草稿を確認する．複数のファイルを選べ，1 ファイルの上限は **128 MiB** である．「＋」からプロジェクト内のパスを指定して新しいファイルを作る方法も使える．
 
@@ -434,7 +436,7 @@ Mac では，保存・検索・コンパイル・SyncTeX のクリック操作�
 
 | 選択する項目 | 初期状態 | 初期化する内容 |
 | --- | --- | --- |
-| 設定と記憶した操作 | オン | 外観，編集の設定，最近開いたプロジェクト，タブと編集位置，TeX の選択を初期値へ戻し，ログイン時の自動起動を無効にする |
+| 設定と記憶した操作 | オン | 外観，編集の設定，最近開いたプロジェクト，タブと編集位置，TeX の選択を初期値へ戻し，ログイン時の自動起動を有効にする |
 | 未保存の草稿 | オフ | 原稿のファイルへ保存していない本文のコピーを削除する |
 | 編集履歴 | オフ | 以前の本文を復元するための記録を削除する |
 | 自作テンプレート | オフ | 自分で追加したテンプレートを削除する |
@@ -606,7 +608,7 @@ go build -o bin/local-tex-web-editor.exe ./cmd/local-tex-editor
 Windows 用の配布ファイルは次のコマンドで作成する．
 
 ```sh
-go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.18" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
+go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.19" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
 ```
 
 `build:windows-resources` は同梱の ICO から Windows x64 用の resource を生成する．実行ファイルのビルド時に，16〜256 px の 9 サイズのアイコンが組み込まれる．
@@ -622,7 +624,7 @@ npx playwright install chromium
 node scripts/build-macos.mjs
 ```
 
-`dist/local-tex-web-editor-0.1.18-macos-universal.zip` に，Apple Silicon と Intel で動く `.app`，日英の README，ライセンスを収録する．
+`dist/local-tex-web-editor-0.1.19-macos-universal.zip` に，Apple Silicon と Intel で動く `.app`，日英の README，ライセンスを収録する．
 
 起動時のオプション:
 

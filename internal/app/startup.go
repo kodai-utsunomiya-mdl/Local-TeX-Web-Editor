@@ -3,6 +3,7 @@ package app
 import (
 	"errors"
 	"net/http"
+	"runtime"
 
 	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/messages"
 	"github.com/kodai-utsunomiya-mdl/local-tex-editor/internal/platform"
@@ -30,6 +31,63 @@ func (a *App) startupFunctions() startupHooks {
 	return functions
 }
 
+// Apply the default once. Later launches use the OS registration as it stands,
+// including changes made in Windows or macOS settings.
+func (a *App) InitializeStartupRegistration() error {
+	a.settingsMu.RLock()
+	defer a.settingsMu.RUnlock()
+	a.startupMu.Lock()
+	defer a.startupMu.Unlock()
+	a.mu.Lock()
+	if a.closed || (a.config.StartupEnabled != nil && (!*a.config.StartupEnabled || a.config.StartupRegistration == a.startupRegistrationID())) {
+		a.mu.Unlock()
+		return nil
+	}
+	functions := a.startupFunctions()
+	a.mu.Unlock()
+	state, err := functions.status(a.options.ConfigDir)
+	if err != nil {
+		return messages.Errorf("ログイン時の起動を設定できませんでした．設定画面で確認してください: %w", err)
+	}
+	if !state.Supported {
+		return nil
+	}
+	// Save before asking the OS, so an interrupted request is not repeated after
+	// the user subsequently disables the registration in the system settings.
+	if err := a.saveStartupPreference(true); err != nil {
+		return err
+	}
+	if !state.Enabled && state.CanEnable {
+		_, err = functions.set(a.options.ConfigDir, true)
+		if err != nil {
+			return messages.Errorf("ログイン時の起動を設定できませんでした．設定画面で確認してください: %w", err)
+		}
+	}
+	return nil
+}
+
+func (a *App) saveStartupPreference(enabled bool) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	config := cloneConfig(a.config)
+	config.StartupEnabled = &enabled
+	config.StartupRegistration = a.startupRegistrationID()
+	if err := a.saveConfig(config); err != nil {
+		return messages.Errorf("ログイン時の起動設定を保存できません: %w", err)
+	}
+	a.config = config
+	return nil
+}
+
+// A ZIP installation and an MSIX package use different OS registrations. The
+// imported preference is applied once to the package's own startup task.
+func (a *App) startupRegistrationID() string {
+	if a.packageIdentity != nil {
+		return "msix:" + a.packageIdentity.FamilyName
+	}
+	return runtime.GOOS
+}
+
 func (a *App) startupHandler(w http.ResponseWriter, r *http.Request) {
 	if !requireMethod(w, r, http.MethodGet, http.MethodPost) {
 		return
@@ -49,7 +107,9 @@ func (a *App) startupHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		enabled = input.Enabled
 	}
-	if !a.startupMu.TryLock() {
+	if enabled == nil {
+		a.startupMu.Lock()
+	} else if !a.startupMu.TryLock() {
 		writeError(w, fail(http.StatusConflict, "ログイン時の起動設定を処理しています．完了してから操作してください．"))
 		return
 	}
@@ -69,7 +129,10 @@ func (a *App) startupHandler(w http.ResponseWriter, r *http.Request) {
 	if enabled == nil {
 		state, err = functions.status(a.options.ConfigDir)
 	} else {
-		state, err = functions.set(a.options.ConfigDir, *enabled)
+		err = a.saveStartupPreference(*enabled)
+		if err == nil {
+			state, err = functions.set(a.options.ConfigDir, *enabled)
+		}
 	}
 	if err != nil {
 		if errors.Is(err, platform.ErrStartupUnsupported) {
@@ -123,18 +186,10 @@ func (a *App) startupSettingsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // The exclusive settings request lock already waits for startup writes.
-func (a *App) resetStartupRegistration() error {
-	functions := a.startupFunctions()
-	state, err := functions.status(a.options.ConfigDir)
-	if err != nil {
-		return err
-	}
-	if !state.Supported || (!state.Enabled && !state.CanDisable) {
+func (a *App) resetStartupRegistration(state platform.StartupState) error {
+	if !state.Supported || state.Enabled || !state.CanEnable {
 		return nil
 	}
-	if !state.CanDisable {
-		return messages.Errorf("ログイン時の起動は OS が管理しています．OS の起動設定で確認してください．")
-	}
-	_, err = functions.set(a.options.ConfigDir, false)
+	_, err := a.startupFunctions().set(a.options.ConfigDir, true)
 	return err
 }

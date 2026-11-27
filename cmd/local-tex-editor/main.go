@@ -149,11 +149,13 @@ func run() error {
 			return err
 		}
 	}
+	installationUpdates := []func() error{application.InitializeStartupRegistration}
 	if !noBrowser {
-		application.StartInstallationUpdate(platform.RefreshInstalledShortcuts, func() error { return platform.RefreshStartupRegistration(*configDir) })
+		installationUpdates = append(installationUpdates, platform.RefreshInstalledShortcuts, func() error { return platform.RefreshStartupRegistration(*configDir) })
 	} else if runtime.GOOS == "darwin" {
-		application.StartInstallationUpdate(func() error { return platform.RefreshStartupRegistration(*configDir) })
+		installationUpdates = append(installationUpdates, func() error { return platform.RefreshStartupRegistration(*configDir) })
 	}
+	application.StartInstallationUpdate(installationUpdates...)
 	select {
 	case <-quit:
 	case <-runContext.Done():

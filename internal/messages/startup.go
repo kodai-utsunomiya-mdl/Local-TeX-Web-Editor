@@ -19,6 +19,8 @@ func init() {
 		"自動起動を登録しました．macOS のシステム設定のログイン項目で，バックグラウンドでの実行を確認してください．":             "Start at login is registered. Check background execution under Login Items in macOS System Settings.",
 		"macOS のログイン項目を登録できません: %w":                                            "Could not register the macOS login item: %w",
 		"ログイン時の起動を有効にするか選んでください．":                                              "Choose whether to enable start at login.",
+		"ログイン時の起動を設定できませんでした．設定画面で確認してください: %w":                                "Could not set up start at login. Check it in Settings: %w",
+		"ログイン時の起動設定を保存できません: %w":                                               "Could not save the start-at-login setting: %w",
 		"ログイン時の起動設定を処理しています．完了してから操作してください．":                                   "The startup setting is being processed. Wait for it to finish before continuing.",
 		"この環境では OS の起動設定を開けません．":                                               "System startup settings cannot be opened in this environment.",
 		"ログイン時の起動は OS が管理しています．OS の起動設定で確認してください．":                             "The operating system manages start at login. Check its startup settings.",

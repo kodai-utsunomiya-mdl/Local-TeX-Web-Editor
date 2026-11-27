@@ -245,8 +245,8 @@ body.resizing * { cursor: inherit !important; user-select: none !important; }
 .alert-symbol { display: inline-flex; align-items: center; justify-content: center; border: 1px solid #cc8a8d; width: 18px; height: 18px; border-radius: 50%; font-size: 11px; font-weight: 650; flex: 0 0 auto; }
 #error-text { flex: 1 1 auto; overflow-wrap: anywhere; max-height: 120px; overflow: auto; }
 .conflict-banner { display: flex; gap: 11px; align-items: center; justify-content: space-between; background: #fff8e9; color: #96723b; padding: 8px 13px; font-size: 10px; line-height: 1.7; border-bottom: 1px solid #efdfba; }
-.dialog { border: 1px solid #d7e0e7; border-radius: 12px; background: #fff; padding: 27px 28px 23px; color: #334454; width: min(510px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); overflow: auto; box-shadow: 0 24px 90px #213e5b30; }
-.dialog::backdrop { background: #1a2f3f38; backdrop-filter: blur(2px); }
+.dialog { border: 1px solid #d7e0e7; border-radius: 8px; background: #fff; padding: 27px 28px 23px; color: #334454; width: min(510px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); overflow: auto; box-shadow: 0 16px 48px #213e5b30; }
+.dialog::backdrop { background: #1a2f3f38; }
 .dialog-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 19px; }
 .dialog-heading .eyebrow { margin-bottom: 5px; }
 .dialog-heading > .icon-button { margin-top: -5px; margin-right: -9px; }
@@ -561,7 +561,7 @@ body.resizing * { cursor: inherit !important; user-select: none !important; }
 :root[data-palette] :is(.conflict-banner, .pdf-note) { color: var(--warning); background: var(--warning-bg); border-color: var(--warning-border); }
 :root[data-palette] .pdf-note.error { color: var(--danger); background: var(--danger-bg); border-color: var(--danger-border); }
 :root[data-palette] .alert-symbol { border-color: var(--danger); }
-:root[data-palette] .toast { color: var(--text); background: var(--surface); border-color: var(--border-strong); border-inline-start: 4px solid var(--accent); }
+:root[data-palette] .toast { color: var(--text); background: var(--surface); border-color: var(--border-strong); }
 :root[data-palette] input[type="checkbox"] { accent-color: var(--accent-button); }
 
 .appearance-entry { display: flex; align-items: center; gap: 16px; padding-top: 18px; border-top: 1px solid var(--border); }
