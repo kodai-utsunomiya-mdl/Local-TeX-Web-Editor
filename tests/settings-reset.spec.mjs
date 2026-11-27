@@ -124,7 +124,7 @@ test('初期化する項目と確認が必要で，キャンセル後も同じ�
 
 test('設定を初期化するとホームへ戻り，原稿と選択していない草稿が残る', async ({ page, session }) => {
   const root = await prepareEditor(page, session, {
-    appearance: { mode: 'dark', palette: 'navy', accent: 'purple', editorFont: 'menlo' },
+    appearance: { mode: 'light', palette: 'navy', accent: 'purple', editorFont: 'menlo' },
     editorFontSize: 22, fileSort: 'name-desc', pdfDarkMode: true,
   });
   const original = await readFile(path.join(root, 'main.tex'), 'utf8');
@@ -140,7 +140,7 @@ test('設定を初期化するとホームへ戻り，原稿と選択してい�
   await expect(page.locator('#workbench')).toBeHidden();
   await expect(page.locator('.project-home-card')).toHaveCount(0);
   await expect(page.locator('html')).toHaveAttribute('data-palette', 'gray');
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   expect(await page.locator('html').evaluate(element => element.style.getPropertyValue('--editor-font-size'))).toBe('14px');
   const meta = await json(session, '/api/state');
   expect(meta.project).toBeNull();

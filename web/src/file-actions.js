@@ -218,13 +218,13 @@ export function createFileActions({ tree, getProject, getCopyPath, isBlocked, be
     }
     if (target.path) item('relative', async () => { await navigator.clipboard.writeText(target.path); onNotice(text('copied')); });
     item('absolute', async () => { await navigator.clipboard.writeText(absoluteProjectPath(getProject().root, target.path)); onNotice(text('copied')); });
-    if (target.path) { separator(); item('duplicate', () => openDialog('copy', target)); item('rename', () => openDialog('rename', target)); item('remove', () => openDialog('delete', target), true); }
     if (onImportProject || onDownloadProject || onSaveProjectAs) {
       separator();
       if (onImportProject) item('importProject', () => { if (returnFocus?.isConnected) returnFocus.focus(); onImportProject(); });
       if (onDownloadProject) item('downloadProject', onDownloadProject);
       if (onSaveProjectAs) item('saveProjectAs', onSaveProjectAs);
     }
+    if (target.path) { separator(); item('duplicate', () => openDialog('copy', target)); item('rename', () => openDialog('rename', target)); item('remove', () => openDialog('delete', target), true); }
     menu.hidden = false;
     const rect = menu.getBoundingClientRect();
     menu.style.left = `${Math.max(6, Math.min(x, innerWidth - rect.width - 6))}px`;

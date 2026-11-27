@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"mime"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -140,6 +141,43 @@ func TestProjectArchiveDoesNotFollowFileOrDirectoryLinks(t *testing.T) {
 	files := readProjectArchive(t, response.Body.Bytes())
 	if len(files) != 1 || files["main.tex"] == nil {
 		t.Fatalf("linked entries were included: %v", files)
+	}
+}
+
+func TestProjectArchiveSkipsLocalSockets(t *testing.T) {
+	root, err := os.MkdirTemp("", "zip-socket-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(root) })
+	writeTestFile(t, filepath.Join(root, "main.tex"), []byte("manuscript"))
+	socket := filepath.Join(root, "worker.sock")
+	if working, err := os.Getwd(); err == nil {
+		if relative, err := filepath.Rel(working, socket); err == nil && len(relative) < len(socket) {
+			socket = relative
+		}
+	}
+	listener, err := net.Listen("unix", socket)
+	if err != nil {
+		t.Skipf("local sockets are unavailable: %v", err)
+	}
+	defer listener.Close()
+	snapshot, err := inspectProjectArchiveSources(context.Background(), root, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	source, err := createProjectArchive(context.Background(), root, snapshot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer source.close()
+	data, err := io.ReadAll(source.reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := readProjectArchive(t, data)
+	if len(files) != 1 || files["main.tex"] == nil {
+		t.Fatalf("socket was included: %v", files)
 	}
 }
 

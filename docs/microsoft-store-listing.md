@@ -71,7 +71,7 @@ Import a project ZIP from Home, choose its destination and name, and open it as 
 
 Edit Python, JavaScript and other program files. Home checks current and recent folders and explains missing locations; remove an entry while leaving its files and drafts in place. Open documents without unsaved edits load external changes. Documents being edited offer a comparison; a deleted file's text and draft stay available for review. The TeX logo opens Home with current and recent projects. Review a project's contents and enter its name before deleting it. Close all tabs together. The local app keeps running while the browser tab sleeps; use Quit to stop it. Settings > Start at login can start it in the background when you sign in, so restored browser tabs can reconnect after a PC restart.
 
-Preview English or Japanese immediately in Settings, adjust panes and appearance, and use autosave and local drafts. Documents, history and templates stay on your PC.
+Start in Dark mode from the first launch, or select Light or System in Appearance settings. Preview English or Japanese immediately in Settings, adjust panes and appearance, and use autosave and local drafts. Documents, history and templates stay on your PC.
 
 Requires an x64 PC with Windows 10 build 19041 or later, or Windows 11, and current Edge or Chrome. Use in-app TeX setup or select TeX Live with the packages your documents need. Markdown works without TeX. Free and open source under the MIT license.
 ```
@@ -132,6 +132,7 @@ Version 0.1.18
 - Import project ZIPs into a new folder directly from Home.
 - Save your work and download a project ZIP, or choose its destination with Save project ZIP as….
 - Include source, bibliography, images and relative folders for use in Overleaf.
+- Start in Dark mode from the first launch.
 - Automatic app updates remain enabled by default and use updates available from Microsoft Store.
 ```
 
@@ -172,7 +173,7 @@ PNG・JPEG・PDF を 8 MiB まで取り込み，表計算ソフトからコピ�
 
 TeX のロゴからホームへ移り，現在と最近使ったプロジェクトを管理できます．フォルダーの状態を読み直し，見つからない場合は案内を表示します．一覧から外しても原稿と草稿は残ります．未保存の編集がない原稿には外部で変更された本文を読み込み，編集中の場合は内容を比較できます．外部で削除されたファイルも本文と草稿を残して確認できます．プロジェクトの削除には，中身の確認と名前の入力が必要です．Python，JavaScript などのプログラムも編集でき，すべてのタブをまとめて閉じる操作もあります．ブラウザのタブが休止してもアプリは動作を続け，終了ボタンで終了します．「設定 → ログイン時の起動」を有効にすると，ログイン後にバックグラウンドで起動し，PC の再起動後も復元したブラウザのタブから再接続できます．
 
-英語・日本語は選択直後に表示を切り替えられ，配色，フォント，各欄の大きさを選べます．原稿，設定，草稿，履歴，テンプレートは PC に保存します．
+初回起動からダークモードを使い，外観の設定でライトやシステムに合わせるモードも選べます．英語・日本語は選択直後に表示を切り替えられ，配色，フォント，各欄の大きさを選べます．原稿，設定，草稿，履歴，テンプレートは PC に保存します．
 
 必要な環境は Windows 10 build 19041 以降または Windows 11 の x64 PC と，現在の Edge または Chrome です．アプリから TeX を導入するか，原稿で使うパッケージを含む既存の TeX Live を選びます．Markdown は TeX がなくても使えます．
 
@@ -235,6 +236,7 @@ TeX の導入と追加パッケージの取得にはインターネット接続
 ・ホームからプロジェクトの ZIP を読み込み，新しいフォルダーで開けるようにした．
 ・原稿を保存してからプロジェクトを ZIP でダウンロードし，「名前を付けて保存…」では場所を選べるようにした．
 ・原稿，参考文献，画像，フォルダー構成をまとめて Overleaf へ持ち込めるようにした．
+・初回起動からダークモードを使うようにした．
 ・アプリの自動更新は初期状態で有効とし，Microsoft Store から利用可能な更新を取得する．
 ```
 

@@ -116,7 +116,7 @@ const state = {
   preferences: { autoSave: true, theme: null, appearance: normalizeAppearance(), editorFontSize: 14, language: getLanguage(), panelLayout: normalizePanelLayout(), fileSort: 'name-asc', markdownEditorModes: { primary: 'rich', secondary: 'rich' }, previewVisibility: { rich: false, markdown: true, source: true }, markdownScrollSync: true, texCompletion: true, automaticCompletion: true, pdfDarkMode: false },
   previewContext: '',
   homeVisible: false,
-  theme: 'light',
+  theme: document.documentElement.dataset.theme === 'light' ? 'light' : 'dark',
   saveQueue: Promise.resolve(),
   autoSaveTimer: null,
   draftTimer: null,
@@ -2543,6 +2543,7 @@ function applyTheme(theme) {
   const previous = state.theme;
   state.theme = theme === 'dark' ? 'dark' : 'light';
   document.documentElement.dataset.theme = state.theme;
+  document.documentElement.style.colorScheme = state.theme;
   $('theme-toggle').setAttribute('aria-pressed', String(state.theme === 'dark'));
   $('theme-toggle').setAttribute('aria-label', state.theme === 'dark' ? t("ライトテーマに切り替える") : t("ダークテーマに切り替える"));
   $('theme-label').textContent = state.theme === 'dark' ? t("ダーク") : t("ライト");
@@ -3488,7 +3489,7 @@ if (isMac) {
   $('project-tex-help').textContent = t("例: /Library/TeX/texbin");
 }
 let cachedAppearance = state.preferences.appearance;
-try { cachedAppearance = normalizeAppearance(JSON.parse(localStorage.getItem('local-tex-editor-appearance') || 'null'), localStorage.getItem('local-tex-editor-theme')); } catch { /* Use the system preference on the first visit. */ }
+try { cachedAppearance = normalizeAppearance(JSON.parse(localStorage.getItem('local-tex-editor-appearance') || 'null'), localStorage.getItem('local-tex-editor-theme')); } catch { /* Use the initial dark theme when browser storage is unavailable. */ }
 applyAppearance(cachedAppearance);
 onClick('theme-toggle', () => {
   state.preferences.appearance = { ...state.preferences.appearance, mode: state.theme === 'dark' ? 'light' : 'dark' };

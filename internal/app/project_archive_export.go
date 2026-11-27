@@ -138,8 +138,23 @@ func inspectProjectArchiveSources(ctx context.Context, root, temporary string) (
 			return err
 		}
 		relative = filepath.ToSlash(relative)
-		if clean, err := cleanRelative(relative); err != nil || clean != relative {
+		if clean, ignored, err := projectArchiveImportPath(relative, entry.IsDir()); err != nil || ignored || clean != relative {
 			return fail(http.StatusBadRequest, "ZIP に含めるファイル名を確認してください: %s", relative)
+		}
+		observed, err := entry.Info()
+		if err != nil {
+			return err
+		}
+		if !observed.IsDir() {
+			regular, err := platform.IsRegularFile(path, observed)
+			if err != nil {
+				return err
+			}
+			// Opening a named pipe can wait for another process. Special files
+			// must be skipped before acquiring a handle to the source.
+			if !regular {
+				return nil
+			}
 		}
 		info, err := projectArchiveEntryInfo(root, relative)
 		if err != nil {

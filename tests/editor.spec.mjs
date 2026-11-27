@@ -1862,6 +1862,7 @@ test('外観の変更をキャンセルや Escape で戻し，OS とテーマボ
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.emulateMedia({ colorScheme: 'light' });
+  await json(session, '/api/storage', { method: 'PUT', data: { key: 'preferences', value: { language: 'ja', appearance: { mode: 'light' } } } });
   await openProject(session);
   await openEditor(page, session);
   await setAutoSave(page, false);

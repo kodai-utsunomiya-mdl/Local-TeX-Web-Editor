@@ -401,7 +401,7 @@ Use the color picker or enter a hexadecimal color code to choose the background,
 
 Notifications and floating menus use their own background and border colors with a visible shadow. Their text colors follow the chosen background in light and dark modes, including custom colors.
 
-The initial appearance uses **System** mode, the **Gray** color scheme, the **Blue** accent, and **Consolas** for the editor. Gray and Consolas appear first in their lists and are marked as the defaults. Your previously saved appearance continues to apply. If Consolas is unavailable, the editor tries Cascadia Code, Menlo, DejaVu Sans Mono, and the browser's monospace font in that order.
+The app starts in **Dark** mode from the first launch, with the **Gray** color scheme, the **Blue** accent, and **Consolas** for the editor. Gray and Consolas appear first in their lists and are marked as the defaults. A previously saved appearance is used when available. If Consolas is unavailable, the editor tries Cascadia Code, Menlo, DejaVu Sans Mono, and the browser's monospace font in that order.
 
 Changes appear immediately. Choose **Save appearance** to use them in future sessions. **Cancel**, `Esc`, or **×** restores the appearance you had when opening the dialog. **Reset appearance** previews the defaults; choose **Save appearance** to apply them.
 

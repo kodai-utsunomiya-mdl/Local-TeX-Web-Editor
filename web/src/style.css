@@ -391,17 +391,17 @@ body.resizing * { cursor: inherit !important; user-select: none !important; }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  color: #d9e3ec;
-  background: #131c25;
-  --surface: #1b2632;
+  color: #e5e6e9;
+  background: #18191c;
+  --surface: #212226;
   --popup-shadow: 0 14px 40px #0008, 0 4px 12px #0006;
-  --text: #d9e3ec;
-  --secondary: #a7bacb;
-  --subtle: #17222d;
-  --hover: #283848;
-  --border: #2b3b4a;
-  --border-strong: #405469;
-  --muted: #8fa2b4;
+  --text: #e5e6e9;
+  --secondary: #b8bbc2;
+  --subtle: #1b1c20;
+  --hover: #303237;
+  --border: #41434b;
+  --border-strong: #61656f;
+  --muted: #a0a4ae;
   --accent: #83b5ff;
   --accent-dark: #245394;
   --accent-soft: #1f3558;
