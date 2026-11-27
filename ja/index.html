@@ -267,6 +267,12 @@
               <li><strong>Destination parent folder (保存先の親フォルダー)</strong> にパスを入力するか，<strong>Choose a folder (フォルダーを選ぶ)</strong> で選びます．<strong>New project name (新しいプロジェクトの名前)</strong> に，まだ使っていない名前を入力します．ZIP のファイル名をもとに名前を提案します．</li>
               <li><strong>New project folder (作成先)</strong> を確認して <strong>Import and open (読み込んで開く)</strong> を押します．その新しいフォルダーへ原稿，参考文献，画像などを展開し，プロジェクトを開きます．</li>
             </ol>
+            <figure class="screenshot secondary-shot project-zip-import-shot">
+              <a href="../assets/project-zip-import-ja.png" aria-label="ZIP の読み込み画面を元のサイズで開く">
+                <img src="../assets/project-zip-import-ja.png" width="1600" height="1000" alt="ZIP からプロジェクトを作成する画面．ZIP ファイル，保存先の親フォルダー，新しいプロジェクトの名前と，読み込んで開くボタンが表示されている．" loading="lazy" decoding="async">
+              </a>
+              <figcaption><span>ZIP ファイルを選び，新しいプロジェクトの作成先を確認します．</span><span>画像を押すと画面全体を開きます．</span></figcaption>
+            </figure>
             <p>日本語のファイル名や，画像・章ごとのフォルダー構成も使えます．作成先に同名のフォルダーがある場合は，別のプロジェクト名を指定します．TeX のプロジェクトを読み込んだ後は，メイン文書を選び，<a href="#project-open">コンパイラーを設定</a> してからコンパイルします．</p>
           </div>
           <div class="usage-block" id="project-zip-export">
@@ -276,6 +282,12 @@
               <li>ブラウザのダウンロード設定に従い，<code>&lt;プロジェクト名&gt;.zip</code> を保存します．</li>
               <li>任意の保存先と名前を選ぶ場合は，<strong>ZIP → Save project ZIP as… (ZIP にして名前を付けて保存…)</strong> を選びます．Windows または Mac の保存画面でフォルダーと <code>.zip</code> で終わるファイル名を指定し，<strong>保存</strong> を押します．同名のファイルがある場合は，上書きの確認が表示されます．</li>
             </ol>
+            <figure class="screenshot secondary-shot project-zip-menu-shot">
+              <a href="../assets/project-zip-menu-ja.png" aria-label="プロジェクトの ZIP メニューを元のサイズで開く">
+                <img src="../assets/project-zip-menu-ja.png" width="1600" height="1000" alt="エディタ上部の ZIP メニュー．ZIP を読み込む，プロジェクトを ZIP でダウンロード，ZIP にして名前を付けて保存の 3 つの操作が並んでいる．" loading="lazy" decoding="async">
+              </a>
+              <figcaption><span>ZIP をダウンロードするか，名前を付けて保存する操作を選べます．</span><span>画像を押すと画面全体を開きます．</span></figcaption>
+            </figure>
             <p>ファイル一覧の右クリックメニューからも，両方の操作を使えます．ZIP にはプロジェクト内のフォルダー，参考文献，画像，フォント，独自の <code>.sty</code>・<code>.cls</code>，<code>latexmkrc</code> などをまとめます．図として使う PDF と，入力に使う <code>.aux</code>，<code>.bbl</code>，<code>.ist</code> も含めます．アプリのキャッシュ，Git の管理用データ，TeX の文書に対応するログや中間ファイルは含めません．</p>
             <p>Overleaf で開く場合は，<strong>New project → Existing project (.zip)</strong> で ZIP を選び，原稿に合うメイン文書とコンパイラーを指定します．詳しい手順は <a href="https://docs.overleaf.com/managing-projects-and-files/uploading-a-project">Overleaf の案内</a> を参照できます．</p>
           </div>
