@@ -153,7 +153,7 @@ If you started from Home with no project open, click **Create a sample…** to o
 
 For a first document, select **English article** or **Japanese document** in the template chooser. Click **Choose a folder** beside **Destination folder** and select a parent folder, such as Documents. Enter an unused name, such as `my-first-paper`, in **New project folder name**, then click **Create and open**. The app creates the project inside that parent folder and selects the compiler for its template. Select `main.tex` in the file list.
 
-For an existing document, choose **Open project folder** on Home, use **Browse…** or enter the folder path, and click **Open**. Select the main `.tex` document in the file list. Before compiling, open **Settings → Compiler**. The default, **Use the latexmkrc nearest the document**, works for a configuration at the project root or in a manuscript’s subfolder. If the manuscript has no configuration and needs an engine other than pdfLaTeX, select it and click **Save and apply settings**.
+For an existing document, choose **Open project folder** on Home, use **Browse…** or enter the folder path, and click **Open**. Select the main `.tex` document and click **Compile**. The app uses the nearest latexmkrc. If the manuscript has no configuration and needs an engine other than pdfLaTeX, choose it in **Settings → Compiler** and save your selection.
 
 Click **Compile** in the top toolbar. The app saves the document and runs TeX. The resulting PDF appears beside the source. If compilation reports a missing package, follow [Manage TeX packages and installations](#manage-tex-packages-and-installations), then compile again.
 
@@ -556,7 +556,7 @@ The app records the PDF page and zoom for each document. If compilation of a dif
 
 The first time you reopen an older project, a saved value matching the old default switches to the new default. Older versions stored manual selections of the same value identically, so these also switch once. Any compiler you select in Settings after updating is remembered for that project.
 
-For a project with a single `latexmkrc` at its root, choose **Use latexmkrc settings** as the compiler. The app uses the `uplatex`, `upbibtex`, `dvipdfmx`, and other commands configured in `latexmkrc` or `.latexmkrc`.
+To always compile from the project root, including when subfolders have their own configurations, choose **Use latexmkrc settings**. The app uses the `uplatex`, `upbibtex`, `dvipdfmx`, and other commands configured in `latexmkrc` or `.latexmkrc`.
 
 For projects without `latexmkrc`, you can select pdfLaTeX, upLaTeX, XeLaTeX, or LuaLaTeX. The app runs `latexmk`, which also handles the repeated runs needed for references and citations.
 

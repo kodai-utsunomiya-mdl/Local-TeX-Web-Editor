@@ -133,7 +133,7 @@ About 2 GB free for initial TeX setup; extra packages may need more space
 ```text
 Version 0.1.22
 
-- The default compiler setting uses the latexmkrc nearest the selected document, including for ZIP imports. Each document keeps its own output, PDF preview and source navigation.
+- Open a manuscript and click Compile. The editor automatically uses the nearest latexmkrc, including for projects imported from a ZIP. Each document keeps its own output, PDF preview and source navigation.
 - On Home, TeX setup and management now appears above recent projects.
 - Choose Whole document in the outline to navigate headings across included TeX files.
 - The Find and replace toolbar offers separate Current file and Entire project buttons.
@@ -240,7 +240,7 @@ TeX の導入と追加パッケージの取得にはインターネット接続
 ```text
 バージョン 0.1.22
 
-・新しく開いたフォルダーと ZIP の取り込みでは，原稿に最も近い latexmkrc を標準で使います．原稿ごとに PDF とソースの位置を対応付けます．
+・原稿を開いて「コンパイル」を押すと，原稿に最も近い latexmkrc を自動で使います．ZIP から取り込んだプロジェクトでも同じです．原稿ごとに PDF とソースの位置を対応付けます．
 ・ホームの「TeX の導入と管理」を「最近開いたプロジェクト」の上に移しました．
 ・アウトラインの「文書全体」で，分割した TeX 原稿の見出しを本文順にたどれます．
 ・「検索・置換」で「ファイル内」と「プロジェクト全体」を選べるようにしました．
