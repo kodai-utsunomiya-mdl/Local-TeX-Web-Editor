@@ -183,6 +183,7 @@ try {
   await page.evaluate(async () => { await navigator.serviceWorker.ready; });
   await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
   const previousConnection = { ...ready };
+  const firstEditorLine = await editor.locator('.cm-line').first().innerText();
   assert.deepEqual(errors, []);
 
   // Use the editor's existing shutdown flow after saving and compiling.
@@ -191,7 +192,8 @@ try {
   await waitFor(() => opening.exitCode, value => value !== null, 'The macOS launcher did not exit with the server.');
   assert.equal(opening.exitCode, 0, launchError);
 
-  // Recreate a browser tab before the background application has restarted.
+  // Reopen the closed tab from the offline page before restarting the app.
+  await page.close();
   page = await context.newPage();
   page.on('pageerror', error => errors.push(error.message));
   await page.goto(previousConnection.url, { waitUntil: 'domcontentloaded' });
@@ -207,7 +209,9 @@ try {
   }, result => Boolean(result?.url && result?.token), 'The background macOS application did not start.');
   assert.equal(ready.url, previousConnection.url);
   assert.equal(ready.token, previousConnection.token);
-  await expect(page.getByTestId('editor').locator('.cm-content')).toBeVisible({ timeout: 20000 });
+  const restoredEditor = page.getByTestId('editor').locator('.cm-content');
+  await expect(restoredEditor.locator('.cm-line').first()).toHaveText(firstEditorLine, { timeout: 60000 });
+  await expect(restoredEditor).toBeVisible();
   await expect(page.locator('#connection-status')).toHaveClass(/connected/);
   assert.equal(page.url(), previousConnection.url);
   await page.screenshot({ path: path.join(output, 'macos-restored-editor.png') });
