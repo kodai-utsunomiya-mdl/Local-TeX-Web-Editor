@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
-import { cp, mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -108,6 +108,24 @@ try {
   }, value => value === '1', 'The native updater did not resume automatic updates.');
   assert.ok(initial.latexmk, 'The selected TeX Live installation must provide latexmk.');
   assert.ok(initial.synctex, 'The selected TeX Live installation must provide SyncTeX.');
+  const collection = path.join(temporary, '複数の原稿');
+  const paper = path.join(collection, '論文');
+  await cp(project, paper, { recursive: true });
+  const shared = path.join(collection, '共通');
+  await mkdir(shared);
+  await cp(path.join(paper, 'references.bib'), path.join(shared, '文献.bib'));
+  const nestedSource = (await readFile(path.join(paper, 'main.tex'), 'utf8'))
+    .replace('\\bibliography{references}', '\\bibliography{../共通/文献}');
+  await writeFile(path.join(paper, 'main.tex'), nestedSource);
+  await api('/api/project/open', { path: collection });
+  const nested = await api('/api/build', { main: '論文/main.tex' });
+  const result = await waitFor(() => api('/api/build'), build => build.id === nested.id && build.status !== 'running', 'Nested TeX compilation did not finish.', 120000);
+  assert.equal(result.status, 'success', result.log + '\n' + result.error);
+  const nestedOutput = (await readdir(paper)).find(name => name.startsWith('local-tex-editor-build-doc-'));
+  assert.ok(nestedOutput, 'The nested document should have a compilation directory.');
+  assert.match(await readFile(path.join(paper, nestedOutput, 'main.bbl'), 'utf8'), /sample2026/);
+  const nestedLocation = await api('/api/synctex/forward', { buildId: result.pdfBuildId, path: '論文/main.tex', line: 10, column: 0 });
+  assert.ok(nestedLocation.locations?.length, 'SyncTeX must locate the nested source.');
   await api('/api/project/open', { path: project });
 
   browser = await chromium.launch({ headless: true });
@@ -197,7 +215,7 @@ try {
   await waitFor(() => opening.exitCode, value => value !== null, 'The background macOS launcher did not exit.');
   assert.equal(opening.exitCode, 0, launchError);
   assert.deepEqual(errors, []);
-  await writeFile(path.join(output, 'result.json'), JSON.stringify({ version, architecture: process.arch, checks: ['universal-bundle', 'icon', 'signature', 'sparkle-signatures-required', 'native-update-bridge', 'launch-services', 'startup-launch', 'api', 'command-save', 'japanese-tex', 'synctex', 'active-document', 'markdown', 'reopen', 'file-download', 'shutdown', 'offline-waiting', 'background-launch', 'restored-tab'] }, null, 2));
+  await writeFile(path.join(output, 'result.json'), JSON.stringify({ version, architecture: process.arch, checks: ['universal-bundle', 'icon', 'signature', 'sparkle-signatures-required', 'native-update-bridge', 'launch-services', 'startup-launch', 'api', 'command-save', 'japanese-tex', 'nested-bibliography', 'synctex', 'active-document', 'markdown', 'reopen', 'file-download', 'shutdown', 'offline-waiting', 'background-launch', 'restored-tab'] }, null, 2));
   passed = true;
   console.log(`macOS ${process.arch}: application launch, editing, TeX, previews, and shutdown passed.`);
 } finally {

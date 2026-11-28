@@ -345,6 +345,9 @@ func isTextFile(path string) bool {
 }
 
 func excludedDirectory(name string) bool {
+	if suffix, ok := strings.CutPrefix(name, nestedBuildPrefix); ok && compiledPDFDocumentDirectory(suffix) {
+		return true
+	}
 	switch strings.ToLower(name) {
 	case ".git", ".local-tex-editor", "node_modules", ".venv", "venv", "__pycache__":
 		return true

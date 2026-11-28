@@ -332,7 +332,7 @@ func (a *App) compile(run *buildRun, project Project, texBin string) {
 	defer release()
 	sources := snapshotSourceRevisions(project.Root)
 	run.sources = sources
-	workDir, args, err := latexmkInvocation(project, outputDirectory)
+	workDir, outputDirectory, args, err := latexmkInvocation(project, outputDirectory)
 	if err != nil {
 		a.finishBuild(run, nil, err, "", "")
 		return
@@ -428,7 +428,7 @@ func (a *App) stopBuild(expectedProject ...string) error {
 	return nil
 }
 
-func latexmkInvocation(project Project, outputDirectory string) (string, []string, error) {
+func latexmkInvocation(project Project, outputDirectory string) (string, string, []string, error) {
 	workDir := project.Root
 	mainFile := absoluteFrom(project.Root, project.Main)
 	mode := project.Mode
@@ -438,14 +438,14 @@ func latexmkInvocation(project Project, outputDirectory string) (string, []strin
 			for _, name := range []string{".latexmkrc", "latexmkrc"} {
 				relative, err := filepath.Rel(project.Root, filepath.Join(dir, name))
 				if err != nil {
-					return "", nil, err
+					return "", "", nil, err
 				}
 				_, err = safePath(project.Root, filepath.ToSlash(relative), false)
 				if errors.Is(err, os.ErrNotExist) {
 					continue
 				}
 				if err != nil {
-					return "", nil, err
+					return "", "", nil, err
 				}
 				found = true
 			}
@@ -461,16 +461,25 @@ func latexmkInvocation(project Project, outputDirectory string) (string, []strin
 	}
 	document, err := filepath.Rel(workDir, mainFile)
 	if err != nil {
-		return "", nil, err
+		return "", "", nil, err
+	}
+	nested := !samePath(workDir, project.Root)
+	if nested && runtime.GOOS != "windows" {
+		// BibTeX resolves ../ bibliographies from its working directory. On Unix
+		// it also refuses to write through a dot-prefixed output directory.
+		outputDirectory, err = ensureBuildPath(workDir, nestedBuildDirectory(project.Main))
+		if err != nil {
+			return "", "", nil, err
+		}
 	}
 	directory, err := filepath.Rel(workDir, outputDirectory)
 	if err != nil {
-		return "", nil, err
+		return "", "", nil, err
 	}
 	directory = filepath.ToSlash(directory)
 	args := []string{"-interaction=nonstopmode", "-file-line-error", "-halt-on-error", "-synctex=1", "-recorder",
 		"-outdir=" + directory, "-auxdir=" + directory}
-	if runtime.GOOS == "windows" {
+	if nested || runtime.GOOS == "windows" {
 		// Keep BibTeX in the source directory. upBibTeX resolves absolute
 		// BIBINPUTS paths through Windows' legacy code page, which can lose
 		// characters in the project's parent directories. The auxiliary
@@ -487,7 +496,7 @@ func latexmkInvocation(project Project, outputDirectory string) (string, []strin
 	case "uplatex":
 		args = append(args, "-pdfdvi", "-e", `$latex='uplatex %O %S'; $bibtex='upbibtex %O %B'; $dvipdf='dvipdfmx %O -o %D %S';`)
 	}
-	return workDir, append(args, "./"+filepath.ToSlash(document)), nil
+	return workDir, outputDirectory, append(args, "./"+filepath.ToSlash(document)), nil
 }
 
 func commandEnvironment(bin string) []string {
@@ -564,11 +573,21 @@ func buildDirectoryRelative(main string) string {
 	return buildRelative + "/doc-" + hex.EncodeToString(key[:16])
 }
 
+const nestedBuildPrefix = "local-tex-editor-build-"
+
+func nestedBuildDirectory(main string) string {
+	return nestedBuildPrefix + filepath.Base(buildDirectoryRelative(main))
+}
+
 func ensureBuildDirectory(root string, main ...string) (string, error) {
 	relative := buildRelative
 	if len(main) > 0 {
 		relative = buildDirectoryRelative(main[0])
 	}
+	return ensureBuildPath(root, relative)
+}
+
+func ensureBuildPath(root, relative string) (string, error) {
 	path := root
 	for _, part := range strings.Split(relative, "/") {
 		path = filepath.Join(path, part)

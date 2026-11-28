@@ -79,7 +79,7 @@ func TestDocumentsWithTheSameNameUseTheirOwnCompilerFiles(t *testing.T) {
 			t.Fatal(err)
 		}
 		relative = filepath.ToSlash(relative)
-		workDir, args, err := latexmkInvocation(project, directory)
+		workDir, _, args, err := latexmkInvocation(project, directory)
 		if err != nil || !samePath(workDir, root) {
 			t.Fatalf("root build directory: %s, %v", workDir, err)
 		}
@@ -207,14 +207,14 @@ func TestDocumentModeUsesNearestConfigurationAndProjectOutput(t *testing.T) {
 	}
 	check := func(mode, dir, input string, wantPDFLaTeX bool) {
 		t.Helper()
-		workDir, args, err := latexmkInvocation(Project{Root: root, Main: main, Mode: mode}, output)
+		workDir, actualOutput, args, err := latexmkInvocation(Project{Root: root, Main: main, Mode: mode}, output)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if !samePath(workDir, dir) || args[len(args)-1] != "./"+input {
 			t.Fatalf("%s: got %q %v", mode, workDir, args)
 		}
-		out, err := filepath.Rel(workDir, output)
+		out, err := filepath.Rel(workDir, actualOutput)
 		if err != nil {
 			t.Fatal(err)
 		}

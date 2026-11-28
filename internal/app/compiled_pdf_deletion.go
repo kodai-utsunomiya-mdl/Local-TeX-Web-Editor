@@ -261,30 +261,8 @@ func (a *App) inspectCompiledPDFDeletionLocked(ctx context.Context, main string)
 			}
 		}
 	}
-	output := buildDirectoryRelative(current.Main)
-	directory, info, err := entryTreePath(result.ProjectRoot, output)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return result, err
-	}
-	if err == nil {
-		if !info.IsDir() {
-			return result, compiledPDFDeletionChanged()
-		}
-		if output == buildRelative {
-			entries, err := os.ReadDir(directory)
-			if err != nil {
-				return result, err
-			}
-			for _, entry := range entries {
-				if compiledPDFDocumentDirectory(entry.Name()) {
-					continue
-				}
-				relative := output + "/" + entry.Name()
-				if err := result.addTree(ctx, result.ProjectRoot, relative, "build", relative); err != nil {
-					return result, err
-				}
-			}
-		} else if err := result.addTree(ctx, result.ProjectRoot, output, "build", output); err != nil {
+	for _, output := range compiledBuildDirectories(current.Main) {
+		if err := result.addBuildOutput(ctx, output); err != nil {
 			return result, err
 		}
 	}
@@ -461,6 +439,45 @@ func (a *App) forgetCompiledPDFLocked(inspection compiledPDFDeletion) {
 		a.lastPDF, a.lastPDFID, a.lastPDFMain = a.pdfVersions[latest.BuildID], latest.BuildID, latest.Main
 		a.lastPDFChanged, a.lastPDFMarkdownInputs = latest.SourceChanged, markdownInputSet(latest.MarkdownInputs)
 	}
+}
+
+// A document can have been compiled using different ancestor configuration files.
+func compiledBuildDirectories(main string) []string {
+	outputs := []string{buildDirectoryRelative(main)}
+	for parent := filepath.Dir(main); parent != "." && filepath.IsLocal(parent); parent = filepath.Dir(parent) {
+		outputs = append(outputs, filepath.ToSlash(filepath.Join(parent, nestedBuildDirectory(main))))
+	}
+	return outputs
+}
+
+func (result *compiledPDFDeletion) addBuildOutput(ctx context.Context, output string) error {
+	directory, info, err := entryTreePath(result.ProjectRoot, output)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	if err == nil {
+		if !info.IsDir() {
+			return compiledPDFDeletionChanged()
+		}
+		if output == buildRelative {
+			entries, err := os.ReadDir(directory)
+			if err != nil {
+				return err
+			}
+			for _, entry := range entries {
+				if compiledPDFDocumentDirectory(entry.Name()) {
+					continue
+				}
+				relative := output + "/" + entry.Name()
+				if err := result.addTree(ctx, result.ProjectRoot, relative, "build", relative); err != nil {
+					return err
+				}
+			}
+		} else if err := result.addTree(ctx, result.ProjectRoot, output, "build", output); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func acquireCompiledPDFDeletionLock(root string) (func(), error) {

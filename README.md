@@ -501,7 +501,7 @@ Relative links in the preview can open other project documents. In visual editin
 
 The file list includes **Compiled PDFs**, with the latest successful result for each TeX document. Each entry shows the actual PDF name and the path of the TeX document used to compile it. Select an entry to open it in the PDF preview while leaving the manuscript tabs in place. Its context menu offers **Open**, **Download**, **Save as…**, **Copy into project…**, and **Delete…**. Copying lets you choose a project destination and review any existing name. The list is available again when you reopen the project; a failed compilation leaves its previous successful PDF available.
 
-To remove a compiled result, right-click its entry, choose **Delete…**, review the TeX document and the number of files, and choose **Delete**. This removes that document's stored PDF previews and SyncTeX data, including earlier versions, together with its compilation output and auxiliary files under `.local-tex-editor/build`. The TeX source and PDFs saved or copied as ordinary files stay in place. If the displayed result is deleted, the preview opens the most recent remaining PDF or becomes empty when none remain. Compile the TeX document again to create a new PDF and return it to the list.
+To remove a compiled result, right-click its entry, choose **Delete…**, review the TeX document and the number of files, and choose **Delete**. This removes that document's stored PDF previews and SyncTeX data, including earlier versions, together with its compilation output and auxiliary files. The TeX source and PDFs saved or copied as ordinary files stay in place. If the displayed result is deleted, the preview opens the most recent remaining PDF or becomes empty when none remain. Compile the TeX document again to create a new PDF and return it to the list.
 
 The PDF scrolls continuously across pages. The app prioritizes rendering the visible page and nearby pages, so a long document does not require rendering every page into an image at once. You can select and copy PDF text and follow links inside the PDF. After following an internal reference link, use **←** above the PDF to return to the position you were reading; **→** moves forward again. `Alt + Left` and `Alt + Right` provide the same navigation from the source or preview. Source links, search results, outline entries, and SyncTeX jumps also participate in this navigation.
 
@@ -556,10 +556,11 @@ For a project with an existing `latexmkrc`, choose **Use latexmkrc settings** as
 
 For projects without `latexmkrc`, you can select pdfLaTeX, upLaTeX, XeLaTeX, or LuaLaTeX. The app runs `latexmk`, which also handles the repeated runs needed for references and citations.
 
-Intermediate files are stored for each document under `.local-tex-editor/build` inside the project. Later compilations reuse that document's intermediate files. If you manage the project with Git, you can add the following to its `.gitignore`:
+Intermediate files are stored for each document under `.local-tex-editor/build` inside the project. On macOS, when a subfolder supplies the latexmkrc, the app writes to `local-tex-editor-build-doc-…` in that subfolder so BibTeX can resolve relative paths to bibliographies. Later compilations reuse that document's intermediate files. If you manage the project with Git, you can add the following to its `.gitignore`:
 
 ```gitignore
 .local-tex-editor/
+local-tex-editor-build-doc-*/
 ```
 
 The app does not impose a compilation time limit. Use the stop button to stop a running compilation.
@@ -577,7 +578,7 @@ The ZIP also includes the README files, screenshots, and licenses. The macOS app
 
 The app includes the JavaScript, PDF.js worker, fonts, and other files needed by the editor. It uses the browser on your computer. TeX is downloaded separately when you choose the app's setup, or you can select an existing installation. The app download excludes TeX, a browser engine, Python and Node.js.
 
-Disk usage also grows with your project files, TeX packages, drafts, and generated PDFs. Compilation files are written under `.local-tex-editor/build` in each project; their size depends on the document and its figures. The ZIP can be deleted after extraction. Creating a Start menu or desktop shortcut in the Windows ZIP edition copies the executable to the application folder described above. After closing the app and checking that the shortcut opens it, the extracted download folder can be deleted as well.
+Disk usage also grows with your project files, TeX packages, drafts, and generated PDFs. The size of the compilation files depends on the document and its figures. The ZIP can be deleted after extraction. Creating a Start menu or desktop shortcut in the Windows ZIP edition copies the executable to the application folder described above. After closing the app and checking that the shortcut opens it, the extracted download folder can be deleted as well.
 
 Settings, drafts, edit history, custom templates, previous view positions, and copies of the PDF and SyncTeX data use these folders:
 

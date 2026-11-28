@@ -156,9 +156,11 @@ func TestCompiledPDFDeletionRemovesAllVersionsAndLeavesOtherDocuments(t *testing
 
 func TestCompiledPDFDeletionUsesRemainingPDFThenClearsTheLastPDF(t *testing.T) {
 	a, root := testApp(t)
-	writeTestFile(t, filepath.Join(root, "appendix.tex"), []byte("appendix"))
+	writeTestFile(t, filepath.Join(root, "parts", "appendix.tex"), []byte("appendix"))
 	first := finishCompiledPDFForTest(t, a, root, "main.tex", "main.pdf", nil)
-	last := finishCompiledPDFForTest(t, a, root, "appendix.tex", "appendix.pdf", nil)
+	last := finishCompiledPDFForTest(t, a, root, "parts/appendix.tex", "appendix.pdf", nil)
+	nestedOutput := filepath.Join(root, "parts", nestedBuildDirectory(last.Main))
+	writeTestFile(t, filepath.Join(nestedOutput, "appendix.bbl"), []byte("bibliography"))
 	before := compiledPDFStateForTest(t, a)
 	result := deleteCompiledPDFForTest(t, a, compiledPDFDeletionForTest(t, a, last))
 	if result.State.Build.ID != last.BuildID || result.State.Build.Main != last.Main || result.State.Build.Log != before.Build.Log {
@@ -168,6 +170,7 @@ func TestCompiledPDFDeletionUsesRemainingPDFThenClearsTheLastPDF(t *testing.T) {
 		t.Fatalf("remaining PDF was not selected: %+v", result.State.Build)
 	}
 	assertCompiledPDFFileMissing(t, filepath.Join(root, buildDirectoryRelative(last.Main)))
+	assertCompiledPDFFileMissing(t, nestedOutput)
 	result = deleteCompiledPDFForTest(t, a, compiledPDFDeletionForTest(t, a, first))
 	if len(result.State.CompiledPDFs) != 0 || result.State.Build.PDFReady || result.State.Build.PDFBuildID != "" || result.State.Build.PDFMain != "" || result.State.Build.SyncTeXReady {
 		t.Fatalf("the last PDF was not cleared: %+v", result.State)
