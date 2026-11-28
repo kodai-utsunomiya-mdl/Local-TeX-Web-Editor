@@ -43,8 +43,8 @@ type templateContents struct {
 }
 
 func builtinTemplates(language string) []templateContents {
-	entry := func(id, name, englishName, description, englishDescription, main, mode string, files map[string]string) templateContents {
-		result := templateContents{projectTemplate: projectTemplate{ID: id, Name: name, Description: description, Main: main, Mode: mode, Builtin: true}, Files: map[string][]byte{}}
+	entry := func(id, name, englishName, description, englishDescription, main string, files map[string]string) templateContents {
+		result := templateContents{projectTemplate: projectTemplate{ID: id, Name: name, Description: description, Main: main, Mode: defaultCompileMode, Builtin: true}, Files: map[string][]byte{}}
 		if language == "en" {
 			result.Name, result.Description = englishName, englishDescription
 		}
@@ -56,16 +56,17 @@ func builtinTemplates(language string) []templateContents {
 		return result
 	}
 	return []templateContents{
-		entry("builtin-japanese", "日本語の文書", "Japanese document", "LuaLaTeX と ltjsarticle を使う短い文書です．TeX Live の日本語用パッケージが必要です．", "A short LuaLaTeX document using ltjsarticle. Install the Japanese language packages in TeX Live.", "main.tex", "lualatex", map[string]string{
-			"main.tex": "\\documentclass[a4paper,11pt]{ltjsarticle}\n\\usepackage{graphicx}\n\\usepackage{amsmath}\n\\title{文書の題名}\n\\author{著者}\n\\date{\\today}\n\n\\begin{document}\n\\maketitle\n\\section{はじめに}\nここから本文を書き始めます．\n\n\\end{document}\n",
+		entry("builtin-japanese", "日本語の文書", "Japanese document", "LuaLaTeX と ltjsarticle を使う短い文書です．TeX Live の日本語用パッケージが必要です．", "A short LuaLaTeX document using ltjsarticle. Install the Japanese language packages in TeX Live.", "main.tex", map[string]string{
+			"latexmkrc": "$pdf_mode = 4; # LuaLaTeX\n",
+			"main.tex":  "\\documentclass[a4paper,11pt]{ltjsarticle}\n\\usepackage{graphicx}\n\\usepackage{amsmath}\n\\title{文書の題名}\n\\author{著者}\n\\date{\\today}\n\n\\begin{document}\n\\maketitle\n\\section{はじめに}\nここから本文を書き始めます．\n\n\\end{document}\n",
 		}),
-		entry("builtin-article", "英語の文書", "English article", "pdfLaTeX を使う article の文書です．", "An article document compiled with pdfLaTeX.", "main.tex", "pdflatex", map[string]string{
+		entry("builtin-article", "英語の文書", "English article", "pdfLaTeX を使う article の文書です．", "An article document compiled with pdfLaTeX.", "main.tex", map[string]string{
 			"main.tex": "\\documentclass[11pt]{article}\n\\usepackage[T1]{fontenc}\n\\usepackage{graphicx}\n\\usepackage{amsmath}\n\\title{Article title}\n\\author{Author}\n\\date{\\today}\n\n\\begin{document}\n\\maketitle\n\\begin{abstract}\nWrite the abstract here.\n\\end{abstract}\n\n\\section{Introduction}\nStart writing here.\n\n\\end{document}\n",
 		}),
-		entry("builtin-slides", "Beamer のスライド", "Beamer slides", "pdfLaTeX で作る英語のスライドです．TeX Live の beamer が必要です．", "English slides compiled with pdfLaTeX. The beamer package is required.", "main.tex", "pdflatex", map[string]string{
+		entry("builtin-slides", "Beamer のスライド", "Beamer slides", "pdfLaTeX で作る英語のスライドです．TeX Live の beamer が必要です．", "English slides compiled with pdfLaTeX. The beamer package is required.", "main.tex", map[string]string{
 			"main.tex": "\\documentclass{beamer}\n\\usepackage[T1]{fontenc}\n\\title{Presentation title}\n\\author{Author}\n\\date{\\today}\n\n\\begin{document}\n\\begin{frame}\n\\titlepage\n\\end{frame}\n\n\\begin{frame}{First slide}\n\\begin{itemize}\n\\item Start writing here.\n\\end{itemize}\n\\end{frame}\n\\end{document}\n",
 		}),
-		entry("builtin-markdown", "Markdown のメモ", "Markdown notes", "見出し，チェック項目，表を含むメモです．TeX Live を使わずに編集できます．", "Notes with headings, a checklist, and a table. Editing does not require TeX Live.", "", "pdflatex", map[string]string{
+		entry("builtin-markdown", "Markdown のメモ", "Markdown notes", "見出し，チェック項目，表を含むメモです．TeX Live を使わずに編集できます．", "Notes with headings, a checklist, and a table. Editing does not require TeX Live.", "", map[string]string{
 			"notes.md": "# Notes\n\n## Tasks\n\n- [ ] First task\n- [ ] Second task\n\n## Notes\n\nWrite here.\n\n| Item | Details |\n| --- | --- |\n| Example | Details |\n",
 		}),
 	}
@@ -576,7 +577,7 @@ func (a *App) templateProjectHandler(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		a.mu.Lock()
 		config := cloneConfig(a.config)
-		config.Projects[root] = projectSettings{Main: item.Main, Mode: item.Mode}
+		config.Projects[root] = projectSettings{Main: item.Main, Mode: item.Mode, DocumentDefaultApplied: true}
 		err = a.saveConfig(config)
 		if err == nil {
 			a.config = config

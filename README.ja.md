@@ -4,13 +4,13 @@
 
 [![Microsoft Store から無料の Windows 版をインストール](docs/download-store.svg)](https://apps.microsoft.com/detail/9P6QF32N19HG?hl=ja-jp&gl=JP)
 &nbsp;&nbsp;
-[![Windows 版の ZIP をダウンロード](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.21/local-tex-web-editor-0.1.21-windows-x64.zip)
+[![Windows 版の ZIP をダウンロード](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.22/local-tex-web-editor-0.1.22-windows-x64.zip)
 &nbsp;&nbsp;
-[![macOS 版をダウンロード](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.21/local-tex-web-editor-0.1.21-macos-universal.zip)
+[![macOS 版をダウンロード](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.22/local-tex-web-editor-0.1.22-macos-universal.zip)
 
-**v0.1.21** · [配布ファイルと更新内容](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [初めて使う](#初めて使う) · [起動する](#ダウンロードして起動する) · [利用前の準備](#利用前の準備) · [アプリの容量](#アプリとデータの保存先)
+**v0.1.22** · [配布ファイルと更新内容](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [初めて使う](#初めて使う) · [起動する](#ダウンロードして起動する) · [利用前の準備](#利用前の準備) · [アプリの容量](#アプリとデータの保存先)
 
-上のボタンから v0.1.21 の ZIP をダウンロードできる．Store 版は Microsoft Store から更新できる．
+上のボタンから v0.1.22 の ZIP をダウンロードできる．Store 版は Microsoft Store から更新できる．
 
 Windows と macOS のブラウザで TeX，Markdown，テキストの原稿を編集する **完全無料** のアプリ．アプリ内購入，有料アップグレード，サブスクリプション，試用期限はなく，すべての機能を使える．起動時には既定のブラウザで `localhost` の画面が開き，原稿と PDF を同じウィンドウで確認できる．
 
@@ -68,7 +68,7 @@ macOS 版の最低 OS は，アプリのビルドに使う [Go 1.25 の対応 OS
 #### ZIP をダウンロードする
 
 1. [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) を開き，最新のバージョンを選ぶ．
-2. **Assets** の `local-tex-web-editor-0.1.21-windows-x64.zip` をダウンロードする．`Source code` は開発用のソースである．
+2. **Assets** の `local-tex-web-editor-0.1.22-windows-x64.zip` をダウンロードする．`Source code` は開発用のソースである．
 3. ZIP を展開し，`local-tex-web-editor.exe` をダブルクリックする．
 4. 初回の起動時に，スタートメニューとデスクトップへショートカットが作成される．次回はそのショートカットから開ける．**設定 → 起動用のショートカット** からも作成できる．
 5. ホーム画面が開いたら，TeX がない場合は [アプリから TeX を導入する](#アプリから-tex-を導入する)，すでにある場合は [既存の TeX を選ぶ](#既存の-tex-を選ぶ) へ進む．続いてホームの **Create from a template (テンプレートから作成)** からサンプルを作れる．
@@ -77,7 +77,7 @@ Windows の ZIP に含まれる実行ファイルにはコード署名が付い�
 
 ### macOS
 
-1. [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) の **Assets** から `local-tex-web-editor-0.1.21-macos-universal.zip` をダウンロードする．Apple Silicon と Intel で共通の ZIP を使う．
+1. [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) の **Assets** から `local-tex-web-editor-0.1.22-macos-universal.zip` をダウンロードする．Apple Silicon と Intel で共通の ZIP を使う．
 2. ZIP を展開し，`Local TeX Web Editor.app` を「アプリケーション」フォルダーへ移す．
 3. Finder や Spotlight から `Local TeX Web Editor` を開く．ブラウザに編集画面が開く．
 4. ホーム画面が開いたら，TeX がない場合は [アプリから TeX を導入する](#アプリから-tex-を導入する)，すでにある場合は [既存の TeX を選ぶ](#既存の-tex-を選ぶ) へ進む．続いてホームの **Create from a template (テンプレートから作成)** からサンプルを作れる．
@@ -153,7 +153,7 @@ Windows x64 と，Apple Silicon / Intel の Mac に対応する．通常のユ�
 
 最初の原稿を作る場合は，テンプレートの一覧で **Japanese document (日本語の文書)** または **English article (英語の文書)** を選ぶ．**Destination folder (保存先のフォルダー)** の横にある **Choose a folder (フォルダーを選ぶ)** を押し，「ドキュメント」などの親フォルダーを選ぶ．**New project folder name (新しいプロジェクトのフォルダー名)** に `my-first-paper` など，まだ使っていない名前を入力し，**Create and open (作成して開く)** を押す．アプリがその親フォルダー内にプロジェクトを作り，テンプレートに合うコンパイラーを選ぶ．ファイル一覧の `main.tex` を開く．
 
-既存の原稿を使う場合は，ホームの **Open project folder (プロジェクトフォルダーを開く)** を押し，**Browse… (参照…)** またはパスの入力でフォルダーを選んで **Open (開く)** を押す．ファイル一覧からメインの `.tex` を開く．コンパイル前に **Settings (設定) → Compiler (コンパイラー)** を開く．設定ファイルがプロジェクトのルートにある場合は「latexmkrc の設定を使う」，サブフォルダーにある原稿ごとに設定がある場合は「原稿に近い latexmkrc を使う」を選ぶ．設定ファイルがない場合は原稿に合う TeX のエンジンを選ぶ．最後に **Save and apply settings (設定を保存して反映)** を押す．
+既存の原稿を使う場合は，ホームの **Open project folder (プロジェクトフォルダーを開く)** を押し，**Browse… (参照…)** またはパスの入力でフォルダーを選んで **Open (開く)** を押す．ファイル一覧からメインの `.tex` を開く．コンパイル前に **Settings (設定) → Compiler (コンパイラー)** を開く．設定ファイルがプロジェクト内にある場合は，標準の「原稿に近い latexmkrc を使う」で組版できる．設定ファイルがなく，pdfLaTeX 以外のエンジンを使う場合は，そのエンジンを選んで **Save and apply settings (設定を保存して反映)** を押す．
 
 上部の **Compile (コンパイル)** を押すと，原稿を保存してから TeX を実行する．完了すると，原稿の隣に PDF が表示される．パッケージがないというエラーが出た場合は，[TeX のパッケージと環境を管理する](#tex-のパッケージと環境を管理する) の手順で追加してから，もう一度コンパイルする．
 
@@ -552,7 +552,9 @@ Store 版で共用の TeX を使う場合は，このボタンから公式の Te
 
 文書ごとに PDF のページ位置と倍率を記録する．別の文書のコンパイルに失敗した場合も，直前に成功した PDF と SyncTeX を使って作業を続けられる．
 
-原稿ごとに設定がある場合は，**設定 → コンパイラー → 原稿に近い latexmkrc を使う** を選ぶ．原稿のフォルダーからプロジェクトのルートまで順に探し，最初に `.latexmkrc` または `latexmkrc` が見つかったフォルダーで組版する．設定が見つからない場合はルートから pdfLaTeX で組版する．初めて開くプロジェクトで設定がサブフォルダーにだけある場合は，この方法が選ばれる．既に開いたプロジェクトには保存済みの選択が適用される．
+**設定 → コンパイラー** の標準は「原稿に近い latexmkrc を使う」である．原稿のフォルダーからプロジェクトのルートまで順に探し，最初に `.latexmkrc` または `latexmkrc` が見つかったフォルダーで組版する．設定が見つからない場合はルートから pdfLaTeX で組版する．新しく開くフォルダー，ZIP から取り込むプロジェクト，付属のテンプレートにこの標準を使う．
+
+旧版でプロジェクトを開いたことがある場合は，保存済みの値が旧版の標準と一致すると，更新後にそのフォルダーを最初に開いたときに新しい標準へ切り替わる．旧版は同じ値を手動で選んだ場合も同じ形式で記録していたため，この場合も切り替わる．その後「設定」で選んだコンパイラーは，次回からもそのプロジェクトで使われる．
 
 プロジェクトのルートに置いた `latexmkrc` を使う場合は，設定画面のコンパイラーを「latexmkrc の設定を使う」にする．`latexmkrc` / `.latexmkrc` に書かれた `uplatex`，`upbibtex`，`dvipdfmx` などの指定を使う．
 
@@ -569,12 +571,12 @@ local-tex-editor-build-doc-*/
 
 ## アプリとデータの保存先
 
-次の表は **v0.1.21** の配布ファイルの実測値である．1 MB = 1,000,000 bytes とし，小数点以下 2 桁で表示している．対象のファイルは，[v0.1.21 の配布ファイル](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.21) から取得できる．
+次の表はダウンロードと展開後の容量の目安である (1 MB = 1,000,000 bytes)．公開された配布ファイルの実測値は[ダウンロードガイド](https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/ja/#requirements)で確認できる．
 
 | 対応環境 | ダウンロードする ZIP | 展開後のアプリ本体 |
 | --- | ---: | ---: |
-| Windows x64 | **9.67 MB** | **18.50 MB** (`.exe`) |
-| macOS，Apple Silicon + Intel | **18.60 MB** | **39.61 MB** (`.app`) |
+| Windows x64 | **10 MB** | **19 MB** (`.exe`) |
+| macOS，Apple Silicon + Intel | **19 MB** | **40 MB** (`.app`) |
 
 ZIP には README，画像，ライセンスも含む．Mac のアプリは両方の CPU 向けの実行ファイルを収録している．冒頭の Windows ZIP と macOS のボタンから，対応する配布ファイルを取得できる．
 
@@ -620,7 +622,7 @@ go build -o bin/local-tex-web-editor.exe ./cmd/local-tex-editor
 Windows 用の配布ファイルは次のコマンドで作成する．
 
 ```sh
-go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.21" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
+go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.22" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
 ```
 
 `build:windows-resources` は同梱の ICO から Windows x64 用の resource を生成する．実行ファイルのビルド時に，16〜256 px の 9 サイズのアイコンが組み込まれる．
@@ -636,7 +638,7 @@ npx playwright install chromium
 node scripts/build-macos.mjs
 ```
 
-`dist/local-tex-web-editor-0.1.21-macos-universal.zip` に，Apple Silicon と Intel で動く `.app`，日英の README，ライセンスを収録する．
+`dist/local-tex-web-editor-0.1.22-macos-universal.zip` に，Apple Silicon と Intel で動く `.app`，日英の README，ライセンスを収録する．
 
 起動時のオプション:
 

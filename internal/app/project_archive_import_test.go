@@ -86,7 +86,7 @@ func TestProjectArchiveImportPreservesProjectFilesAndUnwrapsItsFolder(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.Main != "main.tex" || result.Mode != "project" {
+	if result.Main != "main.tex" || result.Mode != "document" {
 		t.Fatalf("imported project = %+v", result)
 	}
 	for name, want := range contents {
@@ -125,7 +125,7 @@ func TestProjectArchiveImportOnlyUnwrapsAMatchingProjectFolder(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if result.Main != test.expected || result.Mode != "pdflatex" {
+			if result.Main != test.expected || result.Mode != "document" {
 				t.Fatalf("project = %+v", result)
 			}
 			if _, err := os.Stat(filepath.Join(result.Path, filepath.FromSlash(test.expected))); err != nil {
@@ -143,7 +143,7 @@ func TestProjectArchiveImportAcceptsAValidEmptyZIP(t *testing.T) {
 			t.Fatal(err)
 		}
 		items, err := os.ReadDir(result.Path)
-		if err != nil || len(items) != 0 || result.Main != "" || result.Mode != "pdflatex" {
+		if err != nil || len(items) != 0 || result.Main != "" || result.Mode != "document" {
 			t.Fatalf("empty project = %+v, %v, %v", result, items, err)
 		}
 	}
@@ -385,7 +385,7 @@ func TestProjectArchiveImportHandlerCreatesTheProjectWithoutChangingTheOpenProje
 	if response.Code != http.StatusCreated || json.Unmarshal(response.Body.Bytes(), &result) != nil {
 		t.Fatalf("import = %d %s", response.Code, response.Body.String())
 	}
-	if result.Main != "main.tex" || result.Mode != "pdflatex" || !filepath.IsAbs(result.Path) {
+	if result.Main != "main.tex" || result.Mode != "document" || !filepath.IsAbs(result.Path) {
 		t.Fatalf("created project = %+v", result)
 	}
 	if !samePath(a.project.Root, current) {

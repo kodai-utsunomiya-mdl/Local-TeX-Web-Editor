@@ -34,7 +34,7 @@ project は開いている場合に次の形式で返す．
 {"root":"絶対パス","main":"main.tex","mode":"project","files":[{"path":"main.tex","size":123,"kind":"text"},{"path":"figures/chart.png","size":456,"kind":"image"}],"directories":["figures","figures/empty"]}
 ```
 
-mode は `project`，`document`，`pdflatex`，`uplatex`，`xelatex`，`lualatex`．project では既存の latexmkrc をそのまま読み，出力形式を上書きしない．`document` は対象文書からプロジェクトルートまでで最も近い latexmkrc のフォルダーを作業ディレクトリにする．
+mode の標準は `document`．選択肢は `document`，`project`，`pdflatex`，`uplatex`，`xelatex`，`lualatex`．project では既存の latexmkrc をそのまま読み，出力形式を上書きしない．`document` は対象文書からプロジェクトルートまでで最も近い latexmkrc のフォルダーを作業ディレクトリにする．
 
 files は通常のファイルを一覧にし，path は `/` を使うルートからの相対パス，size は byte 数とする．kind は `text`，`image`，`pdf`，`binary`．UI は `text` を編集・草稿・TeX の補完の読込対象にする．`image` / `pdf` はプレビュー，`binary` は名前・サイズと未対応の種類である旨を表示する．
 

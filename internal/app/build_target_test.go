@@ -193,14 +193,64 @@ func TestSuccessfulDocumentAndItsSyncTeXRemainAvailableAfterAnotherFails(t *test
 	}
 }
 
+func TestNewProjectsUseDocumentModeAndKeepCompilerChanges(t *testing.T) {
+	a, _ := testApp(t)
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	for _, config := range []string{"", "latexmkrc", "papers/.latexmkrc"} {
+		root := t.TempDir()
+		writeTestFile(t, filepath.Join(root, "main.tex"), []byte("test"))
+		if config != "" {
+			writeTestFile(t, filepath.Join(root, config), []byte("# project settings"))
+		}
+		if err := a.openProjectLocked(root); err != nil || a.project.Mode != "document" {
+			t.Fatalf("configuration %q: wanted document, got %q (%v)", config, a.project.Mode, err)
+		}
+		mode := "pdflatex"
+		if err := a.updateSettingsLocked(nil, nil, &mode); err != nil {
+			t.Fatal(err)
+		}
+		if err := a.openProjectLocked(root); err != nil || a.project.Mode != mode {
+			t.Fatalf("expected saved compiler %q, got %q (%v)", mode, a.project.Mode, err)
+		}
+	}
+}
+
+func TestOlderProjectCompilerSettingsMigrateOnce(t *testing.T) {
+	a, _ := testApp(t)
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	for _, tc := range []struct{ rc, saved, want string }{
+		{"paper/.latexmkrc", "pdflatex", "document"},
+		{"latexmkrc", "project", "document"},
+		{".latexmkrc", "pdflatex", "pdflatex"},
+		{"", "lualatex", "lualatex"},
+		{"", "project", "project"},
+	} {
+		root := t.TempDir()
+		writeTestFile(t, filepath.Join(root, "paper", "main.tex"), []byte("test"))
+		if tc.rc != "" {
+			writeTestFile(t, filepath.Join(root, tc.rc), []byte("# settings"))
+		}
+		root, err := filepath.EvalSymlinks(root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		a.config.Projects[root] = projectSettings{Main: "paper/main.tex", Mode: tc.saved}
+		if err := a.openProjectLocked(root); err != nil {
+			t.Fatal(err)
+		}
+		config, _, err := readConfig(a.options.ConfigDir)
+		if err != nil || config.Projects[root].Mode != tc.want || !config.Projects[root].DocumentDefaultApplied {
+			t.Fatalf("saved %q with %q: got %+v (%v)", tc.saved, tc.rc, config.Projects[root], err)
+		}
+	}
+}
+
 func TestDocumentModeUsesNearestConfigurationAndProjectOutput(t *testing.T) {
 	root := t.TempDir()
 	main := "papers/work/chapter/main.tex"
 	writeTestFile(t, filepath.Join(root, filepath.FromSlash(main)), []byte("test"))
-	files, err := listProjectFiles(root)
-	if err != nil || defaultCompileMode(files) != "pdflatex" {
-		t.Fatalf("default mode without rc: %s, %v", defaultCompileMode(files), err)
-	}
 	output, err := ensureBuildDirectory(root, main)
 	if err != nil {
 		t.Fatal(err)
@@ -227,18 +277,10 @@ func TestDocumentModeUsesNearestConfigurationAndProjectOutput(t *testing.T) {
 	check("document", root, main, true)
 	papers := filepath.Join(root, "papers")
 	writeTestFile(t, filepath.Join(papers, "latexmkrc"), []byte("# test"))
-	files, err = listProjectFiles(root)
-	if err != nil || defaultCompileMode(files) != "document" {
-		t.Fatalf("default for nested rc: %s, %v", defaultCompileMode(files), err)
-	}
 	check("document", papers, "work/chapter/main.tex", false)
 	work := filepath.Join(papers, "work")
 	writeTestFile(t, filepath.Join(work, ".latexmkrc"), []byte("# test"))
 	writeTestFile(t, filepath.Join(root, "latexmkrc"), []byte("# test"))
-	files, err = listProjectFiles(root)
-	if err != nil || defaultCompileMode(files) != "project" {
-		t.Fatalf("root default: %s, %v", defaultCompileMode(files), err)
-	}
 	check("document", work, "chapter/main.tex", false)
 	check("project", root, main, false)
 	check("pdflatex", root, main, true)

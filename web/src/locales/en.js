@@ -408,7 +408,7 @@ export const english = {
   'コンパイラー': 'Compiler',
   'latexmkrc の設定を使う': 'Use latexmkrc settings',
   '原稿に近い latexmkrc を使う': 'Use the latexmkrc nearest the document',
-  '原稿ごとの設定を使う場合は「原稿に近い latexmkrc を使う」を選択します．': 'Choose the nearest latexmkrc option to use a separate configuration for each document.',
+  '標準では，原稿のフォルダーから親フォルダーを順にたどり，最初に見つかった latexmkrc を使います．設定ファイルがない場合は pdfLaTeX で組版します．': 'By default, the editor uses the first latexmkrc it finds from the document folder up to the project root. Without one, it uses pdfLaTeX.',
   '起動用のショートカット': 'App shortcuts',
   'PC のアプリフォルダーへ Local TeX Web Editor を配置し，選んだ場所にショートカットを作ります．次回からショートカットを開くと，アプリとブラウザが起動します．': 'Place Local TeX Web Editor in your local apps folder and create a shortcut in the selected location. Open the shortcut next time to start the app and browser.',
   'スタートメニューに追加': 'Add to Start menu',

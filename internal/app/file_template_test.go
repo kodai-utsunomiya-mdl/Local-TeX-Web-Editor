@@ -24,7 +24,7 @@ func TestFileTemplatesReadBuiltinTextWithoutCreatingFiles(t *testing.T) {
 			Template projectTemplate     `json:"template"`
 			Files    []fileTemplateEntry `json:"files"`
 		}
-		if response.Code != http.StatusOK || json.Unmarshal(response.Body.Bytes(), &result) != nil || result.Template.Name != item.Name || len(result.Files) != 1 {
+		if response.Code != http.StatusOK || json.Unmarshal(response.Body.Bytes(), &result) != nil || result.Template.Name != item.Name || len(result.Files) != len(item.Files) {
 			t.Fatalf("builtin file list: %d %s", response.Code, response.Body.String())
 		}
 		file := result.Files[0]

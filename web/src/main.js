@@ -1721,7 +1721,7 @@ async function showSettings() {
   for (const file of project?.files || []) if (/\.tex$/i.test(file.path)) { const option = document.createElement('option'); option.value = file.path; option.textContent = file.path; $('main-file').append(option); }
   if (project?.main && ![...$('main-file').options].some(option => option.value === project.main)) { const option = document.createElement('option'); option.value = project.main; option.textContent = project.main; $('main-file').append(option); }
   $('main-file').value = project?.main || '';
-  $('compile-mode').value = project?.mode || 'pdflatex';
+  $('compile-mode').value = project?.mode || 'document';
   $('autosave-setting').checked = state.preferences.autoSave;
   $('tex-completion-setting').checked = state.preferences.texCompletion;
   $('completion-on-type-setting').checked = state.preferences.automaticCompletion;

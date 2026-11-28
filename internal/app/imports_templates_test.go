@@ -91,7 +91,9 @@ func TestBuiltinTemplateCreatesANewFolderAndLeavesTheCurrentProjectOpen(t *testi
 	a, current := testApp(t)
 	parent := t.TempDir()
 	response := apiRequest(a, http.MethodGet, "/api/templates", nil, map[string]string{"Accept-Language": "en"})
-	var result struct{ Templates []projectTemplate `json:"templates"` }
+	var result struct {
+		Templates []projectTemplate `json:"templates"`
+	}
 	if response.Code != http.StatusOK || json.Unmarshal(response.Body.Bytes(), &result) != nil || len(result.Templates) != 4 {
 		t.Fatalf("template list: %d %s", response.Code, response.Body.String())
 	}
@@ -120,7 +122,10 @@ func TestBuiltinTemplateCreatesANewFolderAndLeavesTheCurrentProjectOpen(t *testi
 	if !samePath(a.project.Root, current) {
 		t.Fatalf("creating a template changed the open project: %q instead of %q", a.project.Root, current)
 	}
-	if settings := a.config.Projects[path]; settings.Main != "main.tex" || settings.Mode != "lualatex" || created.Main != settings.Main || created.Mode != settings.Mode {
+	if rc, err := os.ReadFile(filepath.Join(path, "latexmkrc")); err != nil || !strings.Contains(string(rc), "$pdf_mode = 4;") {
+		t.Fatalf("Japanese template must select LuaLaTeX: %q (%v)", rc, err)
+	}
+	if settings := a.config.Projects[path]; settings.Main != "main.tex" || settings.Mode != "document" || created.Main != settings.Main || created.Mode != settings.Mode {
 		t.Fatalf("the new project's compiler setting does not match its response: %#v, %#v", settings, created)
 	}
 	response = apiRequest(a, http.MethodPost, "/api/templates/create-project", map[string]string{"id": "builtin-article", "parent": parent, "name": "日本語の原稿"}, nil)

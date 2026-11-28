@@ -48,8 +48,9 @@ type FileDocument struct {
 }
 
 type projectSettings struct {
-	Main string `json:"main"`
-	Mode string `json:"mode"`
+	Main                   string `json:"main"`
+	Mode                   string `json:"mode"`
+	DocumentDefaultApplied bool   `json:"documentDefaultApplied,omitempty"`
 }
 
 type configuration struct {
@@ -144,12 +145,25 @@ func (a *App) openProjectLocked(rawPath string) error {
 	if err != nil {
 		return err
 	}
-	settings, exists := a.config.Projects[root]
-	if !exists {
-		settings.Mode = defaultCompileMode(files)
+	settings := a.config.Projects[root]
+	if !settings.DocumentDefaultApplied {
+		// Old versions recorded the automatic choice in the same field as a manual one.
+		// With no root configuration, versions before 0.1.21 also chose pdfLaTeX
+		// when a subfolder contained its own latexmkrc.
+		legacyDefault := "pdflatex"
+		for _, file := range files {
+			if samePath(file.Path, "latexmkrc") || samePath(file.Path, ".latexmkrc") {
+				legacyDefault = "project"
+				break
+			}
+		}
+		if settings.Mode == legacyDefault {
+			settings.Mode = defaultCompileMode
+		}
+		settings.DocumentDefaultApplied = true
 	}
 	if !validMode(settings.Mode) {
-		settings.Mode = "project"
+		settings.Mode = defaultCompileMode
 	}
 	if !hasFile(files, settings.Main) || !strings.EqualFold(filepath.Ext(settings.Main), ".tex") {
 		settings.Main = chooseMain(root, files)
@@ -229,7 +243,7 @@ func (a *App) updateSettingsLocked(texBin, main, mode *string) error {
 			}
 			project.Mode = *mode
 		}
-		config.Projects[project.Root] = projectSettings{Main: project.Main, Mode: project.Mode}
+		config.Projects[project.Root] = projectSettings{Main: project.Main, Mode: project.Mode, DocumentDefaultApplied: true}
 	}
 	if err := a.saveConfig(config); err != nil {
 		return messages.Errorf("設定を保存できません: %w", err)
@@ -261,21 +275,7 @@ func (a *App) updateSettingsLocked(texBin, main, mode *string) error {
 	return nil
 }
 
-// Root configuration retains precedence for existing single-project layouts.
-func defaultCompileMode(files []ProjectFile) string {
-	mode := "pdflatex"
-	for _, file := range files {
-		name := filepath.Base(file.Path)
-		if !samePath(name, "latexmkrc") && !samePath(name, ".latexmkrc") {
-			continue
-		}
-		if filepath.Dir(file.Path) == "." {
-			return "project"
-		}
-		mode = "document"
-	}
-	return mode
-}
+const defaultCompileMode = "document"
 
 func validMode(mode string) bool {
 	switch mode {
