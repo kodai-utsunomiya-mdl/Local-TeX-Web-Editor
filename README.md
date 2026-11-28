@@ -4,13 +4,13 @@ English | [日本語](README.ja.md) · [Website and guide](https://kodai-utsunom
 
 [![Get the free Windows app from Microsoft Store](docs/download-store.svg)](https://apps.microsoft.com/detail/9P6QF32N19HG)
 &nbsp;&nbsp;
-[![Download Windows ZIP](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.20/local-tex-web-editor-0.1.20-windows-x64.zip)
+[![Download Windows ZIP](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.21/local-tex-web-editor-0.1.21-windows-x64.zip)
 &nbsp;&nbsp;
-[![Download for macOS](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.20/local-tex-web-editor-0.1.20-macos-universal.zip)
+[![Download for macOS](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.21/local-tex-web-editor-0.1.21-macos-universal.zip)
 
-**v0.1.20** · [All downloads and release notes](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [Get started](#first-document) · [Download and launch](#download-and-launch) · [Requirements](#requirements) · [App size](#app-files-and-storage)
+**v0.1.21** · [All downloads and release notes](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [Get started](#first-document) · [Download and launch](#download-and-launch) · [Requirements](#requirements) · [App size](#app-files-and-storage)
 
-The ZIP downloads are v0.1.20. The Microsoft Store update becomes available after Store review and publication.
+Download v0.1.21 using the ZIP buttons above. Microsoft Store manages updates for the Store edition.
 
 Edit TeX, Markdown, and plain text in your browser on Windows or macOS. The app is **completely free**, with all features included and no in-app purchases, paid upgrades, subscriptions, or trial expiry. Launching the app opens a `localhost` page in your default browser, with the editor and PDF preview in the same window.
 
@@ -68,7 +68,7 @@ Microsoft Store manages installation and app updates. The setup guide below cont
 #### ZIP download
 
 1. Open [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) and select the latest version.
-2. Under **Assets**, download `local-tex-web-editor-0.1.20-windows-x64.zip`. The **Source code** archives contain the files for development.
+2. Under **Assets**, download `local-tex-web-editor-0.1.21-windows-x64.zip`. The **Source code** archives contain the files for development.
 3. Extract the ZIP and double-click `local-tex-web-editor.exe`.
 4. The first launch adds shortcuts to the Start menu and desktop. Use either shortcut to open the app next time. **Settings → App shortcuts** can also create them.
 5. On Home, [set up TeX from the app](#set-up-tex-from-the-app) if TeX is not installed, or [select your existing installation](#use-an-existing-tex-installation) if you already use TeX. Then choose **Create from a template** on Home to create a sample.
@@ -77,7 +77,7 @@ The Windows executable in the ZIP download does not have a code signature. If Sm
 
 ### macOS
 
-1. Under **Assets** in [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases), download `local-tex-web-editor-0.1.20-macos-universal.zip`. The same ZIP supports Apple Silicon and Intel.
+1. Under **Assets** in [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases), download `local-tex-web-editor-0.1.21-macos-universal.zip`. The same ZIP supports Apple Silicon and Intel.
 2. Extract the ZIP and move `Local TeX Web Editor.app` to **Applications**.
 3. Open **Local TeX Web Editor** from Finder or Spotlight. The editor opens in your browser.
 4. On Home, [set up TeX from the app](#set-up-tex-from-the-app) if TeX is not installed, or [select your existing installation](#use-an-existing-tex-installation) if you already use TeX. Then choose **Create from a template** on Home to create a sample.
@@ -109,7 +109,7 @@ First [download and launch the app](#download-and-launch). The first launch uses
 
 ### 1. Open TeX setup from Home
 
-On the **Projects** home screen, find **TeX installation and management** and click **Set up TeX…**. You can return to Home by clicking the TeX logo at the top left. Home and Settings both show **Set up TeX…** and **Manage TeX…**. Setup creates a new environment; management opens the selected environment. **Manage TeX…** becomes available once a TeX environment has been found.
+On the **Projects** home screen, find **TeX installation and management** above **Recent projects** and click **Set up TeX…**. You can return to Home by clicking the TeX logo at the top left. Home and Settings both show **Set up TeX…** and **Manage TeX…**. Setup creates a new environment; management opens the selected environment. **Manage TeX…** becomes available once a TeX environment has been found.
 
 ![Home with Set up TeX and Manage TeX](docs/screenshots/tex-setup-home.png)
 
@@ -153,7 +153,7 @@ If you started from Home with no project open, click **Create a sample…** to o
 
 For a first document, select **English article** or **Japanese document** in the template chooser. Click **Choose a folder** beside **Destination folder** and select a parent folder, such as Documents. Enter an unused name, such as `my-first-paper`, in **New project folder name**, then click **Create and open**. The app creates the project inside that parent folder and selects the compiler for its template. Select `main.tex` in the file list.
 
-For an existing document, choose **Open project folder** on Home, use **Browse…** or enter the folder path, and click **Open**. Select the main `.tex` document in the file list. Before compiling, open **Settings → Compiler**. Choose **Use latexmkrc settings** when the project supplies `latexmkrc` or `.latexmkrc`; otherwise choose the TeX engine required by the document. Click **Save and apply settings**.
+For an existing document, choose **Open project folder** on Home, use **Browse…** or enter the folder path, and click **Open**. Select the main `.tex` document in the file list. Before compiling, open **Settings → Compiler**. Choose **Use latexmkrc settings** for a configuration at the project root, or **Use the latexmkrc nearest the document** for manuscripts with their own configurations in subfolders. If the project has no configuration, choose the TeX engine required by the document. Click **Save and apply settings**.
 
 Click **Compile** in the top toolbar. The app saves the document and runs TeX. The resulting PDF appears beside the source. If compilation reports a missing package, follow [Manage TeX packages and installations](#manage-tex-packages-and-installations), then compile again.
 
@@ -300,7 +300,7 @@ Selected text has a visible background in both themes, including selections on t
 
 | Action | How to use it |
 | --- | --- |
-| Find files or headings | Use the search field on the left. **Outline** shows headings from the selected TeX or Markdown tab. Click a heading to show its source line near the top of the editor, with space above it |
+| Find files or headings | Use the search field on the left. **Outline** shows headings in the current file. For a split TeX document, choose **Whole document** to include headings from the other source files. Click a heading to show its source line near the top of the editor, with space above it |
 | Insert citations | Inside `\citep{` or `\cite{`, completion offers keys from the project's `.bib` files, with author, year, and title information |
 | Insert cross-references | Inside `\ref{`, `\eqref{`, `\cref{`, and similar commands, completion offers labels from the source |
 | Open completion | Type a TeX command or press `Ctrl + Space`. Use `Tab` / `Shift + Tab` to move between the inserted arguments |
@@ -353,11 +353,13 @@ Typing `\b` offers `\begin`. Completing it puts the cursor inside `\begin{}`; ty
 
 Citation details appear beside the candidate list, or below it in a narrow editor, with their own scrolling area. In **Settings**, **Enable TeX completion** enables the feature, and **Show suggestions while typing** controls automatic suggestions. When automatic suggestions are off, `Ctrl + Space` still opens completion.
 
+In **Outline**, choose **Whole document** to see headings from files referenced by `\input` and `\include` in reading order. Select a heading to open the file and line. **Current file** shows the active source only.
+
 The outline uses vertical guides and arrows to show heading levels. Click an arrow to collapse its children, or click the heading to open its source line. In the source, arrows beside the line numbers fold sections and environments; Markdown headings and code blocks can also be folded. Source jumps from the outline, search, and PDF unfold the destination when needed. The keyboard commands are listed under **Help → Keyboard shortcuts**.
 
 ### Search and replace across the project
 
-**Search project** searches the text of `.tex`, `.bib`, Markdown, and other supported text files. Unsaved documents use the text currently in the editor. Generated compilation files are omitted. Select a result to open its location in the source.
+**Find and replace → Entire project** searches the text of `.tex`, `.bib`, Markdown, and other supported text files. Unsaved documents use the text currently in the editor. Generated compilation files are omitted. Select a result to open its location in the source.
 
 Enter the replacement text before searching to see the before/after preview for each occurrence. Tick the occurrences you want to change, or use **Select / clear all**, then choose **Replace … selected matches**. Replacement saves the affected files. The app checks both the current editor text and the disk revisions before saving; if a file has changed, search again to review the new text.
 
@@ -550,9 +552,9 @@ When editing a chapter included with `\input`, a shared preamble, or another sup
 
 The app records the PDF page and zoom for each document. If compilation of a different document fails, you can continue working with the previous successful PDF and its SyncTeX data.
 
-In **Outline**, choose **Whole document** to see headings from files referenced by `\input` and `\include` in reading order. Select a heading to open the file and line. **Current file** shows the active source only.\n\nFor a folder containing independent documents, choose **Use the latexmkrc nearest the document** in **Settings → Compiler**. The editor starts latexmk in the first folder containing `.latexmkrc` or `latexmkrc` on the path from the document up to the project root. With no matching configuration it uses pdfLaTeX from the root. On first opening a project this mode is selected if configurations are found only in subfolders. Previously saved compiler choices are retained.
+For a folder containing independent documents, choose **Use the latexmkrc nearest the document** in **Settings → Compiler**. The editor starts latexmk in the first folder containing `.latexmkrc` or `latexmkrc` on the path from the document up to the project root. With no matching configuration it uses pdfLaTeX from the root. On first opening a project this mode is selected if configurations are found only in subfolders. Previously saved compiler choices are retained.
 
-For a project with an existing `latexmkrc`, choose **Use latexmkrc settings** as the compiler. The app uses the `uplatex`, `upbibtex`, `dvipdfmx`, and other commands configured in `latexmkrc` or `.latexmkrc`.
+For a project with a single `latexmkrc` at its root, choose **Use latexmkrc settings** as the compiler. The app uses the `uplatex`, `upbibtex`, `dvipdfmx`, and other commands configured in `latexmkrc` or `.latexmkrc`.
 
 For projects without `latexmkrc`, you can select pdfLaTeX, upLaTeX, XeLaTeX, or LuaLaTeX. The app runs `latexmk`, which also handles the repeated runs needed for references and citations.
 
@@ -618,7 +620,7 @@ go build -o bin/local-tex-web-editor.exe ./cmd/local-tex-editor
 Build a Windows distribution executable:
 
 ```sh
-go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.20" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
+go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.21" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
 ```
 
 `build:windows-resources` generates Windows x64 resources from the bundled ICO. The executable embeds nine icon sizes from 16 to 256 px.
@@ -634,7 +636,7 @@ npx playwright install chromium
 node scripts/build-macos.mjs
 ```
 
-This creates `dist/local-tex-web-editor-0.1.20-macos-universal.zip` with an app supporting Apple Silicon and Intel, the English and Japanese READMEs, and license files.
+This creates `dist/local-tex-web-editor-0.1.21-macos-universal.zip` with an app supporting Apple Silicon and Intel, the English and Japanese READMEs, and license files.
 
 Command-line options:
 

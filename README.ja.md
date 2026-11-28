@@ -4,13 +4,13 @@
 
 [![Microsoft Store から無料の Windows 版をインストール](docs/download-store.svg)](https://apps.microsoft.com/detail/9P6QF32N19HG?hl=ja-jp&gl=JP)
 &nbsp;&nbsp;
-[![Windows 版の ZIP をダウンロード](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.20/local-tex-web-editor-0.1.20-windows-x64.zip)
+[![Windows 版の ZIP をダウンロード](docs/download-windows.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.21/local-tex-web-editor-0.1.21-windows-x64.zip)
 &nbsp;&nbsp;
-[![macOS 版をダウンロード](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.20/local-tex-web-editor-0.1.20-macos-universal.zip)
+[![macOS 版をダウンロード](docs/download-macos.svg)](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/download/v0.1.21/local-tex-web-editor-0.1.21-macos-universal.zip)
 
-**v0.1.20** · [配布ファイルと更新内容](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [初めて使う](#初めて使う) · [起動する](#ダウンロードして起動する) · [利用前の準備](#利用前の準備) · [アプリの容量](#アプリとデータの保存先)
+**v0.1.21** · [配布ファイルと更新内容](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/latest) · [初めて使う](#初めて使う) · [起動する](#ダウンロードして起動する) · [利用前の準備](#利用前の準備) · [アプリの容量](#アプリとデータの保存先)
 
-ZIP は v0.1.20 を配布する．Microsoft Store 版の更新は，Store の審査と公開の完了後に利用できる．
+上のボタンから v0.1.21 の ZIP をダウンロードできる．Store 版は Microsoft Store から更新できる．
 
 Windows と macOS のブラウザで TeX，Markdown，テキストの原稿を編集する **完全無料** のアプリ．アプリ内購入，有料アップグレード，サブスクリプション，試用期限はなく，すべての機能を使える．起動時には既定のブラウザで `localhost` の画面が開き，原稿と PDF を同じウィンドウで確認できる．
 
@@ -68,7 +68,7 @@ macOS 版の最低 OS は，アプリのビルドに使う [Go 1.25 の対応 OS
 #### ZIP をダウンロードする
 
 1. [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) を開き，最新のバージョンを選ぶ．
-2. **Assets** の `local-tex-web-editor-0.1.20-windows-x64.zip` をダウンロードする．`Source code` は開発用のソースである．
+2. **Assets** の `local-tex-web-editor-0.1.21-windows-x64.zip` をダウンロードする．`Source code` は開発用のソースである．
 3. ZIP を展開し，`local-tex-web-editor.exe` をダブルクリックする．
 4. 初回の起動時に，スタートメニューとデスクトップへショートカットが作成される．次回はそのショートカットから開ける．**設定 → 起動用のショートカット** からも作成できる．
 5. ホーム画面が開いたら，TeX がない場合は [アプリから TeX を導入する](#アプリから-tex-を導入する)，すでにある場合は [既存の TeX を選ぶ](#既存の-tex-を選ぶ) へ進む．続いてホームの **Create from a template (テンプレートから作成)** からサンプルを作れる．
@@ -77,7 +77,7 @@ Windows の ZIP に含まれる実行ファイルにはコード署名が付い�
 
 ### macOS
 
-1. [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) の **Assets** から `local-tex-web-editor-0.1.20-macos-universal.zip` をダウンロードする．Apple Silicon と Intel で共通の ZIP を使う．
+1. [Releases](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases) の **Assets** から `local-tex-web-editor-0.1.21-macos-universal.zip` をダウンロードする．Apple Silicon と Intel で共通の ZIP を使う．
 2. ZIP を展開し，`Local TeX Web Editor.app` を「アプリケーション」フォルダーへ移す．
 3. Finder や Spotlight から `Local TeX Web Editor` を開く．ブラウザに編集画面が開く．
 4. ホーム画面が開いたら，TeX がない場合は [アプリから TeX を導入する](#アプリから-tex-を導入する)，すでにある場合は [既存の TeX を選ぶ](#既存の-tex-を選ぶ) へ進む．続いてホームの **Create from a template (テンプレートから作成)** からサンプルを作れる．
@@ -109,7 +109,7 @@ macOS 版には Apple Developer ID による署名と notarization が付いて�
 
 ### 1. ホームからセットアップを開く
 
-ホームの **Projects (プロジェクト)** 画面で，**TeX installation and management (TeX の導入と管理)** の **Set up TeX… (TeX をセットアップ…)** を押す．編集画面からホームへ戻るには，左上の TeX のロゴを押す．ホームと設定には，セットアップと管理の両方のボタンが常に表示される．セットアップは新しい環境の導入，管理は選択中の環境の操作に使う．**Manage TeX… (TeX を管理…)** は，TeX の環境が見つかると利用できる．
+ホームの **Projects (プロジェクト)** 画面で，「最近開いたプロジェクト」の上にある **TeX installation and management (TeX の導入と管理)** の **Set up TeX… (TeX をセットアップ…)** を押す．編集画面からホームへ戻るには，左上の TeX のロゴを押す．ホームと設定には，セットアップと管理の両方のボタンが常に表示される．セットアップは新しい環境の導入，管理は選択中の環境の操作に使う．**Manage TeX… (TeX を管理…)** は，TeX の環境が見つかると利用できる．
 
 ![ホームに表示された TeX のセットアップと管理のボタン](docs/screenshots/tex-setup-home.png)
 
@@ -153,7 +153,7 @@ Windows x64 と，Apple Silicon / Intel の Mac に対応する．通常のユ�
 
 最初の原稿を作る場合は，テンプレートの一覧で **Japanese document (日本語の文書)** または **English article (英語の文書)** を選ぶ．**Destination folder (保存先のフォルダー)** の横にある **Choose a folder (フォルダーを選ぶ)** を押し，「ドキュメント」などの親フォルダーを選ぶ．**New project folder name (新しいプロジェクトのフォルダー名)** に `my-first-paper` など，まだ使っていない名前を入力し，**Create and open (作成して開く)** を押す．アプリがその親フォルダー内にプロジェクトを作り，テンプレートに合うコンパイラーを選ぶ．ファイル一覧の `main.tex` を開く．
 
-既存の原稿を使う場合は，ホームの **Open project folder (プロジェクトフォルダーを開く)** を押し，**Browse… (参照…)** またはパスの入力でフォルダーを選んで **Open (開く)** を押す．ファイル一覧からメインの `.tex` を開く．コンパイル前に **Settings (設定) → Compiler (コンパイラー)** を開く．プロジェクトに `latexmkrc` または `.latexmkrc` がある場合は **Use latexmkrc settings (latexmkrc の設定を使う)**，それ以外は原稿に合う TeX のエンジンを選び，**Save and apply settings (設定を保存して反映)** を押す．
+既存の原稿を使う場合は，ホームの **Open project folder (プロジェクトフォルダーを開く)** を押し，**Browse… (参照…)** またはパスの入力でフォルダーを選んで **Open (開く)** を押す．ファイル一覧からメインの `.tex` を開く．コンパイル前に **Settings (設定) → Compiler (コンパイラー)** を開く．設定ファイルがプロジェクトのルートにある場合は「latexmkrc の設定を使う」，サブフォルダーにある原稿ごとに設定がある場合は「原稿に近い latexmkrc を使う」を選ぶ．設定ファイルがない場合は原稿に合う TeX のエンジンを選ぶ．最後に **Save and apply settings (設定を保存して反映)** を押す．
 
 上部の **Compile (コンパイル)** を押すと，原稿を保存してから TeX を実行する．完了すると，原稿の隣に PDF が表示される．パッケージがないというエラーが出た場合は，[TeX のパッケージと環境を管理する](#tex-のパッケージと環境を管理する) の手順で追加してから，もう一度コンパイルする．
 
@@ -300,7 +300,7 @@ v0.1.16 以前の ZIP 版からは，自動更新を備えた版を最初に一�
 
 | 操作 | 使い方 |
 | --- | --- |
-| ファイルや見出しを探す | 左側の検索欄を使う．「アウトライン」は選択中の TeX または Markdown のタブに合わせて見出しを表示する．見出しをクリックすると，上側に余白を設けて原稿の該当行を表示する |
+| ファイルや見出しを探す | 左側の検索欄を使う．「アウトライン」で編集中のファイルの見出しを表示する．分割した TeX 原稿では「文書全体」を選ぶと読み込み先の見出しも表示する．見出しをクリックすると，上側に余白を設けて原稿の該当行を表示する |
 | 引用を入力する | `\citep{` や `\cite{` の中で，プロジェクト内の `.bib` にあるキーが候補になる．著者・年・題名も確認できる |
 | 相互参照を入力する | `\ref{`，`\eqref{`，`\cref{` などの中で，原稿の `\label` が候補になる |
 | 補完を呼び出す | TeX のコマンドを入力する，または `Ctrl + Space` を押す．補完した引数の間は `Tab` / `Shift + Tab` で移動できる |
@@ -352,6 +352,8 @@ Mac では，保存・検索・コンパイル・SyncTeX のクリック操作�
 `\b` を入力すると `\begin` が候補になり，選ぶと `\begin{}` の中へカーソルが移る．そこで `i` を入力して `itemize` を選ぶと，`\item` の本文と `\end{itemize}` まで補完する．見出し，文字の装飾，引用，相互参照，図，表，数式のコマンドも使える．例えば `\frac` では分子と分母の欄を作り，`Tab` / `Shift + Tab` で引数の間を移動できる．現在の原稿で `\newtheorem` や `\newenvironment` によって定義した環境も候補になる．
 
 文献の詳細は候補一覧の横，狭いエディタでは下に表示し，詳細だけをスクロールできる．「設定」の「TeX の入力補完を使う」で補完をオン・オフにできる．「入力中に候補を自動で表示する」をオフにした場合も，`Ctrl + Space` で候補を開ける．
+
+アウトラインの「文書全体」では，メイン原稿から `\input`・`\include` で読み込むファイルの見出しを本文順に表示する．見出しを選ぶと，そのファイルの該当行に移動する．「現在のファイル」では編集中の原稿の見出しを表示する．
 
 アウトラインには見出しの階層を示す縦線と矢印がある．矢印を押すと下位の見出しを折りたたみ，見出しを押すと原稿の該当行へ移動する．原稿では行番号の横の矢印でセクションや環境を折りたためる．Markdown の見出しやコードブロックにも対応する．アウトライン，検索，PDF から移動する際は，折りたたまれた移動先を展開する．キー操作は「ヘルプ → キーボードショートカット」にある．
 
@@ -550,9 +552,9 @@ Store 版で共用の TeX を使う場合は，このボタンから公式の Te
 
 文書ごとに PDF のページ位置と倍率を記録する．別の文書のコンパイルに失敗した場合も，直前に成功した PDF と SyncTeX を使って作業を続けられる．
 
-アウトラインの「文書全体」では，メイン原稿から `\input`・`\include` で読み込むファイルの見出しを本文順に表示する．見出しを選ぶと，そのファイルの該当行に移動する．「現在のファイル」では編集中の原稿の見出しを表示する．\n\n原稿ごとに設定がある場合は，**設定 → コンパイラー → 原稿に近い latexmkrc を使う** を選ぶ．原稿のフォルダーからプロジェクトのルートまで順に探し，最初に `.latexmkrc` または `latexmkrc` が見つかったフォルダーで組版する．設定が見つからない場合はルートから pdfLaTeX で組版する．初めて開くプロジェクトで設定がサブフォルダーにだけある場合は，この方法が選ばれる．既に開いたプロジェクトには保存済みの選択が適用される．
+原稿ごとに設定がある場合は，**設定 → コンパイラー → 原稿に近い latexmkrc を使う** を選ぶ．原稿のフォルダーからプロジェクトのルートまで順に探し，最初に `.latexmkrc` または `latexmkrc` が見つかったフォルダーで組版する．設定が見つからない場合はルートから pdfLaTeX で組版する．初めて開くプロジェクトで設定がサブフォルダーにだけある場合は，この方法が選ばれる．既に開いたプロジェクトには保存済みの選択が適用される．
 
-既存の `latexmkrc` がある原稿では，設定画面のコンパイラーを「latexmkrc の設定を使う」にする．`latexmkrc` / `.latexmkrc` に書かれた `uplatex`，`upbibtex`，`dvipdfmx` などの指定を使う．
+プロジェクトのルートに置いた `latexmkrc` を使う場合は，設定画面のコンパイラーを「latexmkrc の設定を使う」にする．`latexmkrc` / `.latexmkrc` に書かれた `uplatex`，`upbibtex`，`dvipdfmx` などの指定を使う．
 
 `latexmkrc` を置かないプロジェクトでは，pdfLaTeX，upLaTeX，XeLaTeX，LuaLaTeX を選択できる．アプリは `latexmk` を実行し，参考文献や相互参照に必要な再実行も `latexmk` が担当する．
 
@@ -618,7 +620,7 @@ go build -o bin/local-tex-web-editor.exe ./cmd/local-tex-editor
 Windows 用の配布ファイルは次のコマンドで作成する．
 
 ```sh
-go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.20" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
+go build -trimpath -ldflags="-s -w -H=windowsgui -X main.version=0.1.21" -o dist/local-tex-web-editor.exe ./cmd/local-tex-editor
 ```
 
 `build:windows-resources` は同梱の ICO から Windows x64 用の resource を生成する．実行ファイルのビルド時に，16〜256 px の 9 サイズのアイコンが組み込まれる．
@@ -634,7 +636,7 @@ npx playwright install chromium
 node scripts/build-macos.mjs
 ```
 
-`dist/local-tex-web-editor-0.1.20-macos-universal.zip` に，Apple Silicon と Intel で動く `.app`，日英の README，ライセンスを収録する．
+`dist/local-tex-web-editor-0.1.21-macos-universal.zip` に，Apple Silicon と Intel で動く `.app`，日英の README，ライセンスを収録する．
 
 起動時のオプション:
 
