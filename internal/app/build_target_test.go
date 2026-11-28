@@ -79,7 +79,11 @@ func TestDocumentsWithTheSameNameUseTheirOwnCompilerFiles(t *testing.T) {
 			t.Fatal(err)
 		}
 		relative = filepath.ToSlash(relative)
-		arguments := strings.Join(latexmkArguments(project), "\n")
+		workDir, args, err := latexmkInvocation(project, directory)
+		if err != nil || !samePath(workDir, root) {
+			t.Fatalf("root build directory: %s, %v", workDir, err)
+		}
+		arguments := strings.Join(args, "\n")
 		if !strings.Contains(arguments, "-outdir="+relative+"\n-auxdir="+relative) || !strings.HasSuffix(arguments, "./"+main) {
 			t.Fatalf("compiler files did not follow %q: %s", main, arguments)
 		}
@@ -87,7 +91,7 @@ func TestDocumentsWithTheSameNameUseTheirOwnCompilerFiles(t *testing.T) {
 		writeTestFile(t, filepath.Join(directory, "main.pdf"), []byte("%PDF-1.7\nstale conventional filename\n"))
 		fdb := fmt.Sprintf("[\"latex\"] 1 \"./%s\" \"%s/shared-job.dvi\" \"shared-job\" 1 0\n[\"dvipdf\"] 1 \"%s/shared-job.dvi\" \"%s/shared-job.pdf\" \"shared-job\" 1 0\n", main, relative, relative, relative)
 		writeTestFile(t, filepath.Join(directory, "shared-job.fdb_latexmk"), []byte(fdb))
-		pdf, err := findOutputPDF(root, main, directory)
+		pdf, err := findOutputPDF(root, root, main, directory)
 		if err != nil || !samePath(pdf, filepath.Join(directory, "shared-job.pdf")) {
 			t.Fatalf("PDF for %q: %q, %v", main, pdf, err)
 		}
@@ -128,7 +132,7 @@ func TestSuccessfulDocumentAndItsSyncTeXRemainAvailableAfterAnotherFails(t *test
 			t.Fatal(err)
 		}
 		sources := snapshotSourceRevisions(root)
-		sync, err := a.cacheSyncTeX(root, original, pdf, id, t.TempDir(), sources)
+		sync, err := a.cacheSyncTeX(root, root, original, pdf, id, t.TempDir(), sources)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -186,5 +190,91 @@ func TestSuccessfulDocumentAndItsSyncTeXRemainAvailableAfterAnotherFails(t *test
 	reopened.mu.Unlock()
 	if build == nil || !build.Restored || build.Main != other || build.PDFMain != other || build.PDFBuildID != lastID || !build.SyncTeXReady || build.PDFSourceChanged || fallback != "main.tex" {
 		t.Fatalf("the last compiled document did not restore with its own metadata: %#v, fallback %q", build, fallback)
+	}
+}
+
+func TestDocumentModeUsesNearestConfigurationAndProjectOutput(t *testing.T) {
+	root := t.TempDir()
+	main := "papers/work/chapter/main.tex"
+	writeTestFile(t, filepath.Join(root, filepath.FromSlash(main)), []byte("test"))
+	files, err := listProjectFiles(root)
+	if err != nil || defaultCompileMode(files) != "pdflatex" {
+		t.Fatalf("default mode without rc: %s, %v", defaultCompileMode(files), err)
+	}
+	output, err := ensureBuildDirectory(root, main)
+	if err != nil {
+		t.Fatal(err)
+	}
+	check := func(mode, dir, input string, wantPDFLaTeX bool) {
+		t.Helper()
+		workDir, args, err := latexmkInvocation(Project{Root: root, Main: main, Mode: mode}, output)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !samePath(workDir, dir) || args[len(args)-1] != "./"+input {
+			t.Fatalf("%s: got %q %v", mode, workDir, args)
+		}
+		out, err := filepath.Rel(workDir, output)
+		if err != nil {
+			t.Fatal(err)
+		}
+		joined := strings.Join(args, "\n") + "\n"
+		if !strings.Contains(joined, "-outdir="+filepath.ToSlash(out)+"\n-auxdir="+filepath.ToSlash(out)+"\n") ||
+			strings.Contains(joined, "-pdf\n") != wantPDFLaTeX {
+			t.Fatal(args)
+		}
+	}
+	check("document", root, main, true)
+	papers := filepath.Join(root, "papers")
+	writeTestFile(t, filepath.Join(papers, "latexmkrc"), []byte("# test"))
+	files, err = listProjectFiles(root)
+	if err != nil || defaultCompileMode(files) != "document" {
+		t.Fatalf("default for nested rc: %s, %v", defaultCompileMode(files), err)
+	}
+	check("document", papers, "work/chapter/main.tex", false)
+	work := filepath.Join(papers, "work")
+	writeTestFile(t, filepath.Join(work, ".latexmkrc"), []byte("# test"))
+	writeTestFile(t, filepath.Join(root, "latexmkrc"), []byte("# test"))
+	files, err = listProjectFiles(root)
+	if err != nil || defaultCompileMode(files) != "project" {
+		t.Fatalf("root default: %s, %v", defaultCompileMode(files), err)
+	}
+	check("document", work, "chapter/main.tex", false)
+	check("project", root, main, false)
+	check("pdflatex", root, main, true)
+}
+
+func TestNestedBuildRecordsUseCompilerWorkingDirectory(t *testing.T) {
+	root := t.TempDir()
+	work := filepath.Join(root, "second")
+	for _, file := range []string{"main.tex", "first/main.tex", "second/main.tex", "shared/note.md"} {
+		writeTestFile(t, filepath.Join(root, filepath.FromSlash(file)), []byte("test"))
+	}
+	main := "second/main.tex"
+	out, err := ensureBuildDirectory(root, main)
+	if err != nil {
+		t.Fatal(err)
+	}
+	relative, err := filepath.Rel(work, out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	base := filepath.ToSlash(filepath.Join(relative, "custom"))
+	pdf := filepath.Join(out, "custom.pdf")
+	writeTestFile(t, pdf, []byte("%PDF-1.5\ntest"))
+	writeTestFile(t, filepath.Join(out, "custom.fdb_latexmk"), []byte(fmt.Sprintf("[\"latex\"] 1 \"./main.tex\" \"%s.dvi\" \"custom\" 1 0\n[\"dvipdf\"] 1 \"%s.dvi\" \"%s.pdf\" \"custom\" 1 0\n", base, base, base)))
+	found, err := findOutputPDF(root, work, main, out)
+	if err != nil || !samePath(found, pdf) {
+		t.Fatalf("wrong PDF: %s %v", found, err)
+	}
+	revisions := map[string]string{"main.tex": "a", "first/main.tex": "b", main: "c", "shared/note.md": "d"}
+	writeTestFile(t, filepath.Join(out, "custom.fls"), []byte("INPUT ./main.tex\nINPUT ../shared/note.md\n"))
+	_, markdown := sourcesForPDF(root, work, main, pdf, revisions)
+	if !markdown["shared/note.md"] {
+		t.Fatal(markdown)
+	}
+	resolver := newSyncSourceResolver(root, work, revisions, nil, func(s string) []byte { return []byte(s) })
+	if resolver("./main.tex") != main || resolver("../shared/note.md") != "shared/note.md" {
+		t.Fatal("SyncTeX did not resolve source names relative to the build")
 	}
 }

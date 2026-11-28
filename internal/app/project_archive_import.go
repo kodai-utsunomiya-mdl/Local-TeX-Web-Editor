@@ -399,12 +399,7 @@ func extractProjectArchive(ctx context.Context, archive io.ReaderAt, size int64,
 	if err != nil {
 		return result, err
 	}
-	result = importedProjectArchive{Path: target, Main: chooseMain(stage, files), Mode: "pdflatex"}
-	for _, file := range []string{"latexmkrc", ".latexmkrc"} {
-		if info, err := os.Stat(filepath.Join(stage, file)); err == nil && info.Mode().IsRegular() {
-			result.Mode = "project"
-		}
-	}
+	result = importedProjectArchive{Path: target, Main: chooseMain(stage, files), Mode: defaultCompileMode(files)}
 	if err := os.Chmod(stage, 0755); err != nil {
 		return importedProjectArchive{}, err
 	}

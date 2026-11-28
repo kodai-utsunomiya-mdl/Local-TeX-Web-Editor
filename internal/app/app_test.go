@@ -264,7 +264,7 @@ func TestPDFDiscoveryUsesTheCurrentMainAndCustomJobName(t *testing.T) {
 ["dvipdf"] 1 ".local-tex-editor/build/renamed.dvi" ".local-tex-editor/build/renamed.pdf" "renamed" 1 0
 `
 	writeTestFile(t, filepath.Join(directory, "renamed.fdb_latexmk"), []byte(fdb))
-	actual, err := findOutputPDF(root, "main.tex", directory)
+	actual, err := findOutputPDF(root, root, "main.tex", directory)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -274,7 +274,7 @@ func TestPDFDiscoveryUsesTheCurrentMainAndCustomJobName(t *testing.T) {
 	// A successful DVI-only run must not expose an older PDF as its new output.
 	fdb = `["latex"] 1 "./main.tex" ".local-tex-editor/build/renamed.dvi" "renamed" 1 0` + "\n"
 	writeTestFile(t, filepath.Join(directory, "renamed.fdb_latexmk"), []byte(fdb))
-	if path, err := findOutputPDF(root, "main.tex", directory); err == nil {
+	if path, err := findOutputPDF(root, root, "main.tex", directory); err == nil {
 		t.Fatalf("accepted stale PDF: %s", path)
 	}
 }

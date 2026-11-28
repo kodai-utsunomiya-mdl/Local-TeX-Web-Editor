@@ -305,8 +305,8 @@ Selected text has a visible background in both themes, including selections on t
 | Insert cross-references | Inside `\ref{`, `\eqref{`, `\cref{`, and similar commands, completion offers labels from the source |
 | Open completion | Type a TeX command or press `Ctrl + Space`. Use `Tab` / `Shift + Tab` to move between the inserted arguments |
 | Fold source | Click an arrow beside the line numbers to fold or unfold a section, environment, Markdown heading, or code block |
-| Search and replace in source | Press `Ctrl + F` in the editor or click the **Find and replace** button. You can paste a selection containing multiple lines |
-| Search the whole project | Click **Search project** or press `Ctrl + Shift + F`. Review the results and select the occurrences to replace |
+| Search and replace in source | Press `Ctrl + F` in the editor or choose **Find and replace → Current file**. You can paste a selection containing multiple lines |
+| Search the whole project | Choose **Find and replace → Entire project** or press `Ctrl + Shift + F`. Review the results and select the occurrences to replace |
 | Return after following a reference | Use the **←** / **→** buttons above the source or PDF, or press `Alt + Left` / `Alt + Right` |
 | View two source documents | Click **Open two source editors**, then choose a document above each editor |
 | Compare earlier text | Open **Editing tools → Document history** |
@@ -549,6 +549,8 @@ The active `.tex` tab selects the document to compile. If the open file contains
 When editing a chapter included with `\input`, a shared preamble, or another supporting file, compilation uses **Default main document** in Settings. To choose a parent document for an individual file, add a comment such as `% !TeX root = ../main.tex`. The path is relative to the folder containing that file.
 
 The app records the PDF page and zoom for each document. If compilation of a different document fails, you can continue working with the previous successful PDF and its SyncTeX data.
+
+In **Outline**, choose **Whole document** to see headings from files referenced by `\input` and `\include` in reading order. Select a heading to open the file and line. **Current file** shows the active source only.\n\nFor a folder containing independent documents, choose **Use the latexmkrc nearest the document** in **Settings → Compiler**. The editor starts latexmk in the first folder containing `.latexmkrc` or `latexmkrc` on the path from the document up to the project root. With no matching configuration it uses pdfLaTeX from the root. On first opening a project this mode is selected if configurations are found only in subfolders. Previously saved compiler choices are retained.
 
 For a project with an existing `latexmkrc`, choose **Use latexmkrc settings** as the compiler. The app uses the `uplatex`, `upbibtex`, `dvipdfmx`, and other commands configured in `latexmkrc` or `.latexmkrc`.
 

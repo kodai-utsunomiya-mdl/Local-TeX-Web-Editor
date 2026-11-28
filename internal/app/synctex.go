@@ -272,7 +272,7 @@ func snapshotSourceRevisions(root string) map[string]string {
 	return result
 }
 
-func (a *App) cacheSyncTeX(root, originalPDF, cachedPDF, id, bin string, revisions map[string]string) (*synctexVersion, error) {
+func (a *App) cacheSyncTeX(root, workDir, originalPDF, cachedPDF, id, bin string, revisions map[string]string) (*synctexVersion, error) {
 	a.cacheMu.Lock()
 	defer a.cacheMu.Unlock()
 	stem := strings.TrimSuffix(originalPDF, filepath.Ext(originalPDF))
@@ -324,7 +324,7 @@ func (a *App) cacheSyncTeX(root, originalPDF, cachedPDF, id, bin string, revisio
 	temp := out.Name()
 	defer os.Remove(temp)
 	compressed := gzip.NewWriter(out)
-	inputs, copyErr := normalizeSyncTeX(reader, compressed, root, revisions, recorderSources(root, stem+".fls", revisions))
+	inputs, copyErr := normalizeSyncTeX(reader, compressed, root, workDir, revisions, recorderSources(root, workDir, stem+".fls", revisions))
 	if err := compressed.Close(); copyErr == nil {
 		copyErr = err
 	}
@@ -348,12 +348,12 @@ func (a *App) cacheSyncTeX(root, originalPDF, cachedPDF, id, bin string, revisio
 // matching file name for that tag; it does not open the TeX source. Substituting
 // ASCII names makes the same data usable on Windows with any system code page.
 // Byte counts on ! lines are updated as described in synctex_record_anchor.
-func normalizeSyncTeX(in io.Reader, out io.Writer, root string, revisions map[string]string, recorded map[string]bool) ([]synctexInput, error) {
+func normalizeSyncTeX(in io.Reader, out io.Writer, root, workDir string, revisions map[string]string, recorded map[string]bool) ([]synctexInput, error) {
 	limited := &io.LimitedReader{R: in, N: maxSyncTeXSize + 1}
 	scanner := bufio.NewScanner(limited)
 	scanner.Buffer(make([]byte, 64<<10), 1<<20)
 	inputs := []synctexInput{}
-	resolve := newSyncSourceResolver(root, revisions, recorded, platform.EncodeFileName)
+	resolve := newSyncSourceResolver(root, workDir, revisions, recorded, platform.EncodeFileName)
 	seen := make(map[int]string)
 	read, sinceAnchor := 0, 0
 	header, content, postamble := false, false, false
@@ -418,16 +418,16 @@ func normalizeSyncTeX(in io.Reader, out io.Writer, root string, revisions map[st
 	return inputs, nil
 }
 
-func recorderSources(root, path string, revisions map[string]string) map[string]bool {
+func recorderSources(root, workDir, path string, revisions map[string]string) map[string]bool {
 	data, err := readBytes(path)
 	if err != nil {
 		return nil
 	}
-	return resolveRecorderSources(root, data, revisions, platform.EncodeFileName)
+	return resolveRecorderSources(root, workDir, data, revisions, platform.EncodeFileName)
 }
 
-func resolveRecorderSources(root string, data []byte, revisions map[string]string, encode func(string) []byte) map[string]bool {
-	resolve := newSyncSourceResolver(root, revisions, nil, encode)
+func resolveRecorderSources(root, workDir string, data []byte, revisions map[string]string, encode func(string) []byte) map[string]bool {
+	resolve := newSyncSourceResolver(root, workDir, revisions, nil, encode)
 	result := make(map[string]bool)
 	for _, line := range bytes.Split(data, []byte("\n")) {
 		if !bytes.HasPrefix(line, []byte("INPUT ")) {
@@ -444,15 +444,15 @@ func resolveRecorderSources(root string, data []byte, revisions map[string]strin
 // The recorder narrows the choices to sources that TeX actually opened. A
 // Unicode file name may become question marks when the SyncTeX writer converts
 // it to Windows' ANSI code page. Only a unique match is used for navigation.
-func newSyncSourceResolver(root string, revisions map[string]string, recorded map[string]bool, encode func(string) []byte) func(string) string {
+func newSyncSourceResolver(root, workDir string, revisions map[string]string, recorded map[string]bool, encode func(string) []byte) func(string) string {
 	roots := []string{root}
 	if short, err := platform.ShortPath(root); err == nil && !samePath(root, short) {
 		roots = append(roots, short)
 	}
-	return syncSourceResolverForRoots(root, roots, revisions, recorded, encode)
+	return syncSourceResolverForRoots(root, workDir, roots, revisions, recorded, encode)
 }
 
-func syncSourceResolverForRoots(root string, roots []string, revisions map[string]string, recorded map[string]bool, encode func(string) []byte) func(string) string {
+func syncSourceResolverForRoots(root, workDir string, roots []string, revisions map[string]string, recorded map[string]bool, encode func(string) []byte) func(string) string {
 	paths := make(map[string]bool)
 	for path := range revisions {
 		if len(recorded) == 0 || recorded[path] {
@@ -465,7 +465,11 @@ func syncSourceResolverForRoots(root string, roots []string, revisions map[strin
 	spellings := make(map[string]string)
 	for path := range paths {
 		native := filepath.FromSlash(path)
-		names := []string{path, "./" + path, native, "." + string(filepath.Separator) + native}
+		relative, err := filepath.Rel(workDir, filepath.Join(root, native))
+		if err != nil {
+			continue
+		}
+		names := []string{relative, filepath.ToSlash(relative)}
 		for _, prefix := range roots {
 			absolute := filepath.Join(prefix, native)
 			names = append(names, absolute, filepath.ToSlash(absolute))
@@ -485,7 +489,7 @@ func syncSourceResolverForRoots(root string, roots []string, revisions map[strin
 		if path, known := spellings[syncNameKey(raw)]; known {
 			return path
 		}
-		path, _ := syncProjectPath(root, platform.DecodeOutput([]byte(raw)))
+		path, _ := syncProjectPath(root, workDir, platform.DecodeOutput([]byte(raw)))
 		return path
 	}
 }
@@ -504,11 +508,11 @@ func syncNameKey(raw string) string {
 	return strings.ToLower(raw)
 }
 
-func syncProjectPath(root, raw string) (string, error) {
+func syncProjectPath(root, workDir, raw string) (string, error) {
 	raw = strings.TrimSuffix(strings.TrimPrefix(raw, `"`), `"`)
 	path := filepath.FromSlash(strings.ReplaceAll(raw, `\`, "/"))
 	if !filepath.IsAbs(path) {
-		path = filepath.Join(root, path)
+		path = filepath.Join(workDir, path)
 	}
 	// EvalSymlinks also expands Windows' short directory names. The returned
 	// name is checked again against the selected project and its safe paths.

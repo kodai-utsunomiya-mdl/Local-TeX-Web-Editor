@@ -1,0 +1,35 @@
+import { expect } from '@playwright/test';
+import { mkdir, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import { test, openProject, openEditor, setAutoSave } from './editor-fixtures.mjs';
+
+test('文書全体の見出しを順にたどり，ファイル内とプロジェクト全体を検索できる', async ({ page, session }) => {
+  await mkdir(path.join(session.project, 'chapters'));
+  await writeFile(path.join(session.project, 'main.tex'), '\\documentclass{article}\n\\begin{document}\n\\section{Intro}\n\\input{chapters/results}\n\\section{Closing}\n\\end{document}\n');
+  await writeFile(path.join(session.project, 'chapters/results.tex'), '% chapter\n\\subsection{Measured results}\nExperiment text.\n');
+  await writeFile(path.join(session.project, 'separate.tex'), '\\documentclass{article}\n\\section{Unrelated}\n');
+  await openProject(session); await openEditor(page, session);
+  await setAutoSave(page, false);
+  await page.getByTestId('outline-tab').click();
+  const tree = page.getByTestId('outline-tree');
+  await expect(tree.locator('.outline-link')).toHaveCount(2);
+  await page.locator('#outline-scope').selectOption('document');
+  await expect(tree.locator('.outline-title')).toHaveText(['Intro', 'Measured results', 'Closing']);
+  const child = tree.locator('.outline-link[data-path="chapters/results.tex"]');
+  await child.click();
+  await expect(page.getByTestId('editor')).toHaveAttribute('data-path', 'chapters/results.tex');
+  await expect(child).toHaveAttribute('aria-current', 'location');
+  await expect(tree.locator('.outline-title')).toHaveText(['Intro', 'Measured results', 'Closing']);
+  const content = page.getByTestId('editor').locator('.cm-content');
+  await content.press(process.platform === 'darwin' ? 'Meta+End' : 'Control+End');
+  await page.keyboard.insertText('\\subsection{Unsaved heading}\n');
+  await expect(tree.locator('.outline-title')).toHaveText(['Intro', 'Measured results', 'Unsaved heading', 'Closing']);
+  await page.locator('#outline-scope').selectOption('file');
+  await expect(tree.locator('.outline-title')).toHaveText(['Measured results', 'Unsaved heading']);
+  const scopes = page.getByRole('group', { name: '検索・置換', exact: true });
+  await scopes.getByRole('button', { name: '現在のファイルを検索・置換' }).click();
+  await expect(page.getByTestId('source-search-input')).toBeVisible();
+  await page.getByTestId('source-search-input').press('Escape');
+  await scopes.getByRole('button', { name: 'プロジェクト全体の本文を検索・置換' }).click();
+  await expect(page.getByTestId('project-search-dialog')).toBeVisible();
+});

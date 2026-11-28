@@ -66,7 +66,7 @@ func TestMarkdownSavesFollowThePDFInputsAndSurviveRestart(t *testing.T) {
 			if test.during {
 				save()
 			}
-			run.sources, run.markdownInputs = sourcesForPDF(root, "main.tex", original, sources)
+			run.sources, run.markdownInputs = sourcesForPDF(root, root, "main.tex", original, sources)
 			code := 0
 			a.finishBuild(run, &code, nil, pdf, id)
 			if !test.during {

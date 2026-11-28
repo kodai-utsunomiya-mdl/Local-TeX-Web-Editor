@@ -147,10 +147,53 @@ function collectLabels(text, lineAt, outline, path) {
   return result;
 }
 
+// Keep include positions interleaved with headings. A heading inside a
+// command definition belongs to the definition, not to the manuscript at
+// the point where its preamble is read.
+function documentItems(text, outline) {
+  const definitions = [];
+  const commands = /\\(?:(newcommand|renewcommand|providecommand|DeclareRobustCommand|newenvironment|renewenvironment)\*?|([egx]?def))(?![A-Za-z@])/g;
+  for (const match of text.matchAll(commands)) {
+    if (escaped(text, match.index)) continue;
+    let at = skipSpace(text, match.index + match[0].length);
+    if (match[2]) {
+      at = text.indexOf('{', at);
+    } else {
+      const name = group(text, at) || /^\\(?:[A-Za-z@]+|.)/.exec(text.slice(at));
+      if (!name) continue;
+      at = skipSpace(text, name.end ?? (at + name[0].length));
+      while (text[at] === '[') {
+        const arg = group(text, at, '[', ']');
+        if (!arg) break;
+        at = skipSpace(text, arg.end);
+      }
+    }
+    const body = group(text, at);
+    if (!body) continue;
+    const end = match[1]?.endsWith('environment') ? group(text, skipSpace(text, body.end))?.end : body.end;
+    definitions.push([match.index, end ?? body.end]);
+  }
+  const items = [...outline];
+  const includes = /\\(input|include)(?![A-Za-z@])\s*(?:\{\s*([^{}\\%#]+?)\s*\}|"([^"\\\r\n]+)"|([^\s{}\\%#]+))|\\(?:end\s*\{\s*document\s*\}|endinput(?![A-Za-z@]))/g;
+  for (const match of text.matchAll(includes)) {
+    if (escaped(text, match.index)) continue;
+    items.push(match[1] ? { from: match.index, include: (match[2] || match[3] || match[4]).trim().replace(/^"([^"]+)"$/, '$1') } : { from: match.index, end: true });
+  }
+  let range = 0;
+  const result = [];
+  for (const item of items.sort((a, b) => a.from - b.from)) {
+    while (range < definitions.length && definitions[range][1] <= item.from) range++;
+    if (range < definitions.length && definitions[range][0] <= item.from) continue;
+    if (item.end) break;
+    result.push(item);
+  }
+  return result;
+}
+
 export function extractTexMetadata(content, path = '') {
   const text = maskNonCode(content), lineAt = lineLookup(content);
   const outline = collectOutline(text, lineAt);
-  return { outline, labels: collectLabels(text, lineAt, outline, path) };
+  return { outline, labels: collectLabels(text, lineAt, outline, path), documentItems: documentItems(text, outline), main: compileTarget(path, content) };
 }
 
 export function extractOutline(content) {

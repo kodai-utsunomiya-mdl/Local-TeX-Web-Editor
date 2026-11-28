@@ -22,7 +22,7 @@ export function createOutlineTree({ container, onJump }) {
   let current = null, hierarchy = { roots: [], nodes: [] }, collapsed = new Set(), active = null;
   let rendered = new Map(), sequence = 0;
 
-  function storageKey(value) { return `${value.projectRoot || ''}\0${value.path || ''}`; }
+  function storageKey(value) { return `${value.projectRoot || ''}\0${value.path || ''}\0${value.scope || 'file'}`; }
   function label(node) { return node.item.title || t('(無題の見出し)'); }
   function setDisclosure(node, value, save = true) {
     const entry = rendered.get(node.id);
@@ -47,9 +47,9 @@ export function createOutlineTree({ container, onJump }) {
     for (const { link, row } of rendered.values()) {
       link.classList.remove('active'); link.removeAttribute('aria-current'); row.classList.remove('contains-active');
     }
-    if (!active || active.path !== current?.path) return;
+    if (!active || !current) return;
     let node = null;
-    for (const candidate of hierarchy.nodes) if (Number(candidate.item.line) <= active.line) node = candidate;
+    for (const candidate of hierarchy.nodes) if ((candidate.item.path || current.path) === active.path && Number(candidate.item.line) <= active.line) node = candidate;
     const selected = node && rendered.get(node.id);
     if (selected) { selected.link.classList.add('active'); selected.link.setAttribute('aria-current', 'location'); }
     if (node && !isShown(node)) {
@@ -99,7 +99,7 @@ export function createOutlineTree({ container, onJump }) {
     if (value.path) {
       const heading = document.createElement('p'); heading.className = 'outline-file'; heading.textContent = value.path; container.append(heading);
     }
-    const matches = node => !current.query || `${node.item.title} ${value.path}`.toLowerCase().includes(current.query);
+    const matches = node => !current.query || `${node.item.title} ${node.item.path || value.path}`.toLowerCase().includes(current.query);
     const visible = hierarchy.nodes.filter(matches);
     const visibleIDs = new Set(visible.map(node => node.id));
     const children = new Map();
@@ -128,11 +128,11 @@ export function createOutlineTree({ container, onJump }) {
           const spacer = document.createElement('span'); spacer.className = 'outline-toggle-space'; spacer.ariaHidden = 'true'; row.append(spacer);
         }
         const link = document.createElement('button'); link.type = 'button'; link.className = 'outline-link'; link.dataset.outlineId = node.id;
-        link.dataset.path = value.path; link.dataset.line = String(node.item.line); link.title = label(node);
+        link.dataset.path = node.item.path || value.path; link.dataset.line = String(node.item.line); link.title = value.scope === 'document' ? label(node) + '\n' + link.dataset.path + ':' + node.item.line : label(node);
         const title = document.createElement('span'); title.className = 'outline-title'; title.textContent = label(node);
         const line = document.createElement('span'); line.className = 'outline-line'; line.textContent = String(node.item.line);
         link.append(title, line); row.append(link);
-        link.addEventListener('click', () => onJump(value.path, node.item.line));
+        link.addEventListener('click', () => onJump(link.dataset.path, node.item.line));
         link.addEventListener('keydown', event => handleKeys(event, node));
         item.append(row); if (nested) item.append(nested); group.append(item);
         rendered.set(node.id, { row, link, toggle, children: nested, descendants });

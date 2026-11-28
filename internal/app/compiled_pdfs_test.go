@@ -45,7 +45,7 @@ func finishCompiledPDFForTest(t *testing.T, a *App, root, main, name string, inp
 	writeTestFile(t, filepath.Join(directory, stem+".synctex"), []byte("SyncTeX Version:1\nInput:1:./"+main+"\nOutput:pdf\nContent:\n!1\nPostamble:\n"))
 	fdb := fmt.Sprintf("[\"pdflatex\"] 1 %q %q %q 1 0\n", "./"+main, buildDirectoryRelative(main)+"/"+name, stem)
 	writeTestFile(t, filepath.Join(directory, "current.fdb_latexmk"), []byte(fdb))
-	found, err := findOutputPDF(root, main, directory)
+	found, err := findOutputPDF(root, root, main, directory)
 	if err != nil || !samePath(found, original) {
 		t.Fatalf("find the named PDF: %q %v", found, err)
 	}
@@ -59,7 +59,7 @@ func finishCompiledPDFForTest(t *testing.T, a *App, root, main, name string, inp
 			delete(sources, path)
 		}
 	}
-	sync, err := a.cacheSyncTeX(root, found, pdf, id, t.TempDir(), sources)
+	sync, err := a.cacheSyncTeX(root, root, found, pdf, id, t.TempDir(), sources)
 	if err != nil {
 		t.Fatal(err)
 	}

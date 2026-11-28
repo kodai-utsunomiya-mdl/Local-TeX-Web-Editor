@@ -54,16 +54,16 @@ func markdownInputSet(paths []string) map[string]bool {
 	return inputs
 }
 
-func sourcesForPDF(root, main, pdf string, sources map[string]string) (map[string]string, map[string]bool) {
+func sourcesForPDF(root, workDir, main, pdf string, sources map[string]string) (map[string]string, map[string]bool) {
 	stem := strings.TrimSuffix(pdf, filepath.Ext(pdf))
-	recorded := recorderSources(root, stem+".fls", sources)
+	recorded := recorderSources(root, workDir, stem+".fls", sources)
 	if !recorded[main] {
 		return sources, nil
 	}
 	// latexmk also records inputs to custom conversion rules. Include their
 	// Markdown files even if TeX opened only the resulting .tex file.
 	if data, err := readBytes(stem + ".fdb_latexmk"); err == nil {
-		resolve := newSyncSourceResolver(root, sources, nil, platform.EncodeFileName)
+		resolve := newSyncSourceResolver(root, workDir, sources, nil, platform.EncodeFileName)
 		for _, line := range strings.Split(string(data), "\n") {
 			for _, value := range fdbValues(line) {
 				if isMarkdownSource(value) {

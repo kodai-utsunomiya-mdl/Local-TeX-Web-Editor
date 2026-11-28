@@ -131,12 +131,12 @@ About 2 GB free for initial TeX setup; extra packages may need more space
 ### What's new
 
 ```text
-Version 0.1.20
+Version 0.1.21
 
-- Download a ZIP or choose Save project ZIP as… from each recent project on Home.
-- Save edited documents when exporting the current project, or export another project's saved files.
-- Start at login is enabled by default and can be turned on or off in Settings.
-- Automatic app updates remain enabled by default and use updates available from Microsoft Store.
+- Compile independent documents in one project using the latexmkrc nearest the selected document. Each document keeps its own output, PDF preview and source navigation.
+- On Home, TeX setup and management now appears above recent projects.
+- Choose Whole document in the outline to navigate headings across included TeX files.
+- The Find and replace toolbar offers separate Current file and Entire project buttons.
 ```
 
 ## 日本語の掲載内容
@@ -238,12 +238,12 @@ TeX の導入と追加パッケージの取得にはインターネット接続
 ### このバージョンの最新情報
 
 ```text
-バージョン 0.1.20
+バージョン 0.1.21
 
-・ホームの各プロジェクトから，ZIP のダウンロードと「ZIP にして名前を付けて保存…」を選べるようにした．
-・編集中のプロジェクトでは原稿を保存してから ZIP を作り，別のプロジェクトでは保存済みのファイルを書き出せるようにした．
-・ログイン時の起動の初期値を有効にした．設定からオン・オフを切り替えられる．
-・アプリの自動更新は初期状態で有効とし，Microsoft Store から利用可能な更新を取得する．
+・一つのプロジェクト内で，原稿に近い latexmkrc を使って組版できるようになりました．原稿ごとに PDF とソースの位置を対応付けます．
+・ホームの「TeX の導入と管理」を「最近開いたプロジェクト」の上に移しました．
+・アウトラインの「文書全体」で，分割した TeX 原稿の見出しを本文順にたどれます．
+・「検索・置換」で「ファイル内」と「プロジェクト全体」を選べるようにしました．
 ```
 
 ## Images and captions
@@ -285,7 +285,7 @@ Sample project: https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/down
 1. Launch Local TeX Web Editor and use Open to select that folder.
 2. Open notes.md. It starts in Visual editing with the preview closed. Edit a rendered sentence and save with Ctrl+S. Switch to Source to edit the Markdown notation and use the separate preview. Show preview / Hide preview controls its visibility.
 3. Open Settings, switch Language between English and Japanese, and change the theme. These changes do not alter document contents.
-4. To test setup in version 0.1.20, open Home or Settings > Set up TeX…. Review TinyTeX v2026.11, the packages, about 250 MB of downloads and the destination under the app's LocalState folder. Choose Download and install. Allow about 2 GB of free space and an internet connection. Follow the progress log; Close and continue editing allows editing while setup continues. On a disposable first attempt, Stop setup and confirm that it can be started again.
+4. To test setup in version 0.1.21, open Home or Settings > Set up TeX…. Review TinyTeX v2026.11, the packages, about 250 MB of downloads and the destination under the app's LocalState folder. Choose Download and install. Allow about 2 GB of free space and an internet connection. Follow the progress log; Close and continue editing allows editing while setup continues. On a disposable first attempt, Stop setup and confirm that it can be started again.
 5. After setup succeeds, the app selects the new environment. Choose pdfLaTeX as the compilation mode for the sample. An existing TeX installation can also be selected in Settings, for example C:\texlive\2026\bin\windows.
 6. Open main.tex, set the preview to Auto, and click Compile. A PDF appears on the right.
 7. Double-click a sentence in the PDF to open its source line. Ctrl-click that source line to navigate back to the PDF.
@@ -328,7 +328,7 @@ Local TeX Web Editor は，ブラウザを画面として使う Windows のデ�
 1. アプリを起動し，Open からそのフォルダーを選びます．
 2. notes.md を開きます．初期状態は「直接編集」で，プレビューは閉じています．表示された文章を編集し，Ctrl + S で保存します．「ソース」へ切り替えると Markdown の記法とプレビューを使えます．「プレビューを表示 / プレビューを閉じる」で表示を変更できます．
 3. Settings の Language で英語と日本語を切り替え，テーマも変更します．原稿の内容は変わりません．
-4. v0.1.20 のセットアップを確認するため，ホームまたは「設定 → TeX をセットアップ…」を開きます．TinyTeX v2026.11，パッケージ，約 250 MB のダウンロード，アプリの LocalState 内の導入先を確認し，「ダウンロードしてインストール」を選びます．インターネット接続と約 2 GB の空き容量が必要です．進捗とログを確認し，「閉じて編集を続ける」で導入中も編集できます．試験用の最初の操作では「セットアップを停止」も試し，再度開始できることを確認します．
+4. v0.1.21 のセットアップを確認するため，ホームまたは「設定 → TeX をセットアップ…」を開きます．TinyTeX v2026.11，パッケージ，約 250 MB のダウンロード，アプリの LocalState 内の導入先を確認し，「ダウンロードしてインストール」を選びます．インターネット接続と約 2 GB の空き容量が必要です．進捗とログを確認し，「閉じて編集を続ける」で導入中も編集できます．試験用の最初の操作では「セットアップを停止」も試し，再度開始できることを確認します．
 5. 導入が成功すると，新しい環境が選ばれます．このサンプルのコンパイル方法には pdfLaTeX を選びます．設定で C:\texlive\2026\bin\windows などの既存の TeX を選ぶこともできます．
 6. main.tex を開き，プレビューを Auto にして Compile を押します．右側に PDF が表示されます．
 7. PDF の文章をダブルクリックして原稿の行へ移動し，その行を Ctrl + クリックして PDF へ移動します．

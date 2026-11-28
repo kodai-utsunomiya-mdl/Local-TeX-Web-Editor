@@ -34,7 +34,7 @@ project は開いている場合に次の形式で返す．
 {"root":"絶対パス","main":"main.tex","mode":"project","files":[{"path":"main.tex","size":123,"kind":"text"},{"path":"figures/chart.png","size":456,"kind":"image"}],"directories":["figures","figures/empty"]}
 ```
 
-mode は `project`，`pdflatex`，`uplatex`，`xelatex`，`lualatex`．project では既存の latexmkrc をそのまま読み，出力形式を上書きしない．
+mode は `project`，`document`，`pdflatex`，`uplatex`，`xelatex`，`lualatex`．project では既存の latexmkrc をそのまま読み，出力形式を上書きしない．`document` は対象文書からプロジェクトルートまでで最も近い latexmkrc のフォルダーを作業ディレクトリにする．
 
 files は通常のファイルを一覧にし，path は `/` を使うルートからの相対パス，size は byte 数とする．kind は `text`，`image`，`pdf`，`binary`．UI は `text` を編集・草稿・TeX の補完の読込対象にする．`image` / `pdf` はプレビュー，`binary` は名前・サイズと未対応の種類である旨を表示する．
 
@@ -190,7 +190,7 @@ UI は草稿の書込みにこの照合を使う．別のタブの草稿と競�
 - 同じ設定フォルダーで同じバージョンが起動済みの場合，通常の起動は既存の画面を開く．異なるバージョンが動いている場合は，それぞれの版を示す画面を開き，旧版の終了後に新しいプロセスがアプリのロックを取得する．コンパイルにはプロジェクトごとのロックを使い，異なる設定フォルダーからの同時起動でも生成物の競合を防ぐ．
 - `--no-browser` と `--ready-file` を同時に指定した場合は，異なるバージョンが起動中でも，移行画面をブラウザで開かずに準備する．この段階の ready-file には `phase: "update"` を加える．通常の編集サーバーを起動すると，同じファイルをその接続情報で更新する．
 - 起動時に main.tex を優先して候補を選ぶが，UI から選択を変更できる．
-- Compile はプロジェクトのルートを working directory にして latexmk を実行する．既存の latexmkrc / .latexmkrc と jobname の設定を使い，出力先は `POST /api/build` に記した文書ごとのフォルダーを `-outdir` で指定する．main に対応する fls / fdb_latexmk と生成された PDF から出力を特定し，latexmk の終了コードを確認する．
+- Compile は `document` モードでは原稿に近い latexmkrc のフォルダー，その他のモードではプロジェクトのルートで latexmk を実行する．既存の latexmkrc / .latexmkrc と jobname の設定を使い，出力先は `POST /api/build` に記した文書ごとのフォルダーを `-outdir` で指定する．main に対応する fls / fdb_latexmk と生成された PDF から出力を特定し，latexmk の終了コードを確認する．
 - 実行の失敗，終了コード，PDF の探索結果を `build.error` または `build.log` に記録する．
 - HTTP サーバーには Go 標準ライブラリの `net/http` を使う．
 

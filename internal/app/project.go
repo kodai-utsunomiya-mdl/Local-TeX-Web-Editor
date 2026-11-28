@@ -146,17 +146,7 @@ func (a *App) openProjectLocked(rawPath string) error {
 	}
 	settings, exists := a.config.Projects[root]
 	if !exists {
-		settings.Mode = "pdflatex"
-		for _, name := range []string{"latexmkrc", ".latexmkrc"} {
-			path := filepath.Join(root, name)
-			info, err := os.Stat(path)
-			if err != nil {
-				continue
-			}
-			if regular, err := platform.IsRegularFile(path, info); err == nil && regular {
-				settings.Mode = "project"
-			}
-		}
+		settings.Mode = defaultCompileMode(files)
 	}
 	if !validMode(settings.Mode) {
 		settings.Mode = "project"
@@ -271,9 +261,25 @@ func (a *App) updateSettingsLocked(texBin, main, mode *string) error {
 	return nil
 }
 
+// Root configuration retains precedence for existing single-project layouts.
+func defaultCompileMode(files []ProjectFile) string {
+	mode := "pdflatex"
+	for _, file := range files {
+		name := filepath.Base(file.Path)
+		if !samePath(name, "latexmkrc") && !samePath(name, ".latexmkrc") {
+			continue
+		}
+		if filepath.Dir(file.Path) == "." {
+			return "project"
+		}
+		mode = "document"
+	}
+	return mode
+}
+
 func validMode(mode string) bool {
 	switch mode {
-	case "project", "pdflatex", "uplatex", "xelatex", "lualatex":
+	case "project", "document", "pdflatex", "uplatex", "xelatex", "lualatex":
 		return true
 	default:
 		return false

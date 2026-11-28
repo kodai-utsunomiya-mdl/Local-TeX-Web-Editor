@@ -108,8 +108,8 @@ h1, h2, h3, p { margin: 0; }
 .count-badge { font-size: 9px; font-weight: 450; color: #8793a0; background: #edf0f3; border: 1px solid #e8ecf0; border-radius: 4px; padding: 0 4px; line-height: 14px; }
 .file-filter-wrap { display: flex; flex-direction: column; flex: 0 0 auto; gap: 6px; min-width: 0; padding: 8px 9px; }
 .file-filter-wrap input { width: 100%; border-color: #e3e8ee; font-size: 11px; padding: 8px 10px; background: #fff; }
-#file-sort { width: 100%; min-width: 0; height: 28px; padding: 3px 5px; font-size: 11px; border-color: var(--border); }
-#file-sort[hidden] { display: none; }
+#file-sort, #outline-scope { width: 100%; min-width: 0; height: 28px; padding: 3px 5px; font-size: 11px; border-color: var(--border); }
+#file-sort[hidden], #outline-scope[hidden] { display: none; }
 .file-tree { flex: 1 1 auto; overflow: auto; padding: 1px 8px 20px; min-height: 0; scrollbar-width: thin; scrollbar-color: #c6cfd7 transparent; }
 .tree-list { list-style: none; margin: 0; padding: 0; }
 .tree-list .tree-list { padding-left: 12px; }

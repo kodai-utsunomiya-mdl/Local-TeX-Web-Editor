@@ -51,6 +51,26 @@ async function confirmDeletion(page, root) {
   await page.locator('#project-delete-confirm').click();
 }
 
+test('TeX setup stays above a full recent-project list', async ({ page, session }) => {
+  for (let i = 0; i < 12; i++) {
+    const directory = path.join(session.temp, `Manuscript ${i}`);
+    await mkdir(directory);
+    await json(session, '/api/project/open', { method: 'POST', data: { path: directory } });
+  }
+  await openProject(session);
+  await openEditor(page, session);
+  await openHome(page);
+  const setup = page.locator('#tex-setup-home');
+  await expect(setup).toBeVisible();
+  await expect(page.locator('#welcome-recent-list .project-home-card')).toHaveCount(12);
+  for (const width of [1100, 600]) {
+    await page.setViewportSize({ width, height: 720 });
+    const setupBox = await setup.boundingBox();
+    const recentBox = await page.locator('#welcome-recent').boundingBox();
+    expect(setupBox.y + setupBox.height).toBeLessThanOrEqual(recentBox.y);
+  }
+});
+
 test('ロゴでホームへ移り，削除をキャンセルして同じエディタで編集を続ける', async ({ page, session }, testInfo) => {
   const meta = await openProject(session);
   const root = meta.project.root;

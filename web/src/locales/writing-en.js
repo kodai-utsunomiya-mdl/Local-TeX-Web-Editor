@@ -1,4 +1,6 @@
 export const writingEnglish = {
+  '検索・置換': 'Find and replace',
+  'プロジェクト全体': 'Entire project',
   '補完したコマンドの次または前の引数へ移動': 'Move to the next or previous argument in a completion',
   '現在のセクションや環境を折りたたむ / 展開': 'Fold or unfold the current section or environment',
   '原稿全体を折りたたむ / 展開': 'Fold or unfold the whole document',

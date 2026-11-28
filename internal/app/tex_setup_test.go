@@ -325,6 +325,10 @@ func TestTeXSetupRequiresConsentAndSerializesCompilation(t *testing.T) {
 
 func TestTeXSetupPackagesUseOnlyTheRecordedSelectedEnvironment(t *testing.T) {
 	a, parent, _ := fakeTeXSetup(t)
+	// Exercise the unconfigured environment even if the host has TeX Live.
+	a.mu.Lock()
+	a.config.TexBin = t.TempDir()
+	a.mu.Unlock()
 	response := apiRequest(a, http.MethodPost, "/api/tex/setup", texSetupInput{Consent: true, Operation: "packages", Packages: []string{"siunitx"}}, nil)
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("unmanaged TeX: %d", response.Code)

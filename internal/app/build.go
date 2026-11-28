@@ -332,20 +332,24 @@ func (a *App) compile(run *buildRun, project Project, texBin string) {
 	defer release()
 	sources := snapshotSourceRevisions(project.Root)
 	run.sources = sources
-	args := latexmkArguments(project)
-	cmd, cleanup, err := latexmkCommand(tool, bin, args, project.Root, a.options.ConfigDir)
+	workDir, args, err := latexmkInvocation(project, outputDirectory)
+	if err != nil {
+		a.finishBuild(run, nil, err, "", "")
+		return
+	}
+	cmd, cleanup, err := latexmkCommand(tool, bin, args, workDir, a.options.ConfigDir)
 	if err != nil {
 		a.finishBuild(run, nil, err, "", "")
 		return
 	}
 	defer cleanup()
-	cmd.Dir = project.Root
+	cmd.Dir = workDir
 	platform.PrepareCommand(cmd)
 	writer := &commandOutput{app: a, run: run}
 	cmd.Stdout, cmd.Stderr = writer, writer
 	a.mu.Lock()
 	run.result.Command = displayCommand(cmd.Path, cmd.Args[1:])
-	a.appendMessageLocked(run, "[作業フォルダー] %s\n[実行] %s\n\n", project.Root, run.result.Command)
+	a.appendMessageLocked(run, "[作業フォルダー] %s\n[実行] %s\n\n", workDir, run.result.Command)
 	cancelled := run.cancelRequested || a.closed
 	a.mu.Unlock()
 	if cancelled {
@@ -375,7 +379,7 @@ func (a *App) compile(run *buildRun, project Project, texBin string) {
 		a.finishBuild(run, &code, waitErr, "", "")
 		return
 	}
-	pdfSource, err := findOutputPDF(project.Root, project.Main, outputDirectory)
+	pdfSource, err := findOutputPDF(project.Root, workDir, project.Main, outputDirectory)
 	if err != nil {
 		a.finishBuild(run, &code, err, "", "")
 		return
@@ -387,8 +391,8 @@ func (a *App) compile(run *buildRun, project Project, texBin string) {
 		return
 	}
 	a.appendMessage(run, "\n[PDF] %s\n", pdfSource)
-	run.sources, run.markdownInputs = sourcesForPDF(project.Root, project.Main, pdfSource, sources)
-	run.synctex, err = a.cacheSyncTeX(project.Root, pdfSource, pdf, run.result.ID, bin, sources)
+	run.sources, run.markdownInputs = sourcesForPDF(project.Root, workDir, project.Main, pdfSource, sources)
+	run.synctex, err = a.cacheSyncTeX(project.Root, workDir, pdfSource, pdf, run.result.ID, bin, sources)
 	if err != nil {
 		a.appendMessage(run, "[SyncTeX] 原稿と PDF の位置を照合できません: %v\n", err)
 	} else {
@@ -424,8 +428,46 @@ func (a *App) stopBuild(expectedProject ...string) error {
 	return nil
 }
 
-func latexmkArguments(project Project) []string {
-	directory := buildDirectoryRelative(project.Main)
+func latexmkInvocation(project Project, outputDirectory string) (string, []string, error) {
+	workDir := project.Root
+	mainFile := absoluteFrom(project.Root, project.Main)
+	mode := project.Mode
+	if project.Mode == "document" {
+		for dir := filepath.Dir(mainFile); ; dir = filepath.Dir(dir) {
+			found := false
+			for _, name := range []string{".latexmkrc", "latexmkrc"} {
+				relative, err := filepath.Rel(project.Root, filepath.Join(dir, name))
+				if err != nil {
+					return "", nil, err
+				}
+				_, err = safePath(project.Root, filepath.ToSlash(relative), false)
+				if errors.Is(err, os.ErrNotExist) {
+					continue
+				}
+				if err != nil {
+					return "", nil, err
+				}
+				found = true
+			}
+			if found {
+				workDir = dir
+				break
+			}
+			if samePath(dir, project.Root) {
+				mode = "pdflatex"
+				break
+			}
+		}
+	}
+	document, err := filepath.Rel(workDir, mainFile)
+	if err != nil {
+		return "", nil, err
+	}
+	directory, err := filepath.Rel(workDir, outputDirectory)
+	if err != nil {
+		return "", nil, err
+	}
+	directory = filepath.ToSlash(directory)
 	args := []string{"-interaction=nonstopmode", "-file-line-error", "-halt-on-error", "-synctex=1", "-recorder",
 		"-outdir=" + directory, "-auxdir=" + directory}
 	if runtime.GOOS == "windows" {
@@ -435,7 +477,7 @@ func latexmkArguments(project Project) []string {
 		// files are still addressed relative to the source directory.
 		args = append(args, "-bibtexfudge-")
 	}
-	switch project.Mode {
+	switch mode {
 	case "pdflatex":
 		args = append(args, "-pdf")
 	case "xelatex":
@@ -445,7 +487,7 @@ func latexmkArguments(project Project) []string {
 	case "uplatex":
 		args = append(args, "-pdfdvi", "-e", `$latex='uplatex %O %S'; $bibtex='upbibtex %O %B'; $dvipdf='dvipdfmx %O -o %D %S';`)
 	}
-	return append(args, "./"+project.Main)
+	return workDir, append(args, "./"+filepath.ToSlash(document)), nil
 }
 
 func commandEnvironment(bin string) []string {
@@ -577,7 +619,7 @@ func absoluteFrom(root, path string) string {
 }
 
 // latexmk records a separate rule for DVI-to-PDF, including a custom job name.
-func findOutputPDF(root, main, directory string) (string, error) {
+func findOutputPDF(root, workDir, main, directory string) (string, error) {
 	entries, err := os.ReadDir(directory)
 	if err != nil {
 		return "", err
@@ -610,11 +652,11 @@ func findOutputPDF(root, main, directory string) (string, error) {
 			if len(values) < 3 {
 				continue
 			}
-			if strings.EqualFold(filepath.Ext(values[1]), ".tex") && samePath(absoluteFrom(root, values[1]), mainPath) {
+			if strings.EqualFold(filepath.Ext(values[1]), ".tex") && samePath(absoluteFrom(workDir, values[1]), mainPath) {
 				matchesMain = true
 			}
 			if strings.EqualFold(filepath.Ext(values[2]), ".pdf") {
-				outputs = append(outputs, absoluteFrom(root, values[2]))
+				outputs = append(outputs, absoluteFrom(workDir, values[2]))
 			}
 		}
 		if matchesMain {

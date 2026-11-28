@@ -29,7 +29,7 @@ func TestSyncTeXNamesAndAnchorsForUnicodeSources(t *testing.T) {
 	writeTestFile(t, outside, []byte("outside"))
 	input := "SyncTeX Version:1\nInput:1:./main.tex\nInput:2:./章/追加の 原稿.tex\nInput:3:" + filepath.ToSlash(outside) + "\nOutput:pdf\nContent:\n!1\n{1\n!1\n}1\nPostamble:\n"
 	var output bytes.Buffer
-	inputs, err := normalizeSyncTeX(strings.NewReader(input), &output, root, snapshotSourceRevisions(root), nil)
+	inputs, err := normalizeSyncTeX(strings.NewReader(input), &output, root, root, snapshotSourceRevisions(root), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,24 +70,24 @@ func TestSyncTeXMatchesWindowsFileNamesUsingTheRecorder(t *testing.T) {
 	}
 	recordedPath := filepath.Join(root, ".local-tex-editor", "build", "main.fls")
 	writeTestFile(t, recordedPath, []byte("INPUT ./main.tex\nINPUT ./"+first+"\nINPUT ./"+first+"\n"))
-	recorded := recorderSources(root, recordedPath, revisions)
+	recorded := recorderSources(root, root, recordedPath, revisions)
 	if len(recorded) != 2 || !recorded[first] {
 		t.Fatalf("could not read the actual recorder inputs: %#v", recorded)
 	}
-	resolve := newSyncSourceResolver(root, revisions, recorded, lossy)
+	resolve := newSyncSourceResolver(root, root, revisions, recorded, lossy)
 	if actual := resolve(string(lossy("./" + first))); actual != first {
 		t.Fatalf("lost a uniquely recorded name: %q", actual)
 	}
-	resolve = newSyncSourceResolver(root, revisions, map[string]bool{first: true, second: true}, lossy)
+	resolve = newSyncSourceResolver(root, root, revisions, map[string]bool{first: true, second: true}, lossy)
 	if actual := resolve(string(lossy("./" + first))); actual != "" {
 		t.Fatalf("an ambiguous legacy name selected %q", actual)
 	}
-	resolve = newSyncSourceResolver(root, revisions, nil, platform.EncodeFileName)
+	resolve = newSyncSourceResolver(root, root, revisions, nil, platform.EncodeFileName)
 	actual := resolve(string(platform.EncodeFileName("./" + first)))
 	// On an ANSI code page which can encode the name, both sources remain
 	// distinct. If it cannot, filtering through the recorder resolves it.
 	if actual == "" {
-		resolve = newSyncSourceResolver(root, revisions, recorded, platform.EncodeFileName)
+		resolve = newSyncSourceResolver(root, root, revisions, recorded, platform.EncodeFileName)
 		actual = resolve(string(platform.EncodeFileName("./" + first)))
 	}
 	if actual != first {
@@ -109,11 +109,11 @@ func TestSyncTeXRecorderAlsoMatchesLegacyNames(t *testing.T) {
 		}, name))
 	}
 	data := []byte("INPUT ./main.tex\r\nINPUT " + string(lossy("./"+name)) + "\r\n")
-	recorded := resolveRecorderSources(root, data, revisions, lossy)
+	recorded := resolveRecorderSources(root, root, data, revisions, lossy)
 	if len(recorded) != 2 || !recorded[name] {
 		t.Fatalf("the recorder lost a source written in a legacy code page: %#v", recorded)
 	}
-	resolve := newSyncSourceResolver(root, revisions, recorded, lossy)
+	resolve := newSyncSourceResolver(root, root, revisions, recorded, lossy)
 	if actual := resolve(string(lossy("./" + name))); actual != name {
 		t.Fatalf("a partial recorder list removed a valid source: %q", actual)
 	}
@@ -126,7 +126,7 @@ func TestSyncTeXRecorderAlsoMatchesLegacyNames(t *testing.T) {
 	// In the Windows integration fixture, TeX additionally uses an 8.3 cwd.
 	// The actual file name remains in the system code page after that prefix.
 	shortRoot := "C:/Users/RUNNER~1/AppData/Local/Temp/LTEX-I~1/WITHSP~1"
-	resolve = syncSourceResolverForRoots(root, []string{root, shortRoot}, revisions, recorded, lossy)
+	resolve = syncSourceResolverForRoots(root, root, []string{root, shortRoot}, revisions, recorded, lossy)
 	if actual := resolve(shortRoot + "/./??? ??.tex"); actual != name {
 		t.Fatalf("the 8.3 working directory lost its Unicode source: %q", actual)
 	}
@@ -278,7 +278,7 @@ func TestPDFAndSyncTeXCacheRestoresTogetherAndExpiresTogether(t *testing.T) {
 			t.Fatal(err)
 		}
 		sources := snapshotSourceRevisions(root)
-		sync, err := a.cacheSyncTeX(root, originalPDF, pdf, id, t.TempDir(), sources)
+		sync, err := a.cacheSyncTeX(root, root, originalPDF, pdf, id, t.TempDir(), sources)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -377,7 +377,7 @@ func TestSyncTeXWithRealTeXAndUnicodePaths(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	version, err := a.cacheSyncTeX(root, originalPDF, pdf, id, filepath.Dir(synctex), sources)
+	version, err := a.cacheSyncTeX(root, root, originalPDF, pdf, id, filepath.Dir(synctex), sources)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -93,11 +93,11 @@
           <button type="button" id="welcome-import-zip" class="button"><span data-i18n="ZIP を読み込む…">Import ZIP…</span></button>
         </div>
         <p class="welcome-note"><span data-i18n="原稿 (.tex，.md，.txt など)，参考文献 (.bib)，画像などが入ったフォルダーを選択してください．">Choose a folder containing documents (.tex, .md, .txt), bibliography files (.bib), images, and other project files.</span></p>
+        <section id="tex-setup-home" aria-labelledby="tex-setup-home-title" hidden></section>
         <div id="welcome-recent" class="welcome-recent" hidden>
           <h2><span data-i18n="最近開いたプロジェクト">Recent projects</span></h2>
           <div id="welcome-recent-list"></div>
         </div>
-        <section id="tex-setup-home" aria-labelledby="tex-setup-home-title" hidden></section>
       </div>
     </main>
 
@@ -122,6 +122,10 @@
             <option value="modified-asc" data-i18n="更新日時 (古い順)">Date modified (oldest first)</option>
             <option value="manual" data-i18n="手動の並び順">Manual order</option>
           </select>
+          <select id="outline-scope" aria-label="Outline scope" data-i18n-aria-label="アウトラインの範囲" hidden>
+            <option value="file" data-i18n="現在のファイル">Current file</option>
+            <option value="document" data-i18n="文書全体">Whole document</option>
+          </select>
         </div>
         <nav id="file-tree" class="file-tree" aria-label="Files" data-i18n-aria-label="ファイル一覧"></nav>
         <nav id="outline-tree" data-testid="outline-tree" class="outline-tree" aria-label="Source outline" hidden data-i18n-aria-label="原稿のアウトライン"></nav>
@@ -133,7 +137,11 @@
       <section class="editor-pane" id="editor-pane" aria-label="Edit source" data-i18n-aria-label="原稿を編集">
         <div class="writing-toolbar">
           <div class="navigation-actions"><button type="button" class="icon-button" data-navigation-back aria-label="Go back" title="Go back to the previous location" disabled data-i18n-aria-label="移動前の場所へ戻る" data-i18n-title="移動前の場所へ戻る">←</button><button type="button" class="icon-button" data-navigation-forward aria-label="Go forward" title="Go forward" disabled data-i18n-aria-label="次の場所へ進む" data-i18n-title="次の場所へ進む">→</button></div>
-          <button type="button" id="project-search-button" class="button button-small" data-i18n-title="プロジェクト全体の本文を検索・置換" title="Search and replace across the project"><span data-i18n="全体を検索">Search project</span></button>
+          <div class="search-scopes" role="group" aria-label="Find and replace" data-i18n-aria-label="検索・置換">
+            <span class="search-scopes-label" data-i18n="検索・置換">Find and replace</span>
+            <button type="button" id="find-button" class="button button-small" title="Find and replace in current file" aria-label="Find and replace in current file" data-i18n-aria-label="現在のファイルを検索・置換" disabled><span data-i18n="ファイル内">Current file</span></button>
+            <button type="button" id="project-search-button" class="button button-small" title="Find and replace across the project" aria-label="Find and replace across the project" data-i18n-title="プロジェクト全体の本文を検索・置換" data-i18n-aria-label="プロジェクト全体の本文を検索・置換"><span data-i18n="プロジェクト全体">Entire project</span></button>
+          </div>
           <span class="toolbar-spacer"></span>
           <label id="markdown-editor-mode-label" class="markdown-editor-mode" hidden><span class="sr-only" data-i18n="Markdown の編集方法">Markdown editing mode</span><select id="markdown-editor-mode" aria-label="Markdown editing mode" data-i18n-aria-label="Markdown の編集方法"><option value="rich" data-i18n="直接編集">Visual editing</option><option value="source" data-i18n="ソース">Source</option></select></label>
           <button type="button" id="toggle-preview" class="icon-button" aria-pressed="true" aria-label="Hide preview" title="Hide preview"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v16H3ZM14 4v16"/><path d="M14 4h7v16h-7Z" fill="currentColor" opacity=".18"/></svg></button>
@@ -155,7 +163,6 @@
           <div class="title-actions">
             <button type="button" id="close-all-tabs" data-testid="close-all-tabs" class="icon-button" title="Close all tabs" aria-label="Close all tabs" disabled data-i18n-title="すべてのタブを閉じる" data-i18n-aria-label="すべてのタブを閉じる"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h14v14M3 7h14v14H3Z"/><path d="m7 11 6 6m0-6-6 6"/></svg></button>
             <button type="button" id="synctex-forward" data-testid="synctex-forward" class="icon-button" title="Show the cursor location in the PDF (also Ctrl+click)" aria-label="Go to the matching PDF location" disabled data-i18n-title="カーソル位置を PDF で表示 ({modifier}+クリックでも移動)" data-i18n-aria-label="PDF の位置へ移動"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3h7v7m0-7L10 14M20 14v6H4V4h6"/></svg></button>
-            <button type="button" id="find-button" class="icon-button" title="Find and replace (Ctrl+F)" aria-label="Find and replace in source" disabled data-i18n-title="検索・置換 ({modifier}+F)" data-i18n-aria-label="原稿を検索・置換"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg></button>
             <button type="button" id="save-button" data-testid="save-button" class="icon-button" title="Save current file (Ctrl+S)" aria-label="Save current file" disabled data-i18n-title="現在のファイルを保存 ({modifier}+S)" data-i18n-aria-label="現在のファイルを保存"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h15l3 3v15H3ZM7 3v6h10V3M7 21v-8h10v8"/></svg></button>
           </div>
         </div>
@@ -292,7 +299,7 @@
       <div id="tex-packages-help"></div>
       <div class="field-group"><span class="field-label"><span data-i18n="原稿と PDF の移動 (SyncTeX)">Source–PDF navigation (SyncTeX)</span></span><p id="synctex-tool-status" class="field-help"></p><div id="synctex-setup" hidden><p id="synctex-setup-help" class="field-help"></p><div class="tex-setup-settings-actions"><button type="button" id="install-synctex" class="button"><span data-i18n="SyncTeX を追加…">Add SyncTeX…</span></button></div></div></div>
       <div class="field-group" id="main-field"><label class="field-label" for="main-file"><span data-i18n="既定のメイン文書">Default main document</span></label><select id="main-file" data-testid="main-file"></select><p class="field-help"><span data-i18n="章や参考文献などを編集しているときに使います．文書全体を含む .tex を編集中の場合は，そのタブの文書をコンパイルします．">Used when editing chapters, bibliography files, and other supporting files. When the active .tex tab contains a complete document, that document is compiled.</span></p></div>
-      <div class="field-group" id="mode-field"><label class="field-label" for="compile-mode"><span data-i18n="コンパイラー">Compiler</span></label><select id="compile-mode" data-testid="compile-mode"><option value="project" data-i18n="latexmkrc の設定を使う">Use latexmkrc settings</option><option value="pdflatex">pdfLaTeX</option><option value="uplatex">upLaTeX + dvipdfmx</option><option value="xelatex">XeLaTeX</option><option value="lualatex">LuaLaTeX</option></select><p id="mode-help" class="field-help"><span data-i18n="プロジェクト内の latexmkrc / .latexmkrc があれば，その設定を利用できます．">Use the settings in the project’s latexmkrc or .latexmkrc file, when present.</span></p></div>
+      <div class="field-group" id="mode-field"><label class="field-label" for="compile-mode"><span data-i18n="コンパイラー">Compiler</span></label><select id="compile-mode" data-testid="compile-mode"><option value="project" data-i18n="latexmkrc の設定を使う">Use latexmkrc settings</option><option value="document" data-i18n="原稿に近い latexmkrc を使う">Use the latexmkrc nearest the document</option><option value="pdflatex">pdfLaTeX</option><option value="uplatex">upLaTeX + dvipdfmx</option><option value="xelatex">XeLaTeX</option><option value="lualatex">LuaLaTeX</option></select><p id="mode-help" class="field-help"><span data-i18n="原稿ごとの設定を使う場合は「原稿に近い latexmkrc を使う」を選択します．">Choose the nearest latexmkrc option to use a separate configuration for each document.</span></p></div>
       <section id="shortcut-settings" class="shortcut-settings" aria-labelledby="shortcut-title" hidden><h3 id="shortcut-title"><span data-i18n="起動用のショートカット">App shortcuts</span></h3><p class="field-help"><span data-i18n="PC のアプリフォルダーへ Local TeX Web Editor を配置し，選んだ場所にショートカットを作ります．次回からショートカットを開くと，アプリとブラウザが起動します．">Place Local TeX Web Editor in your local apps folder and create a shortcut in the selected location. Open the shortcut next time to start the app and browser.</span></p><div class="shortcut-actions"><button type="button" id="shortcut-start-menu" data-testid="shortcut-start-menu" class="button button-small"><span data-i18n="スタートメニューに追加">Add to Start menu</span></button><button type="button" id="shortcut-desktop" data-testid="shortcut-desktop" class="button button-small"><span data-i18n="デスクトップに作成">Create on desktop</span></button></div><p id="shortcut-result" data-testid="shortcut-result" class="shortcut-result" role="status" hidden></p><dl id="shortcut-paths" class="shortcut-paths" hidden><div><dt><span data-i18n="起動するアプリ">App to launch</span></dt><dd id="shortcut-executable"></dd></div><div><dt><span data-i18n="ショートカット">Shortcut</span></dt><dd id="shortcut-path"></dd></div></dl></section>
       <p id="store-installation-note" class="field-help" hidden data-i18n="このアプリのインストールと更新は Windows が管理しています．スタートメニューから起動できます．">Windows manages installation and updates for this app. Open it from the Start menu.</p>
       <section id="startup-settings" class="startup-settings" aria-labelledby="startup-title">

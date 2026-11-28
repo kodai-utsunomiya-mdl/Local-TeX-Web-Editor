@@ -43,6 +43,7 @@ import { combineCompletionItems } from './completion-index.js';
 import { createTeXCompletionSource } from './tex-completion.js';
 import { sourceFolding, revealSourceRange } from './source-folding.js';
 import { createOutlineTree } from './outline-tree.js';
+import { wholeDocumentOutline } from './document-outline.js';
 import { programLanguage } from './program-language.js';
 import { createFileActions, fileActionText, fileDestinationConflict, entryContains, mapEntryPath, suggestEntryCopyPath } from './file-actions.js';
 import { tags } from '@lezer/highlight';
@@ -128,6 +129,8 @@ const state = {
   drafts: { entries: [] },
   recoverySelection: null,
   sidebar: 'files',
+  outlineScope: 'file',
+  outlineMain: '',
   texIndex: new Map(),
   completionItems: { citations: [], labels: [] },
   indexing: false,
@@ -177,7 +180,7 @@ const editorTheme = new Compartment();
 const editorLanguage = new Compartment();
 const editorCompletion = new Compartment();
 const editorDocumentPath = new Compartment();
-const modeLabels = { project: 'latexmkrc', pdflatex: 'pdfLaTeX', uplatex: 'upLaTeX', xelatex: 'XeLaTeX', lualatex: 'LuaLaTeX' };
+const modeLabels = { project: 'latexmkrc', document: '原稿に近い latexmkrc を使う', pdflatex: 'pdfLaTeX', uplatex: 'upLaTeX', xelatex: 'XeLaTeX', lualatex: 'LuaLaTeX' };
 let toastTimer = null;
 let lineFlashTimer = null;
 let markdownScrollFrame = 0;
@@ -1486,7 +1489,8 @@ async function applyMeta(meta, resetProject = false, sequence = ++state.statusRe
     projectSearch?.close(); documentHistory?.close();
     clearTimeout(state.autoSaveTimer); clearTimeout(state.draftTimer); clearTimeout(state.sessionTimer); clearTimeout(state.outlineTimer);
     state.persistenceReady = false; state.initialFilePending = !!meta.project; state.session = null; state.drafts = { entries: [] }; state.recoverySelection = null;
-    state.texIndex.clear(); state.completionItems = { citations: [], labels: [] }; state.indexError = ''; state.indexing = false;
+    state.outlineMain = ''; state.outlineScope = 'file';
+  state.texIndex.clear(); state.completionItems = { citations: [], labels: [] }; state.indexError = ''; state.indexing = false;
     clearTimeout(state.pollTimer); state.pollTimer = null;
     state.documents.clear(); state.assets.clear(); state.tabOrder = []; state.directoryState.clear(); state.fileOrder = {}; state.pendingFiles.clear(); state.activePath = ''; ++state.openSequence;
     assetPreview.hide(); markdownPreview.reset();
@@ -2261,7 +2265,7 @@ function renderControls() {
   $('compile-button').disabled = busy || running || !available || (!useMarkdown && (!main || state.texSetupBusy)) || state.externalProjectChanged;
   $('compile-label').textContent = ['compiling', 'previewing'].includes(state.operation) ? t("保存しています…") : running ? t("コンパイル中") : useMarkdown ? t("プレビュー") : t("コンパイル");
   $('compile-button').title = useMarkdown ? t("保存して Markdown のプレビューを更新 ({value0}+Enter)", { value0: shortcutModifier }) : t("保存して {value0} をコンパイル ({value1}+Enter)", { value0: main || t("原稿"), value1: shortcutModifier });
-  $('main-document-label').textContent = useMarkdown ? `${doc.path} · Markdown` : project ? `${main || t("原稿を選択")} · ${modeLabels[project.mode] || project.mode}` : t("原稿を選択");
+  $('main-document-label').textContent = useMarkdown ? `${doc.path} · Markdown` : project ? `${main || t("原稿を選択")} · ${t(modeLabels[project.mode] || project.mode)}` : t("原稿を選択");
   $('main-document').title = useMarkdown ? t("編集とコンパイルの設定を開く") : t("コンパイル対象: {value0}\n既定のメイン文書とコンパイラーの設定を開く", { value0: main || t("未選択") });
   $('compile-icon').classList.toggle('spinning', running || state.operation === 'compiling');
   $('compile-icon').textContent = running || state.operation === 'compiling' ? '' : '▶';
@@ -2831,7 +2835,7 @@ function persistSession() {
     positions[doc.path] = { anchor: selection.anchor, head: selection.head, scrollTop: doc.path === state.activePath && state.editor ? state.editor.scrollDOM.scrollTop : doc.scrollTop ?? positions[doc.path]?.scrollTop ?? 0,
       richScrollTop: doc.path === state.activePath && activeRichEditor() ? editorSlots[state.activePane].richHost.scrollTop : doc.richScrollTop ?? positions[doc.path]?.richScrollTop ?? 0 };
   }
-  state.session = { version: 2, updatedAt: Date.now(), activePath: state.activePath, tabs: [...state.tabOrder], workspace: captureSourceWorkspace(), positions, pdf: viewer.getViewState(), pdfPositions: viewer.getPositions(), previewChoice: state.previewChoice, lastMarkdownPath: state.lastMarkdownPath, sidebar: state.sidebar, directories: Object.fromEntries(state.directoryState), fileOrder: state.fileOrder };
+  state.session = { version: 2, updatedAt: Date.now(), activePath: state.activePath, tabs: [...state.tabOrder], workspace: captureSourceWorkspace(), positions, pdf: viewer.getViewState(), pdfPositions: viewer.getPositions(), previewChoice: state.previewChoice, lastMarkdownPath: state.lastMarkdownPath, sidebar: state.sidebar, outlineScope: state.outlineScope, directories: Object.fromEntries(state.directoryState), fileOrder: state.fileOrder };
   sessionStore.write(`session:${state.meta.project.root}`, state.session, 0);
 }
 async function loadProjectSession(root, generation) {
@@ -2854,6 +2858,7 @@ async function loadProjectSession(root, generation) {
   state.drafts = { version: 1, entries: Array.isArray(drafts?.entries) ? drafts.entries.filter(entry => typeof entry?.id === 'string' && typeof entry.path === 'string' && typeof entry.content === 'string' && typeof entry.baseRevision === 'string') : [] };
   state.persistenceReady = true;
   viewer.restorePosition(state.session?.pdf, state.session?.pdfPositions);
+  state.outlineScope = state.session?.outlineScope === 'document' ? 'document' : 'file';
   setSidebar(state.session?.sidebar === 'outline' ? 'outline' : 'files');
   renderRecovery();
   $('draft-status').textContent = availableDrafts().length ? t("前回の草稿があります") : '';
@@ -3155,9 +3160,20 @@ function renderOutline() {
   const doc = activeDocument();
   const supported = !!doc && (/\.tex$/i.test(doc.path) || isMarkdown(doc.path));
   if (supported && !state.texIndex.has(doc.path)) updateIndex(doc.path, doc.state.doc.toString(), false);
-  const file = supported ? state.texIndex.get(doc.path) : null;
-  const outline = file?.outline || [];
-  outlineTree.render({ projectRoot: state.meta?.project?.root || '', path: state.activePath, supported, outline, query });
+  const whole = state.sidebar === 'outline' && doc && /\.tex$/i.test(doc.path);
+  $('outline-scope').hidden = !whole;
+  $('outline-scope').value = state.outlineScope;
+  const project = state.meta?.project;
+  let path = state.activePath, outline = state.texIndex.get(path)?.outline || [], scope = 'file';
+  if (whole && project && state.outlineScope === 'document') {
+    for (const open of state.documents.values()) {
+      if (/\.tex$/i.test(open.path) && open.indexedDoc !== open.state.doc) updateIndex(open.path, open.state.doc.toString(), false);
+    }
+    const result = wholeDocumentOutline(state.texIndex, project, path, state.outlineMain);
+    path = state.outlineMain = result.main;
+    outline = result.outline; scope = 'document';
+  }
+  outlineTree.render({ projectRoot: project?.root || '', path, supported, outline, query, scope });
   updateOutlinePosition();
 }
 function updateOutlinePosition() {
@@ -3660,6 +3676,9 @@ $('markdown-scroll-sync').addEventListener('change', () => {
 onClick('refresh-files', refreshFiles); onClick('download-pdf', downloadPDF); onClick('save-as-pdf', savePDFAs); onClick('copy-log', copyLog);
 onClick('synctex-forward', () => navigate(() => syncForward()));
 onClick('files-tab', () => { $('file-filter').value = ''; setSidebar('files'); });
+$('outline-scope').addEventListener('change', event => {
+  state.outlineScope = event.target.value; renderOutline(); scheduleSession();
+});
 onClick('outline-tab', () => { $('file-filter').value = ''; setSidebar('outline'); });
 onClick('review-drafts', showRecovery); onClick('dismiss-recovery', () => { $('recovery-banner').hidden = true; });
 onClick('restore-draft', restoreDraft); onClick('delete-draft', deleteSelectedDraft);
