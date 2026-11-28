@@ -1,5 +1,6 @@
 .writing-toolbar { display: flex; flex-wrap: wrap; flex: 0 0 auto; align-items: center; gap: 5px; min-height: 38px; padding: 3px 6px; border-bottom: 1px solid var(--border); background: var(--surface); }
 .search-scopes { display: inline-flex; align-items: center; gap: 3px; max-width: 100%; flex-wrap: wrap; }
+.search-scopes > button + button { margin-inline-start: 2px; }
 .search-scopes-label { color: var(--muted); font-size: 11px; padding-inline: 3px; }
 .navigation-actions { display: flex; gap: 2px; flex: 0 0 auto; }
 .navigation-actions .icon-button { width: 29px; height: 29px; font-size: 19px; }
