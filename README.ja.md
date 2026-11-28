@@ -571,12 +571,12 @@ local-tex-editor-build-doc-*/
 
 ## アプリとデータの保存先
 
-次の表はダウンロードと展開後の容量の目安である (1 MB = 1,000,000 bytes)．公開された配布ファイルの実測値は[ダウンロードガイド](https://kodai-utsunomiya-mdl.github.io/Local-TeX-Web-Editor/ja/#requirements)で確認できる．
+次の表は **v0.1.22** の ZIP と展開後のアプリ本体の実測値である (1 MB = 1,000,000 bytes)．[v0.1.22 の配布ファイル](https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases/tag/v0.1.22)
 
 | 対応環境 | ダウンロードする ZIP | 展開後のアプリ本体 |
 | --- | ---: | ---: |
-| Windows x64 | **10 MB** | **19 MB** (`.exe`) |
-| macOS，Apple Silicon + Intel | **19 MB** | **40 MB** (`.app`) |
+| Windows x64 | **9.68 MB** | **18.50 MB** (`.exe`) |
+| macOS，Apple Silicon + Intel | **18.62 MB** | **39.61 MB** (`.app`) |
 
 ZIP には README，画像，ライセンスも含む．Mac のアプリは両方の CPU 向けの実行ファイルを収録している．冒頭の Windows ZIP と macOS のボタンから，対応する配布ファイルを取得できる．
 
