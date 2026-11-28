@@ -24,6 +24,8 @@ on:
       - 'web/**'
       - 'packaging/windows/**'
       - 'scripts/build-msix.mjs'
+      # Store submissions use the same push as the tested macOS and Windows release.
+      - 'scripts/test-macos*.mjs'
       - 'scripts/test-msix*'
       - 'scripts/tex-setup-checks.mjs'
       - 'tests/fixtures/tex-setup/**'
