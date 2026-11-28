@@ -4,7 +4,11 @@ import { createRequire } from 'node:module';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 
 const require = createRequire(import.meta.url);
-const { chromium } = require(path.join(process.env.RUNNER_TEMP, 'website-browser/node_modules/playwright'));
+const playwrightPath = process.env.RUNNER_TEMP
+  ? path.join(process.env.RUNNER_TEMP, 'website-browser/node_modules/playwright')
+  : 'playwright';
+const { chromium } = require(playwrightPath);
+const releaseTag = process.env.WEBSITE_RELEASE_TAG;
 const root = process.cwd();
 const sitePath = '/Local-TeX-Web-Editor/';
 const output = path.join(root, 'website-checks');
@@ -72,6 +76,18 @@ try {
       await page.screenshot({ path: path.join(output, `${route.name}-${size.name}.png`), fullPage: true });
       const sectionScreenshots = [];
       if (route.name === 'en' || route.name === 'ja') {
+        const displayed = (await page.locator('.version-badge').innerText()).trim();
+        const tag = releaseTag || displayed;
+        if (!/^v\d+\.\d+\.\d+$/.test(tag) || displayed !== tag) errors.push(`Expected release ${tag}, found ${displayed}.`);
+        const releases = 'https://github.com/kodai-utsunomiya-mdl/Local-TeX-Web-Editor/releases';
+        const releaseLink = await page.locator('.release-note a').getAttribute('href');
+        if (releaseLink !== `${releases}/tag/${tag}`) errors.push(`Unexpected release link: ${releaseLink}`);
+        const buttons = page.locator('a.download[href*="/releases/download/"]');
+        const actual = await buttons.evaluateAll(links => links.map(link => [link.href, link.querySelector('small')?.textContent]));
+        for (const platform of ['windows-x64', 'macos-universal']) {
+          const url = `${releases}/download/${tag}/local-tex-web-editor-${tag.slice(1)}-${platform}.zip`;
+          if (!actual.some(([href, label]) => href === url && label?.startsWith(tag + ' '))) errors.push(`Missing download for ${tag}: ${platform}`);
+        }
         const steps = page.locator('.setup-steps > li');
         const count = await steps.count();
         if (count !== 6) errors.push(`Expected 6 setup steps, got ${count}.`);

@@ -36,6 +36,13 @@ jobs:
       - name: Render the social preview from the application screenshot
         run: node .github/scripts/render-social-preview.mjs
 
+      - name: Read the current public release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag=$(gh release view --json tagName --jq .tagName)
+          echo "WEBSITE_RELEASE_TAG=$tag" >> "$GITHUB_ENV"
+
       - name: Check the pages and capture screenshots
         run: node .github/scripts/check-website.mjs
 
